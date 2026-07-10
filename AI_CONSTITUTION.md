@@ -21,7 +21,28 @@ Do not trade long-term coherence for short-term speed.
 7. Do not create large rewrites when a small modular change is enough.
 8. Do not introduce dependencies without explaining why.
 9. Do not hide uncertainty. Label guesses as hypotheses.
-10. Do not delete project memory, decisions, roadmap, or handoff history.
+10. Do not delete project memory, decisions, roadmap, handoff, or institutional history.
+11. Do not allow important knowledge to remain only in a temporary chat or agent context.
+12. Do not merge critical changes without review.
+13. Do not store secrets, credentials, tokens, or sensitive private data in GitHub or Obsidian notes.
+14. Do not mark work complete before Knowledge Sync.
+
+## Institutional memory rule
+
+The repository and Obsidian vault together form the institutional memory of the company.
+
+Every strategic conversation or meaningful work session must be converted into durable documentation when it affects:
+
+- Vision.
+- Product boundaries.
+- Architecture.
+- Kernel behavior.
+- Ethics or safety.
+- Roadmap.
+- Risks.
+- Important lessons.
+
+The required process is defined in `docs/obsidian-sync-protocol.md`.
 
 ## Kernel modification protocol
 
@@ -41,15 +62,19 @@ KERNEL CHANGE REQUEST
 
 If the answer to item 7 is no, the change should not enter the Kernel.
 
+Kernel changes must use a separate branch and reviewable pull request.
+
 ## Required after every meaningful change
 
-Update at least one of these files when relevant:
+Update all relevant records, including:
 
 - `DECISIONS.md`
 - `CHANGELOG.md`
 - `LLM_HANDOFF.md`
 - `tasks/backlog.md`
 - `ROADMAP.md`
+- `brain/BRAIN_LOG.md`
+- Obsidian session/decision/PR notes as required.
 
 ## Commit discipline
 
@@ -69,18 +94,31 @@ Good:
 
 > implement Obsidian markdown exporter
 
+Non-trivial work should normally enter through a pull request using `.github/pull_request_template.md`.
+
 ## AI behavior standards
 
 Every AI must:
 
-- Read the project entry files first.
+- Read the mandatory project files first.
 - State assumptions before making architecture decisions.
+- Work on one bounded task at a time.
 - Prefer boring, maintainable code.
 - Add tests for core logic.
 - Keep modules small.
 - Leave handoff notes.
 - Preserve local-first behavior.
 - Preserve evidence-first behavior.
+- Complete Knowledge Sync.
+- Stop when scope expands beyond the approved task.
+
+## Model routing
+
+Use the least expensive model that can perform the task safely and correctly.
+
+Use stronger models for architecture, critical reasoning, security, and difficult review.
+
+Do not spend premium model credits on routine transformations that local or inexpensive models can handle.
 
 ## Safety boundary
 
@@ -108,3 +146,7 @@ Before marking work complete, answer:
 6. Are uncertainties labeled?
 7. Are tests or validation steps included?
 8. Is the next handoff clear?
+9. Is the Obsidian Knowledge Sync complete?
+10. Can a new agent continue without access to the original chat?
+11. Is rollback possible?
+12. Does this require Founder or strategic review before merge?
