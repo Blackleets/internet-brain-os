@@ -8,13 +8,12 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "pnpm -r build",
-    "dev": "pnpm -r dev",
-    "test": "pnpm -r test",
-    "lint": "pnpm -r lint",
-    "typecheck": "tsc --noEmit"
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -b --pretty false"
   },
-  "packageManager": "pnpm@^11.11.0",
+  "packageManager": "pnpm@11.11.0",
   "devDependencies": {
     "typescript": "^5.4.5",
     "vitest": "^1.6.0",
