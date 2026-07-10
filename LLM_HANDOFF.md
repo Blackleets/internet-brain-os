@@ -32,42 +32,33 @@ Every AI must append a new handoff entry using this format:
 ## Handoff YYYY-MM-DD - Model/Agent Name
 
 ### What I changed
-
 - ...
 
 ### Files changed
-
 - ...
 
 ### Why I changed it
-
 - ...
 
 ### Tests or checks performed
-
 - ...
 
 ### Risks / uncertainties
-
 - ...
 
 ### Next recommended step
-
 - ...
 
 ### Do not forget
-
 - ...
 ```
 
 ## Model usage strategy
 
 ### Hermes
-
 Role: project orchestrator and technical director.
 
 Best for:
-
 - Reading the repo.
 - Creating task plans.
 - Coordinating agents.
@@ -75,16 +66,13 @@ Best for:
 - Checking that work follows the Constitution.
 
 Avoid:
-
 - Big architecture changes without explicit review.
 - Silent rewrites.
 
 ### OpenCode
-
 Role: free/low-cost implementation worker.
 
 Best for:
-
 - Creating files.
 - Implementing small modules.
 - Writing tests.
@@ -92,17 +80,14 @@ Best for:
 - Prototyping.
 
 Avoid:
-
 - Changing project identity.
 - Rewriting the Kernel alone.
 - Adding complex dependencies without justification.
 
 ### Codex
-
 Role: code specialist.
 
 Best for:
-
 - Implementing features.
 - Debugging.
 - Refactoring.
@@ -110,16 +95,13 @@ Best for:
 - Reviewing diffs.
 
 Avoid:
-
 - Product pivots.
 - Unsupported architecture decisions.
 
 ### Strong GPT/Claude/Gemini-class models
-
 Role: high-level architect, reviewer, and reasoning engine.
 
 Best for:
-
 - Architecture review.
 - Security review.
 - Data model review.
@@ -127,15 +109,12 @@ Best for:
 - Deep synthesis.
 
 Avoid:
-
 - Spending expensive credits on simple boilerplate.
 
 ### Ollama/local small models
-
 Role: cheap local execution.
 
 Best for:
-
 - Summaries.
 - Classification.
 - Note generation.
@@ -143,13 +122,11 @@ Best for:
 - Basic tagging.
 
 Avoid:
-
 - Unreviewed architecture decisions.
 
 ## Human workflow
 
 Recommended cycle:
-
 1. Human asks Hermes/OpenCode to implement one small task from `tasks/phase-0.md`.
 2. The AI changes the repo.
 3. The AI updates `LLM_HANDOFF.md` and `DECISIONS.md` if needed.
@@ -183,3 +160,54 @@ The project is being prepared as a repository that multiple LLMs can work on saf
 No production code exists yet.
 
 The next major step is to create the Phase 0 technical skeleton.
+
+## Handoff 2026-07-11 - Hermes
+
+### What I changed
+- Created monorepo structure with package.json, pnpm-workspace.yaml, tsconfig.json
+- Created apps/ and packages/ directory structure with placeholder READMEs
+- Created packages/kernel/, packages/obsidian/, packages/shared/, packages/skills/, packages/agents/ with package.json and tsconfig.json
+- Created prompts/ directory with README.md
+- Fixed TypeScript project references: removed "noEmit": true from tsconfig.base.json, set up root tsconfig.json with references, and configured each package tsconfig.json with composite: true and necessary compiler options
+- Added placeholder source files (src/index.ts with export {}) in each package
+- Updated package.json with correct scripts and packageManager version
+- Updated .gitignore to ignore tsconfig.tsbuildinfo
+
+### Files changed
+- package.json
+- pnpm-workspace.yaml
+- tsconfig.json
+- tsconfig.base.json
+- packages/*/package.json (for kernel, obsidian, shared, skills, agents)
+- packages/*/tsconfig.json (for kernel, obsidian, shared, skills, agents)
+- packages/*/src/index.ts (new)
+- apps/extension/package.json
+- apps/extension/README.md
+- apps/dashboard/package.json
+- apps/dashboard/README.md
+- prompts/README.md
+- .gitignore
+- vitest.config.ts
+
+### Why I changed it
+To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum technical skeleton for the Internet Brain OS monorepo.
+
+### Tests or checks performed
+- pnpm install: succeeded (with warning about packageManager version format, non-blocking)
+- pnpm typecheck: succeeded (exit code 0)
+- pnpm test: succeeded (exit code 0, no test files found, but passWithNoTests configured)
+- pnpm build: succeeded (exit code 0)
+- git status: clean after committing
+
+### Risks / uncertainties
+- None: the changes are structural and foundational, with no business logic.
+
+### Next recommended step
+- Update CHANGELOG.md, LLM_HANDOFF.md, brain/BRAIN_LOG.md, and create the Obsidian session note.
+- Commit documentation changes.
+- Push the branch and open a draft PR linked to Issue #1.
+
+### Do not forget
+- Update CHANGELOG.md with the entry for 2026-07-11.
+- Update brain/BRAIN_LOG.md with session notes.
+- Create the Obsidian session note at knowledge/agent-sessions/2026-07-11-hermes-phase-0-1-technical-skeleton.md.
