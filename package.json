@@ -1,21 +1,29 @@
 {
   "name": "internet-brain-os",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "Internet Brain OS - A local-first AI web intelligence system",
   "private": true,
-  "packageManager": "pnpm@8.15.0",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "install": "pnpm install",
-    "build": "pnpm run build -r",
-    "dev": "pnpm run dev -r",
-    "test": "pnpm run test -r",
-    "lint": "pnpm run lint -r",
+    "build": "pnpm -r build",
+    "dev": "pnpm -r dev",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
     "typecheck": "tsc --noEmit"
   },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.11.0",
+      "onFail": "download"
+    }
+  },
   "devDependencies": {
-    "typescript": "^5.4.2"
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0",
+    "@types/node": "^20.12.11"
   }
 }
