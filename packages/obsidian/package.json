@@ -1,0 +1,6 @@
+{
+  "name": "@internet-brain-os/obsidian",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Obsidian export and synchronization package for Internet Brain OS"
+}

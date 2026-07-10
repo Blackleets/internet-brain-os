@@ -1,0 +1,20 @@
+{
+  "name": "@internet-brain-os/kernel",
+  "version": "1.0.0",
+  "description": "Internet Brain OS Kernel - Core coordination layer",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0",
+    "@types/node": "^20.12.11"
+  }
+}

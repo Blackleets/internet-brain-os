@@ -1,0 +1,21 @@
+{
+  "name": "internet-brain-os",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@8.15.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "install": "pnpm install",
+    "build": "pnpm run build -r",
+    "dev": "pnpm run dev -r",
+    "test": "pnpm run test -r",
+    "lint": "pnpm run lint -r",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.2"
+  }
+}
