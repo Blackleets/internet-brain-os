@@ -4,4 +4,4 @@ coverage/
 .env
 .env.*
 *.log
-.DS_Store
+.DS_Store**/tsconfig.tsbuildinfo
