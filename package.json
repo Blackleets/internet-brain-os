@@ -1,0 +1,22 @@
+{
+  "name": "internet-brain-os",
+  "version": "1.0.0",
+  "description": "Internet Brain OS - A local-first AI web intelligence system",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "packageManager": "pnpm@11.11.0",
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0",
+    "@types/node": "^20.12.11"
+  }
+}

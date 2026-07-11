@@ -1,0 +1,6 @@
+{
+  "name": "@internet-brain-os/dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dashboard/Desktop app for Internet Brain OS"
+}

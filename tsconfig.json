@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "references": [
+    { "path": "./packages/kernel" },
+    { "path": "./packages/obsidian" },
+    { "path": "./packages/shared" },
+    { "path": "./packages/skills" },
+    { "path": "./packages/agents" }
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
