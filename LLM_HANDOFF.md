@@ -172,6 +172,7 @@ The next major step is to create the Phase 0 technical skeleton.
 - Added placeholder source files (src/index.ts with export {}) in each package
 - Updated package.json with correct scripts and packageManager version
 - Updated .gitignore to ignore tsconfig.tsbuildinfo
+- Updated CHANGELOG.md, LLM_HANDOFF.md, brain/BRAIN_LOG.md, and created knowledge/agent-sessions/2026-07-11-hermes-phase-0-1-technical-skeleton.md
 
 ### Files changed
 - package.json
@@ -188,6 +189,10 @@ The next major step is to create the Phase 0 technical skeleton.
 - prompts/README.md
 - .gitignore
 - vitest.config.ts
+- CHANGELOG.md
+- LLM_HANDOFF.md
+- brain/BRAIN_LOG.md
+- knowledge/agent-sessions/2026-07-11-hermes-phase-0-1-technical-skeleton.md
 
 ### Why I changed it
 To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum technical skeleton for the Internet Brain OS monorepo.
@@ -200,12 +205,14 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 - git status: clean after committing
 
 ### Risks / uncertainties
-- None: the changes are structural and foundational, with no business logic.
+- Vite CJS deprecation warning is non-blocking.
+- Apps are placeholders only.
+- No production tests or business logic exist yet.
+- Phase 0.1 is structural only.
 
 ### Next recommended step
-- Update CHANGELOG.md, LLM_HANDOFF.md, brain/BRAIN_LOG.md, and create the Obsidian session note.
-- Commit documentation changes.
-- Push the branch and open a draft PR linked to Issue #1.
+- Strategic review and merge decision for PR #2.
+- Phase 0.2 must not start before PR #2 is merged.
 
 ### Do not forget
 - Update CHANGELOG.md with the entry for 2026-07-11.
