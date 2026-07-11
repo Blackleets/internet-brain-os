@@ -218,3 +218,41 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 - Update CHANGELOG.md with the entry for 2026-07-11.
 - Update brain/BRAIN_LOG.md with session notes.
 - Create the Obsidian session note at knowledge/agent-sessions/2026-07-11-hermes-phase-0-1-technical-skeleton.md.
+## Phase 0.2: Shared Domain Types (Completed)
+
+### Work Completed
+- Defined shared domain types in `packages/shared/src`:
+  - `common.ts`: Branded types (RequestId, CaseId, etc.), VerificationStatus, Confidence, IsoDateTime.
+  - 1`.
+  - `status": 
+  - `entity.tsentity
+  - `relationstatus
+  - `report.ts`
+  - `skill.ts`
+  - `llm.ts`
+  - `validation.ts` (with createConfidence, createIsoDateTime, and type guards)
+  - `index.ts` (barrel export)
+- Moved tests to `packages/shared/test/validation.test.ts`
+- All types are provider-agnostic, use readonly where appropriate, and avoid framework dependencies.
+- Validation enforces canonical UTC ISO-8601 timestamps and rejects invalid confidence values.
+
+### Validation
+- TypeScript typecheck: passes
+- Unit tests: 29/29 pass
+- Build: passes
+
+### Risks
+- The Evidence content references (contentRef, contentHash, rawText, summary) are optional and assume external storage.
+- The LLMRequest/LLMResponse are minimal and may need extension for provider-specific features (handled in adapters).
+- The Validation functions throw RangeError for invalid inputs, which must be caught by callers.
+
+### Next Step
+- Await review of PR #3. If approved, proceed to Phase 0.3 (Kernel and Case Manager) after merge.
+
+### PR
+- Draft PR #3: feat(shared): define domain types for Phase 0.2
+- Not merged; awaiting review.
+
+### Phase 0.3 Status
+- Not started. Waiting for PR #3 merge.
+
