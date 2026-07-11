@@ -1,3 +1,17 @@
+## [Unreleased]
+
+### Added
+- Shared domain types for Phase 0.2: Case, Evidence, Entity, Relationship, Report, Skill, LLM, and validation helpers.
+
+### Changed
+- Updated validation to enforce canonical ISO-8601 UTC timestamps.
+- Moved test file to packages/shared/test/.
+- Exported public API via index.ts.
+
+## [0.1.0] - 2026-07-11
+### Added
+- Initial technical skeleton for Phase 0.1.
+
 # CHANGELOG
 
 All meaningful project changes should be recorded here.
