@@ -3,6 +3,7 @@
 ### Added
 - Shared domain types for Phase 0.2: Case, Evidence, Entity, Relationship, Report, Skill, LLM, and validation helpers.
 - Phase 0.3 Case Manager in `packages/kernel`, including repository abstraction, typed domain errors, lifecycle transitions, normalization, logical archiving, and defensive-copying tests.
+- Phase 0.4 Evidence Manager in `packages/kernel`, including provenance-preserving creation, metadata updates, Case/Entity/Relationship links, hash validation, stale-write protection, and defensive-copying tests.
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
