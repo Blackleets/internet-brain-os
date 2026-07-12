@@ -256,3 +256,44 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 ### Phase 0.3 Status
 - Not started. Waiting for PR #3 merge.
 
+
+
+## Handoff 2026-07-12 - Codex strategic review
+
+### What I changed
+- Reviewed and completed Phase 0.4 Evidence Manager in PR #7.
+- Added explicit Case attach/detach operations.
+- Added focused tests for Entity, Relationship, and Case link lifecycles.
+- Removed the unused immutable-field runtime error; immutability remains enforced structurally by the public update contract.
+- Completed institutional-memory synchronization.
+
+### Files changed
+- `packages/kernel/src/evidence/evidence-manager.ts`
+- `packages/kernel/src/evidence/evidence-errors.ts`
+- `packages/kernel/src/evidence/index.ts`
+- `packages/kernel/test/evidence-public-api.test.ts`
+- `packages/kernel/test/evidence-links.test.ts`
+- `LLM_HANDOFF.md`
+- `brain/BRAIN_LOG.md`
+- `knowledge/agent-sessions/2026-07-12-chatgpt-phase-0-4-evidence-manager.md`
+
+### Why I changed it
+To close the review gaps in Issue #6 before integration and ensure the Evidence Manager exposes every required link operation with executable coverage.
+
+### Tests or checks performed
+- Added deterministic unit coverage for link/unlink and attach/detach behavior.
+- GitHub Actions must run on the new commits before merge.
+- Existing PR validation previously passed install, typecheck, test, and build.
+
+### Risks / uncertainties
+- Storage adapters must later implement atomic compare-and-update semantics to protect concurrent writes.
+- Hash validation confirms SHA-256 syntax, not correspondence with unavailable content bytes.
+
+### Next recommended step
+- Confirm CI on PR #7.
+- Merge PR #7 only if all required checks pass.
+- Create the next bounded Phase 0 task from `tasks/phase-0.md`; do not jump to the browser extension.
+
+### Do not forget
+- GitHub remains canonical.
+- Phase 0 is incomplete until local persistence, ingestion, Obsidian export, report generation, and a minimal runner exist.
