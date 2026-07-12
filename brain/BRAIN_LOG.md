@@ -183,3 +183,29 @@ Internet Brain OS can now create, retrieve, list, update, transition, and logica
 
 ### Next action
 - Review the draft PR, inspect CI, correct any failures, and merge only after approval. Phase 0.4 remains unstarted.
+
+
+## 2026-07-12 - Phase 0.4 Evidence Manager review completion
+
+### Type
+Decision
+
+### Context
+The Evidence Manager implementation existed in draft PR #7 but its institutional handoff and several required link lifecycle tests were incomplete.
+
+### Insight
+Evidence capture fields stay immutable through a narrow public update contract. Case attachment and detachment deserve explicit Kernel operations, while Entity and Relationship link lifecycles require direct executable coverage. Concurrency guarantees belong to future persistent repository adapters and must use atomic compare-and-update behavior.
+
+### Impact
+Phase 0.4 now provides a coherent evidence-first Kernel boundary for creation, retrieval, filtering, mutable metadata, provenance preservation, and Case/Entity/Relationship links.
+
+### Files updated
+- `packages/kernel/src/evidence/*`
+- `packages/kernel/test/evidence-public-api.test.ts`
+- `packages/kernel/test/evidence-links.test.ts`
+- `LLM_HANDOFF.md`
+- `brain/BRAIN_LOG.md`
+- `knowledge/agent-sessions/2026-07-12-chatgpt-phase-0-4-evidence-manager.md`
+
+### Next action
+- Require green CI on PR #7, then integrate Phase 0.4 and define the next bounded Phase 0 issue.
