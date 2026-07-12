@@ -4,7 +4,6 @@ import {
   EvidenceAlreadyExistsError,
   EvidenceManager,
   EvidenceNotFoundError,
-  ImmutableEvidenceFieldError,
   InvalidEvidenceInputError,
   StaleEvidenceUpdateError,
 } from '../src';
@@ -22,7 +21,6 @@ describe('Evidence Manager public API', () => {
     expect(EvidenceAlreadyExistsError).toBeTypeOf('function');
     expect(EvidenceNotFoundError).toBeTypeOf('function');
     expect(InvalidEvidenceInputError).toBeTypeOf('function');
-    expect(ImmutableEvidenceFieldError).toBeTypeOf('function');
     expect(StaleEvidenceUpdateError).toBeTypeOf('function');
     expect(ArchivedCaseEvidenceLinkError).toBeTypeOf('function');
   });
