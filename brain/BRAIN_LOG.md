@@ -154,3 +154,32 @@ Established a validated monorepo structure with successful install, typecheck, t
 - packages_shared/src/index.ts
 - packages_shared/test/validation.test.ts
 **Next Step**: Await review of PR #3. If approved, proceed to Phase 0.3 after merge.
+
+## 2026-07-11 - Phase 0.3 Case Manager
+
+### Type
+Decision
+
+### Context
+The first executable Kernel capability was needed after the shared domain contracts were merged.
+
+### Insight
+Case lifecycle logic belongs in a deterministic Kernel service, while persistence remains behind a small `CaseRepository` port. Archived Cases are terminal, timestamps are caller-supplied, and normalization is explicit and testable.
+
+### Impact
+Internet Brain OS can now create, retrieve, list, update, transition, and logically archive Cases without coupling business rules to a database or UI. This establishes the pattern for future Kernel managers.
+
+### Files updated
+- packages/kernel/src/case/*
+- packages/kernel/src/index.ts
+- packages/kernel/test/*
+- packages/kernel/tsconfig.json
+- vitest.config.ts
+- .github/workflows/ci.yml
+- CHANGELOG.md
+- LLM_HANDOFF.md
+- brain/BRAIN_LOG.md
+- knowledge/agent-sessions/2026-07-11-chatgpt-phase-0-3-case-manager.md
+
+### Next action
+- Review the draft PR, inspect CI, correct any failures, and merge only after approval. Phase 0.4 remains unstarted.
