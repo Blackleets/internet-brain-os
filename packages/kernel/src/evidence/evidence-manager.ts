@@ -69,10 +69,7 @@ export class EvidenceManager {
     if (await this.repository.getById(input.id)) {
       throw new EvidenceAlreadyExistsError(input.id);
     }
-
-    if (input.caseId) {
-      await this.assertCaseAcceptsEvidence(input.id, input.caseId);
-    }
+    if (input.caseId) await this.assertCaseAcceptsEvidence(input.id, input.caseId);
 
     const evidence: Evidence = {
       id: input.id,
@@ -103,22 +100,13 @@ export class EvidenceManager {
   }
 
   async list(caseId?: CaseId): Promise<readonly Evidence[]> {
-    const records = await this.repository.list(caseId);
-    return records.map((record) => cloneEvidence(record.evidence));
+    return (await this.repository.list(caseId)).map((record) => cloneEvidence(record.evidence));
   }
 
-  async updateMetadata(
-    id: EvidenceId,
-    input: UpdateEvidenceMetadataInput,
-  ): Promise<Evidence> {
+  async updateMetadata(id: EvidenceId, input: UpdateEvidenceMetadataInput): Promise<Evidence> {
     const current = await this.requireRecord(id);
     this.assertFresh(current, input.updatedAt);
-
-    const nextCaseId =
-      input.caseId === undefined
-        ? current.evidence.caseId
-        : input.caseId ?? undefined;
-
+    const nextCaseId = input.caseId === undefined ? current.evidence.caseId : input.caseId ?? undefined;
     if (nextCaseId && nextCaseId !== current.evidence.caseId) {
       await this.assertCaseAcceptsEvidence(id, nextCaseId);
     }
@@ -126,49 +114,31 @@ export class EvidenceManager {
     const updated: Evidence = {
       ...current.evidence,
       caseId: nextCaseId,
-      summary:
-        input.summary === undefined
-          ? current.evidence.summary
-          : normalizeOptionalText(input.summary),
-      confidence:
-        input.confidence === undefined
-          ? current.evidence.confidence
-          : validateConfidence(input.confidence),
-      tags:
-        input.tags === undefined
-          ? [...current.evidence.tags]
-          : normalizeTags(input.tags),
-      entityIds:
-        input.entityIds === undefined
-          ? [...current.evidence.entityIds]
-          : normalizeEntityIds(input.entityIds),
-      relationshipIds:
-        input.relationshipIds === undefined
-          ? [...current.evidence.relationshipIds]
-          : normalizeRelationshipIds(input.relationshipIds),
+      summary: input.summary === undefined ? current.evidence.summary : normalizeOptionalText(input.summary),
+      confidence: input.confidence === undefined ? current.evidence.confidence : validateConfidence(input.confidence),
+      tags: input.tags === undefined ? [...current.evidence.tags] : normalizeTags(input.tags),
+      entityIds: input.entityIds === undefined ? [...current.evidence.entityIds] : normalizeEntityIds(input.entityIds),
+      relationshipIds: input.relationshipIds === undefined ? [...current.evidence.relationshipIds] : normalizeRelationshipIds(input.relationshipIds),
     };
 
     await this.repository.update({ evidence: updated, updatedAt: input.updatedAt });
     return cloneEvidence(updated);
   }
 
-  async linkEntity(
-    id: EvidenceId,
-    entityId: EntityId,
-    updatedAt: IsoDateTime,
-  ): Promise<Evidence> {
-    const current = await this.requireRecord(id);
-    return this.updateMetadata(id, {
-      entityIds: [...current.evidence.entityIds, entityId],
-      updatedAt,
-    });
+  attachToCase(id: EvidenceId, caseId: CaseId, updatedAt: IsoDateTime): Promise<Evidence> {
+    return this.updateMetadata(id, { caseId, updatedAt });
   }
 
-  async unlinkEntity(
-    id: EvidenceId,
-    entityId: EntityId,
-    updatedAt: IsoDateTime,
-  ): Promise<Evidence> {
+  detachFromCase(id: EvidenceId, updatedAt: IsoDateTime): Promise<Evidence> {
+    return this.updateMetadata(id, { caseId: null, updatedAt });
+  }
+
+  async linkEntity(id: EvidenceId, entityId: EntityId, updatedAt: IsoDateTime): Promise<Evidence> {
+    const current = await this.requireRecord(id);
+    return this.updateMetadata(id, { entityIds: [...current.evidence.entityIds, entityId], updatedAt });
+  }
+
+  async unlinkEntity(id: EvidenceId, entityId: EntityId, updatedAt: IsoDateTime): Promise<Evidence> {
     const current = await this.requireRecord(id);
     return this.updateMetadata(id, {
       entityIds: current.evidence.entityIds.filter((value) => value !== entityId),
@@ -176,11 +146,7 @@ export class EvidenceManager {
     });
   }
 
-  async linkRelationship(
-    id: EvidenceId,
-    relationshipId: RelationshipId,
-    updatedAt: IsoDateTime,
-  ): Promise<Evidence> {
+  async linkRelationship(id: EvidenceId, relationshipId: RelationshipId, updatedAt: IsoDateTime): Promise<Evidence> {
     const current = await this.requireRecord(id);
     return this.updateMetadata(id, {
       relationshipIds: [...current.evidence.relationshipIds, relationshipId],
@@ -188,16 +154,10 @@ export class EvidenceManager {
     });
   }
 
-  async unlinkRelationship(
-    id: EvidenceId,
-    relationshipId: RelationshipId,
-    updatedAt: IsoDateTime,
-  ): Promise<Evidence> {
+  async unlinkRelationship(id: EvidenceId, relationshipId: RelationshipId, updatedAt: IsoDateTime): Promise<Evidence> {
     const current = await this.requireRecord(id);
     return this.updateMetadata(id, {
-      relationshipIds: current.evidence.relationshipIds.filter(
-        (value) => value !== relationshipId,
-      ),
+      relationshipIds: current.evidence.relationshipIds.filter((value) => value !== relationshipId),
       updatedAt,
     });
   }
@@ -210,18 +170,11 @@ export class EvidenceManager {
 
   private assertFresh(record: EvidenceRecord, updatedAt: IsoDateTime): void {
     if (updatedAt <= record.updatedAt) {
-      throw new StaleEvidenceUpdateError(
-        record.evidence.id,
-        updatedAt,
-        record.updatedAt,
-      );
+      throw new StaleEvidenceUpdateError(record.evidence.id, updatedAt, record.updatedAt);
     }
   }
 
-  private async assertCaseAcceptsEvidence(
-    evidenceId: EvidenceId,
-    caseId: CaseId,
-  ): Promise<void> {
+  private async assertCaseAcceptsEvidence(evidenceId: EvidenceId, caseId: CaseId): Promise<void> {
     const caseRecord = await this.caseReader.getById(caseId);
     if (!caseRecord) throw new CaseNotFoundError(caseId);
     if (caseRecord.status === 'archived') {
