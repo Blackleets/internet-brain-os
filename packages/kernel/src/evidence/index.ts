@@ -12,7 +12,6 @@ export {
   ArchivedCaseEvidenceLinkError,
   EvidenceAlreadyExistsError,
   EvidenceNotFoundError,
-  ImmutableEvidenceFieldError,
   InvalidEvidenceInputError,
   StaleEvidenceUpdateError,
 } from './evidence-errors';
