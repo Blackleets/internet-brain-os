@@ -2,11 +2,14 @@
 
 ### Added
 - Shared domain types for Phase 0.2: Case, Evidence, Entity, Relationship, Report, Skill, LLM, and validation helpers.
+- Phase 0.3 Case Manager in `packages/kernel`, including repository abstraction, typed domain errors, lifecycle transitions, normalization, logical archiving, and defensive-copying tests.
+- GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
 - Updated validation to enforce canonical ISO-8601 UTC timestamps.
 - Moved test file to packages/shared/test/.
 - Exported public API via index.ts.
+- Added Kernel-to-Shared workspace resolution for TypeScript and Vitest.
 
 ## [0.1.0] - 2026-07-11
 ### Added
