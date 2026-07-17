@@ -2,6 +2,8 @@ export * from './common';
 export type * from './common';
 export * from './case';
 export type * from './case';
+export * from './claim';
+export type * from './claim';
 export * from './evidence';
 export type * from './evidence';
 export * from './entity';
