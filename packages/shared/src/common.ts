@@ -8,6 +8,7 @@ export type CaseId = Brand<string, 'CaseId'>;
 export type EvidenceId = Brand<string, 'EvidenceId'>;
 export type EntityId = Brand<string, 'EntityId'>;
 export type RelationshipId = Brand<string, 'RelationshipId'>;
+export type ClaimId = Brand<string, 'ClaimId'>;
 export type ReportId = Brand<string, 'ReportId'>;
 export type SkillId = Brand<string, 'SkillId'>;
 export type Confidence = Brand<number, 'Confidence'>;
