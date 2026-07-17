@@ -4,6 +4,7 @@
     { "path": "./packages/shared" },
     { "path": "./packages/kernel" },
     { "path": "./packages/obsidian" },
+    { "path": "./packages/connectors" },
     { "path": "./packages/skills" },
     { "path": "./packages/agents" }
   ]
