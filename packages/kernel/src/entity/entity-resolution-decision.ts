@@ -13,7 +13,7 @@ export interface EntityResolutionDecisionInput {
   };
 }
 
-export interface EntityResolutionDecision {
+export interface AuditableEntityResolutionDecision {
   readonly entityId: EntityId;
   readonly action: EntityResolutionAction;
   readonly score: number;
@@ -22,7 +22,7 @@ export interface EntityResolutionDecision {
 }
 
 /** Converts a scored candidate into an explicit, auditable decision. */
-export function decideEntityResolution(input: EntityResolutionDecisionInput): EntityResolutionDecision {
+export function decideEntityResolution(input: EntityResolutionDecisionInput): AuditableEntityResolutionDecision {
   const matchThreshold = input.thresholds?.match ?? 0.92;
   const candidateThreshold = input.thresholds?.candidate ?? 0.65;
   const score = clamp(input.score);
