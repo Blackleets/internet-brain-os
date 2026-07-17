@@ -3,6 +3,7 @@ import type { CaseRepository } from '../case';
 import type { EvidenceRecord, EvidenceRepository } from '../evidence';
 import type { EntityRepository } from '../entity';
 import type { RelationshipRepository } from '../relationship';
+import type { Memory, MemoryId, MemoryRepository } from '../memory';
 
 export class InMemoryCaseRepository implements CaseRepository {
   private readonly records = new Map<CaseId, Case>();
@@ -36,7 +37,16 @@ export class InMemoryRelationshipRepository implements RelationshipRepository {
   async update(relationship: Relationship): Promise<void> { this.records.set(relationship.id, cloneRelationship(relationship)); }
 }
 
+export class InMemoryMemoryRepository implements MemoryRepository {
+  private readonly records = new Map<MemoryId, Memory>();
+  async create(memory: Memory): Promise<void> { this.records.set(memory.id, cloneMemory(memory)); }
+  async getById(id: MemoryId): Promise<Memory | null> { const record = this.records.get(id); return record ? cloneMemory(record) : null; }
+  async list(): Promise<readonly Memory[]> { return [...this.records.values()].map(cloneMemory); }
+  async update(memory: Memory): Promise<void> { this.records.set(memory.id, cloneMemory(memory)); }
+}
+
 function cloneCase(record: Case): Case { return { ...record, tags: [...record.tags] }; }
 function cloneEvidenceRecord(record: EvidenceRecord): EvidenceRecord { return { updatedAt: record.updatedAt, evidence: { ...record.evidence, tags: [...record.evidence.tags], entityIds: [...record.evidence.entityIds], relationshipIds: [...record.evidence.relationshipIds] } }; }
 function cloneEntity(entity: Entity): Entity { return { ...entity, aliases: entity.aliases ? [...entity.aliases] : undefined, properties: { ...entity.properties }, evidenceIds: [...entity.evidenceIds] }; }
 function cloneRelationship(relationship: Relationship): Relationship { return { ...relationship, evidenceIds: [...relationship.evidenceIds] }; }
+function cloneMemory(memory: Memory): Memory { return { ...memory, evidenceIds: [...memory.evidenceIds] }; }
