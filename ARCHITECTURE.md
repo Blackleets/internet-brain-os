@@ -24,7 +24,9 @@ Hermes
   ↓
 Discovery / Tools / Providers
   ↓
-Research Orchestrator
+Hermes ↔ Hephaestus Orchestrator
+  ↓
+Research Execution Runtime
   ↓
 Research State Machine
   ↓
@@ -60,14 +62,14 @@ created
   → completed
 ```
 
-Failures transition to `failed`. Retry and checkpoint recovery are supported by the state history layer.
+Failures transition to `failed`. Retry and checkpoint recovery are supported by the state history layer. The execution runtime now runs stages through bounded retry policy and returns structured failure telemetry.
 
 ## Existing Orchestration Components
 
 - `ResearchStateMachine`: validates legal state transitions.
 - `InMemoryResearchStateHistory`: append-only transition history and checkpoints.
-- `ResearchExecutionRuntime`: executes stages and records results.
-- `runResearchStage`: bounded retries and failure telemetry.
+- `ResearchExecutionRuntime`: executes stages, retries failures, records results, and emits failure telemetry.
+- `runResearchStage`: bounded retries and failure telemetry for one stage.
 - `HermesHephaestusOrchestrator`: adapts Hermes tools into Hephaestus research stages.
 
 ## Memory Architecture
@@ -98,9 +100,10 @@ Memory changes are recorded through an append-only event log. Duplicate normaliz
 
 ### P0 — Stabilize the foundation
 
-- Add/repair tests for memory lifecycle, consolidation, provenance, state transitions, retries, and orchestration.
-- Run the repository's typecheck/test/build commands and fix regressions.
-- Ensure all public exports match actual implementations.
+- [x] Add initial coverage for research lifecycle, retries, and failure telemetry.
+- [ ] Add/repair tests for memory lifecycle, consolidation, provenance, and Hermes orchestration.
+- [ ] Run the repository's typecheck/test/build commands and fix regressions.
+- [ ] Ensure all public exports match actual implementations.
 
 ### P1 — Make the Hermes bridge production-grade
 
