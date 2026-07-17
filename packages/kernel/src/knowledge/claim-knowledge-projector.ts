@@ -1,4 +1,4 @@
-import type { Claim, Entity, EntityId, Relationship, RelationshipId } from '@internet-brain-os/shared';
+import type { Claim, Entity, Relationship, RelationshipId } from '@internet-brain-os/shared';
 import { KnowledgeGraph, type KnowledgeGraphSnapshot } from './knowledge-graph';
 
 export interface ClaimKnowledgeProjection {
@@ -18,13 +18,18 @@ export class ClaimKnowledgeProjector {
     for (const claim of claims) {
       if (!claim.subjectEntityId || !claim.objectEntityId) continue;
       if (!entityById.has(claim.subjectEntityId) || !entityById.has(claim.objectEntityId)) continue;
+
       const relationshipId = `claim:${claim.id}` as RelationshipId;
       if (projectedRelationships.has(relationshipId)) continue;
+
       projectedRelationships.set(relationshipId, {
         id: relationshipId,
         sourceEntityId: claim.subjectEntityId,
         targetEntityId: claim.objectEntityId,
         type: 'claim_supports_relation',
+        description: claim.statement,
+        verificationStatus: claim.verificationStatus,
+        confidence: claim.confidence,
         evidenceIds: [...claim.evidenceIds],
         createdAt: claim.createdAt,
         updatedAt: claim.updatedAt,
