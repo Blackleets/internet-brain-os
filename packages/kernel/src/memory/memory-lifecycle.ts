@@ -1,4 +1,5 @@
-import type { IsoDateTime, Memory, MemoryId } from '@internet-brain-os/shared';
+import type { Confidence, IsoDateTime } from '@internet-brain-os/shared';
+import type { Memory, MemoryId } from './memory-repository';
 
 export type MemoryLifecycleAction = 'reinforce' | 'decay' | 'invalidate' | 'restore';
 
@@ -44,9 +45,9 @@ export class MemoryLifecycleEngine {
       ? 0
       : nextConfidence;
 
-    const nextMemory = {
+    const nextMemory: Memory = {
       ...memory,
-      confidence: effectiveConfidence,
+      confidence: asConfidence(effectiveConfidence),
       updatedAt: occurredAt,
     };
 
@@ -67,4 +68,8 @@ export class MemoryLifecycleEngine {
 function clamp(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.min(1, Math.max(0, value));
+}
+
+function asConfidence(value: number): Confidence {
+  return value as Confidence;
 }
