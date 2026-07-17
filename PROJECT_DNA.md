@@ -1,12 +1,12 @@
 # PROJECT DNA
 
-This file defines the identity of Internet Brain OS.
+This file defines the identity of **Hephaestus — The Intelligence Forge**.
 
 It is the highest-level project file. All future decisions must respect it.
 
 ## What we are building
 
-Internet Brain OS is a local-first intelligence layer for the public internet.
+Hephaestus is a local-first intelligence layer for the public internet.
 
 It helps users investigate, understand, remember, connect, and act on public information without drowning in tabs, spreadsheets, and disconnected notes.
 
@@ -35,13 +35,17 @@ When the user first experiences the product, they should feel:
 
 ## Product metaphor
 
+**Hephaestus is the forge.**
+
+Raw public information enters as ore. The system refines it into evidence, entities, relationships, memory, hypotheses, and decisions.
+
 Not a scraper.
 
 Not just a browser extension.
 
 Not just a dashboard.
 
-Internet Brain OS is a living second brain for public web intelligence.
+Hephaestus is a living second brain for public web intelligence.
 
 ## Core principles
 
@@ -62,7 +66,7 @@ The user should not ask: "What data can I scrape?"
 
 The user should ask: "What do I want to understand or achieve?"
 
-Internet Brain OS turns that objective into a case, sends agents to work, saves evidence, builds memory, generates hypotheses, and produces useful outputs.
+Hephaestus turns that objective into a case, sends agents to work, saves evidence, builds memory, generates hypotheses, and produces useful outputs.
 
 ## Permanent north star
 
