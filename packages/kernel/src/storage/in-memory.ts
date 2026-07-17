@@ -1,5 +1,6 @@
-import type { Case, CaseId, Entity, EntityId, Evidence, EvidenceId, Relationship, RelationshipId } from '@internet-brain-os/shared';
+import type { Case, CaseId, Claim, ClaimId, Entity, EntityId, Evidence, EvidenceId, Relationship, RelationshipId } from '@internet-brain-os/shared';
 import type { CaseRepository } from '../case';
+import type { ClaimRepository } from '../claim';
 import type { EvidenceRecord, EvidenceRepository } from '../evidence';
 import type { EntityRepository } from '../entity';
 import type { RelationshipRepository } from '../relationship';
@@ -11,6 +12,14 @@ export class InMemoryCaseRepository implements CaseRepository {
   async getById(id: CaseId): Promise<Case | null> { const record = this.records.get(id); return record ? cloneCase(record) : null; }
   async list(): Promise<readonly Case[]> { return [...this.records.values()].map(cloneCase); }
   async update(caseRecord: Case): Promise<void> { this.records.set(caseRecord.id, cloneCase(caseRecord)); }
+}
+
+export class InMemoryClaimRepository implements ClaimRepository {
+  private readonly records = new Map<ClaimId, Claim>();
+  async create(claim: Claim): Promise<void> { this.records.set(claim.id, cloneClaim(claim)); }
+  async getById(id: ClaimId): Promise<Claim | null> { const record = this.records.get(id); return record ? cloneClaim(record) : null; }
+  async list(): Promise<readonly Claim[]> { return [...this.records.values()].map(cloneClaim); }
+  async update(claim: Claim): Promise<void> { this.records.set(claim.id, cloneClaim(claim)); }
 }
 
 export class InMemoryEvidenceRepository implements EvidenceRepository {
@@ -46,6 +55,7 @@ export class InMemoryMemoryRepository implements MemoryRepository {
 }
 
 function cloneCase(record: Case): Case { return { ...record, tags: [...record.tags] }; }
+function cloneClaim(claim: Claim): Claim { return { ...claim, evidenceIds: [...claim.evidenceIds], contradictsClaimIds: [...claim.contradictsClaimIds] }; }
 function cloneEvidenceRecord(record: EvidenceRecord): EvidenceRecord { return { updatedAt: record.updatedAt, evidence: { ...record.evidence, tags: [...record.evidence.tags], entityIds: [...record.evidence.entityIds], relationshipIds: [...record.evidence.relationshipIds] } }; }
 function cloneEntity(entity: Entity): Entity { return { ...entity, aliases: entity.aliases ? [...entity.aliases] : undefined, properties: { ...entity.properties }, evidenceIds: [...entity.evidenceIds] }; }
 function cloneRelationship(relationship: Relationship): Relationship { return { ...relationship, evidenceIds: [...relationship.evidenceIds] }; }
