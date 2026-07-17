@@ -4,6 +4,7 @@ export { ResearchStateMachine } from './research-state-machine';
 export { InMemoryResearchStateHistory } from './research-state-machine-history';
 export { ResearchExecutionRuntime } from './research-execution';
 export { runResearchStage, ResearchStageExecutionError } from './research-retry-policy';
+export { HermesHephaestusOrchestrator } from './hermes-hephaestus-orchestrator';
 export type { ResearchPipelineInput, ResearchPipelineResult } from './research-pipeline';
 export type { ClaimAwareResearchPipelineInput, ClaimAwareResearchPipelineResult } from './claim-aware-research-pipeline';
 export type {
@@ -27,3 +28,8 @@ export type {
   ResearchStageExecution,
   ResearchStageFailure,
 } from './research-retry-policy';
+export type {
+  HermesToolContext,
+  HermesTool,
+  HermesStageAdapter,
+} from './hermes-hephaestus-orchestrator';
