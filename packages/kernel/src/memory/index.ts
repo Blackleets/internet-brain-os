@@ -1,6 +1,7 @@
 export { MemoryManager } from './memory-manager';
 export { MemoryLifecycleEngine } from './memory-lifecycle';
 export { InMemoryMemoryEventLog } from './memory-event-log';
+export { MemoryConsolidationEngine } from './memory-consolidation';
 export type { CreateMemoryInput } from './memory-manager';
 export type {
   MemoryLifecycleAction,
@@ -8,4 +9,5 @@ export type {
   MemoryLifecycleOptions,
 } from './memory-lifecycle';
 export type { MemoryEventLog } from './memory-event-log';
+export type { MemoryConsolidationGroup } from './memory-consolidation';
 export type { Memory, MemoryId, MemoryKind, MemoryRepository } from './memory-repository';
