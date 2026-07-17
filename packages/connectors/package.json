@@ -1,0 +1,6 @@
+{
+  "name": "@internet-brain-os/connectors",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Public information connectors for Internet Brain OS"
+}
