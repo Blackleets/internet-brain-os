@@ -1,13 +1,9 @@
-import type { Confidence, IsoDateTime } from '@internet-brain-os/shared';
+import type { Confidence } from '@internet-brain-os/shared';
 import type { Memory, MemoryId } from './memory-repository';
 
 export interface MemoryConsolidationGroup {
   readonly canonical: Memory;
   readonly sourceMemoryIds: readonly MemoryId[];
-}
-
-export interface MemoryConsolidationOptions {
-  readonly similarityThreshold?: number;
 }
 
 /**
@@ -16,8 +12,6 @@ export interface MemoryConsolidationOptions {
  * silently discards provenance: source IDs are returned with the canonical memory.
  */
 export class MemoryConsolidationEngine {
-  constructor(private readonly options: MemoryConsolidationOptions = {}) {}
-
   consolidate(memories: readonly Memory[]): readonly MemoryConsolidationGroup[] {
     const groups = new Map<string, MemoryConsolidationGroup>();
 
