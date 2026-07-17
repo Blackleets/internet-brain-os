@@ -1,6 +1,8 @@
-# Internet Brain OS
+# HEPHAESTUS
 
-Internet Brain OS is a local-first AI web intelligence system.
+**The Intelligence Forge.**
+
+Hephaestus is a local-first AI intelligence system for the public internet.
 
 It is not a scraper. Scraping is only one internal capability.
 
@@ -25,9 +27,29 @@ The system should:
 7. Export results.
 8. Sync knowledge to Obsidian.
 
+## The Forge Model
+
+```text
+OBJECTIVE
+   ↓
+CASE
+   ↓
+SOURCES → EVIDENCE
+             ↓
+       ENTITIES + RELATIONSHIPS
+             ↓
+        KNOWLEDGE GRAPH
+             ↓
+      INSTITUTIONAL MEMORY
+             ↓
+        AGENTS + ANALYSIS
+             ↓
+           REPORT
+```
+
 ## Non-negotiable direction
 
-Internet Brain OS must remain:
+Hephaestus must remain:
 
 - Local-first.
 - Evidence-first.
@@ -37,22 +59,13 @@ Internet Brain OS must remain:
 - Free or near-zero-cost by default.
 - Safe, legal, and focused on public/authorized information.
 
-## Initial build target
+## Product identity
 
-Phase 0 is not the full product.
+**Name:** Hephaestus  
+**Codename:** The Intelligence Forge  
+**Mission:** Transform the open internet into evidence-backed, connected intelligence.
 
-Phase 0 is the minimum kernel:
-
-```text
-User objective
-  -> Case creation
-  -> Local memory
-  -> Basic web extraction from public pages
-  -> Evidence capture
-  -> Markdown notes
-  -> Obsidian export
-  -> Simple report
-```
+The project is named after Hephaestus, the Greek god of fire, craftsmanship, metallurgy, and extraordinary creations. The metaphor is deliberate: raw information enters the forge; structured knowledge and actionable intelligence come out.
 
 ## Mandatory reading order
 
@@ -90,16 +103,6 @@ Nothing important may exist only in a temporary AI conversation.
 - OpenCode/Codex/other models: specialized implementation and review workers.
 - GitHub: source of truth for code and versioned operating doctrine.
 - Obsidian: human-readable institutional brain.
-
-No AI may silently redefine the product, weaken the Constitution, or merge critical Kernel changes without review.
-
-## Execution rule
-
-Work on one bounded task at a time.
-
-Non-trivial work should happen on a branch and enter through a reviewable pull request using `.github/pull_request_template.md`.
-
-A task is not complete until its tests, handoff, documentation, and Obsidian Knowledge Sync are complete.
 
 ## Golden rule
 
