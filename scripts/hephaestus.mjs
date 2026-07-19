@@ -2,6 +2,8 @@
 import { randomUUID } from 'node:crypto';
 import { lookup } from 'node:dns/promises';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { request as httpRequest } from 'node:http';
+import { request as httpsRequest } from 'node:https';
 import { isIP } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
 
@@ -136,8 +138,8 @@ async function fetchPublicPage(url) {
   let parsed = new URL(url);
   let response;
   for (let redirects = 0; redirects <= 5; redirects += 1) {
-    await assertPublicHttpUrl(parsed);
-    response = await fetch(parsed, { redirect: 'manual', signal: AbortSignal.timeout(20_000) });
+    const address = await resolvePublicHttpUrl(parsed);
+    response = await pinnedRequest(parsed, address, AbortSignal.timeout(20_000));
     if (![301, 302, 303, 307, 308].includes(response.status)) break;
     const location = response.headers.get('location');
     if (!location) throw new CliError('Redirect response is missing Location');
@@ -174,7 +176,7 @@ async function readBoundedText(response, maximumBytes) {
   return new TextDecoder().decode(bytes);
 }
 
-async function assertPublicHttpUrl(url) {
+async function resolvePublicHttpUrl(url) {
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
     throw new CliError('Only public HTTP(S) URLs without credentials are supported');
   }
@@ -184,6 +186,36 @@ async function assertPublicHttpUrl(url) {
   if (!addresses.length || addresses.some(({ address }) => !isPublicAddress(address))) {
     throw new CliError('Private network URLs are not supported');
   }
+  return addresses[0].address;
+}
+
+function pinnedRequest(url, address, signal) {
+  return new Promise((resolve, reject) => {
+    const request = (url.protocol === 'https:' ? httpsRequest : httpRequest)({
+      protocol: url.protocol, hostname: address, port: url.port || undefined,
+      path: `${url.pathname}${url.search}`, method: 'GET', family: isIP(address),
+      servername: url.hostname, headers: { host: url.host, accept: 'text/html,application/xhtml+xml,text/plain' }, signal,
+    }, (incoming) => {
+      const headers = new Headers();
+      for (const [name, value] of Object.entries(incoming.headers)) {
+        if (Array.isArray(value)) value.forEach((item) => headers.append(name, item));
+        else if (value !== undefined) headers.set(name, value);
+      }
+      const chunks = [];
+      let size = 0;
+      incoming.on('data', (chunk) => {
+        size += chunk.length;
+        if (size > 2 * 1024 * 1024) return incoming.destroy(new CliError('Public page exceeds 2 MiB limit'));
+        chunks.push(chunk);
+      });
+      incoming.on('end', () => resolve(new Response(Buffer.concat(chunks), {
+        status: incoming.statusCode ?? 500, statusText: incoming.statusMessage, headers,
+      })));
+      incoming.on('error', reject);
+    });
+    request.on('error', reject);
+    request.end();
+  });
 }
 
 function isPublicAddress(address) {

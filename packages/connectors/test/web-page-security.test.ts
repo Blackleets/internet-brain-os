@@ -22,4 +22,17 @@ describe('WebPageFetcher public-network boundary', () => {
     await expect(new WebPageFetcher({ fetchImpl: fetchImpl as typeof fetch, lookupImpl: lookupImpl as never }).fetch('https://example.com'))
       .rejects.toThrow('exceeds 2 MiB');
   });
+
+  test('pins the validated DNS address into the connection adapter', async () => {
+    const lookupImpl = vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]);
+    const requestImpl = vi.fn(async () => new Response('<title>Safe</title>', { status: 200, headers: { 'content-type': 'text/html' } }));
+    const result = await new WebPageFetcher({ lookupImpl: lookupImpl as never, requestImpl }).fetch('https://example.com/page');
+    expect(result.title).toBe('Safe');
+    expect(requestImpl).toHaveBeenCalledWith(
+      expect.objectContaining({ hostname: 'example.com' }),
+      '93.184.216.34',
+      expect.any(AbortSignal),
+      expect.any(Object),
+    );
+  });
 });

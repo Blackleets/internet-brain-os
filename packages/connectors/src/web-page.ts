@@ -12,6 +12,7 @@ export interface WebPageFetcherOptions {
   readonly userAgent?: string;
   readonly fetchImpl?: typeof fetch;
   readonly lookupImpl?: typeof lookup;
+  readonly requestImpl?: (url: URL, address: string, signal: AbortSignal, headers: Record<string, string>) => Promise<Response>;
 }
 
 /** Fetches public HTML pages and reduces them to clean, auditable text. */
@@ -27,14 +28,14 @@ export class WebPageFetcher {
     try {
       let response: Response | undefined;
       for (let redirects = 0; redirects <= 5; redirects += 1) {
-        await assertPublicHttpUrl(parsed, this.options.lookupImpl ?? lookup);
-        response = await (this.options.fetchImpl ?? fetch)(parsed, {
-          redirect: 'manual', signal: controller.signal,
-          headers: {
-            accept: 'text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8',
-            'user-agent': this.options.userAgent ?? 'InternetBrainOS/0.1 (+public-research)',
-          },
-        });
+        const address = await resolvePublicHttpUrl(parsed, this.options.lookupImpl ?? lookup);
+        const headers = {
+          accept: 'text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8',
+          'user-agent': this.options.userAgent ?? 'InternetBrainOS/0.1 (+public-research)',
+        };
+        response = this.options.fetchImpl
+          ? await this.options.fetchImpl(parsed, { redirect: 'manual', signal: controller.signal, headers })
+          : await (this.options.requestImpl ?? pinnedRequest)(parsed, address, controller.signal, headers);
         if (![301, 302, 303, 307, 308].includes(response.status)) break;
         const location = response.headers.get('location');
         if (!location) throw new Error('Redirect response is missing Location');
@@ -85,7 +86,7 @@ async function readBoundedText(response: Response, maximumBytes: number): Promis
   return new TextDecoder().decode(bytes);
 }
 
-async function assertPublicHttpUrl(url: URL, lookupImpl: typeof lookup): Promise<void> {
+async function resolvePublicHttpUrl(url: URL, lookupImpl: typeof lookup): Promise<string> {
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
     throw new Error('Only public HTTP(S) URLs without credentials are supported');
   }
@@ -97,6 +98,47 @@ async function assertPublicHttpUrl(url: URL, lookupImpl: typeof lookup): Promise
   if (!addresses.length || addresses.some(({ address }) => !isPublicAddress(address))) {
     throw new Error('Private network URLs are not supported');
   }
+  return addresses[0].address;
+}
+
+function pinnedRequest(url: URL, address: string, signal: AbortSignal, headers: Record<string, string>): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const request = (url.protocol === 'https:' ? httpsRequest : httpRequest)({
+      protocol: url.protocol,
+      hostname: address,
+      port: url.port || undefined,
+      path: `${url.pathname}${url.search}`,
+      method: 'GET',
+      family: isIP(address),
+      servername: url.hostname,
+      headers: { ...headers, host: url.host },
+      signal,
+    }, (incoming) => {
+      const responseHeaders = new Headers();
+      for (const [name, value] of Object.entries(incoming.headers)) {
+        if (Array.isArray(value)) value.forEach((item) => responseHeaders.append(name, item));
+        else if (value !== undefined) responseHeaders.set(name, value);
+      }
+      const chunks: Buffer[] = [];
+      let size = 0;
+      incoming.on('data', (chunk: Buffer) => {
+        size += chunk.length;
+        if (size > 2 * 1024 * 1024) {
+          incoming.destroy(new Error('Public page exceeds 2 MiB limit'));
+          return;
+        }
+        chunks.push(chunk);
+      });
+      incoming.on('end', () => resolve(new Response(Buffer.concat(chunks), {
+        status: incoming.statusCode ?? 500,
+        statusText: incoming.statusMessage,
+        headers: responseHeaders,
+      })));
+      incoming.on('error', reject);
+    });
+    request.on('error', reject);
+    request.end();
+  });
 }
 
 function isPublicAddress(address: string): boolean {
@@ -141,4 +183,6 @@ function decodeEntities(value: string): string {
     .replace(/&#x27;/gi, "'");
 }
 import { lookup } from 'node:dns/promises';
+import { request as httpRequest } from 'node:http';
+import { request as httpsRequest } from 'node:https';
 import { isIP } from 'node:net';
