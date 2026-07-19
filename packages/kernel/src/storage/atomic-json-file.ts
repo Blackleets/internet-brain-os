@@ -66,7 +66,7 @@ export class AtomicJsonCollection<T> {
       }
       return parsed.records.map(this.clone);
     } catch (error) {
-      throw new CorruptDataError(this.filePath, { cause: error });
+      throw new CorruptDataError(this.filePath, error);
     }
   }
 
