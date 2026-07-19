@@ -1,4 +1,4 @@
-import type { Confidence, Entity, EntityId, IsoDateTime, VerificationStatus } from '@internet-brain-os/shared';
+import type { Confidence, Entity, EntityId, EvidenceId, IsoDateTime, VerificationStatus } from '@internet-brain-os/shared';
 import type { EntityRepository } from './entity-repository';
 
 export interface CreateEntityInput {
@@ -11,7 +11,7 @@ export interface CreateEntityInput {
   readonly verificationStatus?: VerificationStatus;
   readonly confidence: Confidence;
   readonly createdAt: IsoDateTime;
-  readonly evidenceIds?: readonly string[];
+  readonly evidenceIds?: readonly EvidenceId[];
 }
 
 export class EntityManager {
@@ -39,10 +39,10 @@ export class EntityManager {
   getById(id: EntityId): Promise<Entity | null> { return this.repository.getById(id); }
   list(): Promise<readonly Entity[]> { return this.repository.list(); }
 
-  async linkEvidence(id: EntityId, evidenceId: string, updatedAt: IsoDateTime): Promise<Entity> {
+  async linkEvidence(id: EntityId, evidenceId: EvidenceId, updatedAt: IsoDateTime): Promise<Entity> {
     const current = await this.repository.getById(id);
     if (!current) throw new Error(`Entity not found: ${id}`);
-    const updated = { ...current, updatedAt, evidenceIds: [...new Set([...current.evidenceIds, evidenceId])] };
+    const updated: Entity = { ...current, updatedAt, evidenceIds: [...new Set([...current.evidenceIds, evidenceId])] };
     await this.repository.update(updated);
     return clone(updated);
   }

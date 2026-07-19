@@ -1,4 +1,4 @@
-import type { Confidence, EntityId, IsoDateTime, Relationship, RelationshipId, VerificationStatus } from '@internet-brain-os/shared';
+import type { Confidence, EntityId, EvidenceId, IsoDateTime, Relationship, RelationshipId, VerificationStatus } from '@internet-brain-os/shared';
 import type { RelationshipRepository } from './relationship-repository';
 
 export interface CreateRelationshipInput {
@@ -10,7 +10,7 @@ export interface CreateRelationshipInput {
   readonly verificationStatus?: VerificationStatus;
   readonly confidence: Confidence;
   readonly createdAt: IsoDateTime;
-  readonly evidenceIds?: readonly string[];
+  readonly evidenceIds?: readonly EvidenceId[];
 }
 
 export class RelationshipManager {

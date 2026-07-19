@@ -1,5 +1,5 @@
-import type { EvidenceId, IsoDateTime, MemoryId } from '@internet-brain-os/shared';
-import type { Memory } from './memory-repository';
+import type { EvidenceId, IsoDateTime } from '@internet-brain-os/shared';
+import type { Memory, MemoryId } from './memory-repository';
 
 export interface MemoryProvenance {
   readonly memoryId: MemoryId;

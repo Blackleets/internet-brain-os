@@ -1,4 +1,4 @@
-import type { IsoDateTime, MemoryId } from '@internet-brain-os/shared';
+import type { MemoryId } from './memory-repository';
 import type { MemoryLifecycleEvent } from './memory-lifecycle';
 
 export interface MemoryEventLog {
