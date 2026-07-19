@@ -7,6 +7,9 @@ export default defineConfig({
       '@internet-brain-os/shared': fileURLToPath(
         new URL('./packages/shared/src/index.ts', import.meta.url),
       ),
+      '@internet-brain-os/kernel': fileURLToPath(
+        new URL('./packages/kernel/src/index.ts', import.meta.url),
+      ),
     },
   },
   test: {
