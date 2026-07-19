@@ -251,3 +251,11 @@ Phase 0.4 now provides a coherent evidence-first Kernel boundary for creation, r
 - Rendered page/model-controlled content inert in Obsidian to prevent Markdown embeds or active markup injection.
 - Blocked private-network ingestion, unsafe redirects, and unbounded web response bodies in both connector and CLI paths.
 - Production dependency audit found no known advisories; 125 regression tests pass.
+
+## 2026-07-19 — User security shield
+
+- Local API credentials now persist privately with explicit rotation instead of changing on every restart.
+- Public fetchers pin validated DNS addresses into HTTP/TLS connections, closing the documented rebinding gap.
+- CI gained least-privilege permissions, bounded execution, concurrency cancellation, and production advisory enforcement.
+- Added `SECURITY.md` as the user/operator security baseline.
+- Validation: 128/128 tests, typecheck, build, diff check, and production audit passed.

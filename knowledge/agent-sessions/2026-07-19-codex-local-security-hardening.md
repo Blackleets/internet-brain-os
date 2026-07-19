@@ -30,4 +30,4 @@ Threat-model and test the browser extension → local HTTP receiver → knowledg
 
 ## Residual trust
 
-The local operating-system account, browser profile, installed extension code, configured Obsidian plugins, and Ollama model remain trusted boundaries. DNS resolution is checked before requests, but future network adapters should pin validated addresses at connection time to fully remove DNS rebinding time-of-check/time-of-use risk. Future work should also add explicit token rotation/pairing and CI security automation.
+The local operating-system account, browser profile, installed extension code, configured Obsidian plugins, and Ollama model remain trusted boundaries. At this session boundary DNS pinning, explicit token rotation, and CI audit enforcement remained future work; all three were completed in the subsequent user-security-shield change.

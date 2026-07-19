@@ -519,8 +519,33 @@ The receiver preserved raw captures but did not yet feed the Hephaestus knowledg
 - The token is stored in extension-local storage; a fully compromised browser profile or operating-system account remains outside this boundary.
 - Obsidian community plugins can expand Markdown behavior. Keep plugins trusted and raw Evidence inert.
 - Local JSON files use restrictive creation modes, but operating-system account compromise can still access them.
-- DNS validation reduces SSRF risk; future connector work should pin validated addresses at connection time to eliminate DNS time-of-check/time-of-use rebinding risk completely.
+- DNS rebinding pinning was still pending in this handoff and was completed by the subsequent user-security-shield change.
 
 ### Next recommended step
 - Add token rotation/pairing UX that avoids manual copying while requiring explicit local user approval.
 - Add automated security checks for dependency advisories and secret scanning in CI.
+
+## Handoff 2026-07-19 - Codex user security shield
+
+### What changed
+- Generated Kernel API tokens now persist in the configured Hephaestus data directory with `0600` permissions and survive restarts.
+- Added explicit token rotation through `HEPHAESTUS_ROTATE_API_TOKEN=1`; old credentials stop working after the extension is updated.
+- Public web connector and CLI now connect to the exact public IP validated by DNS while preserving the original hostname for TLS verification, closing DNS rebinding TOCTOU.
+- CI runs production dependency auditing with read-only repository permissions, concurrency cancellation, and a bounded timeout.
+- Added a user-facing security baseline and incident guidance in `SECURITY.md`.
+
+### Validation
+- `pnpm test`: 128/128 passed.
+- `pnpm typecheck`: passed.
+- `pnpm build`: passed.
+- `pnpm audit --prod`: no known vulnerabilities.
+- `git diff --check`: passed.
+
+### Next recommended step
+- Design an explicit one-click local pairing ceremony with short-lived approval codes instead of exposing the long-lived token in the popup.
+- Add a pinned secret-scanning tool after selecting and documenting its update policy.
+
+### Do not forget
+- Never print an existing persistent token on routine restarts.
+- Token rotation must always remain explicit and invalidate the extension's old credential.
+- Public network requests must never fall back from pinned connections to ordinary DNS-resolving fetches.

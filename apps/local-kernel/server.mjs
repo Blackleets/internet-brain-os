@@ -1,4 +1,4 @@
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -6,13 +6,22 @@ import { CaptureCaseEvidenceProjector, LocalKnowledgeStore } from './capture-pro
 import { InboxError, MAX_BODY_BYTES, PageContextInbox } from './page-context-inbox.mjs';
 import { ObsidianKnowledgeProjector } from './obsidian-projector.mjs';
 import { OptionalEvidenceSummarizer } from './optional-evidence-summarizer.mjs';
+import { loadOrCreateApiToken, validateApiToken } from './api-token-store.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
-const apiToken = validateApiToken(process.env.HEPHAESTUS_API_TOKEN ?? randomBytes(32).toString('hex'));
-const dataFile = resolve(process.env.HEPHAESTUS_DATA_DIR ?? '.hephaestus', 'page-context-inbox.jsonl');
+const dataDir = resolve(process.env.HEPHAESTUS_DATA_DIR ?? '.hephaestus');
+const isMain = Boolean(process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href);
+const tokenRecord = isMain
+  ? await loadOrCreateApiToken(resolve(dataDir, 'kernel-api-token'), {
+    envToken: process.env.HEPHAESTUS_API_TOKEN,
+    rotate: process.env.HEPHAESTUS_ROTATE_API_TOKEN === '1',
+  })
+  : { token: validateApiToken('import-only-token-that-is-never-used'), source: 'import' };
+const apiToken = tokenRecord.token;
+const dataFile = resolve(dataDir, 'page-context-inbox.jsonl');
 const inbox = new PageContextInbox(dataFile);
-const knowledgeStore = new LocalKnowledgeStore(resolve(process.env.HEPHAESTUS_DATA_DIR ?? '.hephaestus', 'store.json'));
+const knowledgeStore = new LocalKnowledgeStore(resolve(dataDir, 'store.json'));
 const projector = new CaptureCaseEvidenceProjector(knowledgeStore);
 const obsidian = new ObsidianKnowledgeProjector(
   knowledgeStore,
@@ -82,11 +91,13 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
 
 export const server = createLocalKernelServer(inbox, projector, obsidian, summarizer, { apiToken });
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (isMain) {
   if (!isLoopbackHostname(host)) throw new Error('HEPHAESTUS_HOST must be a loopback address');
   server.listen(port, host, () => {
     console.log(`Hephaestus local Kernel listening on http://${host}:${port}`);
-    if (!process.env.HEPHAESTUS_API_TOKEN) console.log(`One-time extension token: ${apiToken}`);
+    if (tokenRecord.source === 'created') console.log(`Extension token created at ${tokenRecord.filePath}: ${apiToken}`);
+    else if (tokenRecord.source === 'rotated') console.log(`Extension token rotated at ${tokenRecord.filePath}: ${apiToken}`);
+    else if (tokenRecord.source === 'file') console.log(`Using persistent extension token from ${tokenRecord.filePath}`);
   });
 }
 
@@ -122,13 +133,6 @@ function hasValidToken(value, requiredToken) {
   const supplied = Buffer.from(value);
   const expected = Buffer.from(requiredToken);
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
-}
-
-function validateApiToken(value) {
-  if (typeof value !== 'string' || value.length < 32 || value.length > 512) {
-    throw new Error('HEPHAESTUS_API_TOKEN must contain 32-512 characters');
-  }
-  return value;
 }
 
 function setCors(origin, response) {
