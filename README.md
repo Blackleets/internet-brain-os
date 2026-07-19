@@ -39,6 +39,7 @@ For the full demo, including local server ingestion and replay checks, read:
 For the product story behind the demo, read:
 
 - `docs/ai-forensics-case-study.md`
+- `docs/product-star-roadmap.md`
 
 ## Core idea
 
@@ -115,11 +116,12 @@ Every human or AI contributor must read these files before making changes:
 10. `docs/hermes-demo-quickstart.md`
 11. `docs/hermes-real-runtime-validation.md`
 12. `docs/ai-forensics-case-study.md`
-13. `docs/obsidian-sync-protocol.md`
-14. `docs/architecture.md`
-15. `ROADMAP.md`
-16. `DECISIONS.md`
-17. The active task or GitHub issue.
+13. `docs/product-star-roadmap.md`
+14. `docs/obsidian-sync-protocol.md`
+15. `docs/architecture.md`
+16. `ROADMAP.md`
+17. `DECISIONS.md`
+18. The active task or GitHub issue.
 
 ## Institutional memory
 
