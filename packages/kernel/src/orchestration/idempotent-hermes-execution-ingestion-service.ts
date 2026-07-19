@@ -19,6 +19,7 @@ export interface HermesIngestionReceiptStore {
     fingerprint: string;
     recordId: IngestHermesExecutionInput['recordId'];
     at: IsoDateTime;
+    leaseExpiresAt?: IsoDateTime;
   }): Promise<BeginHermesIngestionResult>;
   complete(key: string, record: CognitivePipelineRecord, at: IsoDateTime): Promise<void>;
   fail(key: string, error: unknown, at: IsoDateTime): Promise<void>;
@@ -27,6 +28,7 @@ export interface HermesIngestionReceiptStore {
 export interface IngestHermesExecutionIdempotentlyInput extends IngestHermesExecutionInput {
   readonly idempotencyKey: string;
   readonly receivedAt: IsoDateTime;
+  readonly leaseExpiresAt?: IsoDateTime;
 }
 
 /**
@@ -58,6 +60,7 @@ export class IdempotentHermesExecutionIngestionService {
       fingerprint,
       recordId: input.recordId,
       at: input.receivedAt,
+      leaseExpiresAt: input.leaseExpiresAt,
     });
 
     if (reservation.kind === 'replay') {
