@@ -17,12 +17,21 @@ export {
 } from './research-retry-policy';
 export { HermesHephaestusOrchestrator } from './hermes-hephaestus-orchestrator';
 export { CognitivePipelineOrchestrator } from './cognitive-pipeline-orchestrator';
+export {
+  HermesCognitiveAdapter,
+  InvalidHermesCognitiveSubmissionError,
+} from './hermes-cognitive-adapter';
 export type { ResearchPipelineInput, ResearchPipelineResult } from './research-pipeline';
 export type { ClaimAwareResearchPipelineInput, ClaimAwareResearchPipelineResult } from './claim-aware-research-pipeline';
 export type {
   CognitivePipelineRecordWriter,
   RunCognitivePipelineInput,
 } from './cognitive-pipeline-orchestrator';
+export type {
+  CognitivePipelineRunner,
+  HermesCognitiveKernelContext,
+  HermesCognitiveSubmission,
+} from './hermes-cognitive-adapter';
 export type {
   ResearchEvent,
   ResearchState,
