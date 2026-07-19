@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { randomUUID } from 'node:crypto';
+import { lookup } from 'node:dns/promises';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { isIP } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
 
 class CliError extends Error {
@@ -107,10 +109,10 @@ function safeFileName(value) {
 
 function exportBundle(caseRecord, evidence, report) {
   const caseNote = [
-    `# ${caseRecord.title}`,
+    `# ${markdownText(caseRecord.title)}`,
     '',
     '## Objective',
-    caseRecord.objective,
+    markdownText(caseRecord.objective),
     '',
     `**Status:** ${caseRecord.status}`,
     `**Created:** ${caseRecord.createdAt}`,
@@ -124,21 +126,85 @@ function exportBundle(caseRecord, evidence, report) {
     { path: `Cases/${safeFileName(caseRecord.title)}.md`, content: caseNote },
     ...evidence.map((item) => ({
       path: `Evidence/${safeFileName(item.id)}.md`,
-      content: [`# Evidence ${item.id}`, '', `- **Type:** ${item.contentType}`, `- **Captured:** ${item.capturedAt}`, `- **Confidence:** ${item.confidence}`, item.sourceUrl ? `- **Source:** ${item.sourceUrl}` : '', '', '## Summary', item.summary ?? 'No summary available.', '', '## Raw Content', item.rawText ?? 'No raw content available.', ''].filter(Boolean).join('\n'),
+      content: [`# Evidence ${markdownText(item.id)}`, '', `- **Type:** ${markdownText(item.contentType)}`, `- **Captured:** ${markdownText(item.capturedAt)}`, `- **Confidence:** ${Number(item.confidence ?? 0)}`, item.sourceUrl ? `- **Source:** ${item.sourceUrl}` : '', '', '## Summary', markdownText(item.summary ?? 'No summary available.'), '', '## Raw Content', indentedCode(item.rawText ?? 'No raw content available.'), ''].filter(Boolean).join('\n'),
     })),
     { path: `Reports/${safeFileName(report.title)}.md`, content: renderReport(report) },
   ];
 }
 
 async function fetchPublicPage(url) {
-  const parsed = new URL(url);
-  if (!['http:', 'https:'].includes(parsed.protocol)) throw new CliError('Only public HTTP(S) URLs are supported');
-  const response = await fetch(parsed, { redirect: 'follow', signal: AbortSignal.timeout(20_000) });
+  let parsed = new URL(url);
+  let response;
+  for (let redirects = 0; redirects <= 5; redirects += 1) {
+    await assertPublicHttpUrl(parsed);
+    response = await fetch(parsed, { redirect: 'manual', signal: AbortSignal.timeout(20_000) });
+    if (![301, 302, 303, 307, 308].includes(response.status)) break;
+    const location = response.headers.get('location');
+    if (!location) throw new CliError('Redirect response is missing Location');
+    if (redirects === 5) throw new CliError('Too many redirects');
+    parsed = new URL(location, parsed);
+  }
   if (!response.ok) throw new CliError(`Page fetch failed with HTTP ${response.status}`);
-  const body = await response.text();
+  const body = await readBoundedText(response, 2 * 1024 * 1024);
   const title = body.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g, ' ').trim() ?? parsed.hostname;
   const text = body.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   return { title, text: text.slice(0, 200_000), contentType: response.headers.get('content-type') ?? 'text/html' };
+}
+
+async function readBoundedText(response, maximumBytes) {
+  const declared = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > maximumBytes) throw new CliError('Public page exceeds 2 MiB limit');
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const chunks = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maximumBytes) {
+      await reader.cancel();
+      throw new CliError('Public page exceeds 2 MiB limit');
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return new TextDecoder().decode(bytes);
+}
+
+async function assertPublicHttpUrl(url) {
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
+    throw new CliError('Only public HTTP(S) URLs without credentials are supported');
+  }
+  const hostname = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) throw new CliError('Private network URLs are not supported');
+  const addresses = isIP(hostname) ? [{ address: hostname }] : await lookup(hostname, { all: true, verbatim: true });
+  if (!addresses.length || addresses.some(({ address }) => !isPublicAddress(address))) {
+    throw new CliError('Private network URLs are not supported');
+  }
+}
+
+function isPublicAddress(address) {
+  const normalized = address.toLowerCase();
+  if (normalized === '::1' || normalized === '::' || normalized.startsWith('fe80:')
+    || normalized.startsWith('fc') || normalized.startsWith('fd')) return false;
+  const mapped = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/)?.[1];
+  const ipv4 = mapped ?? (isIP(normalized) === 4 ? normalized : undefined);
+  if (!ipv4) return isIP(normalized) === 6;
+  const [a, b] = ipv4.split('.').map(Number);
+  return !(a === 0 || a === 10 || a === 127 || a >= 224
+    || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254)
+    || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168));
+}
+
+function markdownText(value) {
+  return String(value ?? '').replace(/\\/g, '\\\\').replace(/([`*_{}\[\]<>#+!|])/g, '\\$1').replace(/\r?\n/g, ' ');
+}
+
+function indentedCode(value) {
+  return String(value).split(/\r?\n/).map((line) => `    ${line}`).join('\n');
 }
 
 export async function run(argv = process.argv.slice(2), env = process.env) {

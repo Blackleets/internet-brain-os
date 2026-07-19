@@ -3,14 +3,21 @@ import { DEFAULT_KERNEL_BASE_URL, listCases } from './local-transport.js';
 const select = document.querySelector('#case-target');
 const button = document.querySelector('#capture');
 const status = document.querySelector('#status');
+const tokenInput = document.querySelector('#kernel-token');
+const saveTokenButton = document.querySelector('#save-token');
 
 void loadCases();
 button.addEventListener('click', capture);
+saveTokenButton.addEventListener('click', saveToken);
 
 async function loadCases() {
   try {
-    const stored = await chrome.storage.local.get('kernelBaseUrl');
-    const cases = await listCases({ baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL });
+    const stored = await chrome.storage.local.get(['kernelBaseUrl', 'kernelApiToken']);
+    tokenInput.value = stored.kernelApiToken ?? '';
+    const cases = await listCases({
+      baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL,
+      apiToken: stored.kernelApiToken,
+    });
     for (const item of cases) {
       const option = document.createElement('option');
       option.value = item.id;
@@ -20,6 +27,13 @@ async function loadCases() {
   } catch {
     setStatus('Start the local Kernel to load existing Cases.', true);
   }
+}
+
+async function saveToken() {
+  const token = tokenInput.value.trim();
+  if (token.length < 32) return setStatus('Kernel token must contain at least 32 characters.', true);
+  await chrome.storage.local.set({ kernelApiToken: token });
+  setStatus('Local Kernel token saved.');
 }
 
 async function capture() {

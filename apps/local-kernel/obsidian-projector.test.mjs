@@ -67,4 +67,31 @@ describe('Obsidian knowledge projector', () => {
     expect(note).toContain('Hypothesis: This may be temporary');
     expect(note).toContain('ollama/qwen2.5:3b');
   });
+
+  it('renders captured and generated text inert instead of executable Obsidian Markdown', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-obsidian-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    await store.write({
+      cases: [{ id: 'case:test', title: 'Bad ![[embed]]', objective: '<iframe src="x">', status: 'draft' }],
+      evidence: [{
+        id: 'evidence:test', caseId: 'case:test', summary: '[click](file:///secret)', confidence: 0.5,
+        rawText: '![[private-note]]\n<img src="https://tracker.example/pixel">',
+        aiSummary: {
+          summary: '![](https://tracker.example/ai)', hypotheses: ['[[danger]]'], limitations: ['<script>x</script>'],
+          provider: 'ollama', model: 'local', promptVersion: '1.0.0',
+        },
+      }],
+    });
+    const vault = join(dir, 'vault');
+    await new ObsidianKnowledgeProjector(store, vault).syncCase('case:test');
+    const note = await readFile(join(vault, 'Evidence', 'evidence-test.md'), 'utf8');
+    const caseNote = await readFile(join(vault, 'Cases', 'case-test.md'), 'utf8');
+
+    expect(note).not.toContain('![](https://tracker.example/ai)');
+    expect(note).toContain('\\!\\[\\]\(https://tracker.example/ai\)');
+    expect(note).toContain('    ![[private-note]]');
+    expect(note).toContain('    <img src="https://tracker.example/pixel">');
+    expect(caseNote).not.toContain('# Bad ![[embed]]');
+    expect(caseNote).toContain('# Bad \\!\\[\\[embed\\]\\]');
+  });
 });

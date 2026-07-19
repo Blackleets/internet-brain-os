@@ -5,9 +5,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   void (async () => {
     try {
-      const stored = await chrome.storage.local.get('kernelBaseUrl');
+      const stored = await chrome.storage.local.get(['kernelBaseUrl', 'kernelApiToken']);
       const result = await sendPageContext(message.context, {
         baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL,
+        apiToken: stored.kernelApiToken,
         targetCaseId: message.targetCaseId,
       });
       sendResponse(result);

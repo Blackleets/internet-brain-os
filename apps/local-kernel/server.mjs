@@ -1,3 +1,4 @@
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -8,6 +9,7 @@ import { OptionalEvidenceSummarizer } from './optional-evidence-summarizer.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
+const apiToken = validateApiToken(process.env.HEPHAESTUS_API_TOKEN ?? randomBytes(32).toString('hex'));
 const dataFile = resolve(process.env.HEPHAESTUS_DATA_DIR ?? '.hephaestus', 'page-context-inbox.jsonl');
 const inbox = new PageContextInbox(dataFile);
 const knowledgeStore = new LocalKnowledgeStore(resolve(process.env.HEPHAESTUS_DATA_DIR ?? '.hephaestus', 'store.json'));
@@ -22,8 +24,12 @@ const summarizer = new OptionalEvidenceSummarizer(knowledgeStore, {
   timeoutMs: Number(process.env.HEPHAESTUS_OLLAMA_TIMEOUT_MS ?? 20_000),
 });
 
-export function createLocalKernelServer(captureInbox, captureProjector, obsidianProjector, evidenceSummarizer) {
+export function createLocalKernelServer(captureInbox, captureProjector, obsidianProjector, evidenceSummarizer, options = {}) {
+  const requiredToken = options.apiToken === undefined ? undefined : validateApiToken(options.apiToken);
   return createServer(async (request, response) => {
+    if (!isLoopbackHost(request.headers.host)) {
+      return send(response, 403, { ok: false, code: 'HOST_FORBIDDEN' });
+    }
     const origin = request.headers.origin;
     if (typeof origin === 'string' && !isAllowedOrigin(origin)) {
       return send(response, 403, { ok: false, code: 'ORIGIN_FORBIDDEN' });
@@ -32,6 +38,9 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     if (request.method === 'OPTIONS') return send(response, 204);
     if (request.method === 'GET' && request.url === '/health') {
       return send(response, 200, { ok: true, service: 'hephaestus-local-kernel' });
+    }
+    if (request.url?.startsWith('/api/') && !hasValidToken(request.headers['x-hephaestus-token'], requiredToken)) {
+      return send(response, 401, { ok: false, code: 'AUTH_REQUIRED' });
     }
     if (request.method === 'GET' && request.url === '/api/cases' && captureProjector) {
       try {
@@ -71,10 +80,14 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   });
 }
 
-export const server = createLocalKernelServer(inbox, projector, obsidian, summarizer);
+export const server = createLocalKernelServer(inbox, projector, obsidian, summarizer, { apiToken });
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  server.listen(port, host, () => console.log(`Hephaestus local Kernel listening on http://${host}:${port}`));
+  if (!isLoopbackHostname(host)) throw new Error('HEPHAESTUS_HOST must be a loopback address');
+  server.listen(port, host, () => {
+    console.log(`Hephaestus local Kernel listening on http://${host}:${port}`);
+    if (!process.env.HEPHAESTUS_API_TOKEN) console.log(`One-time extension token: ${apiToken}`);
+  });
 }
 
 async function readJson(request) {
@@ -94,14 +107,39 @@ function isAllowedOrigin(origin) {
     || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 }
 
+function isLoopbackHost(value) {
+  if (typeof value !== 'string') return false;
+  try { return isLoopbackHostname(new URL(`http://${value}`).hostname); }
+  catch { return false; }
+}
+
+function isLoopbackHostname(value) {
+  return ['127.0.0.1', 'localhost', '[::1]', '::1'].includes(String(value).toLowerCase());
+}
+
+function hasValidToken(value, requiredToken) {
+  if (!requiredToken || typeof value !== 'string') return false;
+  const supplied = Buffer.from(value);
+  const expected = Buffer.from(requiredToken);
+  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
+}
+
+function validateApiToken(value) {
+  if (typeof value !== 'string' || value.length < 32 || value.length > 512) {
+    throw new Error('HEPHAESTUS_API_TOKEN must contain 32-512 characters');
+  }
+  return value;
+}
+
 function setCors(origin, response) {
   if (typeof origin === 'string' && isAllowedOrigin(origin)) {
     response.setHeader('access-control-allow-origin', origin);
     response.setHeader('vary', 'Origin');
   }
   response.setHeader('access-control-allow-methods', 'POST, GET, OPTIONS');
-  response.setHeader('access-control-allow-headers', 'content-type');
+  response.setHeader('access-control-allow-headers', 'content-type, x-hephaestus-token');
   response.setHeader('x-content-type-options', 'nosniff');
+  response.setHeader('cache-control', 'no-store');
 }
 
 function send(response, status, body) {
