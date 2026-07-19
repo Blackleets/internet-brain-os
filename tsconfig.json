@@ -6,6 +6,7 @@
     { "path": "./packages/obsidian" },
     { "path": "./packages/connectors" },
     { "path": "./packages/skills" },
-    { "path": "./packages/agents" }
+    { "path": "./packages/agents" },
+    { "path": "./packages/cli" }
   ]
 }
