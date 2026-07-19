@@ -5,10 +5,16 @@ import { resolve } from 'node:path';
 
 const endpoint = process.env.IBOS_HERMES_INGEST_URL ?? 'http://127.0.0.1:4000/hermes/ingestions';
 const secret = process.env.IBOS_HERMES_SECRET ?? process.env.HEPHAESTUS_HERMES_SECRET;
-const inputPath = process.argv[2];
+const args = process.argv.slice(2);
+const nativeJsonl = args.includes('--native-jsonl');
+const inputPath = args.find((arg) => arg !== '--native-jsonl');
 
 if (!inputPath || inputPath === '--help' || inputPath === '-h') {
-  console.error('Usage: IBOS_HERMES_SECRET=<secret> node scripts/hermes-ingest-agent-output.mjs <hermes-agent-output.json>');
+  console.error([
+    'Usage:',
+    '  IBOS_HERMES_SECRET=<secret> node scripts/hermes-ingest-agent-output.mjs <hermes-agent-output.json>',
+    '  IBOS_HERMES_SECRET=<secret> node scripts/hermes-ingest-agent-output.mjs --native-jsonl <hermes-native-log.jsonl>',
+  ].join('\n'));
   process.exit(inputPath ? 0 : 1);
 }
 
@@ -28,16 +34,18 @@ try {
 const source = await readFile(resolve(inputPath), 'utf8');
 let runOutput;
 try {
-  runOutput = JSON.parse(source);
+  runOutput = nativeJsonl
+    ? new kernel.HermesNativeLogExtractor().fromJsonl(source)
+    : JSON.parse(source);
 } catch (error) {
-  console.error(`Invalid JSON file: ${error instanceof Error ? error.message : String(error)}`);
+  console.error(`Invalid Hermes input: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 }
 
 const adapter = new kernel.HermesAgentOutputAdapter();
 let events;
 try {
-  events = adapter.toEvents(runOutput);
+  events = adapter.toExecutionEvents(runOutput);
 } catch (error) {
   console.error(`Invalid Hermes Agent output: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
