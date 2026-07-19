@@ -95,8 +95,8 @@ export class OllamaLLMAdapter implements LLMAdapter {
       if (error instanceof LLMInvalidResponseError || error instanceof LLMUnavailableError || error instanceof LLMTransportError) {
         throw error;
       }
-      if (controller.signal.aborted) throw new LLMTimeoutError(this.name, this.timeoutMs, { cause: error });
-      throw new LLMTransportError(this.name, { cause: error });
+      if (controller.signal.aborted) throw new LLMTimeoutError(this.name, this.timeoutMs, error);
+      throw new LLMTransportError(this.name, error);
     } finally {
       clearTimeout(timeout);
     }
