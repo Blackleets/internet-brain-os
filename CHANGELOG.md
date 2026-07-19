@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- Hermes Agent output ingestion CLI and sample JSON fixture for converting, signing, and submitting real-agent run exports to the local Kernel.
 - Hermes Agent output adapter for converting bounded real-agent run exports into Kernel ingestion events while rejecting Kernel authority fields.
 - Hermes ingestion smoke test script and signed Hermes → Internet Brain OS ingestion contract documentation.
 - Storage-backed, optional local Hermes ingestion route wired into the local Kernel server behind HMAC, freshness, idempotency, local-only, and startup-reconciliation safeguards.
@@ -19,7 +20,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
-- Hermes ingestion contract now documents the bounded real-agent run export consumed by the Kernel adapter.
+- Hermes ingestion contract now documents both the bounded real-agent run export and the `pnpm hermes:ingest-agent` ingestion flow.
 - Hermes operating protocol now requires the signed ingestion contract and `pnpm hermes:smoke` validation for ingestion-related changes.
 - Updated validation to enforce canonical ISO-8601 UTC timestamps.
 - Moved test file to packages/shared/test/.

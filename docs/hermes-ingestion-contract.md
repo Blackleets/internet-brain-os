@@ -83,6 +83,36 @@ When using a real Hermes Agent run, first normalize the run into this bounded ex
 
 The Kernel adapter converts that export into `HermesExecutionEvent[]`. The adapter rejects embedded Kernel authority fields such as `validation`, `contradiction`, `admission`, `candidate`, `durableClaim`, or `knowledgeAdmission` before ingestion.
 
+## Agent-output CLI
+
+Build first:
+
+```bash
+pnpm build
+```
+
+Start the local Kernel with the same secret used by the client:
+
+```bash
+IBOS_HERMES_SECRET=dev-secret pnpm kernel:serve
+```
+
+In another shell, ingest a Hermes Agent run export JSON:
+
+```bash
+IBOS_HERMES_SECRET=dev-secret pnpm hermes:ingest-agent examples/hermes-agent-run-output.sample.json
+```
+
+The CLI:
+
+1. reads the Hermes Agent run export JSON;
+2. converts it through `HermesAgentOutputAdapter`;
+3. builds the signed `/hermes/ingestions` payload;
+4. sends it to the local Kernel server;
+5. exits non-zero if conversion, signing, transport, or ingestion fails.
+
+Use `IBOS_HERMES_IDEMPOTENCY_KEY`, `IBOS_HERMES_RECORD_ID`, or `IBOS_HERMES_RESULT_ID` to override derived IDs when reproducing a specific run.
+
 ## Request body
 
 ```json

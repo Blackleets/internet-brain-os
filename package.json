@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc -b",
     "clean": "tsc -b --clean",
+    "hermes:ingest-agent": "node scripts/hermes-ingest-agent-output.mjs",
     "hermes:smoke": "node scripts/hermes-smoke-test.mjs",
     "kernel:serve": "node apps/local-kernel/server.mjs",
     "test": "vitest run --passWithNoTests",

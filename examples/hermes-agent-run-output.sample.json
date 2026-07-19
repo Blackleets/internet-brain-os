@@ -1,0 +1,23 @@
+{
+  "runId": "run-hermes-agent-sample-001",
+  "missionId": "mission-hermes-agent-sample",
+  "taskId": "task-hermes-agent-sample",
+  "startedAt": "2026-07-20T00:00:00.000Z",
+  "completedAt": "2026-07-20T00:00:05.000Z",
+  "summary": "Hermes Agent inspected a source and produced an evidence-backed operational claim.",
+  "evidence": [
+    {
+      "id": "evidence-hermes-agent-sample-1",
+      "requirementKey": "source",
+      "verified": true,
+      "recordedAt": "2026-07-20T00:00:02.000Z"
+    }
+  ],
+  "claim": {
+    "id": "proposal-hermes-agent-sample-1",
+    "statement": "Hermes Agent output can be normalized into Internet Brain OS ingestion events without Kernel authority fields.",
+    "confidence": 0.9,
+    "evidenceIds": ["evidence-hermes-agent-sample-1"],
+    "proposedAt": "2026-07-20T00:00:04.000Z"
+  }
+}
