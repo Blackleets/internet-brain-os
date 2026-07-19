@@ -24,6 +24,7 @@ Already implemented and merged:
 - Demo quickstart.
 - Real Hermes validation guide.
 - Product-facing AI Forensics case study.
+- Replay Lab contract.
 
 Current status:
 
@@ -76,6 +77,10 @@ Do not weaken the Kernel contract to make real Hermes fit.
 ## Phase B — Visible Replay Lab
 
 Purpose: make the forensic record understandable without reading JSON.
+
+Primary contract:
+
+- `docs/replay-lab-contract.md`
 
 Minimum UI should show:
 
