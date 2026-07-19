@@ -4,6 +4,7 @@ export * from './evidence';
 export * from './ingestion/web-ingestion';
 export * from './llm';
 export * from './memory';
+export * from './mission';
 export * from './orchestration';
 export * from './relationship';
 export * from './report/report-generator';
