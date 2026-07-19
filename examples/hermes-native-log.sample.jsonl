@@ -1,0 +1,4 @@
+{"type":"run_started","runId":"hermes-native-sample-1","missionId":"mission-hermes-native-sample","taskId":"task-hermes-native-sample","at":"2026-07-20T00:00:00.000Z"}
+{"type":"evidence","id":"evidence-hermes-native-sample-1","requirementKey":"source","verified":true,"at":"2026-07-20T00:00:01.000Z"}
+{"type":"claim","id":"proposal-hermes-native-sample-1","statement":"Hermes native JSONL output can be extracted into the bounded Internet Brain OS ingestion export.","confidence":0.88,"evidenceIds":["evidence-hermes-native-sample-1"],"at":"2026-07-20T00:00:02.000Z"}
+{"type":"run_completed","summary":"Hermes native sample completed.","at":"2026-07-20T00:00:03.000Z"}
