@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Hephaestus Browser Copilot",
+  "version": "0.1.0",
+  "description": "Capture structured public-page context for the local Hephaestus Kernel.",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["src/page-context.js", "src/content-script.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

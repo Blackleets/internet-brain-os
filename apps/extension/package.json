@@ -2,5 +2,6 @@
   "name": "@internet-brain-os/extension",
   "version": "0.1.0",
   "private": true,
-  "description": "Browser extension for Internet Brain OS"
+  "type": "module",
+  "description": "Hephaestus Browser Extension Copilot"
 }
