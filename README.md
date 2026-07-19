@@ -36,6 +36,10 @@ For the full demo, including local server ingestion and replay checks, read:
 - `docs/hermes-real-runtime-validation.md`
 - `docs/hermes-ingestion-contract.md`
 
+For the product story behind the demo, read:
+
+- `docs/ai-forensics-case-study.md`
+
 ## Core idea
 
 Give the system an objective, not a selector.
@@ -110,11 +114,12 @@ Every human or AI contributor must read these files before making changes:
 9. `docs/hermes-ingestion-contract.md`
 10. `docs/hermes-demo-quickstart.md`
 11. `docs/hermes-real-runtime-validation.md`
-12. `docs/obsidian-sync-protocol.md`
-13. `docs/architecture.md`
-14. `ROADMAP.md`
-15. `DECISIONS.md`
-16. The active task or GitHub issue.
+12. `docs/ai-forensics-case-study.md`
+13. `docs/obsidian-sync-protocol.md`
+14. `docs/architecture.md`
+15. `ROADMAP.md`
+16. `DECISIONS.md`
+17. The active task or GitHub issue.
 
 ## Institutional memory
 
