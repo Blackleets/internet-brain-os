@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- Deterministic browser capture projection into local Case and Evidence records, compatible with the existing CLI store and idempotent across retries and restarts.
 - Local Hephaestus HTTP receiver for browser page context, with bounded validation, durable JSONL inbox, deterministic receipts, restart-safe deduplication, and local-only defaults.
 - Shared domain types for Phase 0.2: Case, Evidence, Entity, Relationship, Report, Skill, LLM, and validation helpers.
 - Phase 0.3 Case Manager in `packages/kernel`, including repository abstraction, typed domain errors, lifecycle transitions, normalization, logical archiving, and defensive-copying tests.

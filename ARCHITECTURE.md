@@ -100,7 +100,7 @@ Memory changes are recorded through an append-only event log. Duplicate normaliz
 
 ### Phase 1 local capture path
 
-The extension now sends `hephaestus.page-context.v1` payloads to a local HTTP receiver. The receiver validates and durably journals accepted captures before returning a deterministic receipt. This inbox is a loss-prevention boundary; projecting accepted captures into Case and Evidence objects remains the next bounded adapter task.
+The extension sends `hephaestus.page-context.v1` payloads to a local HTTP receiver. The receiver validates and durably journals accepted captures before returning a deterministic receipt. A capture projector then creates one deterministic Case and Evidence pair in the existing local knowledge store. The receipt is preserved as correlation provenance, and retries or restarts cannot duplicate the projection.
 
 ### P0 — Stabilize the foundation
 
@@ -116,7 +116,8 @@ The extension now sends `hephaestus.page-context.v1` payloads to a local HTTP re
 - Add provider capability metadata.
 - Add timeout and cancellation contracts.
 - Add structured execution telemetry.
-- Project accepted browser inbox records into Case and Evidence through a typed, idempotent adapter.
+- [x] Project accepted browser inbox records into Case and Evidence through an idempotent adapter.
+- Add explicit extension UX for choosing an existing Case instead of starting a new one.
 
 ### P2 — Make research resumable end-to-end
 
