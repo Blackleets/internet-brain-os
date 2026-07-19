@@ -9,6 +9,7 @@ The extension captures visible public-page context and sends it only to the auth
 3. Open the extension popup, enter the code under **Pair this extension**, and select **Pair securely**.
 
 The long-lived token is delivered once to extension-local storage and is never printed. It persists privately in `.hephaestus/kernel-api-token` with owner-only permissions and is reused across restarts.
+The Kernel also stores the exact paired Chrome extension ID in `.hephaestus/authorized-extensions.json`; other extensions are denied even if they obtain the token.
 
 To supply your own token, set a private value of at least 32 characters:
 
@@ -25,5 +26,6 @@ HEPHAESTUS_ROTATE_API_TOKEN=1 pnpm kernel:serve
 ```
 
 Enter the newly printed pairing code into the extension immediately. Rotation invalidates the previous token.
+Rotation also clears the previous extension allowlist, so only profiles paired again remain authorized.
 
 To pair another local extension profile without rotating the credential, start once with `HEPHAESTUS_PAIRING=1`. Manual token entry remains available only as a recovery path.
