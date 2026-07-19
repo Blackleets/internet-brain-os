@@ -1,3 +1,4 @@
+import type { IsoDateTime } from '@internet-brain-os/shared';
 import type { CognitivePipelineRecord } from '../storage/cognitive-pipeline-types';
 import type { ExistingClaimSnapshot } from '../mission';
 import {
@@ -62,10 +63,10 @@ export class HermesLocalIngestionHttpRoute {
         {
           remoteAddress: request.remoteAddress,
           rawBody: request.rawBody,
-          receivedAt: this.config.now().toISOString(),
+          receivedAt: this.config.now().toISOString() as IsoDateTime,
           headers: {
             idempotencyKey: headerValue(request.headers, 'x-ibos-idempotency-key'),
-            timestamp: headerValue(request.headers, 'x-ibos-timestamp'),
+            timestamp: headerValue(request.headers, 'x-ibos-timestamp') as IsoDateTime | undefined,
             signature: headerValue(request.headers, 'x-ibos-signature'),
           },
         },
@@ -86,8 +87,9 @@ function headerValue(
   name: string,
 ): string | undefined {
   const direct = headers[name] ?? headers[name.toLowerCase()];
+  if (typeof direct === 'string') return direct;
   if (Array.isArray(direct)) return direct[0];
-  return direct;
+  return undefined;
 }
 
 function successBody(record: CognitivePipelineRecord): unknown {
