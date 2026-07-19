@@ -232,7 +232,7 @@ startup recovery
 idempotency receipts
 ```
 
-## Smoke test
+## Smoke tests
 
 Build first:
 
@@ -246,6 +246,12 @@ Run the automated local smoke test:
 pnpm hermes:smoke
 ```
 
+Run the idempotency attack smoke test:
+
+```bash
+pnpm hermes:attack-smoke
+```
+
 Or manually run server and sample client:
 
 ```bash
@@ -253,18 +259,20 @@ IBOS_HERMES_SECRET=dev-secret pnpm kernel:serve
 IBOS_HERMES_SECRET=dev-secret node scripts/hermes-ingest-sample.mjs
 ```
 
-Expected smoke result:
+Expected smoke results:
 
 ```text
 Hermes smoke test PASS
+Hermes idempotency attack test PASS
 ```
 
-The smoke test verifies:
+The smoke tests verify:
 
 - local server starts with Hermes enabled;
 - `/health` reports Hermes enabled without leaking the secret;
 - a signed Hermes payload returns `202`;
-- retrying the same idempotency key returns the same cognitive record id.
+- retrying the same idempotency key returns the same cognitive record id;
+- altering the payload while reusing the same idempotency key returns `409` and does not rerun Kernel gates.
 
 ## Failure signals
 

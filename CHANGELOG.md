@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- Hermes idempotency attack smoke test to verify altered payloads with reused idempotency keys are rejected without rerunning Kernel gates.
 - Hermes native JSONL log extractor, sample native log fixture, and `--native-jsonl` ingestion mode for the Hermes Agent output CLI.
 - Hermes Agent output ingestion CLI and sample JSON fixture for converting, signing, and submitting real-agent run exports to the local Kernel.
 - Hermes Agent output adapter for converting bounded real-agent run exports into Kernel ingestion events while rejecting Kernel authority fields.
@@ -21,7 +22,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
-- Hermes ingestion contract now documents bounded exports, native JSONL logs, and both agent-output ingestion CLI modes.
+- Hermes ingestion contract now documents bounded exports, native JSONL logs, both agent-output ingestion CLI modes, and idempotency attack-smoke validation.
 - Hermes operating protocol now requires the signed ingestion contract and `pnpm hermes:smoke` validation for ingestion-related changes.
 - Updated validation to enforce canonical ISO-8601 UTC timestamps.
 - Moved test file to packages/shared/test/.

@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc -b",
     "clean": "tsc -b --clean",
+    "hermes:attack-smoke": "node scripts/hermes-idempotency-attack-test.mjs",
     "hermes:ingest-agent": "node scripts/hermes-ingest-agent-output.mjs",
     "hermes:smoke": "node scripts/hermes-smoke-test.mjs",
     "kernel:serve": "node apps/local-kernel/server.mjs",

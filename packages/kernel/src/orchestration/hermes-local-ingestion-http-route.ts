@@ -2,6 +2,10 @@ import type { IsoDateTime } from '@internet-brain-os/shared';
 import type { CognitivePipelineRecord } from '../storage/cognitive-pipeline-types';
 import type { ExistingClaimSnapshot } from '../mission';
 import {
+  HermesIngestionConflictError,
+  HermesIngestionInProgressError,
+} from '../storage/json-hermes-ingestion-receipt-repository';
+import {
   HermesLocalIngestionBoundary,
   InvalidHermesLocalIngestionRequestError,
   type HermesIdempotentIngestionHandler,
@@ -76,6 +80,12 @@ export class HermesLocalIngestionHttpRoute {
     } catch (error) {
       if (error instanceof InvalidHermesLocalIngestionRequestError) {
         return { status: 400, body: { ok: false, code: 'HERMES_INGESTION_REJECTED', error: error.message } };
+      }
+      if (error instanceof HermesIngestionConflictError) {
+        return { status: 409, body: { ok: false, code: 'HERMES_IDEMPOTENCY_CONFLICT', error: error.message } };
+      }
+      if (error instanceof HermesIngestionInProgressError) {
+        return { status: 409, body: { ok: false, code: 'HERMES_INGESTION_IN_PROGRESS', error: error.message } };
       }
       return { status: 500, body: { ok: false, code: 'HERMES_INGESTION_FAILED' } };
     }
