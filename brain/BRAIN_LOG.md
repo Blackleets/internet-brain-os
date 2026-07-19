@@ -209,3 +209,9 @@ Phase 0.4 now provides a coherent evidence-first Kernel boundary for creation, r
 
 ### Next action
 - Require green CI on PR #7, then integrate Phase 0.4 and define the next bounded Phase 0 issue.
+## 2026-07-19 — Local browser capture receiver
+
+- Merged the validated Phase 1 extension-to-Kernel transport in PR #22.
+- Added a local-only HTTP receiver at `POST /api/browser/page-context`.
+- Captures are validated, size-bounded, written to an append-only JSONL inbox, and acknowledged with deterministic restart-safe receipts.
+- Architectural decision: the inbox is a loss-prevention boundary; Case/Evidence projection is the next separate adapter task.

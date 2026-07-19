@@ -334,3 +334,41 @@ To move the project from a collection of domain primitives toward a recoverable,
 - Do not add Nametrom model-specific logic to the kernel.
 - Preserve evidence, provenance, and history.
 - Make one bounded change at a time.
+
+## Handoff 2026-07-19 - Codex local Kernel receiver
+
+### What I changed
+- Reviewed and merged PR #22 after local and GitHub CI validation.
+- Added a dependency-free local HTTP receiver for extension page-context captures.
+- Added bounded schema validation, 32 KiB request limits, enforced local/extension origin policy, JSON-only ingestion, deterministic receipts, durable JSONL journaling, and restart-safe deduplication.
+- Added unit and real HTTP integration coverage.
+
+### Files changed
+- `apps/local-kernel/*`
+- `package.json`
+- `pnpm-lock.yaml`
+- `ARCHITECTURE.md`
+- `CHANGELOG.md`
+- `LLM_HANDOFF.md`
+- `brain/BRAIN_LOG.md`
+- `knowledge/agent-sessions/2026-07-19-codex-local-kernel-receiver.md`
+
+### Why I changed it
+The Phase 1 extension transport pointed to `/api/browser/page-context`, but no local receiver existed. The new durable inbox closes the transport gap without prematurely coupling browser payloads to Kernel domain objects.
+
+### Tests or checks performed
+- `pnpm typecheck`: passed.
+- `pnpm test`: 95/95 passed.
+- `pnpm build`: passed.
+- `git diff --check`: passed.
+
+### Risks / uncertainties
+- Inbox records are durably preserved but are not yet projected into Case and Evidence repositories.
+- The server intentionally binds to `127.0.0.1` by default and has no remote deployment/authentication design.
+
+### Next recommended step
+- Add a typed, idempotent inbox projector that creates or attaches Case and Evidence records while preserving the receipt ID as correlation provenance.
+
+### Do not forget
+- Do not expose this receiver publicly without authentication, origin policy, and deployment threat modeling.
+- Do not delete inbox records after projection until durable Case/Evidence persistence and recovery are proven.

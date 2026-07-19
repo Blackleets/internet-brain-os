@@ -221,6 +221,8 @@ importers:
 
   apps/extension: {}
 
+  apps/local-kernel: {}
+
   packages/agents: {}
 
   packages/kernel:
