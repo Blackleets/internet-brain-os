@@ -372,3 +372,39 @@ The Phase 1 extension transport pointed to `/api/browser/page-context`, but no l
 ### Do not forget
 - Do not expose this receiver publicly without authentication, origin policy, and deployment threat modeling.
 - Do not delete inbox records after projection until durable Case/Evidence persistence and recovery are proven.
+
+## Handoff 2026-07-19 - Codex browser capture projector
+
+### What I changed
+- Added an idempotent capture projector that converts each accepted receipt into one deterministic Case and Evidence pair.
+- Preserved the receipt ID as correlation provenance on Evidence.
+- Reused the existing `.hephaestus/store.json` shape so browser captures and CLI knowledge remain compatible.
+- Integrated projection after durable inbox acknowledgement, allowing failed projections to be retried without losing the original capture.
+
+### Files changed
+- `apps/local-kernel/capture-projector.mjs`
+- `apps/local-kernel/capture-projector.test.mjs`
+- `apps/local-kernel/server.mjs`
+- `apps/local-kernel/server.test.mjs`
+- Architecture and institutional-memory documents.
+
+### Why I changed it
+The receiver preserved raw captures but did not yet feed the Hephaestus knowledge loop. This change establishes the first real browser-to-Kernel Case/Evidence path without changing shared domain contracts.
+
+### Tests or checks performed
+- `pnpm test`: 99/99 passed.
+- `pnpm typecheck`: passed.
+- `pnpm build`: passed.
+- `git diff --check`: passed.
+
+### Risks / uncertainties
+- The current extension message has no Case selector, so each unique capture starts a new draft Case.
+- The local JSON store is protected against concurrent writes inside one server process, not multiple simultaneous server processes.
+
+### Next recommended step
+- Add extension UX and transport metadata to choose an existing Case or explicitly start a new Case.
+- Then connect created Evidence to the existing summarization Skill and Obsidian export flow.
+
+### Do not forget
+- Never remove `sourceReceiptId`; it is the correlation link back to the durable inbox.
+- Keep capture projection deterministic and replay-safe.

@@ -215,3 +215,10 @@ Phase 0.4 now provides a coherent evidence-first Kernel boundary for creation, r
 - Added a local-only HTTP receiver at `POST /api/browser/page-context`.
 - Captures are validated, size-bounded, written to an append-only JSONL inbox, and acknowledged with deterministic restart-safe receipts.
 - Architectural decision: the inbox is a loss-prevention boundary; Case/Evidence projection is the next separate adapter task.
+
+## 2026-07-19 — Browser capture Case/Evidence projection
+
+- Added deterministic receipt-to-Case/Evidence projection after durable inbox persistence.
+- Browser captures and CLI records share the existing local `.hephaestus/store.json` knowledge store.
+- Replays and restarts reuse the original Case/Evidence IDs without duplicate writes.
+- Until the extension gains a Case selector, each unique capture intentionally starts one draft Case.

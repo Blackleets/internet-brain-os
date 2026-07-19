@@ -1,7 +1,8 @@
-import { mkdtemp } from 'node:fs/promises';
+import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { CaptureCaseEvidenceProjector, LocalKnowledgeStore } from './capture-projector.mjs';
 import { PageContextInbox } from './page-context-inbox.mjs';
 import { createLocalKernelServer } from './server.mjs';
 
@@ -13,7 +14,8 @@ afterEach(async () => {
 describe('local Kernel HTTP receiver', () => {
   it('accepts extension context and returns an idempotent receipt', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
-    server = createLocalKernelServer(new PageContextInbox(join(dir, 'inbox.jsonl')));
+    const projector = new CaptureCaseEvidenceProjector(new LocalKnowledgeStore(join(dir, 'store.json')));
+    server = createLocalKernelServer(new PageContextInbox(join(dir, 'inbox.jsonl')), projector);
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     const { port } = server.address();
     const url = `http://127.0.0.1:${port}/api/browser/page-context`;
@@ -28,8 +30,16 @@ describe('local Kernel HTTP receiver', () => {
     const first = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body });
     const retry = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body });
     expect(first.status).toBe(202);
-    expect(await first.json()).toMatchObject({ ok: true, duplicate: false });
+    expect(await first.json()).toMatchObject({
+      ok: true,
+      duplicate: false,
+      caseId: expect.stringMatching(/^case:[a-f0-9]{64}$/),
+      evidenceId: expect.stringMatching(/^evidence:[a-f0-9]{64}$/),
+    });
     expect(await retry.json()).toMatchObject({ ok: true, duplicate: true });
+    const stored = JSON.parse(await readFile(join(dir, 'store.json'), 'utf8'));
+    expect(stored.cases).toHaveLength(1);
+    expect(stored.evidence).toHaveLength(1);
   });
 
   it('rejects invalid JSON without exposing internals', async () => {
