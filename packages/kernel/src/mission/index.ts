@@ -1,6 +1,7 @@
 export { MissionEngine } from './mission-engine';
 export { EvidenceAwareMissionPlanner } from './evidence-aware-planner';
 export { MissionExecutionEngine } from './mission-execution-engine';
+export { TaskResultBuilder } from './task-result-builder';
 export type {
   EvidenceAwarePlannerPolicy,
   MissionPlanningDraft,
@@ -25,6 +26,19 @@ export {
   InvalidMissionTransitionError,
   MissionTaskDependencyError,
 } from './mission-errors';
+export {
+  InvalidTaskResultError,
+  TaskResultTaskStateError,
+  UnsupportedClaimEvidenceError,
+} from './task-result-errors';
+export type {
+  ClaimProposal,
+  ClaimProposalDraft,
+  ClaimProposalId,
+  CreateTaskResultInput,
+  TaskResult,
+  TaskResultId,
+} from './task-result-types';
 export type {
   CreateMissionInput,
   EvidenceRequirement,
