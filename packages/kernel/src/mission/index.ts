@@ -3,6 +3,7 @@ export { EvidenceAwareMissionPlanner } from './evidence-aware-planner';
 export { MissionExecutionEngine } from './mission-execution-engine';
 export { TaskResultBuilder } from './task-result-builder';
 export { ClaimValidationGate } from './claim-validation-gate';
+export { ContradictionEngine } from './contradiction-engine';
 export type {
   EvidenceAwarePlannerPolicy,
   MissionPlanningDraft,
@@ -33,6 +34,7 @@ export {
   UnsupportedClaimEvidenceError,
 } from './task-result-errors';
 export { InvalidClaimValidationInputError } from './claim-validation-errors';
+export { InvalidContradictionInputError } from './contradiction-errors';
 export type {
   ClaimContradictionAssessment,
   ClaimEvidenceAssessment,
@@ -44,6 +46,16 @@ export type {
   ClaimValidationResult,
   ValidatedClaimCandidate,
 } from './claim-validation-types';
+export type {
+  ContradictionAction,
+  ContradictionAssessmentResult,
+  ContradictionComparison,
+  ContradictionEvaluationInput,
+  ContradictionKind,
+  ContradictionPolicy,
+  ContradictionReason,
+  ExistingClaimSnapshot,
+} from './contradiction-types';
 export type {
   ClaimProposal,
   ClaimProposalDraft,
