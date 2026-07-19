@@ -4,6 +4,7 @@ export { MissionExecutionEngine } from './mission-execution-engine';
 export { TaskResultBuilder } from './task-result-builder';
 export { ClaimValidationGate } from './claim-validation-gate';
 export { ContradictionEngine } from './contradiction-engine';
+export { KnowledgeAdmissionGate } from './knowledge-admission-gate';
 export type {
   EvidenceAwarePlannerPolicy,
   MissionPlanningDraft,
@@ -35,6 +36,7 @@ export {
 } from './task-result-errors';
 export { InvalidClaimValidationInputError } from './claim-validation-errors';
 export { InvalidContradictionInputError } from './contradiction-errors';
+export { InvalidKnowledgeAdmissionInputError } from './knowledge-admission-errors';
 export type {
   ClaimContradictionAssessment,
   ClaimEvidenceAssessment,
@@ -56,6 +58,12 @@ export type {
   ContradictionReason,
   ExistingClaimSnapshot,
 } from './contradiction-types';
+export type {
+  DurableClaim,
+  KnowledgeAdmissionDecision,
+  KnowledgeAdmissionInput,
+  KnowledgeAdmissionResult,
+} from './knowledge-admission-types';
 export type {
   ClaimProposal,
   ClaimProposalDraft,
