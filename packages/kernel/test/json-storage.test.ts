@@ -76,6 +76,23 @@ describe('JSON storage adapters', () => {
     expect(await new JsonEvidenceRepository({ dataRoot: root }).getById(evidenceId)).toEqual(makeEvidence());
   });
 
+  test('serializes concurrent writes from separate repository instances', async () => {
+    const root = await temporaryRoot();
+    const first = new JsonCaseRepository({ dataRoot: root });
+    const second = new JsonCaseRepository({ dataRoot: root });
+
+    await Promise.all([
+      first.create(makeCase('case-concurrent-1' as CaseId)),
+      second.create(makeCase('case-concurrent-2' as CaseId)),
+    ]);
+
+    const stored = await new JsonCaseRepository({ dataRoot: root }).list();
+    expect(stored.map((record) => record.id).sort()).toEqual([
+      'case-concurrent-1',
+      'case-concurrent-2',
+    ]);
+  });
+
   test('preserves updatedAt and filters Evidence by Case', async () => {
     const root = await temporaryRoot();
     const repository = new JsonEvidenceRepository({ dataRoot: root });
