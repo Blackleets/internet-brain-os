@@ -5,14 +5,14 @@ import type { CognitivePipelineRecord, CognitivePipelineRecordId } from './cogni
 export type HermesIngestionReceiptStatus = 'pending' | 'completed' | 'failed';
 
 export interface HermesIngestionReceipt {
-  readonly idempotencyKey: string;
-  readonly fingerprint: string;
-  readonly recordId: CognitivePipelineRecordId;
-  readonly status: HermesIngestionReceiptStatus;
-  readonly createdAt: IsoDateTime;
-  readonly updatedAt: IsoDateTime;
-  readonly record?: CognitivePipelineRecord;
-  readonly failure?: string;
+  idempotencyKey: string;
+  fingerprint: string;
+  recordId: CognitivePipelineRecordId;
+  status: HermesIngestionReceiptStatus;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+  record?: CognitivePipelineRecord;
+  failure?: string;
 }
 
 export type BeginHermesIngestionResult =
@@ -68,7 +68,7 @@ export class JsonHermesIngestionReceiptRepository {
         }
         existing.status = 'pending';
         existing.updatedAt = input.at;
-        delete (existing as { failure?: string }).failure;
+        delete existing.failure;
         result = { kind: 'acquired', receipt: structuredClone(existing) };
         return;
       }
