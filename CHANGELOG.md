@@ -1,6 +1,8 @@
 ## [Unreleased]
 
 ### Added
+- Hermes ingestion smoke test script and signed Hermes → Internet Brain OS ingestion contract documentation.
+- Storage-backed, optional local Hermes ingestion route wired into the local Kernel server behind HMAC, freshness, idempotency, local-only, and startup-reconciliation safeguards.
 - Persistent Chrome extension identity allowlisting activated by pairing, with token-rotation revocation and compatibility for pre-pairing installations.
 - Secure local extension pairing with an ephemeral one-use code, five-minute expiry, five-attempt lockout, extension-origin enforcement, and no long-lived token disclosure.
 - Persistent private local API credentials with explicit rotation, DNS-pinned public connections, and CI production-dependency auditing with least-privilege workflow permissions.
@@ -16,6 +18,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Hermes operating protocol now requires the signed ingestion contract and `pnpm hermes:smoke` validation for ingestion-related changes.
 - Updated validation to enforce canonical ISO-8601 UTC timestamps.
 - Moved test file to packages/shared/test/.
 - Exported public API via index.ts.
