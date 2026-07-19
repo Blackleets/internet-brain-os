@@ -15,7 +15,7 @@ export class MockLLMAdapter implements LLMAdapter {
 
   constructor(options: MockLLMAdapterOptions = {}) {
     this.model = options.model ?? 'mock-local';
-    this.content = options.content ?? ((input) => input.messages.at(-1)?.content ?? '');
+    this.content = options.content ?? ((input) => input.messages[input.messages.length - 1]?.content ?? '');
     this.now = options.now ?? (() => new Date().toISOString() as IsoDateTime);
   }
 
