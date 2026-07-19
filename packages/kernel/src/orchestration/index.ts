@@ -25,6 +25,10 @@ export {
   HermesExecutionMapper,
   InvalidHermesExecutionEventError,
 } from './hermes-execution-mapper';
+export {
+  HermesAgentOutputAdapter,
+  InvalidHermesAgentOutputError,
+} from './hermes-agent-output-adapter';
 export { HermesExecutionIngestionService } from './hermes-execution-ingestion-service';
 export { IdempotentHermesExecutionIngestionService } from './idempotent-hermes-execution-ingestion-service';
 export { HermesIngestionRecoveryCoordinator } from './hermes-ingestion-recovery-coordinator';
@@ -50,6 +54,11 @@ export type {
   HermesExecutionEvent,
   MapHermesExecutionInput,
 } from './hermes-execution-mapper';
+export type {
+  HermesAgentClaimOutput,
+  HermesAgentEvidenceOutput,
+  HermesAgentRunOutput,
+} from './hermes-agent-output-adapter';
 export type {
   HermesExecutionIngestionContext,
   IngestHermesExecutionInput,
