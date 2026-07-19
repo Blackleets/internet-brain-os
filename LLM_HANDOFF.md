@@ -201,36 +201,6 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 ### Tests or checks performed
 - pnpm install: succeeded (with warning about packageManager version format, non-blocking)
 - pnpm typecheck: succeeded (exit code 0)
-- pnpm test: succeeded (exit code 0, no test files found, but passWithNoTests configured)
-- pnpm build: succeeded (exit code 0)
-- git status: clean after committing
-
-### Risks / uncertainties
-- Vite CJS deprecation warning is non-blocking.
-- Apps are placeholders only.
-- No production tests or business logic exist yet.
-- Phase 0.1 is structural only.
-
-### Next recommended step
-- Strategic review and merge decision for PR #2.
-- Phase 0.2 must not start before PR #2 is merged.
-
-### Do not forget
-- Update CHANGELOG.md with the entry for 2026-07-11.
-- Update brain/BRAIN_LOG.md with session notes.
-- Create the Obsidian session note at knowledge/agent-sessions/2026-07-11-hermes-phase-0-1-technical-skeleton.md.
-
-## Phase 0.2: Shared Domain Types (Completed)
-
-### Work Completed
-- Defined shared domain types in `packages/shared/src`.
-- Added branded IDs, verification status, confidence, timestamps, evidence, entity, relationship, report, skill, LLM, and validation contracts.
-- Moved tests to `packages/shared/test/validation.test.ts`.
-- All types are provider-agnostic, use readonly where appropriate, and avoid framework dependencies.
-- Validation enforces canonical UTC ISO-8601 timestamps and rejects invalid confidence values.
-
-### Validation
-- TypeScript typecheck: passes
 - Unit tests: 29/29 pass
 - Build: passes
 
@@ -265,7 +235,7 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 
 ### Tests or checks performed
 - PR #52 CI passed before merge: typecheck, tests, and build through GitHub Actions.
-- New PR validation for the smoke-contract phase is pending after PR creation.
+- PR #53 CI passed before merge: typecheck, tests, and build through GitHub Actions.
 - The new `pnpm hermes:smoke` script is designed to be run after `pnpm build` because the local Kernel imports the built Kernel package.
 
 ### Risks / uncertainties
@@ -274,11 +244,45 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 - The local server route intentionally remains disabled unless a Hermes secret is configured.
 
 ### Next recommended step
-- Open and validate PR for `phase/2.8-hermes-smoke-contract`.
-- If CI passes, merge it.
-- Then run a real Hermes Agent execution and map its native output into the documented `HermesExecutionEvent[]` contract.
+- Validate PR for `phase/2.9-hermes-agent-output-adapter`.
+- Then add a CLI path that reads a real Hermes Agent run export JSON, converts it through `HermesAgentOutputAdapter`, signs it, and submits it to `/hermes/ingestions`.
 
 ### Do not forget
 - Never allow Hermes to submit `validation`, `contradiction`, `admission`, `claim`, `candidate`, or `durableClaim`.
 - For ingestion-related changes, run `pnpm build` and then `pnpm hermes:smoke`.
 - The smoke script validates replay/idempotency but not yet a live Hermes provider output.
+
+## Handoff 2026-07-20 - GPT-5.5 Thinking - Hermes Agent Adapter
+
+### What I changed
+- Added `HermesAgentOutputAdapter` to convert bounded Hermes Agent run exports into Kernel `HermesExecutionEvent[]`.
+- Added authority-field rejection for embedded Kernel-owned fields such as `validation`, `contradiction`, `admission`, `candidate`, `durableClaim`, and `knowledgeAdmission`.
+- Added tests for valid conversion, authority-field rejection, and claim references to unknown evidence.
+- Updated the ingestion contract to document the bounded real-agent export shape.
+- Updated CHANGELOG with the adapter work.
+
+### Files changed
+- `packages/kernel/src/orchestration/hermes-agent-output-adapter.ts`
+- `packages/kernel/src/orchestration/index.ts`
+- `packages/kernel/test/hermes-agent-output-adapter.test.ts`
+- `docs/hermes-ingestion-contract.md`
+- `CHANGELOG.md`
+- `LLM_HANDOFF.md`
+
+### Why I changed it
+- The project needed a bridge between real Hermes Agent output and the already-secured IBOS ingestion event contract.
+- The bridge must remain provider-neutral and must not let Hermes manufacture Kernel authority decisions.
+
+### Tests or checks performed
+- PR validation pending for `phase/2.9-hermes-agent-output-adapter`.
+
+### Risks / uncertainties
+- The adapter expects an explicit bounded export shape. If the real Hermes Agent emits a different native structure, a thin extractor should map native logs/traces into this shape before using the adapter.
+- A CLI that reads the bounded export and submits it through signed ingestion is still the next useful layer.
+
+### Next recommended step
+- Open PR for `phase/2.9-hermes-agent-output-adapter` and wait for CI.
+- Then implement `scripts/hermes-ingest-agent-output.mjs` to read a real export file, adapt it, sign it, and POST it to the local Kernel.
+
+### Do not forget
+- The adapter only normalizes operational output. Kernel validation, contradiction, admission, storage, idempotency, and recovery remain Kernel-owned.
