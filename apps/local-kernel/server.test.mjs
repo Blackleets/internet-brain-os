@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CaptureCaseEvidenceProjector, LocalKnowledgeStore } from './capture-projector.mjs';
 import { PageContextInbox } from './page-context-inbox.mjs';
+import { ObsidianKnowledgeProjector } from './obsidian-projector.mjs';
 import { createLocalKernelServer } from './server.mjs';
 
 let server;
@@ -98,5 +99,29 @@ describe('local Kernel HTTP receiver', () => {
       ok: true,
       cases: [{ id: 'case:active', title: 'Active Case', status: 'active' }],
     });
+  });
+
+  it('updates Obsidian notes after a successful capture projection', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    const projector = new CaptureCaseEvidenceProjector(store);
+    server = createLocalKernelServer(
+      new PageContextInbox(join(dir, 'inbox.jsonl')),
+      projector,
+      new ObsidianKnowledgeProjector(store, join(dir, 'vault')),
+    );
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+    const response = await fetch(`http://127.0.0.1:${port}/api/browser/page-context`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        schemaVersion: 'hephaestus.page-context.v1', url: 'https://example.com/', title: 'Example',
+        visibleText: 'Public Evidence', capturedAt: '2026-07-19T11:00:00.000Z',
+      }),
+    });
+    const body = await response.json();
+    expect(body.obsidianNotes).toMatchObject({ caseNote: expect.stringContaining('Cases/') });
+    expect(await readFile(join(dir, 'vault', body.obsidianNotes.caseNote), 'utf8')).toContain('# Example');
   });
 });

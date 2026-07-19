@@ -436,3 +436,30 @@ The receiver preserved raw captures but did not yet feed the Hephaestus knowledg
 ### Do not forget
 - Keep the extension thin; analysis stays in the local Kernel.
 - Never show archived Cases as valid capture targets.
+
+## Handoff 2026-07-19 - Codex automatic Obsidian sync
+
+### What I changed
+- Added automatic Obsidian-compatible projection after successful browser capture projection.
+- Generates stable Case, Evidence, and evidence-report Markdown notes with YAML frontmatter and backlinks.
+- Refreshes Case and report notes when new Evidence is attached.
+- Preserves receipt ID, content hash, source, extraction method, timestamps, and confidence in Evidence notes.
+- Added `HEPHAESTUS_OBSIDIAN_DIR` for a configurable vault destination.
+
+### Tests or checks performed
+- `pnpm test`: 107/107 passed.
+- `pnpm typecheck`: passed.
+- `pnpm build`: passed.
+- `git diff --check`: passed.
+
+### Risks / uncertainties
+- Reports are deterministic evidence inventories, not LLM-generated conclusions.
+- Concurrent synchronization from multiple server processes is not supported.
+
+### Next recommended step
+- Add optional local-LLM Evidence summarization with a conservative offline fallback.
+- Preserve the current deterministic report whenever no model is available.
+
+### Do not forget
+- Obsidian Markdown must remain readable without Hephaestus.
+- Never replace raw Evidence with generated summaries.

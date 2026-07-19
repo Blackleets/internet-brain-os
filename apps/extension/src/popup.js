@@ -36,7 +36,8 @@ async function capture() {
       targetCaseId: select.value || undefined,
     });
     if (!result?.ok) throw new Error(result?.error ?? 'Local Kernel rejected the page');
-    setStatus(select.value ? 'Evidence added to the selected Case.' : 'New Case and Evidence created.');
+    const destination = select.value ? 'Evidence added to the selected Case.' : 'New Case and Evidence created.';
+    setStatus(`${destination}${result.obsidianUpdated ? ' Obsidian notes updated.' : ''}`);
   } catch (error) {
     setStatus(error instanceof Error ? error.message : 'Unable to capture page', true);
   } finally {

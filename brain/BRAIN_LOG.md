@@ -229,3 +229,10 @@ Phase 0.4 now provides a coherent evidence-first Kernel boundary for creation, r
 - Added active Case listing from the local Kernel.
 - Target Case IDs now participate in receipt identity, preserving idempotency while allowing the same page in different investigations.
 - Fixed write-queue recovery after a rejected projection.
+
+## 2026-07-19 — Automatic Obsidian knowledge projection
+
+- Browser captures now refresh Case, Evidence, and evidence-report Markdown automatically.
+- Notes contain YAML frontmatter, provenance fields, source links, receipt IDs, content hashes, and Obsidian backlinks.
+- Default vault path is `.hephaestus/obsidian-vault`; `HEPHAESTUS_OBSIDIAN_DIR` can override it.
+- Reports remain deterministic and evidence-bound when no LLM is available.
