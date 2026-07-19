@@ -2,6 +2,7 @@ export * from './case';
 export * from './entity';
 export * from './evidence';
 export * from './ingestion/web-ingestion';
+export * from './llm';
 export * from './memory';
 export * from './orchestration';
 export * from './relationship';
