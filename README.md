@@ -79,11 +79,12 @@ Every human or AI contributor must read these files before making changes:
 6. `LLM_HANDOFF.md`
 7. `AGENT_ROLES.md`
 8. `docs/hermes-operating-protocol.md`
-9. `docs/obsidian-sync-protocol.md`
-10. `docs/architecture.md`
-11. `ROADMAP.md`
-12. `DECISIONS.md`
-13. The active task or GitHub issue.
+9. `docs/hermes-ingestion-contract.md`
+10. `docs/obsidian-sync-protocol.md`
+11. `docs/architecture.md`
+12. `ROADMAP.md`
+13. `DECISIONS.md`
+14. The active task or GitHub issue.
 
 ## Institutional memory
 

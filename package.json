@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc -b",
     "clean": "tsc -b --clean",
+    "hermes:smoke": "node scripts/hermes-smoke-test.mjs",
     "kernel:serve": "node apps/local-kernel/server.mjs",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc -b --pretty false"
