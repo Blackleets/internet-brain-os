@@ -2,6 +2,7 @@ export { MissionEngine } from './mission-engine';
 export { EvidenceAwareMissionPlanner } from './evidence-aware-planner';
 export { MissionExecutionEngine } from './mission-execution-engine';
 export { TaskResultBuilder } from './task-result-builder';
+export { ClaimValidationGate } from './claim-validation-gate';
 export type {
   EvidenceAwarePlannerPolicy,
   MissionPlanningDraft,
@@ -31,6 +32,18 @@ export {
   TaskResultTaskStateError,
   UnsupportedClaimEvidenceError,
 } from './task-result-errors';
+export { InvalidClaimValidationInputError } from './claim-validation-errors';
+export type {
+  ClaimContradictionAssessment,
+  ClaimEvidenceAssessment,
+  ClaimValidationContext,
+  ClaimValidationDecision,
+  ClaimValidationPolicy,
+  ClaimValidationReason,
+  ClaimValidationReasonCode,
+  ClaimValidationResult,
+  ValidatedClaimCandidate,
+} from './claim-validation-types';
 export type {
   ClaimProposal,
   ClaimProposalDraft,
