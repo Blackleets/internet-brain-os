@@ -24,6 +24,7 @@ describe('sendPageContext', () => {
       caseId: 'case:1',
       evidenceId: 'evidence:1',
       obsidianUpdated: false,
+      intelligenceStatus: undefined,
     });
     expect(fetchImpl).toHaveBeenCalledWith(
       'http://127.0.0.1:4000/api/browser/page-context',

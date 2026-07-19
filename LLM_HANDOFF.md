@@ -463,3 +463,30 @@ The receiver preserved raw captures but did not yet feed the Hephaestus knowledg
 ### Do not forget
 - Obsidian Markdown must remain readable without Hephaestus.
 - Never replace raw Evidence with generated summaries.
+
+## Handoff 2026-07-19 - Codex optional local Evidence summary
+
+### What I changed
+- Added an optional Ollama adapter to summarize newly projected Evidence before Obsidian synchronization.
+- Restricted model traffic to loopback HTTP endpoints and disabled the feature unless `HEPHAESTUS_OLLAMA_MODEL` is configured.
+- Stored structured summaries, explicitly uncertain hypotheses, limitations, model identity, Skill identity, prompt version, and generation time alongside raw Evidence.
+- Kept capture, persistence, and deterministic reporting successful when Ollama is missing, unavailable, slow, or returns invalid output.
+- Exposed the intelligence result in the receiver response and extension popup status.
+
+### Tests or checks performed
+- `pnpm test`: 112/112 passed.
+- `pnpm typecheck`: passed.
+- `pnpm build`: passed.
+- `git diff --check`: passed.
+
+### Risks / uncertainties
+- Ollama integration is covered with mocked HTTP responses; a real local model smoke test still depends on the user's installed model.
+- Generated summaries are advisory and must never be treated as verified facts.
+
+### Next recommended step
+- Add a simple local readiness view for Kernel, configured Ollama model, and Obsidian destination.
+- Later, add claim extraction only behind explicit evidence links and uncertainty labels.
+
+### Do not forget
+- Raw Evidence is authoritative; `aiSummary` is derived metadata.
+- Never permit a non-loopback Ollama endpoint without a deliberate security design.

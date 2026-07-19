@@ -100,7 +100,7 @@ Memory changes are recorded through an append-only event log. Duplicate normaliz
 
 ### Phase 1 local capture path
 
-The extension popup lets the user start a new Case or select an active local Case. It sends `hephaestus.page-context.v1` payloads with an optional target Case to the local HTTP receiver. The receiver validates and durably journals accepted captures before returning a deterministic receipt. A capture projector then creates or attaches Evidence in the existing local knowledge store. After projection, Obsidian-compatible Case, Evidence, and evidence-report notes are atomically refreshed. The receipt is preserved as correlation provenance, and retries or restarts cannot duplicate the projection.
+The extension popup lets the user start a new Case or select an active local Case. It sends `hephaestus.page-context.v1` payloads with an optional target Case to the local HTTP receiver. The receiver validates and durably journals accepted captures before returning a deterministic receipt. A capture projector then creates or attaches Evidence in the existing local knowledge store. When `HEPHAESTUS_OLLAMA_MODEL` is configured, an optional loopback-only Ollama adapter adds a structured summary, explicitly uncertain hypotheses, limitations, and model provenance without replacing raw Evidence. Missing, unavailable, timed-out, or invalid model output leaves the deterministic capture path intact. Obsidian-compatible Case, Evidence, and evidence-report notes are then atomically refreshed. The receipt is preserved as correlation provenance, and retries or restarts cannot duplicate the projection.
 
 ### P0 — Stabilize the foundation
 
@@ -119,7 +119,8 @@ The extension popup lets the user start a new Case or select an active local Cas
 - [x] Project accepted browser inbox records into Case and Evidence through an idempotent adapter.
 - [x] Add explicit extension UX for choosing an existing Case instead of starting a new one.
 - [x] Connect newly created Evidence to automatic Obsidian export and evidence-report generation.
-- Connect Evidence to the summarization Skill through an optional local LLM adapter.
+- [x] Connect Evidence to the summarization Skill contract through an optional loopback-only local Ollama adapter.
+- Add a local status/setup surface that explains Kernel, Ollama, and Obsidian readiness without requiring cloud services.
 
 ### P2 — Make research resumable end-to-end
 

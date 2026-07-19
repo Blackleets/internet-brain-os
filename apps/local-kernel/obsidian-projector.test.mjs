@@ -46,4 +46,25 @@ describe('Obsidian knowledge projector', () => {
     await projector.syncCase('case:test');
     expect(await readFile(join(vault, 'Cases', 'case-test.md'), 'utf8')).toContain('Evidence/evidence-new');
   });
+
+  it('labels generated hypotheses and preserves model provenance', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-obsidian-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    await store.write({
+      cases: [{ id: 'case:test', title: 'Test', objective: 'Test', status: 'draft' }],
+      evidence: [{
+        id: 'evidence:test', caseId: 'case:test', summary: 'Captured summary', confidence: 0.5,
+        aiSummary: {
+          summary: 'Local model summary', hypotheses: ['This may be temporary'], limitations: ['One source'],
+          provider: 'ollama', model: 'qwen2.5:3b', promptVersion: '1.0.0',
+        },
+      }],
+    });
+    const vault = join(dir, 'vault');
+    await new ObsidianKnowledgeProjector(store, vault).syncCase('case:test');
+    const note = await readFile(join(vault, 'Evidence', 'evidence-test.md'), 'utf8');
+    expect(note).toContain('## Local AI Summary');
+    expect(note).toContain('Hypothesis: This may be temporary');
+    expect(note).toContain('ollama/qwen2.5:3b');
+  });
 });

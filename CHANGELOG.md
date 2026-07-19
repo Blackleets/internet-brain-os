@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- Optional loopback-only Ollama Evidence summaries with structured hypotheses, limitations, model provenance, and a deterministic offline fallback that preserves raw Evidence.
 - Automatic Obsidian-compatible Case, Evidence, and evidence-report synchronization after successful browser captures.
 - First usable extension popup with explicit new-Case or existing-Case capture destinations and a local active-Case listing endpoint.
 - Deterministic browser capture projection into local Case and Evidence records, compatible with the existing CLI store and idempotent across retries and restarts.

@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { CaptureCaseEvidenceProjector, LocalKnowledgeStore } from './capture-projector.mjs';
 import { InboxError, MAX_BODY_BYTES, PageContextInbox } from './page-context-inbox.mjs';
 import { ObsidianKnowledgeProjector } from './obsidian-projector.mjs';
+import { OptionalEvidenceSummarizer } from './optional-evidence-summarizer.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
@@ -15,8 +16,13 @@ const obsidian = new ObsidianKnowledgeProjector(
   knowledgeStore,
   resolve(process.env.HEPHAESTUS_OBSIDIAN_DIR ?? '.hephaestus/obsidian-vault'),
 );
+const summarizer = new OptionalEvidenceSummarizer(knowledgeStore, {
+  model: process.env.HEPHAESTUS_OLLAMA_MODEL,
+  baseUrl: process.env.HEPHAESTUS_OLLAMA_URL,
+  timeoutMs: Number(process.env.HEPHAESTUS_OLLAMA_TIMEOUT_MS ?? 20_000),
+});
 
-export function createLocalKernelServer(captureInbox, captureProjector, obsidianProjector) {
+export function createLocalKernelServer(captureInbox, captureProjector, obsidianProjector, evidenceSummarizer) {
   return createServer(async (request, response) => {
     const origin = request.headers.origin;
     if (typeof origin === 'string' && !isAllowedOrigin(origin)) {
@@ -47,10 +53,13 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       const projection = captureProjector
         ? await captureProjector.project(receipt.receiptId, body)
         : undefined;
+      const intelligence = projection && evidenceSummarizer
+        ? await evidenceSummarizer.summarize(projection.evidenceId)
+        : undefined;
       const obsidianNotes = projection && obsidianProjector
         ? await obsidianProjector.syncCase(projection.caseId)
         : undefined;
-      return send(response, 202, { ok: true, ...receipt, ...projection, obsidianNotes });
+      return send(response, 202, { ok: true, ...receipt, ...projection, intelligence, obsidianNotes });
     } catch (error) {
       const known = error instanceof InboxError;
       return send(response, known ? error.status : 500, {
@@ -62,7 +71,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   });
 }
 
-export const server = createLocalKernelServer(inbox, projector, obsidian);
+export const server = createLocalKernelServer(inbox, projector, obsidian, summarizer);
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   server.listen(port, host, () => console.log(`Hephaestus local Kernel listening on http://${host}:${port}`));
