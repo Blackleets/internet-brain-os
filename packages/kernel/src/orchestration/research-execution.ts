@@ -1,17 +1,20 @@
 import type { CaseId, IsoDateTime } from '@internet-brain-os/shared';
 import type { ResearchEvent, ResearchState, ResearchStateMachine, ResearchStateTransition } from './research-state-machine';
 import type { ResearchStateHistory } from './research-state-machine-history';
-import { runResearchStage, type ResearchRetryPolicy, type ResearchStageFailure } from './research-retry-policy';
+import { runResearchStage, type ResearchRetryPolicy, type ResearchStageExecution, type ResearchStageFailure } from './research-retry-policy';
 
 export interface ResearchStageResult<T = unknown> {
   readonly value: T;
   readonly completedAt: IsoDateTime;
+  readonly metadata?: Readonly<Record<string, string | number | boolean>>;
 }
 
 export interface ResearchStageContext {
   readonly caseId: CaseId;
   readonly state: ResearchState;
   readonly attempt: number;
+  readonly idempotencyKey: string;
+  readonly abortSignal?: AbortSignal;
 }
 
 export interface ResearchStage<T = unknown> {
@@ -29,6 +32,7 @@ export interface ResearchExecutionResult {
   readonly state: ResearchState;
   readonly transitions: readonly ResearchStateTransition[];
   readonly results: ReadonlyMap<ResearchState, ResearchStageResult>;
+  readonly executions: ReadonlyMap<ResearchState, ResearchStageExecution>;
   readonly failures: readonly ResearchExecutionFailure[];
 }
 
@@ -36,8 +40,33 @@ export interface ResearchExecutionOptions {
   readonly retry?: ResearchRetryPolicy;
 }
 
-/** Executes research stages with bounded retries, failure telemetry, and state history. */
+const canonicalPlan: readonly ResearchStage['state'][] = [
+  'discovering',
+  'ingesting',
+  'analyzing',
+  'validating',
+  'memorizing',
+  'reporting',
+];
+
+export class ResearchPlanValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ResearchPlanValidationError';
+  }
+}
+
+export class ResearchRuntimeReuseError extends Error {
+  constructor() {
+    super('ResearchExecutionRuntime instances are single-use');
+    this.name = 'ResearchRuntimeReuseError';
+  }
+}
+
+/** Executes a complete research lifecycle with bounded retries and full telemetry. */
 export class ResearchExecutionRuntime {
+  private hasRun = false;
+
   constructor(
     private readonly machine: ResearchStateMachine,
     private readonly history: ResearchStateHistory,
@@ -46,7 +75,17 @@ export class ResearchExecutionRuntime {
   ) {}
 
   async run(stages: readonly ResearchStage[]): Promise<ResearchExecutionResult> {
+    if (this.hasRun) throw new ResearchRuntimeReuseError();
+    this.hasRun = true;
+    validatePlan(stages);
+
+    const initial = this.machine.getSnapshot();
+    if (initial.state !== 'created') {
+      throw new ResearchPlanValidationError(`Research must start in created state, received ${initial.state}`);
+    }
+
     const results = new Map<ResearchState, ResearchStageResult>();
+    const executions = new Map<ResearchState, ResearchStageExecution>();
     const transitions: ResearchStateTransition[] = [];
     const failures: ResearchExecutionFailure[] = [];
 
@@ -55,25 +94,26 @@ export class ResearchExecutionRuntime {
     for (const stage of stages) {
       const current = this.machine.getSnapshot().state;
       if (current !== stage.state) {
-        throw new Error(`Stage order mismatch: expected ${current}, received ${stage.state}`);
+        throw new ResearchPlanValidationError(`Stage order mismatch: expected ${current}, received ${stage.state}`);
       }
 
       const context: ResearchStageContext = {
         caseId: this.machine.getSnapshot().caseId,
         state: current,
         attempt: 1,
+        idempotencyKey: `${this.machine.getSnapshot().caseId}:${current}`,
       };
 
       try {
         const execution = await runResearchStage(stage, context, this.now, this.options.retry);
+        executions.set(stage.state, execution);
         results.set(stage.state, execution.result);
-        const nextEvent = completionEvent(stage.state);
-        this.record(this.machine.transition(nextEvent, execution.result.completedAt), transitions);
+        this.record(this.machine.transition(completionEvent(stage.state), execution.result.completedAt), transitions);
       } catch (error) {
         const stageError = error as { failures?: readonly ResearchStageFailure[] };
         const stageFailures = stageError.failures ?? [];
         failures.push({ state: stage.state, failures: stageFailures });
-        this.record(this.machine.transition('fail', this.now(), `Stage ${stage.state} exhausted retries`), transitions);
+        this.record(this.machine.transition('fail', this.now(), `Stage ${stage.state} failed safely`), transitions);
         break;
       }
     }
@@ -83,6 +123,7 @@ export class ResearchExecutionRuntime {
       state: this.machine.getSnapshot().state,
       transitions,
       results,
+      executions,
       failures,
     };
   }
@@ -93,8 +134,15 @@ export class ResearchExecutionRuntime {
   }
 }
 
-function completionEvent(state: Exclude<ResearchState, 'created' | 'completed' | 'failed'>): ResearchEvent {
-  const events: Record<Exclude<ResearchState, 'created' | 'completed' | 'failed'>, ResearchEvent> = {
+function validatePlan(stages: readonly ResearchStage[]): void {
+  const states = stages.map((stage) => stage.state);
+  if (states.length !== canonicalPlan.length || states.some((state, index) => state !== canonicalPlan[index])) {
+    throw new ResearchPlanValidationError(`Research plan must contain the complete canonical lifecycle: ${canonicalPlan.join(' -> ')}`);
+  }
+}
+
+function completionEvent(state: ResearchStage['state']): ResearchEvent {
+  const events: Record<ResearchStage['state'], ResearchEvent> = {
     discovering: 'discovery_complete',
     ingesting: 'ingestion_complete',
     analyzing: 'analysis_complete',
