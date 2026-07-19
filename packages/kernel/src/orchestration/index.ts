@@ -28,6 +28,7 @@ export {
 export { HermesExecutionIngestionService } from './hermes-execution-ingestion-service';
 export { IdempotentHermesExecutionIngestionService } from './idempotent-hermes-execution-ingestion-service';
 export { HermesIngestionRecoveryCoordinator } from './hermes-ingestion-recovery-coordinator';
+export { HermesIngestionStartupReconciler } from './hermes-ingestion-startup-reconciler';
 export type { ResearchPipelineInput, ResearchPipelineResult } from './research-pipeline';
 export type { ClaimAwareResearchPipelineInput, ClaimAwareResearchPipelineResult } from './claim-aware-research-pipeline';
 export type {
@@ -57,6 +58,10 @@ export type {
   HermesIngestionRecoveryResult,
   HermesRecoveryReceiptStore,
 } from './hermes-ingestion-recovery-coordinator';
+export type {
+  HermesStartupReceiptStore,
+  HermesStartupReconciliationResult,
+} from './hermes-ingestion-startup-reconciler';
 export type {
   ResearchEvent,
   ResearchState,

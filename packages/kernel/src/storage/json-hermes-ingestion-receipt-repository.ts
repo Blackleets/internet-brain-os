@@ -11,6 +11,7 @@ export interface HermesIngestionReceipt {
   status: HermesIngestionReceiptStatus;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
+  leaseExpiresAt?: IsoDateTime;
   record?: CognitivePipelineRecord;
   failure?: string;
 }
@@ -49,6 +50,7 @@ export class JsonHermesIngestionReceiptRepository {
     fingerprint: string;
     recordId: CognitivePipelineRecordId;
     at: IsoDateTime;
+    leaseExpiresAt?: IsoDateTime;
   }): Promise<BeginHermesIngestionResult> {
     let result: BeginHermesIngestionResult | undefined;
     await this.collection.mutate((receipts) => {
@@ -60,7 +62,14 @@ export class JsonHermesIngestionReceiptRepository {
           );
         }
         if (existing.status === 'pending') {
-          throw new HermesIngestionInProgressError(input.idempotencyKey);
+          if (!isExpired(existing.leaseExpiresAt, input.at)) {
+            throw new HermesIngestionInProgressError(input.idempotencyKey);
+          }
+          existing.updatedAt = input.at;
+          existing.leaseExpiresAt = input.leaseExpiresAt;
+          delete existing.failure;
+          result = { kind: 'acquired', receipt: structuredClone(existing) };
+          return;
         }
         if (existing.status === 'completed' && existing.record) {
           result = { kind: 'replay', receipt: structuredClone(existing) };
@@ -68,6 +77,7 @@ export class JsonHermesIngestionReceiptRepository {
         }
         existing.status = 'pending';
         existing.updatedAt = input.at;
+        existing.leaseExpiresAt = input.leaseExpiresAt;
         delete existing.failure;
         result = { kind: 'acquired', receipt: structuredClone(existing) };
         return;
@@ -80,6 +90,7 @@ export class JsonHermesIngestionReceiptRepository {
         status: 'pending',
         createdAt: input.at,
         updatedAt: input.at,
+        leaseExpiresAt: input.leaseExpiresAt,
       };
       receipts.push(receipt);
       result = { kind: 'acquired', receipt: structuredClone(receipt) };
@@ -98,6 +109,12 @@ export class JsonHermesIngestionReceiptRepository {
       .map((receipt) => structuredClone(receipt));
   }
 
+  async listExpiredPending(at: IsoDateTime): Promise<readonly HermesIngestionReceipt[]> {
+    return (await this.collection.read())
+      .filter((receipt) => receipt.status === 'pending' && isExpired(receipt.leaseExpiresAt, at))
+      .map((receipt) => structuredClone(receipt));
+  }
+
   async complete(key: string, record: CognitivePipelineRecord, at: IsoDateTime): Promise<void> {
     await this.collection.mutate((receipts) => {
       const receipt = receipts.find((candidate) => candidate.idempotencyKey === key);
@@ -110,6 +127,7 @@ export class JsonHermesIngestionReceiptRepository {
       receipt.status = 'completed';
       receipt.record = structuredClone(record);
       receipt.updatedAt = at;
+      delete receipt.leaseExpiresAt;
       delete receipt.failure;
     });
   }
@@ -121,6 +139,11 @@ export class JsonHermesIngestionReceiptRepository {
       receipt.status = 'failed';
       receipt.failure = error instanceof Error ? error.message : String(error);
       receipt.updatedAt = at;
+      delete receipt.leaseExpiresAt;
     });
   }
+}
+
+function isExpired(leaseExpiresAt: IsoDateTime | undefined, at: IsoDateTime): boolean {
+  return !!leaseExpiresAt && new Date(leaseExpiresAt).getTime() <= new Date(at).getTime();
 }
