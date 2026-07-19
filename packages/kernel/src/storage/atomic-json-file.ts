@@ -14,10 +14,11 @@ export interface AtomicJsonCollectionOptions<T> {
   readonly clone: (record: T) => T;
 }
 
+const writeQueues = new Map<string, Promise<void>>();
+
 export class AtomicJsonCollection<T> {
   readonly filePath: string;
   private readonly clone: (record: T) => T;
-  private writeQueue: Promise<void> = Promise.resolve();
 
   constructor(options: AtomicJsonCollectionOptions<T>) {
     const root = validateDataRoot(options.dataRoot);
@@ -35,19 +36,27 @@ export class AtomicJsonCollection<T> {
   }
 
   async read(): Promise<readonly T[]> {
-    await this.writeQueue;
+    await currentWriteQueue(this.filePath);
     return (await this.readUnsafe()).map(this.clone);
   }
 
   async mutate(mutator: (records: T[]) => void): Promise<void> {
-    const operation = this.writeQueue.then(async () => {
+    const previous = currentWriteQueue(this.filePath);
+    const operation = previous.then(async () => {
       const records = await this.readUnsafe();
       mutator(records);
       await this.writeUnsafe(records);
     });
+    const settled = operation.catch(() => undefined);
+    writeQueues.set(this.filePath, settled);
 
-    this.writeQueue = operation.catch(() => undefined);
-    await operation;
+    try {
+      await operation;
+    } finally {
+      if (writeQueues.get(this.filePath) === settled) {
+        writeQueues.delete(this.filePath);
+      }
+    }
   }
 
   private async readUnsafe(): Promise<T[]> {
@@ -89,6 +98,10 @@ export class AtomicJsonCollection<T> {
       throw error;
     }
   }
+}
+
+function currentWriteQueue(filePath: string): Promise<void> {
+  return writeQueues.get(filePath) ?? Promise.resolve();
 }
 
 function validateDataRoot(value: string): string {
