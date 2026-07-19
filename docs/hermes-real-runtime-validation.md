@@ -107,7 +107,38 @@ Save as `tmp/hermes-real-native.jsonl`:
 {"type":"run_completed","summary":"Hermes completed a real runtime task.","at":"2026-07-20T00:00:05.000Z"}
 ```
 
-## Step 3 — Ingest real bounded JSON
+## Step 3 — Validate captured output offline
+
+Validate the file before sending it to the local Kernel server.
+
+For bounded JSON:
+
+```bash
+pnpm hermes:validate-agent tmp/hermes-real-run-output.json
+```
+
+For native JSONL:
+
+```bash
+pnpm hermes:validate-agent --native-jsonl tmp/hermes-real-native.jsonl
+```
+
+Expected output:
+
+```text
+Hermes Agent output validation PASS
+```
+
+Use `--json` when another tool or script needs machine-readable validation output:
+
+```bash
+pnpm hermes:validate-agent --json tmp/hermes-real-run-output.json
+pnpm hermes:validate-agent --json --native-jsonl tmp/hermes-real-native.jsonl
+```
+
+The offline validator must fail before transport if the file has invalid JSON/JSONL, missing evidence, unknown evidence references, or forbidden Kernel authority fields.
+
+## Step 4 — Ingest real bounded JSON
 
 ```bash
 IBOS_HERMES_SECRET="$IBOS_HERMES_SECRET" \
@@ -128,7 +159,7 @@ The response body must include:
 - `validationDecision`
 - `recordedAt`
 
-## Step 4 — Ingest real native JSONL
+## Step 5 — Ingest real native JSONL
 
 Use this only if the captured output is JSONL:
 
@@ -144,7 +175,7 @@ Expected response:
 202 Accepted
 ```
 
-## Step 5 — Replay validation
+## Step 6 — Replay validation
 
 Run the exact same command again with the exact same file and the exact same `IBOS_HERMES_IDEMPOTENCY_KEY`.
 
@@ -157,7 +188,7 @@ same recordId as first ingestion
 
 Replay must not re-run validation, contradiction, admission, or storage.
 
-## Step 6 — Attack validation
+## Step 7 — Attack validation
 
 Copy the real file and alter the claim statement, confidence, evidence list, or timestamps while keeping the same idempotency key.
 
@@ -184,7 +215,7 @@ HERMES_IDEMPOTENCY_CONFLICT
 
 This proves the same idempotency key cannot be reused for a different semantic run.
 
-## Step 7 — Authority-field validation
+## Step 8 — Authority-field validation
 
 Add any forbidden field to the captured output, such as:
 
@@ -197,7 +228,8 @@ Add any forbidden field to the captured output, such as:
 Expected behavior:
 
 ```text
-conversion fails before transport or ingestion
+pnpm hermes:validate-agent tmp/hermes-real-run-output.json
+# fails before transport or ingestion
 ```
 
 Forbidden Kernel authority fields include:
@@ -217,6 +249,7 @@ Mark Issue #57 complete only when all are true:
 - `pnpm hermes:smoke` passes locally.
 - `pnpm hermes:attack-smoke` passes locally.
 - One real Hermes bounded JSON or JSONL output is captured.
+- `pnpm hermes:validate-agent` passes on the captured output.
 - First ingestion returns `202`.
 - Exact replay returns `202` with the same record id.
 - Altered replay returns `409`.
