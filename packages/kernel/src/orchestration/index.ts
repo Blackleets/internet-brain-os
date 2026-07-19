@@ -34,6 +34,7 @@ export {
   InvalidHermesLocalIngestionRequestError,
   signHermesLocalIngestionRequest,
 } from './hermes-local-ingestion-boundary';
+export { HermesLocalIngestionHttpRoute } from './hermes-local-ingestion-http-route';
 export type { ResearchPipelineInput, ResearchPipelineResult } from './research-pipeline';
 export type { ClaimAwareResearchPipelineInput, ClaimAwareResearchPipelineResult } from './claim-aware-research-pipeline';
 export type {
@@ -73,6 +74,11 @@ export type {
   HermesLocalIngestionHeaders,
   HermesLocalIngestionRequest,
 } from './hermes-local-ingestion-boundary';
+export type {
+  HermesLocalIngestionHttpRequest,
+  HermesLocalIngestionHttpResponse,
+  HermesLocalIngestionHttpRouteConfig,
+} from './hermes-local-ingestion-http-route';
 export type {
   ResearchEvent,
   ResearchState,
