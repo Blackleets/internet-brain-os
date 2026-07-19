@@ -1,4 +1,11 @@
 export { MissionEngine } from './mission-engine';
+export { EvidenceAwareMissionPlanner } from './evidence-aware-planner';
+export type {
+  EvidenceAwarePlannerPolicy,
+  MissionPlanningDraft,
+  MissionTaskDecomposer,
+  MissionTaskDraft,
+} from './evidence-aware-planner';
 export {
   InvalidMissionInputError,
   InvalidMissionPlanError,
