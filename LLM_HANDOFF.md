@@ -274,15 +274,55 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 - The bridge must remain provider-neutral and must not let Hermes manufacture Kernel authority decisions.
 
 ### Tests or checks performed
-- PR validation pending for `phase/2.9-hermes-agent-output-adapter`.
+- PR #54 CI passed before merge: typecheck, tests, and build through GitHub Actions.
 
 ### Risks / uncertainties
 - The adapter expects an explicit bounded export shape. If the real Hermes Agent emits a different native structure, a thin extractor should map native logs/traces into this shape before using the adapter.
 - A CLI that reads the bounded export and submits it through signed ingestion is still the next useful layer.
 
 ### Next recommended step
-- Open PR for `phase/2.9-hermes-agent-output-adapter` and wait for CI.
-- Then implement `scripts/hermes-ingest-agent-output.mjs` to read a real export file, adapt it, sign it, and POST it to the local Kernel.
+- Implement `scripts/hermes-ingest-agent-output.mjs` to read a real export file, adapt it, sign it, and POST it to the local Kernel.
 
 ### Do not forget
 - The adapter only normalizes operational output. Kernel validation, contradiction, admission, storage, idempotency, and recovery remain Kernel-owned.
+
+## Handoff 2026-07-20 - GPT-5.5 Thinking - Hermes Agent CLI
+
+### What I changed
+- Added `scripts/hermes-ingest-agent-output.mjs` to read a Hermes Agent run export JSON, convert it with `HermesAgentOutputAdapter`, sign the resulting ingestion payload, and submit it to `/hermes/ingestions`.
+- Added `pnpm hermes:ingest-agent` command.
+- Added `examples/hermes-agent-run-output.sample.json` as a runnable export shape reference.
+- Updated `docs/hermes-ingestion-contract.md` with the agent-output CLI flow.
+- Updated CHANGELOG with the CLI and sample fixture.
+
+### Files changed
+- `scripts/hermes-ingest-agent-output.mjs`
+- `examples/hermes-agent-run-output.sample.json`
+- `package.json`
+- `docs/hermes-ingestion-contract.md`
+- `CHANGELOG.md`
+- `LLM_HANDOFF.md`
+
+### Why I changed it
+- The system needed a direct way to take real Hermes Agent output from disk and push it through the same secured local Kernel ingestion path used by the smoke test.
+- This makes the next real-world validation step operational instead of theoretical.
+
+### Tests or checks performed
+- PR #54 CI passed before merge: typecheck, tests, and build through GitHub Actions.
+- PR validation for the CLI phase is pending.
+
+### Risks / uncertainties
+- The CLI imports the built Kernel package, so `pnpm build` must run before `pnpm hermes:ingest-agent`.
+- A live server with matching `IBOS_HERMES_SECRET` must be running for the CLI to succeed.
+- The sample fixture is representative; a native Hermes Agent extractor may still be needed if the actual Hermes runtime emits a different log shape.
+
+### Next recommended step
+- Open PR for `phase/3.0-hermes-agent-output-cli` and wait for CI.
+- Then validate the full flow locally with:
+  - `pnpm build`
+  - `IBOS_HERMES_SECRET=dev-secret pnpm kernel:serve`
+  - `IBOS_HERMES_SECRET=dev-secret pnpm hermes:ingest-agent examples/hermes-agent-run-output.sample.json`
+
+### Do not forget
+- Hermes still cannot submit Kernel authority fields.
+- The CLI is only a transport client; Kernel ingestion still owns validation, contradiction, admission, idempotency, recovery, and persistence.
