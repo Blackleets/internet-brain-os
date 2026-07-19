@@ -46,6 +46,7 @@ export async function sendPageContext(context, options = {}) {
       receiptId: payload.receiptId,
       caseId: payload.caseId,
       evidenceId: payload.evidenceId,
+      obsidianUpdated: Boolean(payload.obsidianNotes),
     };
   } catch (error) {
     if (error instanceof LocalTransportError) throw error;
