@@ -267,3 +267,10 @@ Phase 0.4 now provides a coherent evidence-first Kernel boundary for creation, r
 - Long-lived credentials are delivered directly to extension-local storage and never printed.
 - Manual credential entry remains only as a recovery route.
 - Validation: 133/133 tests, typecheck, build, diff check, and production audit passed.
+
+## 2026-07-19 — Persistent extension identity
+
+- Pairing now binds the long-lived credential to the exact Chrome extension ID.
+- The allowlist is persisted privately and blocks other extensions even when they present the correct token.
+- Empty-registry migration preserves existing installations until they pair; token rotation clears identities for clean revocation.
+- Validation: 135/135 tests, typecheck, build, diff check, and production audit passed.

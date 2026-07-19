@@ -8,6 +8,7 @@ import { ObsidianKnowledgeProjector } from './obsidian-projector.mjs';
 import { OptionalEvidenceSummarizer } from './optional-evidence-summarizer.mjs';
 import { loadOrCreateApiToken, validateApiToken } from './api-token-store.mjs';
 import { PairingError, PairingSession } from './pairing-session.mjs';
+import { ExtensionIdentityRegistry } from './extension-identity-registry.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
@@ -23,6 +24,8 @@ const apiToken = tokenRecord.token;
 const pairingSession = isMain && (tokenRecord.source === 'created' || tokenRecord.source === 'rotated' || process.env.HEPHAESTUS_PAIRING === '1')
   ? new PairingSession(apiToken)
   : undefined;
+const extensionRegistry = new ExtensionIdentityRegistry(resolve(dataDir, 'authorized-extensions.json'));
+if (isMain && tokenRecord.source === 'rotated') await extensionRegistry.clear();
 const dataFile = resolve(dataDir, 'page-context-inbox.jsonl');
 const inbox = new PageContextInbox(dataFile);
 const knowledgeStore = new LocalKnowledgeStore(resolve(dataDir, 'store.json'));
@@ -40,6 +43,7 @@ const summarizer = new OptionalEvidenceSummarizer(knowledgeStore, {
 export function createLocalKernelServer(captureInbox, captureProjector, obsidianProjector, evidenceSummarizer, options = {}) {
   const requiredToken = options.apiToken === undefined ? undefined : validateApiToken(options.apiToken);
   const activePairing = options.pairingSession;
+  const identities = options.extensionRegistry;
   return createServer(async (request, response) => {
     if (!isLoopbackHost(request.headers.host)) {
       return send(response, 403, { ok: false, code: 'HOST_FORBIDDEN' });
@@ -62,6 +66,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       try {
         const body = await readJson(request);
         const paired = activePairing.consume(body?.code);
+        if (identities) await identities.authorize(origin);
         return send(response, 200, { ok: true, ...paired });
       } catch (error) {
         if (error instanceof PairingError) return send(response, error.status, { ok: false, code: error.code });
@@ -71,6 +76,13 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     }
     if (request.url?.startsWith('/api/') && !hasValidToken(request.headers['x-hephaestus-token'], requiredToken)) {
       return send(response, 401, { ok: false, code: 'AUTH_REQUIRED' });
+    }
+    if (request.url?.startsWith('/api/') && isExtensionOrigin(origin) && identities) {
+      try {
+        if (!(await identities.allows(origin))) return send(response, 403, { ok: false, code: 'EXTENSION_NOT_AUTHORIZED' });
+      } catch {
+        return send(response, 500, { ok: false, code: 'IDENTITY_REGISTRY_UNAVAILABLE' });
+      }
     }
     if (request.method === 'GET' && request.url === '/api/cases' && captureProjector) {
       try {
@@ -110,7 +122,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   });
 }
 
-export const server = createLocalKernelServer(inbox, projector, obsidian, summarizer, { apiToken, pairingSession });
+export const server = createLocalKernelServer(inbox, projector, obsidian, summarizer, { apiToken, pairingSession, extensionRegistry });
 
 if (isMain) {
   if (!isLoopbackHostname(host)) throw new Error('HEPHAESTUS_HOST must be a loopback address');

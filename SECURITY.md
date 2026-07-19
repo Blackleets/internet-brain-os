@@ -8,6 +8,7 @@ Internet Brain OS is local-first and evidence-first. Security controls protect t
 - Every `/api/*` request requires a high-entropy token.
 - Generated tokens persist in `.hephaestus/kernel-api-token` with owner-only permissions (`0600`).
 - Extension pairing uses an eight-character, five-minute, one-use code with a five-attempt lockout; the long-lived token is never printed.
+- Successful pairing allowlists the exact Chrome extension ID. Other extensions are rejected even with the correct token.
 - The extension sends Evidence only to loopback HTTP endpoints.
 - Ollama calls accept only loopback HTTP endpoints.
 - Captured and generated text is rendered inert in Obsidian notes.
@@ -23,6 +24,8 @@ HEPHAESTUS_ROTATE_API_TOKEN=1 pnpm kernel:serve
 ```
 
 Then replace the saved token in the extension popup. A custom token may be supplied through `HEPHAESTUS_API_TOKEN` and must contain 32–512 characters.
+
+Rotation also clears authorized extension identities. Pair the trusted extension again with the newly printed code; this revokes previously authorized browser profiles as part of incident recovery.
 
 Pair an additional trusted local browser profile without rotating the token:
 

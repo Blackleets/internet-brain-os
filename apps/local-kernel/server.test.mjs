@@ -8,6 +8,7 @@ import { PageContextInbox } from './page-context-inbox.mjs';
 import { ObsidianKnowledgeProjector } from './obsidian-projector.mjs';
 import { PairingSession } from './pairing-session.mjs';
 import { createLocalKernelServer } from './server.mjs';
+import { ExtensionIdentityRegistry } from './extension-identity-registry.mjs';
 
 let server;
 const apiToken = 'test-token-that-is-at-least-32-characters';
@@ -152,7 +153,10 @@ describe('local Kernel HTTP receiver', () => {
   it('pairs once with an expiring bounded-attempt code and never exposes it through health', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
     const pairing = new PairingSession(apiToken, { code: 'ABCD2345', expiresAt: 2_000, now: () => 1_000 });
-    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, { pairingSession: pairing });
+    const identities = new ExtensionIdentityRegistry(join(dir, 'extensions.json'));
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, {
+      pairingSession: pairing, extensionRegistry: identities,
+    });
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     const { port } = server.address();
     const base = `http://127.0.0.1:${port}`;
@@ -163,6 +167,13 @@ describe('local Kernel HTTP receiver', () => {
     });
     expect(paired.status).toBe(200);
     expect(await paired.json()).toEqual({ ok: true, apiToken });
+    const trustedOrigin = `chrome-extension://${'a'.repeat(32)}`;
+    const attackerOrigin = `chrome-extension://${'b'.repeat(32)}`;
+    const trusted = await fetch(`${base}/api/cases`, { headers: { ...authHeaders, origin: trustedOrigin } });
+    const attacker = await fetch(`${base}/api/cases`, { headers: { ...authHeaders, origin: attackerOrigin } });
+    expect(trusted.status).toBe(404);
+    expect(attacker.status).toBe(403);
+    expect(await attacker.json()).toEqual({ ok: false, code: 'EXTENSION_NOT_AUTHORIZED' });
     const reused = await fetch(`${base}/pair`, {
       method: 'POST', headers: { origin: `chrome-extension://${'a'.repeat(32)}`, 'content-type': 'application/json' }, body: JSON.stringify({ code: 'ABCD2345' }),
     });

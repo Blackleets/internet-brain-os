@@ -578,3 +578,31 @@ The receiver preserved raw captures but did not yet feed the Hephaestus knowledg
 ### Do not forget
 - Never make `/pair` available to ordinary localhost web origins or requests without an extension origin.
 - Do not persist pairing codes; restart or expiry should destroy them.
+
+## Handoff 2026-07-19 - Codex persistent extension identity
+
+### What changed
+- Successful pairing now persists the exact Chrome extension ID in `authorized-extensions.json` with `0600` permissions.
+- After the first identity is registered, extension API requests require both the valid token and an allowlisted extension origin.
+- Empty registries preserve compatibility for installations created before identity binding; their next pairing activates strict enforcement.
+- Explicit token rotation clears the identity registry, revoking previously paired profiles before the new pairing ceremony.
+
+### Security properties
+- A different installed extension is rejected with `EXTENSION_NOT_AUTHORIZED` even if it presents the correct API token.
+- Originless native local clients still require the token and are not incorrectly treated as browser extensions.
+- Corrupt identity state fails closed for extension requests.
+
+### Validation
+- `pnpm test`: 135/135 passed.
+- `pnpm typecheck`: passed.
+- `pnpm build`: passed.
+- `pnpm audit --prod`: no known vulnerabilities.
+- `git diff --check`: passed.
+
+### Next recommended step
+- Package/sign the extension with a stable published ID and optionally seed a strict expected-ID policy for new installations.
+- Add a user-visible authorized-device management and revocation surface.
+
+### Do not forget
+- Never silently auto-register an identity after the registry becomes non-empty.
+- Token rotation is also an identity revocation boundary.
