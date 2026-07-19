@@ -1,11 +1,24 @@
 export { MissionEngine } from './mission-engine';
 export { EvidenceAwareMissionPlanner } from './evidence-aware-planner';
+export { MissionExecutionEngine } from './mission-execution-engine';
 export type {
   EvidenceAwarePlannerPolicy,
   MissionPlanningDraft,
   MissionTaskDecomposer,
   MissionTaskDraft,
 } from './evidence-aware-planner';
+export {
+  InvalidMissionTaskTransitionError,
+  MissingMissionTaskEvidenceError,
+  MissionExecutionInvariantError,
+  MissionTaskBlockedError,
+  MissionTaskNotFoundError,
+} from './mission-execution-errors';
+export type {
+  MissionExecutionState,
+  MissionTaskEvidenceRef,
+  MissionTaskExecution,
+} from './mission-execution-types';
 export {
   InvalidMissionInputError,
   InvalidMissionPlanError,
