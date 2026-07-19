@@ -62,4 +62,30 @@ describe('capture Case/Evidence projector', () => {
     expect(stored.cases.map((item) => item.id)).toContain('case:existing');
     expect(stored.evidence.map((item) => item.id)).toContain('evidence:existing');
   });
+
+  it('adds Evidence to an existing Case without creating another Case', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-projector-'));
+    const file = join(dir, 'store.json');
+    const store = new LocalKnowledgeStore(file);
+    await store.write({
+      cases: [{ id: 'case:existing', title: 'Existing investigation', objective: 'Compare products', status: 'active' }],
+      evidence: [],
+    });
+    const projector = new CaptureCaseEvidenceProjector(store);
+    const result = await projector.project(receiptId, { ...context, targetCaseId: 'case:existing' });
+    const stored = JSON.parse(await readFile(file, 'utf8'));
+    expect(result.caseId).toBe('case:existing');
+    expect(stored.cases).toHaveLength(1);
+    expect(stored.evidence[0].caseId).toBe('case:existing');
+  });
+
+  it('rejects missing and archived target Cases', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-projector-'));
+    const file = join(dir, 'store.json');
+    const store = new LocalKnowledgeStore(file);
+    const projector = new CaptureCaseEvidenceProjector(store);
+    await expect(projector.project(receiptId, { ...context, targetCaseId: 'case:missing' })).rejects.toMatchObject({ code: 'CASE_NOT_FOUND' });
+    await store.write({ cases: [{ id: 'case:archived', status: 'archived' }], evidence: [] });
+    await expect(projector.project(receiptId, { ...context, targetCaseId: 'case:archived' })).rejects.toMatchObject({ code: 'CASE_ARCHIVED' });
+  });
 });

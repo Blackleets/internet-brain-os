@@ -42,6 +42,7 @@ export function validatePageContext(value) {
     language: optionalText(value.language, 'language', 64),
     visibleText: requiredText(value.visibleText, 'visibleText', MAX_TEXT),
     selection: optionalText(value.selection, 'selection', MAX_SELECTION),
+    targetCaseId: optionalCaseId(value.targetCaseId),
     capturedAt,
   };
 }
@@ -115,4 +116,13 @@ function requiredText(value, field, max) {
 function optionalText(value, field, max) {
   if (value === undefined) return undefined;
   return requiredText(value, field, max);
+}
+
+function optionalCaseId(value) {
+  if (value === undefined) return undefined;
+  const id = requiredText(value, 'targetCaseId', 160);
+  if (!/^case:[A-Za-z0-9._:-]+$/.test(id)) {
+    throw new InboxError('INVALID_CONTEXT', 'targetCaseId must be a valid Case ID');
+  }
+  return id;
 }

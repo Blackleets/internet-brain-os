@@ -9,6 +9,10 @@
     "service_worker": "src/background.js",
     "type": "module"
   },
+  "action": {
+    "default_title": "Send page to Hephaestus",
+    "default_popup": "src/popup.html"
+  },
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],

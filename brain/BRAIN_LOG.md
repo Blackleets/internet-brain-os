@@ -222,3 +222,10 @@ Phase 0.4 now provides a coherent evidence-first Kernel boundary for creation, r
 - Browser captures and CLI records share the existing local `.hephaestus/store.json` knowledge store.
 - Replays and restarts reuse the original Case/Evidence IDs without duplicate writes.
 - Until the extension gains a Case selector, each unique capture intentionally starts one draft Case.
+
+## 2026-07-19 — First usable browser capture UX
+
+- Added a compact extension popup with new-Case and existing-Case destinations.
+- Added active Case listing from the local Kernel.
+- Target Case IDs now participate in receipt identity, preserving idempotency while allowing the same page in different investigations.
+- Fixed write-queue recovery after a rejected projection.
