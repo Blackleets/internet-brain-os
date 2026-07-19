@@ -1,7 +1,10 @@
 export class StorageError extends Error {
-  constructor(message: string, options?: ErrorOptions) {
-    super(message, options);
+  readonly cause?: unknown;
+
+  constructor(message: string, cause?: unknown) {
+    super(message);
     this.name = new.target.name;
+    this.cause = cause;
   }
 }
 
@@ -18,8 +21,8 @@ export class NotFoundError extends StorageError {
 }
 
 export class CorruptDataError extends StorageError {
-  constructor(path: string, options?: ErrorOptions) {
-    super(`Stored data is corrupt or unsupported: ${path}`, options);
+  constructor(path: string, cause?: unknown) {
+    super(`Stored data is corrupt or unsupported: ${path}`, cause);
   }
 }
 
