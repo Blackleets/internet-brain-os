@@ -6,14 +6,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { CaptureCaseEvidenceProjector, LocalKnowledgeStore } from './capture-projector.mjs';
 import { PageContextInbox } from './page-context-inbox.mjs';
 import { ObsidianKnowledgeProjector } from './obsidian-projector.mjs';
+import { PairingSession } from './pairing-session.mjs';
 import { createLocalKernelServer } from './server.mjs';
 
 let server;
 const apiToken = 'test-token-that-is-at-least-32-characters';
 const authHeaders = { 'x-hephaestus-token': apiToken };
 
-function testServer(inbox, projector, obsidianProjector, evidenceSummarizer) {
-  return createLocalKernelServer(inbox, projector, obsidianProjector, evidenceSummarizer, { apiToken });
+function testServer(inbox, projector, obsidianProjector, evidenceSummarizer, options = {}) {
+  return createLocalKernelServer(inbox, projector, obsidianProjector, evidenceSummarizer, { apiToken, ...options });
 }
 afterEach(async () => {
   if (server?.listening) await new Promise((resolve) => server.close(resolve));
@@ -146,6 +147,33 @@ describe('local Kernel HTTP receiver', () => {
 
     expect((await fetch(url)).status).toBe(401);
     expect((await fetch(url, { headers: { 'x-hephaestus-token': `${apiToken}x` } })).status).toBe(401);
+  });
+
+  it('pairs once with an expiring bounded-attempt code and never exposes it through health', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    const pairing = new PairingSession(apiToken, { code: 'ABCD2345', expiresAt: 2_000, now: () => 1_000 });
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, { pairingSession: pairing });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+    const base = `http://127.0.0.1:${port}`;
+
+    expect(JSON.stringify(await (await fetch(`${base}/health`)).json())).not.toContain('ABCD2345');
+    const paired = await fetch(`${base}/pair`, {
+      method: 'POST', headers: { origin: `chrome-extension://${'a'.repeat(32)}`, 'content-type': 'application/json' }, body: JSON.stringify({ code: 'abcd-2345' }),
+    });
+    expect(paired.status).toBe(200);
+    expect(await paired.json()).toEqual({ ok: true, apiToken });
+    const reused = await fetch(`${base}/pair`, {
+      method: 'POST', headers: { origin: `chrome-extension://${'a'.repeat(32)}`, 'content-type': 'application/json' }, body: JSON.stringify({ code: 'ABCD2345' }),
+    });
+    expect(reused.status).toBe(410);
+    expect(await reused.json()).toEqual({ ok: false, code: 'PAIRING_ALREADY_USED' });
+
+    const noOrigin = await fetch(`${base}/pair`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: 'ABCD2345' }),
+    });
+    expect(noOrigin.status).toBe(403);
+    expect(await noOrigin.json()).toEqual({ ok: false, code: 'PAIRING_ORIGIN_REQUIRED' });
   });
 
   it('rejects non-loopback Host headers before routing', async () => {

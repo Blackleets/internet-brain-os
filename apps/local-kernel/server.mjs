@@ -7,6 +7,7 @@ import { InboxError, MAX_BODY_BYTES, PageContextInbox } from './page-context-inb
 import { ObsidianKnowledgeProjector } from './obsidian-projector.mjs';
 import { OptionalEvidenceSummarizer } from './optional-evidence-summarizer.mjs';
 import { loadOrCreateApiToken, validateApiToken } from './api-token-store.mjs';
+import { PairingError, PairingSession } from './pairing-session.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
@@ -19,6 +20,9 @@ const tokenRecord = isMain
   })
   : { token: validateApiToken('import-only-token-that-is-never-used'), source: 'import' };
 const apiToken = tokenRecord.token;
+const pairingSession = isMain && (tokenRecord.source === 'created' || tokenRecord.source === 'rotated' || process.env.HEPHAESTUS_PAIRING === '1')
+  ? new PairingSession(apiToken)
+  : undefined;
 const dataFile = resolve(dataDir, 'page-context-inbox.jsonl');
 const inbox = new PageContextInbox(dataFile);
 const knowledgeStore = new LocalKnowledgeStore(resolve(dataDir, 'store.json'));
@@ -35,6 +39,7 @@ const summarizer = new OptionalEvidenceSummarizer(knowledgeStore, {
 
 export function createLocalKernelServer(captureInbox, captureProjector, obsidianProjector, evidenceSummarizer, options = {}) {
   const requiredToken = options.apiToken === undefined ? undefined : validateApiToken(options.apiToken);
+  const activePairing = options.pairingSession;
   return createServer(async (request, response) => {
     if (!isLoopbackHost(request.headers.host)) {
       return send(response, 403, { ok: false, code: 'HOST_FORBIDDEN' });
@@ -47,6 +52,22 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     if (request.method === 'OPTIONS') return send(response, 204);
     if (request.method === 'GET' && request.url === '/health') {
       return send(response, 200, { ok: true, service: 'hephaestus-local-kernel' });
+    }
+    if (request.method === 'POST' && request.url === '/pair') {
+      if (!isExtensionOrigin(origin)) return send(response, 403, { ok: false, code: 'PAIRING_ORIGIN_REQUIRED' });
+      if (!activePairing) return send(response, 404, { ok: false, code: 'PAIRING_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) {
+        return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      }
+      try {
+        const body = await readJson(request);
+        const paired = activePairing.consume(body?.code);
+        return send(response, 200, { ok: true, ...paired });
+      } catch (error) {
+        if (error instanceof PairingError) return send(response, error.status, { ok: false, code: error.code });
+        if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code });
+        return send(response, 500, { ok: false, code: 'INTERNAL_ERROR' });
+      }
     }
     if (request.url?.startsWith('/api/') && !hasValidToken(request.headers['x-hephaestus-token'], requiredToken)) {
       return send(response, 401, { ok: false, code: 'AUTH_REQUIRED' });
@@ -89,15 +110,19 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   });
 }
 
-export const server = createLocalKernelServer(inbox, projector, obsidian, summarizer, { apiToken });
+export const server = createLocalKernelServer(inbox, projector, obsidian, summarizer, { apiToken, pairingSession });
 
 if (isMain) {
   if (!isLoopbackHostname(host)) throw new Error('HEPHAESTUS_HOST must be a loopback address');
   server.listen(port, host, () => {
     console.log(`Hephaestus local Kernel listening on http://${host}:${port}`);
-    if (tokenRecord.source === 'created') console.log(`Extension token created at ${tokenRecord.filePath}: ${apiToken}`);
-    else if (tokenRecord.source === 'rotated') console.log(`Extension token rotated at ${tokenRecord.filePath}: ${apiToken}`);
+    if (tokenRecord.source === 'created') console.log(`Extension token created privately at ${tokenRecord.filePath}`);
+    else if (tokenRecord.source === 'rotated') console.log(`Extension token rotated privately at ${tokenRecord.filePath}`);
     else if (tokenRecord.source === 'file') console.log(`Using persistent extension token from ${tokenRecord.filePath}`);
+    if (pairingSession) {
+      const pairing = pairingSession.details();
+      console.log(`Extension pairing code: ${pairing.code} (expires ${pairing.expiresAt}, one use, five attempts)`);
+    }
   });
 }
 
@@ -114,8 +139,12 @@ async function readJson(request) {
 }
 
 function isAllowedOrigin(origin) {
-  return /^chrome-extension:\/\/[a-p]{32}$/.test(origin)
+  return isExtensionOrigin(origin)
     || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+}
+
+function isExtensionOrigin(origin) {
+  return typeof origin === 'string' && /^chrome-extension:\/\/[a-p]{32}$/.test(origin);
 }
 
 function isLoopbackHost(value) {
