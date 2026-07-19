@@ -155,7 +155,7 @@ function sanitizeErrorMessage(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
   return raw
     .replace(/(bearer\s+)[^\s]+/gi, '$1[REDACTED]')
-    .replace(/([?&](?:token|api_key|apikey|key|secret)=)[^&\s]+/gi, '$1[REDACTED]')
+    .replace(/((?:^|[?&\s])(?:token|api_key|apikey|key|secret)=)[^&\s]+/gi, '$1[REDACTED]')
     .replace(/\b(?:sk|pk)-[A-Za-z0-9_-]{12,}\b/g, '[REDACTED_KEY]')
     .slice(0, 500);
 }
