@@ -25,6 +25,7 @@ export {
   HermesExecutionMapper,
   InvalidHermesExecutionEventError,
 } from './hermes-execution-mapper';
+export { HermesExecutionIngestionService } from './hermes-execution-ingestion-service';
 export type { ResearchPipelineInput, ResearchPipelineResult } from './research-pipeline';
 export type { ClaimAwareResearchPipelineInput, ClaimAwareResearchPipelineResult } from './claim-aware-research-pipeline';
 export type {
@@ -40,6 +41,10 @@ export type {
   HermesExecutionEvent,
   MapHermesExecutionInput,
 } from './hermes-execution-mapper';
+export type {
+  HermesExecutionIngestionContext,
+  IngestHermesExecutionInput,
+} from './hermes-execution-ingestion-service';
 export type {
   ResearchEvent,
   ResearchState,
