@@ -51,6 +51,38 @@ HMAC-SHA256(secret, signing-string).hex()
 
 The raw request body must be the exact bytes sent over HTTP. Reformatting JSON after signing invalidates the signature.
 
+## Hermes Agent run export
+
+When using a real Hermes Agent run, first normalize the run into this bounded export shape. This is not a Kernel record; it is only operational output from Hermes.
+
+```json
+{
+  "runId": "hermes-run-2026-07-20-001",
+  "missionId": "mission-hermes-real-001",
+  "taskId": "task-hermes-real-001",
+  "startedAt": "2026-07-20T00:00:00.000Z",
+  "completedAt": "2026-07-20T00:00:03.000Z",
+  "summary": "Hermes execution completed.",
+  "evidence": [
+    {
+      "id": "evidence-hermes-real-1",
+      "requirementKey": "source",
+      "verified": true,
+      "recordedAt": "2026-07-20T00:00:01.000Z"
+    }
+  ],
+  "claim": {
+    "id": "proposal-hermes-real-1",
+    "statement": "Hermes produced an evidence-backed claim.",
+    "confidence": 0.9,
+    "evidenceIds": ["evidence-hermes-real-1"],
+    "proposedAt": "2026-07-20T00:00:02.000Z"
+  }
+}
+```
+
+The Kernel adapter converts that export into `HermesExecutionEvent[]`. The adapter rejects embedded Kernel authority fields such as `validation`, `contradiction`, `admission`, `candidate`, `durableClaim`, or `knowledgeAdmission` before ingestion.
+
 ## Request body
 
 ```json
