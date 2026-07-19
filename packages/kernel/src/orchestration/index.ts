@@ -27,6 +27,7 @@ export {
 } from './hermes-execution-mapper';
 export { HermesExecutionIngestionService } from './hermes-execution-ingestion-service';
 export { IdempotentHermesExecutionIngestionService } from './idempotent-hermes-execution-ingestion-service';
+export { HermesIngestionRecoveryCoordinator } from './hermes-ingestion-recovery-coordinator';
 export type { ResearchPipelineInput, ResearchPipelineResult } from './research-pipeline';
 export type { ClaimAwareResearchPipelineInput, ClaimAwareResearchPipelineResult } from './claim-aware-research-pipeline';
 export type {
@@ -51,6 +52,11 @@ export type {
   HermesIngestionReceiptStore,
   IngestHermesExecutionIdempotentlyInput,
 } from './idempotent-hermes-execution-ingestion-service';
+export type {
+  CognitivePipelineRecordReader,
+  HermesIngestionRecoveryResult,
+  HermesRecoveryReceiptStore,
+} from './hermes-ingestion-recovery-coordinator';
 export type {
   ResearchEvent,
   ResearchState,
