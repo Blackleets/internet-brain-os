@@ -1,20 +1,23 @@
 export class LLMAdapterError extends Error {
-  constructor(message: string, readonly code: string, options?: ErrorOptions) {
-    super(message, options);
+  readonly cause?: unknown;
+
+  constructor(message: string, readonly code: string, cause?: unknown) {
+    super(message);
     this.name = 'LLMAdapterError';
+    this.cause = cause;
   }
 }
 
 export class LLMTimeoutError extends LLMAdapterError {
-  constructor(provider: string, timeoutMs: number, options?: ErrorOptions) {
-    super(`${provider} request timed out after ${timeoutMs}ms`, 'LLM_TIMEOUT', options);
+  constructor(provider: string, timeoutMs: number, cause?: unknown) {
+    super(`${provider} request timed out after ${timeoutMs}ms`, 'LLM_TIMEOUT', cause);
     this.name = 'LLMTimeoutError';
   }
 }
 
 export class LLMTransportError extends LLMAdapterError {
-  constructor(provider: string, options?: ErrorOptions) {
-    super(`${provider} request failed`, 'LLM_TRANSPORT', options);
+  constructor(provider: string, cause?: unknown) {
+    super(`${provider} request failed`, 'LLM_TRANSPORT', cause);
     this.name = 'LLMTransportError';
   }
 }
