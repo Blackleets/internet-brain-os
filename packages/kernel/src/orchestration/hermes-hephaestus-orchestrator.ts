@@ -45,7 +45,7 @@ export class HermesHephaestusOrchestrator {
           try {
             const value = await tool.execute({
               caseId: context.caseId,
-              stage: context.state,
+              stage: adapter.stage,
               attempt: context.attempt,
               idempotencyKey: context.idempotencyKey,
               abortSignal: context.abortSignal,
