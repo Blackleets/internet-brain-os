@@ -83,6 +83,19 @@ When using a real Hermes Agent run, first normalize the run into this bounded ex
 
 The Kernel adapter converts that export into `HermesExecutionEvent[]`. The adapter rejects embedded Kernel authority fields such as `validation`, `contradiction`, `admission`, `candidate`, `durableClaim`, or `knowledgeAdmission` before ingestion.
 
+## Native Hermes JSONL log
+
+If Hermes emits native JSONL-style operational events, use this explicit event format:
+
+```jsonl
+{"type":"run_started","runId":"hermes-native-1","missionId":"mission-native-1","taskId":"task-native-1","at":"2026-07-20T00:00:00.000Z"}
+{"type":"evidence","id":"evidence-native-1","requirementKey":"source","verified":true,"at":"2026-07-20T00:00:01.000Z"}
+{"type":"claim","id":"proposal-native-1","statement":"Hermes produced an evidence-backed claim.","confidence":0.9,"evidenceIds":["evidence-native-1"],"at":"2026-07-20T00:00:02.000Z"}
+{"type":"run_completed","summary":"Hermes execution completed.","at":"2026-07-20T00:00:03.000Z"}
+```
+
+`HermesNativeLogExtractor` converts this JSONL into the bounded Hermes Agent run export. It is a thin extractor only: it does not infer missing claims, fabricate evidence, validate knowledge, or admit memory.
+
 ## Agent-output CLI
 
 Build first:
@@ -97,19 +110,26 @@ Start the local Kernel with the same secret used by the client:
 IBOS_HERMES_SECRET=dev-secret pnpm kernel:serve
 ```
 
-In another shell, ingest a Hermes Agent run export JSON:
+In another shell, ingest a bounded Hermes Agent run export JSON:
 
 ```bash
 IBOS_HERMES_SECRET=dev-secret pnpm hermes:ingest-agent examples/hermes-agent-run-output.sample.json
 ```
 
+Or ingest a native Hermes JSONL log:
+
+```bash
+IBOS_HERMES_SECRET=dev-secret pnpm hermes:ingest-agent --native-jsonl examples/hermes-native-log.sample.jsonl
+```
+
 The CLI:
 
-1. reads the Hermes Agent run export JSON;
-2. converts it through `HermesAgentOutputAdapter`;
-3. builds the signed `/hermes/ingestions` payload;
-4. sends it to the local Kernel server;
-5. exits non-zero if conversion, signing, transport, or ingestion fails.
+1. reads the Hermes Agent run export JSON or native JSONL log;
+2. converts it through `HermesNativeLogExtractor` when `--native-jsonl` is used;
+3. converts the bounded output through `HermesAgentOutputAdapter`;
+4. builds the signed `/hermes/ingestions` payload;
+5. sends it to the local Kernel server;
+6. exits non-zero if conversion, signing, transport, or ingestion fails.
 
 Use `IBOS_HERMES_IDEMPOTENCY_KEY`, `IBOS_HERMES_RECORD_ID`, or `IBOS_HERMES_RESULT_ID` to override derived IDs when reproducing a specific run.
 
