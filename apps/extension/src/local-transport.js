@@ -47,6 +47,7 @@ export async function sendPageContext(context, options = {}) {
       caseId: payload.caseId,
       evidenceId: payload.evidenceId,
       obsidianUpdated: Boolean(payload.obsidianNotes),
+      intelligenceStatus: payload.intelligence?.status,
     };
   } catch (error) {
     if (error instanceof LocalTransportError) throw error;

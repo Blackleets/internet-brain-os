@@ -236,3 +236,10 @@ Phase 0.4 now provides a coherent evidence-first Kernel boundary for creation, r
 - Notes contain YAML frontmatter, provenance fields, source links, receipt IDs, content hashes, and Obsidian backlinks.
 - Default vault path is `.hephaestus/obsidian-vault`; `HEPHAESTUS_OBSIDIAN_DIR` can override it.
 - Reports remain deterministic and evidence-bound when no LLM is available.
+
+## 2026-07-19 — Optional local Evidence intelligence
+
+- Added disabled-by-default Ollama summarization after deterministic Evidence projection.
+- Model calls are restricted to loopback HTTP and cannot block successful capture when unavailable or invalid.
+- Raw Evidence remains unchanged; derived summaries include uncertain hypotheses, limitations, Skill/prompt versions, and model provenance.
+- Obsidian notes surface generated content under an explicit Local AI Summary section.
