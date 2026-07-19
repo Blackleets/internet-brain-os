@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- Secure local extension pairing with an ephemeral one-use code, five-minute expiry, five-attempt lockout, extension-origin enforcement, and no long-lived token disclosure.
 - Persistent private local API credentials with explicit rotation, DNS-pinned public connections, and CI production-dependency auditing with least-privilege workflow permissions.
 - Authenticated local Kernel API, strict loopback/Host enforcement, extension credential setup, SSRF-safe bounded public-page fetching, and inert Obsidian rendering for untrusted captured/model text.
 - Optional loopback-only Ollama Evidence summaries with structured hypotheses, limitations, model provenance, and a deterministic offline fallback that preserves raw Evidence.

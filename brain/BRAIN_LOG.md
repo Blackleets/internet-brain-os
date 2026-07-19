@@ -259,3 +259,11 @@ Phase 0.4 now provides a coherent evidence-first Kernel boundary for creation, r
 - CI gained least-privilege permissions, bounded execution, concurrency cancellation, and production advisory enforcement.
 - Added `SECURITY.md` as the user/operator security baseline.
 - Validation: 128/128 tests, typecheck, build, diff check, and production audit passed.
+
+## 2026-07-19 — Secure extension pairing
+
+- Replaced long-token copying with a short-lived, single-use local pairing ceremony.
+- Pairing has five-minute expiry, five-attempt lockout, constant-time digest comparison, and Chrome-extension-origin enforcement.
+- Long-lived credentials are delivered directly to extension-local storage and never printed.
+- Manual credential entry remains only as a recovery route.
+- Validation: 133/133 tests, typecheck, build, diff check, and production audit passed.

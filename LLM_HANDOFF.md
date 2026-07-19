@@ -549,3 +549,32 @@ The receiver preserved raw captures but did not yet feed the Hephaestus knowledg
 - Never print an existing persistent token on routine restarts.
 - Token rotation must always remain explicit and invalidate the extension's old credential.
 - Public network requests must never fall back from pinned connections to ordinary DNS-resolving fetches.
+
+## Handoff 2026-07-19 - Codex secure local extension pairing
+
+### What changed
+- Added an in-memory pairing session that generates an eight-character code with roughly 40 bits of entropy.
+- Codes expire after five minutes, lock after five failed attempts, and deliver the persistent API token exactly once.
+- Pairing is accepted only from a valid Chrome extension origin over the existing loopback/Host boundary.
+- First token creation and explicit rotation enable pairing automatically; `HEPHAESTUS_PAIRING=1` enables pairing for an additional trusted browser profile.
+- The long-lived token is no longer printed. Manual token entry remains inside a collapsed recovery section.
+
+### Security properties
+- Pairing codes are stored as SHA-256 digests for comparison and checked with constant-time equality.
+- Health and ordinary API responses never expose pairing material.
+- Invalid, expired, used, and locked sessions return bounded generic error codes without tokens.
+
+### Validation
+- `pnpm test`: 133/133 passed.
+- `pnpm typecheck`: passed.
+- `pnpm build`: passed.
+- `pnpm audit --prod`: no known vulnerabilities.
+- `git diff --check`: passed.
+
+### Next recommended step
+- Add extension identity allowlisting after packaging provides a stable signed extension ID.
+- Add browser-level integration testing for the popup pairing ceremony.
+
+### Do not forget
+- Never make `/pair` available to ordinary localhost web origins or requests without an extension origin.
+- Do not persist pairing codes; restart or expiry should destroy them.

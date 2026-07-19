@@ -11,9 +11,15 @@
       <p class="eyebrow">HEPHAESTUS</p>
       <h1>Forge this page</h1>
       <p class="muted">Turn the current public page into traceable Evidence.</p>
+      <label for="pairing-code">Pair this extension</label>
+      <input id="pairing-code" type="text" inputmode="text" maxlength="12" autocomplete="one-time-code" placeholder="Eight-character startup code">
+      <button id="pair-kernel" type="button">Pair securely</button>
+      <details>
+        <summary>Manual recovery</summary>
       <label for="kernel-token">Local Kernel token</label>
-      <input id="kernel-token" type="password" autocomplete="off" placeholder="Paste token from Kernel startup">
+      <input id="kernel-token" type="password" autocomplete="off" placeholder="Read token file only for recovery">
       <button id="save-token" type="button">Save local token</button>
+      </details>
       <label for="case-target">Destination</label>
       <select id="case-target">
         <option value="">Start a new Case</option>

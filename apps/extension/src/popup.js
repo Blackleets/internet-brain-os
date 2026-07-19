@@ -1,14 +1,17 @@
-import { DEFAULT_KERNEL_BASE_URL, listCases } from './local-transport.js';
+import { DEFAULT_KERNEL_BASE_URL, listCases, pairKernel } from './local-transport.js';
 
 const select = document.querySelector('#case-target');
 const button = document.querySelector('#capture');
 const status = document.querySelector('#status');
 const tokenInput = document.querySelector('#kernel-token');
 const saveTokenButton = document.querySelector('#save-token');
+const pairingCodeInput = document.querySelector('#pairing-code');
+const pairButton = document.querySelector('#pair-kernel');
 
 void loadCases();
 button.addEventListener('click', capture);
 saveTokenButton.addEventListener('click', saveToken);
+pairButton.addEventListener('click', pair);
 
 async function loadCases() {
   try {
@@ -25,7 +28,26 @@ async function loadCases() {
       select.append(option);
     }
   } catch {
-    setStatus('Start the local Kernel to load existing Cases.', true);
+    setStatus('Start the Kernel and pair this extension to load Cases.', true);
+  }
+}
+
+async function pair() {
+  pairButton.disabled = true;
+  try {
+    const stored = await chrome.storage.local.get('kernelBaseUrl');
+    const token = await pairKernel(pairingCodeInput.value, {
+      baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL,
+    });
+    await chrome.storage.local.set({ kernelApiToken: token });
+    tokenInput.value = token;
+    pairingCodeInput.value = '';
+    setStatus('Extension paired securely.');
+    await loadCases();
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'Pairing failed', true);
+  } finally {
+    pairButton.disabled = false;
   }
 }
 

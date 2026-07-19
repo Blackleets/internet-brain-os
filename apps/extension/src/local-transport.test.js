@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { listCases, LocalTransportError, sendPageContext } from './local-transport.js';
+import { listCases, LocalTransportError, pairKernel, sendPageContext } from './local-transport.js';
 
 const context = {
   schemaVersion: 'hephaestus.page-context.v1',
@@ -88,5 +88,21 @@ describe('listCases', () => {
     const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, cases }) }));
     await expect(listCases({ fetchImpl, apiToken })).resolves.toEqual(cases);
     expect(fetchImpl.mock.calls[0][1].headers['x-hephaestus-token']).toBe(apiToken);
+  });
+});
+
+describe('pairKernel', () => {
+  it('exchanges a short-lived code for a validated local credential', async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, apiToken }) }));
+    await expect(pairKernel('ABCD-2345', { fetchImpl })).resolves.toBe(apiToken);
+    expect(fetchImpl).toHaveBeenCalledWith('http://127.0.0.1:4000/pair', expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ code: 'ABCD-2345' }),
+    }));
+  });
+
+  it('rejects malformed codes without network access', async () => {
+    const fetchImpl = vi.fn();
+    await expect(pairKernel('123', { fetchImpl })).rejects.toMatchObject({ code: 'INVALID_PAIRING_CODE' });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

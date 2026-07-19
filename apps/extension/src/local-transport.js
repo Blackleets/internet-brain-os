@@ -79,6 +79,31 @@ export async function listCases(options = {}) {
   return payload.cases;
 }
 
+export async function pairKernel(code, options = {}) {
+  const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
+  const normalizedCode = typeof code === 'string' ? code.trim() : '';
+  if (!/^[A-Za-z2-9 -]{8,12}$/.test(normalizedCode)) {
+    throw new LocalTransportError('INVALID_PAIRING_CODE', 'Enter the eight-character pairing code');
+  }
+  const fetchImpl = options.fetchImpl ?? fetch;
+  let response;
+  try {
+    response = await fetchImpl(`${baseUrl}/pair`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code: normalizedCode }),
+    });
+  } catch {
+    throw new LocalTransportError('TRANSPORT', 'Unable to reach the local Hephaestus Kernel');
+  }
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new LocalTransportError(payload.code ?? 'PAIRING_REJECTED', 'Pairing code was rejected or expired');
+  }
+  const payload = await response.json();
+  return requireApiToken(payload?.apiToken);
+}
+
 function requireApiToken(value) {
   if (typeof value !== 'string' || value.length < 32 || value.length > 512) {
     throw new LocalTransportError('AUTH_REQUIRED', 'Enter the local Kernel token in the extension');
