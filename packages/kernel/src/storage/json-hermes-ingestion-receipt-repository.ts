@@ -87,15 +87,30 @@ export class JsonHermesIngestionReceiptRepository {
     return result!;
   }
 
+  async get(key: string): Promise<HermesIngestionReceipt | undefined> {
+    const receipt = (await this.collection.read()).find((candidate) => candidate.idempotencyKey === key);
+    return receipt ? structuredClone(receipt) : undefined;
+  }
+
+  async listPending(): Promise<readonly HermesIngestionReceipt[]> {
+    return (await this.collection.read())
+      .filter((receipt) => receipt.status === 'pending')
+      .map((receipt) => structuredClone(receipt));
+  }
+
   async complete(key: string, record: CognitivePipelineRecord, at: IsoDateTime): Promise<void> {
     await this.collection.mutate((receipts) => {
       const receipt = receipts.find((candidate) => candidate.idempotencyKey === key);
       if (!receipt || receipt.status !== 'pending') {
         throw new HermesIngestionConflictError(`Cannot complete unreserved Hermes ingestion: ${key}`);
       }
+      if (receipt.recordId !== record.id) {
+        throw new HermesIngestionConflictError(`Recovered record does not match receipt: ${key}`);
+      }
       receipt.status = 'completed';
       receipt.record = structuredClone(record);
       receipt.updatedAt = at;
+      delete receipt.failure;
     });
   }
 
