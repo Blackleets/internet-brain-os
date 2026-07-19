@@ -7,8 +7,17 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "baseUrl": ".",
+    "paths": {
+      "@internet-brain-os/shared": ["../shared/src/index.ts"],
+      "@internet-brain-os/kernel": ["../kernel/src/index.ts"]
+    }
   },
+  "references": [
+    { "path": "../shared" },
+    { "path": "../kernel" }
+  ],
   "include": [
     "src/**/*.ts"
   ]
