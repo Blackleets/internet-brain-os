@@ -98,6 +98,10 @@ Memory changes are recorded through an append-only event log. Duplicate normaliz
 
 ## Next Priority Queue
 
+### Phase 1 local capture path
+
+The extension now sends `hephaestus.page-context.v1` payloads to a local HTTP receiver. The receiver validates and durably journals accepted captures before returning a deterministic receipt. This inbox is a loss-prevention boundary; projecting accepted captures into Case and Evidence objects remains the next bounded adapter task.
+
 ### P0 — Stabilize the foundation
 
 - [x] Add initial coverage for research lifecycle, retries, and failure telemetry.
@@ -112,6 +116,7 @@ Memory changes are recorded through an append-only event log. Duplicate normaliz
 - Add provider capability metadata.
 - Add timeout and cancellation contracts.
 - Add structured execution telemetry.
+- Project accepted browser inbox records into Case and Evidence through a typed, idempotent adapter.
 
 ### P2 — Make research resumable end-to-end
 

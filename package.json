@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc -b",
     "clean": "tsc -b --clean",
+    "kernel:serve": "node apps/local-kernel/server.mjs",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc -b --pretty false"
   },

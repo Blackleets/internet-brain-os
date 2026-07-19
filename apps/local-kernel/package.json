@@ -1,0 +1,6 @@
+{
+  "name": "@internet-brain-os/local-kernel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module"
+}
