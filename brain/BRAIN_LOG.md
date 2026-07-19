@@ -243,3 +243,11 @@ Phase 0.4 now provides a coherent evidence-first Kernel boundary for creation, r
 - Model calls are restricted to loopback HTTP and cannot block successful capture when unavailable or invalid.
 - Raw Evidence remains unchanged; derived summaries include uncertain hypotheses, limitations, Skill/prompt versions, and model provenance.
 - Obsidian notes surface generated content under an explicit Local AI Summary section.
+
+## 2026-07-19 — Local capture trust-boundary hardening
+
+- Confirmed and closed unauthenticated local API access with per-runtime or configured high-entropy tokens.
+- Enforced loopback-only listener, request Host, Ollama, and extension Kernel destinations.
+- Rendered page/model-controlled content inert in Obsidian to prevent Markdown embeds or active markup injection.
+- Blocked private-network ingestion, unsafe redirects, and unbounded web response bodies in both connector and CLI paths.
+- Production dependency audit found no known advisories; 125 regression tests pass.

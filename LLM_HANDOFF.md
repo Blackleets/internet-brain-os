@@ -490,3 +490,37 @@ The receiver preserved raw captures but did not yet feed the Hephaestus knowledg
 ### Do not forget
 - Raw Evidence is authoritative; `aiSummary` is derived metadata.
 - Never permit a non-loopback Ollama endpoint without a deliberate security design.
+
+## Handoff 2026-07-19 - Codex local capture security hardening
+
+### Confirmed vulnerabilities corrected
+- Local API routes had no authentication, so another local process or installed extension could read Cases or submit captures.
+- The receiver trusted the listening configuration and did not reject hostile `Host` headers.
+- Captured page text and model output were emitted as active Obsidian Markdown, allowing hostile content to create embeds, links, or HTML-like markup in the vault.
+- The extension transport allowed non-loopback HTTP(S) Kernel endpoints, creating an Evidence exfiltration configuration risk.
+- Public-page fetchers accepted private/link-local targets and automatic redirects, enabling SSRF, and read response bodies without a hard memory bound.
+
+### Controls added
+- High-entropy local API token with timing-safe comparison on every `/api/*` route.
+- Strict loopback listener, request `Host`, and extension endpoint enforcement.
+- `Cache-Control: no-store` and explicit authenticated CORS header support.
+- Extension token storage/setup UI.
+- Escaped summaries/headings/link labels and indented-code rendering for raw captured text.
+- DNS/private-address validation before public fetches and every redirect, manual bounded redirects, and a 2 MiB response limit.
+
+### Validation
+- `pnpm test`: 125/125 passed.
+- `pnpm typecheck`: passed.
+- `pnpm build`: passed.
+- `pnpm audit --prod`: no known vulnerabilities.
+- `git diff --check`: passed.
+
+### Residual risks
+- The token is stored in extension-local storage; a fully compromised browser profile or operating-system account remains outside this boundary.
+- Obsidian community plugins can expand Markdown behavior. Keep plugins trusted and raw Evidence inert.
+- Local JSON files use restrictive creation modes, but operating-system account compromise can still access them.
+- DNS validation reduces SSRF risk; future connector work should pin validated addresses at connection time to eliminate DNS time-of-check/time-of-use rebinding risk completely.
+
+### Next recommended step
+- Add token rotation/pairing UX that avoids manual copying while requiring explicit local user approval.
+- Add automated security checks for dependency advisories and secret scanning in CI.

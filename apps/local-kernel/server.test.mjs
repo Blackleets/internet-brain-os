@@ -1,4 +1,5 @@
 import { mkdtemp, readFile } from 'node:fs/promises';
+import { request as httpRequest } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -8,15 +9,26 @@ import { ObsidianKnowledgeProjector } from './obsidian-projector.mjs';
 import { createLocalKernelServer } from './server.mjs';
 
 let server;
+const apiToken = 'test-token-that-is-at-least-32-characters';
+const authHeaders = { 'x-hephaestus-token': apiToken };
+
+function testServer(inbox, projector, obsidianProjector, evidenceSummarizer) {
+  return createLocalKernelServer(inbox, projector, obsidianProjector, evidenceSummarizer, { apiToken });
+}
 afterEach(async () => {
   if (server?.listening) await new Promise((resolve) => server.close(resolve));
 });
 
 describe('local Kernel HTTP receiver', () => {
+  it('refuses weak configured API tokens', () => {
+    expect(() => createLocalKernelServer({}, undefined, undefined, undefined, { apiToken: 'short' }))
+      .toThrow('HEPHAESTUS_API_TOKEN must contain 32-512 characters');
+  });
+
   it('accepts extension context and returns an idempotent receipt', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
     const projector = new CaptureCaseEvidenceProjector(new LocalKnowledgeStore(join(dir, 'store.json')));
-    server = createLocalKernelServer(new PageContextInbox(join(dir, 'inbox.jsonl')), projector);
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), projector);
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     const { port } = server.address();
     const url = `http://127.0.0.1:${port}/api/browser/page-context`;
@@ -28,8 +40,8 @@ describe('local Kernel HTTP receiver', () => {
       capturedAt: '2026-07-19T11:00:00.000Z',
     });
 
-    const first = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body });
-    const retry = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body });
+    const first = await fetch(url, { method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' }, body });
+    const retry = await fetch(url, { method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' }, body });
     expect(first.status).toBe(202);
     expect(await first.json()).toMatchObject({
       ok: true,
@@ -45,12 +57,12 @@ describe('local Kernel HTTP receiver', () => {
 
   it('rejects invalid JSON without exposing internals', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
-    server = createLocalKernelServer(new PageContextInbox(join(dir, 'inbox.jsonl')));
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')));
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     const { port } = server.address();
     const response = await fetch(`http://127.0.0.1:${port}/api/browser/page-context`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { ...authHeaders, 'content-type': 'application/json' },
       body: '{',
     });
     expect(response.status).toBe(400);
@@ -59,17 +71,17 @@ describe('local Kernel HTTP receiver', () => {
 
   it('blocks hostile browser origins and simple-request content types', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
-    server = createLocalKernelServer(new PageContextInbox(join(dir, 'inbox.jsonl')));
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')));
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     const { port } = server.address();
     const url = `http://127.0.0.1:${port}/api/browser/page-context`;
 
     const hostile = await fetch(url, {
       method: 'POST',
-      headers: { origin: 'https://malicious.example', 'content-type': 'application/json' },
+      headers: { ...authHeaders, origin: 'https://malicious.example', 'content-type': 'application/json' },
       body: '{}',
     });
-    const simple = await fetch(url, { method: 'POST', headers: { 'content-type': 'text/plain' }, body: '{}' });
+    const simple = await fetch(url, { method: 'POST', headers: { ...authHeaders, 'content-type': 'text/plain' }, body: '{}' });
 
     expect(hostile.status).toBe(403);
     expect(await hostile.json()).toEqual({ ok: false, code: 'ORIGIN_FORBIDDEN' });
@@ -87,13 +99,13 @@ describe('local Kernel HTTP receiver', () => {
       ],
       evidence: [],
     });
-    server = createLocalKernelServer(
+    server = testServer(
       new PageContextInbox(join(dir, 'inbox.jsonl')),
       new CaptureCaseEvidenceProjector(store),
     );
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     const { port } = server.address();
-    const response = await fetch(`http://127.0.0.1:${port}/api/cases`);
+    const response = await fetch(`http://127.0.0.1:${port}/api/cases`, { headers: authHeaders });
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       ok: true,
@@ -105,7 +117,7 @@ describe('local Kernel HTTP receiver', () => {
     const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));
     const projector = new CaptureCaseEvidenceProjector(store);
-    server = createLocalKernelServer(
+    server = testServer(
       new PageContextInbox(join(dir, 'inbox.jsonl')),
       projector,
       new ObsidianKnowledgeProjector(store, join(dir, 'vault')),
@@ -114,7 +126,7 @@ describe('local Kernel HTTP receiver', () => {
     const { port } = server.address();
     const response = await fetch(`http://127.0.0.1:${port}/api/browser/page-context`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { ...authHeaders, 'content-type': 'application/json' },
       body: JSON.stringify({
         schemaVersion: 'hephaestus.page-context.v1', url: 'https://example.com/', title: 'Example',
         visibleText: 'Public Evidence', capturedAt: '2026-07-19T11:00:00.000Z',
@@ -124,4 +136,37 @@ describe('local Kernel HTTP receiver', () => {
     expect(body.obsidianNotes).toMatchObject({ caseNote: expect.stringContaining('Cases/') });
     expect(await readFile(join(dir, 'vault', body.obsidianNotes.caseNote), 'utf8')).toContain('# Example');
   });
+
+  it('requires a timing-safe bearer token for every API route', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')));
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+    const url = `http://127.0.0.1:${port}/api/cases`;
+
+    expect((await fetch(url)).status).toBe(401);
+    expect((await fetch(url, { headers: { 'x-hephaestus-token': `${apiToken}x` } })).status).toBe(401);
+  });
+
+  it('rejects non-loopback Host headers before routing', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')));
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+    const response = await rawRequest(port, 'attacker.example');
+    expect(response.status).toBe(403);
+    expect(JSON.parse(response.body)).toEqual({ ok: false, code: 'HOST_FORBIDDEN' });
+  });
 });
+
+function rawRequest(port, host) {
+  return new Promise((resolve, reject) => {
+    const request = httpRequest({ hostname: '127.0.0.1', port, path: '/health', headers: { host } }, (response) => {
+      const chunks = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => resolve({ status: response.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
+    });
+    request.on('error', reject);
+    request.end();
+  });
+}

@@ -46,4 +46,12 @@ describe('Hephaestus CLI', () => {
     await expect(run(['case', 'show'], env)).rejects.toThrow('Missing required case ID');
     await expect(run(['case', 'show', 'case:missing'], env)).rejects.toThrow('Case not found: case:missing');
   });
+
+  test.each(['http://127.0.0.1/private', 'http://169.254.169.254/latest/meta-data', 'http://[::1]/'])('blocks SSRF target %s before fetch', async (url) => {
+    const root = await mkdtemp(join(tmpdir(), 'hephaestus-cli-ssrf-'));
+    const env = { ...process.env, HEPHAESTUS_DATA_DIR: root };
+    const created = JSON.parse(await capture(['case', 'create', 'Security test'], env));
+    await expect(run(['ingest', 'page', '--case', created.id, '--url', url], env))
+      .rejects.toThrow('Private network URLs are not supported');
+  });
 });

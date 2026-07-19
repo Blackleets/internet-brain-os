@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- Authenticated local Kernel API, strict loopback/Host enforcement, extension credential setup, SSRF-safe bounded public-page fetching, and inert Obsidian rendering for untrusted captured/model text.
 - Optional loopback-only Ollama Evidence summaries with structured hypotheses, limitations, model provenance, and a deterministic offline fallback that preserves raw Evidence.
 - Automatic Obsidian-compatible Case, Evidence, and evidence-report synchronization after successful browser captures.
 - First usable extension popup with explicit new-Case or existing-Case capture destinations and a local active-Case listing endpoint.

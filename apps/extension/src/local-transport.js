@@ -17,13 +17,14 @@ export async function sendPageContext(context, options = {}) {
   const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const fetchImpl = options.fetchImpl ?? fetch;
+  const apiToken = requireApiToken(options.apiToken);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetchImpl(`${baseUrl}/api/browser/page-context`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'x-hephaestus-token': apiToken },
       body: JSON.stringify({ ...context, targetCaseId: options.targetCaseId }),
       signal: controller.signal,
     });
@@ -63,9 +64,10 @@ export async function sendPageContext(context, options = {}) {
 export async function listCases(options = {}) {
   const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
   const fetchImpl = options.fetchImpl ?? fetch;
+  const apiToken = requireApiToken(options.apiToken);
   let response;
   try {
-    response = await fetchImpl(`${baseUrl}/api/cases`);
+    response = await fetchImpl(`${baseUrl}/api/cases`, { headers: { 'x-hephaestus-token': apiToken } });
   } catch {
     throw new LocalTransportError('TRANSPORT', 'Unable to reach the local Hephaestus Kernel');
   }
@@ -77,10 +79,17 @@ export async function listCases(options = {}) {
   return payload.cases;
 }
 
+function requireApiToken(value) {
+  if (typeof value !== 'string' || value.length < 32 || value.length > 512) {
+    throw new LocalTransportError('AUTH_REQUIRED', 'Enter the local Kernel token in the extension');
+  }
+  return value;
+}
+
 function normalizeBaseUrl(value) {
   const url = new URL(value);
-  if (!['http:', 'https:'].includes(url.protocol)) {
-    throw new LocalTransportError('INVALID_ENDPOINT', 'Kernel endpoint must use HTTP(S)');
+  if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) {
+    throw new LocalTransportError('INVALID_ENDPOINT', 'Kernel endpoint must use HTTP on a loopback host');
   }
   return url.href.replace(/\/$/, '');
 }
