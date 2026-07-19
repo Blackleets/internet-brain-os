@@ -40,6 +40,7 @@ For the product story behind the demo, read:
 
 - `docs/ai-forensics-case-study.md`
 - `docs/product-star-roadmap.md`
+- `docs/replay-lab-contract.md`
 
 ## Core idea
 
@@ -117,11 +118,12 @@ Every human or AI contributor must read these files before making changes:
 11. `docs/hermes-real-runtime-validation.md`
 12. `docs/ai-forensics-case-study.md`
 13. `docs/product-star-roadmap.md`
-14. `docs/obsidian-sync-protocol.md`
-15. `docs/architecture.md`
-16. `ROADMAP.md`
-17. `DECISIONS.md`
-18. The active task or GitHub issue.
+14. `docs/replay-lab-contract.md`
+15. `docs/obsidian-sync-protocol.md`
+16. `docs/architecture.md`
+17. `ROADMAP.md`
+18. `DECISIONS.md`
+19. The active task or GitHub issue.
 
 ## Institutional memory
 
