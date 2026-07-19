@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- First usable extension popup with explicit new-Case or existing-Case capture destinations and a local active-Case listing endpoint.
 - Deterministic browser capture projection into local Case and Evidence records, compatible with the existing CLI store and idempotent across retries and restarts.
 - Local Hephaestus HTTP receiver for browser page context, with bounded validation, durable JSONL inbox, deterministic receipts, restart-safe deduplication, and local-only defaults.
 - Shared domain types for Phase 0.2: Case, Evidence, Entity, Relationship, Report, Skill, LLM, and validation helpers.

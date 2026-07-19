@@ -23,6 +23,13 @@ export function createLocalKernelServer(captureInbox, captureProjector) {
     if (request.method === 'GET' && request.url === '/health') {
       return send(response, 200, { ok: true, service: 'hephaestus-local-kernel' });
     }
+    if (request.method === 'GET' && request.url === '/api/cases' && captureProjector) {
+      try {
+        return send(response, 200, { ok: true, cases: await captureProjector.listCases() });
+      } catch {
+        return send(response, 500, { ok: false, code: 'INTERNAL_ERROR' });
+      }
+    }
     if (request.method !== 'POST' || request.url !== '/api/browser/page-context') {
       return send(response, 404, { ok: false, code: 'NOT_FOUND' });
     }

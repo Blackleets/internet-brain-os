@@ -24,7 +24,7 @@ export async function sendPageContext(context, options = {}) {
     const response = await fetchImpl(`${baseUrl}/api/browser/page-context`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(context),
+      body: JSON.stringify({ ...context, targetCaseId: options.targetCaseId }),
       signal: controller.signal,
     });
 
@@ -36,11 +36,17 @@ export async function sendPageContext(context, options = {}) {
     }
 
     const payload = await response.json();
-    if (!payload || payload.ok !== true || typeof payload.receiptId !== 'string') {
+    if (!payload || payload.ok !== true || typeof payload.receiptId !== 'string'
+      || typeof payload.caseId !== 'string' || typeof payload.evidenceId !== 'string') {
       throw new LocalTransportError('INVALID_RESPONSE', 'Local Kernel returned an invalid response');
     }
 
-    return { ok: true, receiptId: payload.receiptId };
+    return {
+      ok: true,
+      receiptId: payload.receiptId,
+      caseId: payload.caseId,
+      evidenceId: payload.evidenceId,
+    };
   } catch (error) {
     if (error instanceof LocalTransportError) throw error;
     if (controller.signal.aborted) {
@@ -50,6 +56,23 @@ export async function sendPageContext(context, options = {}) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+export async function listCases(options = {}) {
+  const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  let response;
+  try {
+    response = await fetchImpl(`${baseUrl}/api/cases`);
+  } catch {
+    throw new LocalTransportError('TRANSPORT', 'Unable to reach the local Hephaestus Kernel');
+  }
+  if (!response.ok) throw new LocalTransportError('KERNEL_REJECTED', `Local Kernel request failed with HTTP ${response.status}`);
+  const payload = await response.json();
+  if (!payload?.ok || !Array.isArray(payload.cases)) {
+    throw new LocalTransportError('INVALID_RESPONSE', 'Local Kernel returned an invalid Case list');
+  }
+  return payload.cases;
 }
 
 function normalizeBaseUrl(value) {

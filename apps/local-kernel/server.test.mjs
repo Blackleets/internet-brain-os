@@ -75,4 +75,28 @@ describe('local Kernel HTTP receiver', () => {
     expect(simple.status).toBe(415);
     expect(await simple.json()).toEqual({ ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
   });
+
+  it('lists active Cases for the extension popup', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    await store.write({
+      cases: [
+        { id: 'case:active', title: 'Active Case', status: 'active' },
+        { id: 'case:archived', title: 'Archived Case', status: 'archived' },
+      ],
+      evidence: [],
+    });
+    server = createLocalKernelServer(
+      new PageContextInbox(join(dir, 'inbox.jsonl')),
+      new CaptureCaseEvidenceProjector(store),
+    );
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+    const response = await fetch(`http://127.0.0.1:${port}/api/cases`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      ok: true,
+      cases: [{ id: 'case:active', title: 'Active Case', status: 'active' }],
+    });
+  });
 });

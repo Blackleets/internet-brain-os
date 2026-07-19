@@ -408,3 +408,31 @@ The receiver preserved raw captures but did not yet feed the Hephaestus knowledg
 ### Do not forget
 - Never remove `sourceReceiptId`; it is the correlation link back to the durable inbox.
 - Keep capture projection deterministic and replay-safe.
+
+## Handoff 2026-07-19 - Codex extension Case destination UX
+
+### What I changed
+- Added the first visible extension popup and action entry point.
+- Added active Case discovery through `GET /api/cases`.
+- Let users start a new Case or attach captured Evidence to an existing active Case.
+- Included target Case in the durable receipt identity so the same page can be attached deliberately to different Cases.
+- Rejected missing and archived target Cases.
+- Recovered the local write queue after rejected projections instead of repeating a stale failure.
+
+### Tests or checks performed
+- `pnpm test`: 104/104 passed.
+- `pnpm typecheck`: passed.
+- `pnpm build`: passed.
+- `git diff --check`: passed.
+
+### Risks / uncertainties
+- The popup is intentionally minimal and has not yet been manually loaded in Chrome for visual QA.
+- The Case list is unpaginated; local early-stage datasets are expected to remain small.
+
+### Next recommended step
+- Feed created Evidence through the existing summarization Skill with an optional local Ollama adapter.
+- Add one-click Obsidian export/report generation from the selected Case.
+
+### Do not forget
+- Keep the extension thin; analysis stays in the local Kernel.
+- Never show archived Cases as valid capture targets.

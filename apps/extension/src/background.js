@@ -8,6 +8,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       const stored = await chrome.storage.local.get('kernelBaseUrl');
       const result = await sendPageContext(message.context, {
         baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL,
+        targetCaseId: message.targetCaseId,
       });
       sendResponse(result);
     } catch (error) {

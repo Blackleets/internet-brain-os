@@ -11,7 +11,7 @@ export class LocalKnowledgeStore {
 
   async project(mutator) {
     let result;
-    this.writeQueue = this.writeQueue.then(async () => {
+    this.writeQueue = this.writeQueue.catch(() => undefined).then(async () => {
       const current = await this.read();
       const next = await mutator(current);
       result = next.result;
@@ -51,7 +51,7 @@ export class CaptureCaseEvidenceProjector {
   project(receiptId, input) {
     const context = validatePageContext(input);
     const suffix = receiptId.replace(/^receipt:/, '');
-    const caseId = `case:${suffix}`;
+    const caseId = context.targetCaseId ?? `case:${suffix}`;
     const evidenceId = `evidence:${suffix}`;
 
     return this.store.project(async (data) => {
@@ -65,6 +65,15 @@ export class CaptureCaseEvidenceProjector {
       }
 
       const sourceUrl = context.canonicalUrl ?? context.url;
+      const targetCase = context.targetCaseId
+        ? data.cases.find((item) => item.id === context.targetCaseId)
+        : undefined;
+      if (context.targetCaseId && !targetCase) {
+        throw new InboxError('CASE_NOT_FOUND', `Case not found: ${context.targetCaseId}`, 404);
+      }
+      if (targetCase?.status === 'archived') {
+        throw new InboxError('CASE_ARCHIVED', 'Archived Cases cannot accept new Evidence', 409);
+      }
       const caseRecord = {
         id: caseId,
         title: context.title,
@@ -95,9 +104,19 @@ export class CaptureCaseEvidenceProjector {
 
       return {
         changed: true,
-        data: { cases: [...data.cases, caseRecord], evidence: [...data.evidence, evidenceRecord] },
+        data: {
+          cases: context.targetCaseId ? data.cases : [...data.cases, caseRecord],
+          evidence: [...data.evidence, evidenceRecord],
+        },
         result: { caseId, evidenceId, duplicate: false },
       };
     });
+  }
+
+  async listCases() {
+    const data = await this.store.read();
+    return data.cases
+      .filter((item) => item?.status !== 'archived' && typeof item?.id === 'string')
+      .map((item) => ({ id: item.id, title: item.title ?? item.objective ?? item.id, status: item.status ?? 'draft' }));
   }
 }

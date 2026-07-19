@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Hephaestus</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">HEPHAESTUS</p>
+      <h1>Forge this page</h1>
+      <p class="muted">Turn the current public page into traceable Evidence.</p>
+      <label for="case-target">Destination</label>
+      <select id="case-target">
+        <option value="">Start a new Case</option>
+      </select>
+      <button id="capture" type="button">Send to the forge</button>
+      <p id="status" role="status" aria-live="polite"></p>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
