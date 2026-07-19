@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CognitivePipelineRecord } from '../src/storage';
+import { HermesIngestionConflictError } from '../src/storage';
 import {
   HermesLocalIngestionHttpRoute,
   signHermesLocalIngestionRequest,
@@ -146,5 +147,16 @@ describe('HermesLocalIngestionHttpRoute', () => {
 
     expect(response.status).toBe(400);
     expect(response.body).toMatchObject({ ok: false, code: 'HERMES_INGESTION_REJECTED' });
+  });
+
+  it('maps idempotency conflicts to 409 responses', async () => {
+    const response = await makeRoute({
+      ingest: async () => {
+        throw new HermesIngestionConflictError('Idempotency key was reused with different Hermes input: key-1');
+      },
+    }).handle(signedRequest());
+
+    expect(response.status).toBe(409);
+    expect(response.body).toMatchObject({ ok: false, code: 'HERMES_IDEMPOTENCY_CONFLICT' });
   });
 });
