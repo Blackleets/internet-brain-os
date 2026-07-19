@@ -309,7 +309,7 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 
 ### Tests or checks performed
 - PR #54 CI passed before merge: typecheck, tests, and build through GitHub Actions.
-- PR validation for the CLI phase is pending.
+- PR #55 CI passed before merge: typecheck, tests, and build through GitHub Actions.
 
 ### Risks / uncertainties
 - The CLI imports the built Kernel package, so `pnpm build` must run before `pnpm hermes:ingest-agent`.
@@ -317,12 +317,48 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 - The sample fixture is representative; a native Hermes Agent extractor may still be needed if the actual Hermes runtime emits a different log shape.
 
 ### Next recommended step
-- Open PR for `phase/3.0-hermes-agent-output-cli` and wait for CI.
-- Then validate the full flow locally with:
-  - `pnpm build`
-  - `IBOS_HERMES_SECRET=dev-secret pnpm kernel:serve`
-  - `IBOS_HERMES_SECRET=dev-secret pnpm hermes:ingest-agent examples/hermes-agent-run-output.sample.json`
+- Capture actual Hermes native output and add a thin extractor if the runtime emits logs/traces instead of the bounded JSON export.
 
 ### Do not forget
 - Hermes still cannot submit Kernel authority fields.
 - The CLI is only a transport client; Kernel ingestion still owns validation, contradiction, admission, idempotency, recovery, and persistence.
+
+## Handoff 2026-07-20 - GPT-5.5 Thinking - Hermes Native JSONL Extractor
+
+### What I changed
+- Added `HermesNativeLogExtractor` to extract bounded Hermes Agent run output from explicit native JSONL operational events.
+- Added tests for JSONL extraction, authority-field rejection, unknown evidence references, and invalid JSONL line errors.
+- Exported the extractor through the Kernel API.
+- Added `examples/hermes-native-log.sample.jsonl`.
+- Extended `scripts/hermes-ingest-agent-output.mjs` with `--native-jsonl` support.
+- Corrected the CLI to call `HermesAgentOutputAdapter.toExecutionEvents`.
+- Updated the Hermes ingestion contract and CHANGELOG.
+
+### Files changed
+- `packages/kernel/src/orchestration/hermes-native-log-extractor.ts`
+- `packages/kernel/src/orchestration/index.ts`
+- `packages/kernel/test/hermes-native-log-extractor.test.ts`
+- `scripts/hermes-ingest-agent-output.mjs`
+- `examples/hermes-native-log.sample.jsonl`
+- `docs/hermes-ingestion-contract.md`
+- `CHANGELOG.md`
+- `LLM_HANDOFF.md`
+
+### Why I changed it
+- The project needed a conservative path for native Hermes logs that are not already in the bounded JSON export format.
+- This keeps the runtime usable with JSONL operational logs while still requiring explicit evidence and claim entries.
+
+### Tests or checks performed
+- PR #55 CI passed before merge: typecheck, tests, and build through GitHub Actions.
+- PR validation for native extractor phase is pending.
+
+### Risks / uncertainties
+- The native extractor supports an explicit JSONL event shape. If Hermes emits a different console/Telegram format, another thin extractor should map that format into this JSONL contract.
+- `--native-jsonl` still requires `pnpm build` and a running local Kernel server with matching Hermes secret.
+
+### Next recommended step
+- Open PR for `phase/3.1-hermes-native-output-extractor`, wait for CI, and merge if green.
+- Then run the full local flow with `examples/hermes-native-log.sample.jsonl`.
+
+### Do not forget
+- The extractor must stay dumb: no inferred claims, no fabricated evidence, no Kernel authority decisions.

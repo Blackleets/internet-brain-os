@@ -29,6 +29,10 @@ export {
   HermesAgentOutputAdapter,
   InvalidHermesAgentOutputError,
 } from './hermes-agent-output-adapter';
+export {
+  HermesNativeLogExtractor,
+  InvalidHermesNativeLogError,
+} from './hermes-native-log-extractor';
 export { HermesExecutionIngestionService } from './hermes-execution-ingestion-service';
 export { IdempotentHermesExecutionIngestionService } from './idempotent-hermes-execution-ingestion-service';
 export { HermesIngestionRecoveryCoordinator } from './hermes-ingestion-recovery-coordinator';
@@ -59,6 +63,9 @@ export type {
   HermesAgentEvidenceOutput,
   HermesAgentRunOutput,
 } from './hermes-agent-output-adapter';
+export type {
+  HermesNativeLogEntry,
+} from './hermes-native-log-extractor';
 export type {
   HermesExecutionIngestionContext,
   IngestHermesExecutionInput,
