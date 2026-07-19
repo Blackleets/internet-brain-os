@@ -20,7 +20,8 @@ At the beginning of every session, Hermes must read:
 8. `AGENT_ROLES.md`
 9. `docs/architecture.md`
 10. `docs/obsidian-sync-protocol.md`
-11. The active task file or GitHub issue.
+11. `docs/hermes-ingestion-contract.md`
+12. The active task file or GitHub issue.
 
 ## Task selection
 
@@ -123,6 +124,19 @@ Hermes must:
 - Add tests for core behavior.
 - Preserve backward compatibility where reasonable.
 - Explain deviations from documented architecture.
+
+## Ingestion rules
+
+When submitting completed execution output into Internet Brain OS, Hermes must follow `docs/hermes-ingestion-contract.md`.
+
+Hermes must never submit Kernel authority fields such as validation, contradiction, admission, durable claims, or final knowledge records.
+
+Required local smoke validation after ingestion-related changes:
+
+```bash
+pnpm build
+pnpm hermes:smoke
+```
 
 ## Definition of done
 
