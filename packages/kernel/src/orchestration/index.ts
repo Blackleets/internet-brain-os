@@ -21,6 +21,10 @@ export {
   HermesCognitiveAdapter,
   InvalidHermesCognitiveSubmissionError,
 } from './hermes-cognitive-adapter';
+export {
+  HermesExecutionMapper,
+  InvalidHermesExecutionEventError,
+} from './hermes-execution-mapper';
 export type { ResearchPipelineInput, ResearchPipelineResult } from './research-pipeline';
 export type { ClaimAwareResearchPipelineInput, ClaimAwareResearchPipelineResult } from './claim-aware-research-pipeline';
 export type {
@@ -32,6 +36,10 @@ export type {
   HermesCognitiveKernelContext,
   HermesCognitiveSubmission,
 } from './hermes-cognitive-adapter';
+export type {
+  HermesExecutionEvent,
+  MapHermesExecutionInput,
+} from './hermes-execution-mapper';
 export type {
   ResearchEvent,
   ResearchState,
