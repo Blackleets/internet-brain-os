@@ -29,6 +29,11 @@ export { HermesExecutionIngestionService } from './hermes-execution-ingestion-se
 export { IdempotentHermesExecutionIngestionService } from './idempotent-hermes-execution-ingestion-service';
 export { HermesIngestionRecoveryCoordinator } from './hermes-ingestion-recovery-coordinator';
 export { HermesIngestionStartupReconciler } from './hermes-ingestion-startup-reconciler';
+export {
+  HermesLocalIngestionBoundary,
+  InvalidHermesLocalIngestionRequestError,
+  signHermesLocalIngestionRequest,
+} from './hermes-local-ingestion-boundary';
 export type { ResearchPipelineInput, ResearchPipelineResult } from './research-pipeline';
 export type { ClaimAwareResearchPipelineInput, ClaimAwareResearchPipelineResult } from './claim-aware-research-pipeline';
 export type {
@@ -62,6 +67,12 @@ export type {
   HermesStartupReceiptStore,
   HermesStartupReconciliationResult,
 } from './hermes-ingestion-startup-reconciler';
+export type {
+  HermesIdempotentIngestionHandler,
+  HermesLocalIngestionBoundaryConfig,
+  HermesLocalIngestionHeaders,
+  HermesLocalIngestionRequest,
+} from './hermes-local-ingestion-boundary';
 export type {
   ResearchEvent,
   ResearchState,
