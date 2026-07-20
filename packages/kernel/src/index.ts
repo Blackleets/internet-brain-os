@@ -7,6 +7,7 @@ export * from './memory';
 export * from './mission';
 export * from './orchestration';
 export * from './relationship';
+export * from './replay-lab';
 export * from './report/report-generator';
 export * from './storage';
 export * from './storage/in-memory';
