@@ -174,6 +174,20 @@ describe('Replay Lab read model', () => {
     expect(view.gates.admission?.decision).toBe('admitted');
     expect(view.gates.admission?.durableClaimId).toBe('durable-replay-1');
     expect(view.idempotency.status).toBe('not_attached_to_record');
+    expect(view.authorityBoundary).toEqual({
+      status: 'enforced_before_ingestion',
+      forbiddenFields: [
+        'candidate',
+        'validation',
+        'contradiction',
+        'admission',
+        'claimValidation',
+        'durableClaim',
+        'knowledgeAdmission',
+      ],
+      observedAttempt: 'not_persisted',
+      explanation: expect.stringContaining('intentionally not persisted'),
+    });
     expect(view.warnings).toEqual([]);
   });
 

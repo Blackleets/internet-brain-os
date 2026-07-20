@@ -193,6 +193,8 @@ If any of these appear in Hermes output, the visible story should be:
 Hermes attempted to submit Kernel-owned authority fields. The adapter rejected the output before transport or Kernel processing.
 ```
 
+The current safe view exposes the enforced boundary and the forbidden field names on every accepted case. It does not claim that a specific accepted case contained an authority attempt: rejected payload contents are intentionally not persisted, and Replay Lab must not fabricate that attribution. Attempt-specific history would require a separate metadata-only security-audit design that never stores rejected values or secrets.
+
 ## Local read API
 
 The first local API is documented in:
