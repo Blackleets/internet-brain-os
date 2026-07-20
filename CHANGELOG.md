@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- Canonical `PROJECT_STATE.md` continuity checkpoint and `pnpm resume` command combining recovery instructions with live Git state.
 - Filesystem-backed Internal Orchestrator CLI for durable task lifecycle, execution reporting, Git-evidence approval, rejection, inspection, and explicit founder gates.
 - Hermes idempotency attack smoke test to verify altered payloads with reused idempotency keys are rejected without rerunning Kernel gates.
 - Hermes native JSONL log extractor, sample native log fixture, and `--native-jsonl` ingestion mode for the Hermes Agent output CLI.

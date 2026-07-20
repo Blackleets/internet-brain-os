@@ -104,28 +104,30 @@ The project is named after Hephaestus, the Greek god of fire, craftsmanship, met
 
 ## Mandatory reading order
 
-Every human or AI contributor must read these files before making changes:
+Every human or AI contributor must run `pnpm resume` and read these files before making changes:
 
-1. `PROJECT_DNA.md`
-2. `PROJECT_BIBLE.md`
-3. `AI_CONSTITUTION.md`
-4. `brain/FOUNDER_VISION.md`
-5. `brain/BRAIN_LOG.md`
-6. `LLM_HANDOFF.md`
-7. `AGENT_ROLES.md`
-8. `docs/hermes-operating-protocol.md`
-9. `docs/hermes-ingestion-contract.md`
-10. `docs/hermes-demo-quickstart.md`
-11. `docs/hermes-real-runtime-validation.md`
-12. `docs/ai-forensics-case-study.md`
-13. `docs/product-star-roadmap.md`
-14. `docs/replay-lab-contract.md`
-15. `docs/replay-lab-api.md`
-16. `docs/obsidian-sync-protocol.md`
-17. `docs/architecture.md`
-18. `ROADMAP.md`
-19. `DECISIONS.md`
-20. The active task or GitHub issue.
+1. `PROJECT_STATE.md`
+2. `AGENTS.md`
+3. `PROJECT_DNA.md`
+4. `PROJECT_BIBLE.md`
+5. `AI_CONSTITUTION.md`
+6. `brain/FOUNDER_VISION.md`
+7. `brain/BRAIN_LOG.md`
+8. `LLM_HANDOFF.md`
+9. `AGENT_ROLES.md`
+10. `docs/hermes-operating-protocol.md`
+11. `docs/hermes-ingestion-contract.md`
+12. `docs/hermes-demo-quickstart.md`
+13. `docs/hermes-real-runtime-validation.md`
+14. `docs/ai-forensics-case-study.md`
+15. `docs/product-star-roadmap.md`
+16. `docs/replay-lab-contract.md`
+17. `docs/replay-lab-api.md`
+18. `docs/obsidian-sync-protocol.md`
+19. `docs/architecture.md`
+20. `ROADMAP.md`
+21. `DECISIONS.md`
+22. The active task or GitHub issue.
 
 ## Institutional memory
 
