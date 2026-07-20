@@ -15,6 +15,7 @@
     "hermes:smoke": "node scripts/hermes-smoke-test.mjs",
     "hermes:validate-agent": "node scripts/hermes-validate-agent-output.mjs",
     "kernel:serve": "node apps/local-kernel/server.mjs",
+    "orchestrator": "node scripts/orchestrator-cli.mjs",
     "replay-lab:api-smoke": "node scripts/replay-lab-api-smoke.mjs",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc -b --pretty false"
