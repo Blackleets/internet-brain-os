@@ -19,6 +19,16 @@ function task(overrides = {}) {
   };
 }
 
+function expectStateError(action, code) {
+  try {
+    action();
+    throw new Error(`Expected ${code}.`);
+  } catch (error) {
+    expect(error).toBeInstanceOf(OrchestratorStateError);
+    expect(error.code).toBe(code);
+  }
+}
+
 describe('orchestrator task state', () => {
   it('accepts a bounded task contract and returns a defensive copy', () => {
     const source = task();
@@ -35,17 +45,21 @@ describe('orchestrator task state', () => {
   });
 
   it('rejects invalid transitions', () => {
-    expect(() => transitionTask(task(), 'completed')).toThrow(OrchestratorStateError);
+    expectStateError(() => transitionTask(task(), 'completed'), 'INVALID_TRANSITION');
   });
 
   it('enforces one active task', () => {
-    expect(() => transitionTask(task(), 'active', [task({ task_id: 'IBOS-0002', status: 'active' })]))
-      .toThrowError(expect.objectContaining({ code: 'ACTIVE_TASK_EXISTS' }));
+    expectStateError(
+      () => transitionTask(task(), 'active', [task({ task_id: 'IBOS-0002', status: 'active' })]),
+      'ACTIVE_TASK_EXISTS',
+    );
   });
 
   it('forbids production deployment in phase A', () => {
-    expect(() => validateTaskContract(task({ production_deploy_allowed: true })))
-      .toThrowError(expect.objectContaining({ code: 'PRODUCTION_DEPLOY_FORBIDDEN' }));
+    expectStateError(
+      () => validateTaskContract(task({ production_deploy_allowed: true })),
+      'PRODUCTION_DEPLOY_FORBIDDEN',
+    );
   });
 
   it('allows blocked work to return to pending', () => {
