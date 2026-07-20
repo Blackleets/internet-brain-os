@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -62,6 +62,15 @@ describe('filesystem orchestrator store', () => {
     await expect(subject.activate('IBOS-1001')).rejects.toMatchObject({ code: 'ACTIVE_TASK_EXISTS' });
   });
 
+  it('serializes concurrent mutations so only one task becomes active', async () => {
+    const subject = await store();
+    await subject.create(task('IBOS-1000'));
+    await subject.create(task('IBOS-1001'));
+    const results = await Promise.allSettled([subject.activate('IBOS-1000'), subject.activate('IBOS-1001')]);
+    expect(results.filter((item) => item.status === 'fulfilled')).toHaveLength(1);
+    expect((await subject.status()).counts.active).toBe(1);
+  });
+
   it('returns corrections without completing a task when Git evidence fails', async () => {
     const subject = await store();
     await subject.create(task());
@@ -97,5 +106,14 @@ describe('filesystem orchestrator store', () => {
     await subject.create(task());
     await expectCode(() => subject.create(task()), 'TASK_EXISTS');
     await expectCode(() => subject.create(task('IBOS-1001', { status: 'active' })), 'TASK_NOT_PENDING');
+  });
+
+  it('surfaces corrupt stored reports instead of hiding them', async () => {
+    const subject = await store();
+    await subject.create(task());
+    await subject.activate('IBOS-1000');
+    await subject.report('IBOS-1000', report());
+    await writeFile(join(subject.root, 'reports', 'hermes', 'IBOS-1000.json'), '{broken', 'utf8');
+    await expectCode(() => subject.inspect('IBOS-1000'), 'INVALID_STORED_JSON');
   });
 });
