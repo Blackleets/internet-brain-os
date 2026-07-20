@@ -10,9 +10,9 @@ Every AI must update this file before ending a work session.
 
 Status: Foundation runtime, Replay Lab core, Internal Orchestrator v0, and deterministic Hermes preflight are stable on `main`.
 
-Current phase: Product Star Phase A is blocked on a sanitized real Hermes runtime capture; Phase B is partially complete; Phase C is complete.
+Current phase: Product Star Phase A is blocked on a sanitized real Hermes runtime capture; Phases B and C are complete for their current read-only/local scopes.
 
-Primary objective: close Issue #57 with real-runtime evidence, then finish the remaining Replay Lab authority-attempt visibility and product-polish sections without weakening Kernel authority.
+Primary objective: close Issue #57 with real-runtime evidence, then continue product narrative polish without weakening Kernel authority.
 
 ## Mandatory reading order
 
