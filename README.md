@@ -104,11 +104,13 @@ The project is named after Hephaestus, the Greek god of fire, craftsmanship, met
 
 ## Mandatory reading order
 
-Every human or AI contributor must read these files before making changes:
+Every human or AI contributor must run `pnpm resume` and read these files before making changes:
 
-1. `PROJECT_DNA.md`
-2. `PROJECT_BIBLE.md`
-3. `AI_CONSTITUTION.md`
+1. `PROJECT_STATE.md`
+2. `AGENTS.md`
+3. `PROJECT_DNA.md`
+4. `PROJECT_BIBLE.md`
+5. `AI_CONSTITUTION.md`
 4. `brain/FOUNDER_VISION.md`
 5. `brain/BRAIN_LOG.md`
 6. `LLM_HANDOFF.md`
