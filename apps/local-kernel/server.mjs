@@ -10,6 +10,7 @@ import { loadOrCreateApiToken, validateApiToken } from './api-token-store.mjs';
 import { PairingError, PairingSession } from './pairing-session.mjs';
 import { ExtensionIdentityRegistry } from './extension-identity-registry.mjs';
 import { createHermesLocalIngestionRoute } from './hermes-route-factory.mjs';
+import { replayLabPageHtml } from './replay-lab-page.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
@@ -66,6 +67,9 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     if (request.method === 'OPTIONS') return send(response, 204);
     if (request.method === 'GET' && request.url === '/health') {
       return send(response, 200, { ok: true, service: 'hephaestus-local-kernel', hermes: Boolean(hermesRoute), replayLab: Boolean(replayLabQuery) });
+    }
+    if (request.method === 'GET' && request.url === '/replay-lab') {
+      return sendHtml(response, 200, replayLabPageHtml);
     }
     if (request.url === '/hermes/ingestions') {
       if (!hermesRoute) return send(response, 404, { ok: false, code: 'HERMES_INGESTION_DISABLED' });
@@ -186,6 +190,7 @@ if (isMain) {
     if (hermes?.route) {
       console.log('Hermes local ingestion enabled at /hermes/ingestions');
       console.log('Replay Lab API enabled at /api/replay-lab/cases');
+      console.log('Replay Lab UI available at /replay-lab');
       console.log(`Hermes startup reconciliation: ${JSON.stringify(hermes.reconciled)}`);
     }
     if (pairingSession) {
@@ -254,4 +259,11 @@ function send(response, status, body) {
   if (body === undefined) return response.end();
   response.setHeader('content-type', 'application/json; charset=utf-8');
   response.end(JSON.stringify(body));
+}
+
+function sendHtml(response, status, html) {
+  response.statusCode = status;
+  response.setHeader('content-type', 'text/html; charset=utf-8');
+  response.setHeader('cache-control', 'no-store');
+  response.end(html);
 }

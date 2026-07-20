@@ -162,6 +162,22 @@ describe('local Kernel HTTP receiver', () => {
     expect(await response.json()).toEqual({ ok: false, code: 'REPLAY_LAB_UNAVAILABLE' });
   });
 
+  it('serves the minimal Replay Lab operator page without exposing the API token', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')));
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const response = await fetch(`http://127.0.0.1:${port}/replay-lab`);
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('text/html');
+    expect(html).toContain('Replay Lab');
+    expect(html).toContain('/api/replay-lab/cases');
+    expect(html).not.toContain(apiToken);
+  });
+
   it('updates Obsidian notes after a successful capture projection', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));
