@@ -12,7 +12,7 @@ Status: Foundation runtime, Replay Lab core, Internal Orchestrator v0, and deter
 
 Current phase: Product Star Phase A is blocked on a sanitized real Hermes runtime capture; Phases B and C are complete for their current read-only/local scopes.
 
-Primary objective: close Issue #57 with real-runtime evidence, then continue product narrative polish without weakening Kernel authority.
+Primary objective: close Issue #57 with real-runtime evidence, capture sanitized real Replay Lab screenshots, then proceed to the bounded memory-safety expansion without weakening Kernel authority.
 
 ## Mandatory reading order
 
