@@ -38,7 +38,7 @@ describe('orchestrator task state', () => {
   });
 
   it('supports the approved lifecycle', () => {
-    const active = transitionTask(task(), 'active');
+    const active = transitionTask(task(), 'active', [task()]);
     const review = transitionTask(active, 'review');
     const completed = transitionTask(review, 'completed');
     expect(completed.status).toBe('completed');
@@ -53,6 +53,10 @@ describe('orchestrator task state', () => {
       () => transitionTask(task(), 'active', [task({ task_id: 'IBOS-0002', status: 'active' })]),
       'ACTIVE_TASK_EXISTS',
     );
+  });
+
+  it('requires the complete task set before activation', () => {
+    expectStateError(() => transitionTask(task(), 'active'), 'TASK_SET_REQUIRED');
   });
 
   it('forbids production deployment in phase A', () => {
