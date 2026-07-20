@@ -31,12 +31,13 @@ try {
 
   await waitForHealth(`${baseUrl}/health`);
   const health = await (await fetch(`${baseUrl}/health`)).json();
-  assert(health.hermes?.enabled === true, 'Hermes route must be enabled in health response.');
+  assert(isEnabled(health.hermes), 'Hermes route must be enabled in health response.');
 
   const idempotencyKey = `hermes-attack-smoke-${Date.now()}`;
-  const first = await ingest({ idempotencyKey, statement: 'Hermes idempotency attack smoke baseline claim.', confidence: 0.9 });
-  const replay = await ingest({ idempotencyKey, statement: 'Hermes idempotency attack smoke baseline claim.', confidence: 0.9 });
-  const altered = await ingest({ idempotencyKey, statement: 'ALTERED claim trying to reuse the same idempotency key.', confidence: 0.1 });
+  const timestamp = new Date().toISOString();
+  const first = await ingest({ idempotencyKey, timestamp, statement: 'Hermes idempotency attack smoke baseline claim.', confidence: 0.9 });
+  const replay = await ingest({ idempotencyKey, timestamp, statement: 'Hermes idempotency attack smoke baseline claim.', confidence: 0.9 });
+  const altered = await ingest({ idempotencyKey, timestamp, statement: 'ALTERED claim trying to reuse the same idempotency key.', confidence: 0.1 });
 
   assert(first.status === 202, `First ingest expected 202, got ${first.status}: ${first.body}`);
   assert(replay.status === 202, `Replay ingest expected 202, got ${replay.status}: ${replay.body}`);
@@ -62,8 +63,7 @@ try {
   await rm(dataDir, { recursive: true, force: true });
 }
 
-async function ingest({ idempotencyKey, statement, confidence }) {
-  const timestamp = new Date().toISOString();
+async function ingest({ idempotencyKey, timestamp, statement, confidence }) {
   const body = JSON.stringify({
     idempotencyKey,
     recordId: `pipeline-${idempotencyKey}`,
@@ -129,6 +129,10 @@ async function waitForHealth(url) {
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
   throw new Error(`Local Kernel did not become healthy: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+}
+
+function isEnabled(value) {
+  return value === true || value?.enabled === true;
 }
 
 function assert(condition, message) {
