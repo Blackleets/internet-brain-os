@@ -11,7 +11,7 @@ export class OrchestratorEvidenceError extends Error {
 
 export function evaluateGitEvidence(taskInput, reportInput, evidenceInput) {
   const task = validateTaskContract(taskInput);
-  const report = validateExecutionReport(task, reportInput);
+  const report = validateExecutionReport(reportInput, task);
   const evidence = validateEvidenceShape(evidenceInput);
   const findings = [];
 
