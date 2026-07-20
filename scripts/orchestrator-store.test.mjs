@@ -81,6 +81,17 @@ describe('filesystem orchestrator store', () => {
     expect((await subject.inspect('IBOS-1000')).task.status).toBe('review');
   });
 
+  it('returns blocked work to pending through the explicit retry transition', async () => {
+    const subject = await store();
+    await subject.create(task());
+    await subject.activate('IBOS-1000');
+    await subject.report('IBOS-1000', report('IBOS-1000', {
+      status: 'blocked', commands_run: [], test_results: [], acceptance_criteria_results: [],
+    }));
+    expect((await subject.inspect('IBOS-1000')).task.status).toBe('blocked');
+    expect((await subject.retry('IBOS-1000')).status).toBe('pending');
+  });
+
   it('requires explicit founder approval when the contract says so', async () => {
     const subject = await store();
     await subject.create(task('IBOS-1000', { requires_founder_approval: true }));
