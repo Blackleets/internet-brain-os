@@ -175,6 +175,8 @@ describe('local Kernel HTTP receiver', () => {
     expect(response.headers.get('content-type')).toContain('text/html');
     expect(html).toContain('Replay Lab');
     expect(html).toContain('/api/replay-lab/cases');
+    expect(html).toContain('Authority boundary');
+    expect(html).toContain('Rejected payload contents are not persisted.');
     expect(html).not.toContain(apiToken);
   });
 
