@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://internet-brain-os.local/schemas/execution-report.schema.json",
+  "title": "Internet Brain OS Orchestrator Execution Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task_id",
+    "status",
+    "summary",
+    "branch",
+    "commit",
+    "files_changed",
+    "commands_run",
+    "test_results",
+    "acceptance_criteria_results",
+    "risks",
+    "deviations",
+    "recommended_next_step"
+  ],
+  "properties": {
+    "task_id": { "type": "string", "pattern": "^IBOS-[0-9]{4,}$" },
+    "status": { "enum": ["completed", "blocked", "failed"] },
+    "summary": { "type": "string", "minLength": 1 },
+    "branch": { "type": "string", "minLength": 1, "not": { "const": "main" } },
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+    "files_changed": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "commands_run": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "test_results": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "acceptance_criteria_results": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "risks": { "type": "array", "items": { "type": "string" } },
+    "deviations": { "type": "array", "items": { "type": "string" } },
+    "recommended_next_step": { "type": "string", "minLength": 1 }
+  }
+}
