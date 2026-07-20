@@ -1,12 +1,32 @@
 # HEPHAESTUS
 
-**The Intelligence Forge.**
+**The Intelligence Forge — evidence and memory safety for autonomous agents.**
 
-Hephaestus is a local-first AI intelligence system for the public internet.
+Hephaestus is a local-first AI intelligence Kernel. It turns public-internet research and agent runs into evidence-backed cases before any claim can become trusted, connected memory.
 
-It is not a scraper. Scraping is only one internal capability.
+Hermes and other agents may discover sources, record evidence, and propose claims. The Kernel owns validation, contradiction checks, admission, replay protection, and persistence. The first visible operator surface, Replay Lab, explains what happened without granting the UI or the agent authority over memory.
 
-The product turns public information from the internet into connected memory, evidence, analysis, opportunities, and actions.
+```text
+Agent run → signed ingestion → evidence-backed case → Kernel gates → controlled memory
+                  ↘ exact replay: safe
+                  ↘ altered replay: blocked
+```
+
+## What this is / what this is not
+
+Hephaestus is:
+
+- An evidence-first intelligence and AI-forensics Kernel.
+- A local boundary between agent output and durable memory.
+- A reusable foundation for sourcing, research, monitoring, and decision intelligence.
+- LLM-flexible, Obsidian-compatible, and free or near-zero-cost by default.
+
+Hephaestus is not:
+
+- A generic scraper or a prettier log viewer.
+- An autonomous agent with permission to rewrite its own history.
+- A cloud-only observability product.
+- A route for Hermes or another model to bypass validation and write durable memory directly.
 
 ## Try the Hermes → Kernel demo
 
@@ -81,6 +101,31 @@ SOURCES → EVIDENCE
              ↓
            REPORT
 ```
+
+## Current architecture
+
+```text
+Hermes / browser extension / CLI
+              │
+              ▼
+ authenticated loopback-only API
+              │
+              ▼
+      HEPHAESTUS KERNEL
+   ┌──────────┼───────────┐
+   │          │           │
+Evidence   Cognitive   Replay-safe
+  store     gates      receipts
+   │          │           │
+   └──────────┼───────────┘
+              ▼
+ controlled memory + Obsidian
+              │
+              ▼
+     Replay Lab (read only)
+```
+
+See `docs/architecture.md` for system boundaries and `docs/launch-kit.md` for the one-minute explanation and demo narrative.
 
 ## Non-negotiable direction
 
