@@ -258,13 +258,13 @@ function buildIdempotencyView(
     createdAt: receipt.createdAt,
     updatedAt: receipt.updatedAt,
     recordMatchesReceipt,
+    ...(receipt.failure ? { failure: receipt.failure } : {}),
   };
 
   if (!recordMatchesReceipt) {
     return {
       ...base,
       status: 'record_mismatch',
-      failure: receipt.failure,
       explanation: 'Attached Hermes ingestion receipt points to a different cognitive pipeline record and must not be trusted for replay status.',
     };
   }
@@ -272,7 +272,6 @@ function buildIdempotencyView(
   return {
     ...base,
     status: 'attached',
-    failure: receipt.failure,
     explanation: 'Hermes ingestion receipt is attached by record id. Fingerprints are intentionally not exposed in Replay Lab views.',
   };
 }
