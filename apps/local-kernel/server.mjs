@@ -52,6 +52,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const activePairing = options.pairingSession;
   const identities = options.extensionRegistry;
   const hermesRoute = options.hermesRoute;
+  const replayLabQuery = options.replayLabQuery;
   const hermesMaxBodyBytes = Number(options.hermesMaxBodyBytes ?? 256 * 1024);
   return createServer(async (request, response) => {
     if (!isLoopbackHost(request.headers.host)) {
@@ -64,7 +65,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     setCors(origin, response);
     if (request.method === 'OPTIONS') return send(response, 204);
     if (request.method === 'GET' && request.url === '/health') {
-      return send(response, 200, { ok: true, service: 'hephaestus-local-kernel', hermes: Boolean(hermesRoute) });
+      return send(response, 200, { ok: true, service: 'hephaestus-local-kernel', hermes: Boolean(hermesRoute), replayLab: Boolean(replayLabQuery) });
     }
     if (request.url === '/hermes/ingestions') {
       if (!hermesRoute) return send(response, 404, { ok: false, code: 'HERMES_INGESTION_DISABLED' });
@@ -119,6 +120,23 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         return send(response, 500, { ok: false, code: 'INTERNAL_ERROR' });
       }
     }
+    if (request.method === 'GET' && request.url === '/api/replay-lab/cases') {
+      if (!replayLabQuery) return send(response, 404, { ok: false, code: 'REPLAY_LAB_UNAVAILABLE' });
+      try {
+        return send(response, 200, { ok: true, cases: await replayLabQuery.listCases() });
+      } catch {
+        return send(response, 500, { ok: false, code: 'REPLAY_LAB_QUERY_FAILED' });
+      }
+    }
+    if (request.method === 'GET' && request.url?.startsWith('/api/replay-lab/cases/')) {
+      if (!replayLabQuery) return send(response, 404, { ok: false, code: 'REPLAY_LAB_UNAVAILABLE' });
+      try {
+        const caseId = decodeURIComponent(request.url.slice('/api/replay-lab/cases/'.length));
+        return send(response, 200, { ok: true, case: await replayLabQuery.getCase(caseId) });
+      } catch {
+        return send(response, 404, { ok: false, code: 'REPLAY_LAB_CASE_NOT_FOUND' });
+      }
+    }
     if (request.method !== 'POST' || request.url !== '/api/browser/page-context') {
       return send(response, 404, { ok: false, code: 'NOT_FOUND' });
     }
@@ -155,6 +173,7 @@ export const server = createLocalKernelServer(inbox, projector, obsidian, summar
   pairingSession,
   extensionRegistry,
   hermesRoute: hermes?.route,
+  replayLabQuery: hermes?.replayLabQuery,
 });
 
 if (isMain) {
@@ -166,6 +185,7 @@ if (isMain) {
     else if (tokenRecord.source === 'file') console.log(`Using persistent extension token from ${tokenRecord.filePath}`);
     if (hermes?.route) {
       console.log('Hermes local ingestion enabled at /hermes/ingestions');
+      console.log('Replay Lab API enabled at /api/replay-lab/cases');
       console.log(`Hermes startup reconciliation: ${JSON.stringify(hermes.reconciled)}`);
     }
     if (pairingSession) {
