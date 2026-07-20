@@ -37,6 +37,12 @@ describe('orchestrator Git evidence', () => {
     expect(result.findings.map((item) => item.code)).toEqual(expect.arrayContaining(['CHECK_FAILED', 'CHECK_MISSING']));
   });
 
+  it.each(['blocked', 'failed'])('never approves a %s execution report', (status) => {
+    const result = evaluateGitEvidence(task, { ...report, status }, evidence);
+    expect(result.decision).toBe('CORRECTIONS_REQUIRED');
+    expect(result.findings.map((item) => item.code)).toContain('REPORT_NOT_COMPLETED');
+  });
+
   it('blocks dirty worktrees and non-main bases', () => {
     const result = evaluateGitEvidence(task, report, { ...evidence, dirty: true, baseBranch: 'develop' });
     expect(result.findings.map((item) => item.code)).toEqual(expect.arrayContaining(['WORKTREE_DIRTY', 'INVALID_BASE']));

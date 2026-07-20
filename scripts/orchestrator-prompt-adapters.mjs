@@ -74,7 +74,7 @@ export function validateExecutionReport(report, task) {
   }
 
   for (const field of ['files_changed', 'commands_run', 'test_results', 'acceptance_criteria_results', 'risks', 'deviations']) {
-    if (!Array.isArray(report[field]) || report[field].some((value) => typeof value !== 'string')) {
+    if (!Array.isArray(report[field]) || report[field].some((value) => typeof value !== 'string' || value.trim() === '')) {
       throw new OrchestratorStateError('INVALID_REPORT', `${field} must be a string array.`);
     }
   }

@@ -93,6 +93,11 @@ describe('orchestrator prompt adapters', () => {
     expect(captureCode(() => validateExecutionReport(report({ acceptance_criteria_results: ['one result'] }), task()))).toBe('ACCEPTANCE_EVIDENCE_MISSING');
   });
 
+  it('rejects blank report evidence instead of counting it as completion proof', () => {
+    expect(captureCode(() => validateExecutionReport(report({ test_results: ['  '] }), task()))).toBe('INVALID_REPORT');
+    expect(captureCode(() => validateExecutionReport(report({ acceptance_criteria_results: ['', ''] }), task()))).toBe('INVALID_REPORT');
+  });
+
   it('permits blocked reports without pretending completion evidence exists', () => {
     const blocked = validateExecutionReport(report({
       status: 'blocked',

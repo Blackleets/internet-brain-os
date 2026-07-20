@@ -55,7 +55,7 @@ export function validateTaskContract(task) {
   return structuredClone(task);
 }
 
-export function transitionTask(task, nextStatus, allTasks = []) {
+export function transitionTask(task, nextStatus, allTasks) {
   const current = validateTaskContract(task);
   if (!orchestratorStatuses.includes(nextStatus)) {
     throw new OrchestratorStateError('INVALID_STATUS', `Unsupported task status: ${nextStatus}`);
@@ -66,6 +66,12 @@ export function transitionTask(task, nextStatus, allTasks = []) {
   }
 
   if (nextStatus === 'active') {
+    if (!Array.isArray(allTasks)) {
+      throw new OrchestratorStateError(
+        'TASK_SET_REQUIRED',
+        'The complete task set is required before activating a task.',
+      );
+    }
     const conflicting = allTasks.find((candidate) => candidate.task_id !== current.task_id && candidate.status === 'active');
     if (conflicting) {
       throw new OrchestratorStateError('ACTIVE_TASK_EXISTS', `${conflicting.task_id} is already active.`);
