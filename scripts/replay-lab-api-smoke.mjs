@@ -31,8 +31,8 @@ try {
 
   await waitForHealth(`${baseUrl}/health`);
   const health = await (await fetch(`${baseUrl}/health`)).json();
-  assert(health.hermes?.enabled === true, 'Hermes route must be enabled in health response.');
-  assert(health.replayLab?.enabled === true, 'Replay Lab API must be enabled in health response.');
+  assert(isEnabled(health.hermes), 'Hermes route must be enabled in health response.');
+  assert(isEnabled(health.replayLab), 'Replay Lab API must be enabled in health response.');
 
   const unauthorized = await fetch(`${baseUrl}/api/replay-lab/cases`);
   assert(unauthorized.status === 401, `Replay Lab API must require token, got ${unauthorized.status}.`);
@@ -119,6 +119,10 @@ function runSample(env) {
 
 function authHeaders() {
   return { 'x-hephaestus-token': apiToken };
+}
+
+function isEnabled(value) {
+  return value === true || value?.enabled === true;
 }
 
 function assert(condition, message) {
