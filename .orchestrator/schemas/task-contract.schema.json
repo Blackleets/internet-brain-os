@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://internet-brain-os.local/schemas/task-contract.schema.json",
+  "title": "Internet Brain OS Orchestrator Task Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task_id",
+    "title",
+    "objective",
+    "business_value",
+    "status",
+    "allowed_paths",
+    "forbidden_paths",
+    "acceptance_criteria",
+    "required_commands",
+    "requires_tests",
+    "requires_founder_approval",
+    "production_deploy_allowed"
+  ],
+  "properties": {
+    "task_id": { "type": "string", "pattern": "^IBOS-[0-9]{4,}$" },
+    "title": { "type": "string", "minLength": 1 },
+    "objective": { "type": "string", "minLength": 1 },
+    "business_value": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["pending", "active", "review", "blocked", "completed"] },
+    "allowed_paths": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true },
+    "forbidden_paths": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true },
+    "acceptance_criteria": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
+    "required_commands": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
+    "requires_tests": { "type": "boolean" },
+    "requires_founder_approval": { "type": "boolean" },
+    "production_deploy_allowed": { "const": false }
+  }
+}
