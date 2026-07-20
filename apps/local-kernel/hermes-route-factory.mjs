@@ -23,7 +23,7 @@ export async function createHermesLocalIngestionRoute(options = {}) {
   const dataRoot = resolve(options.dataDir ?? '.hephaestus', 'kernel');
   const now = options.now ?? (() => new Date());
   const maxPayloadBytes = Number(options.maxPayloadBytes ?? process.env.IBOS_HERMES_MAX_PAYLOAD_BYTES ?? 256 * 1024);
-  const freshnessWindowMs = Number(process.env.IBOS_HERMES_FRESHNESS_WINDOW_MS ?? options.freshnessWindowMs ?? 5 * 60 * 1000);
+  const freshnessWindowMs = Number(options.freshnessWindowMs ?? process.env.IBOS_HERMES_FRESHNESS_WINDOW_MS ?? 5 * 60 * 1000);
   const leaseMs = Number(options.leaseMs ?? process.env.IBOS_HERMES_LEASE_MS ?? 2 * 60 * 1000);
 
   const records = new kernel.JsonCognitivePipelineRepository(dataRoot);
