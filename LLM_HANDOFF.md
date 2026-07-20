@@ -1,5 +1,7 @@
 # LLM HANDOFF
 
+> Recovery entrypoint: read `PROJECT_STATE.md` and run `pnpm resume` before relying on older entries in this historical handoff log.
+
 This file lets Hermes, OpenCode, Codex, GPT, and future models continue work without losing logic.
 
 Every AI must update this file before ending a work session.
