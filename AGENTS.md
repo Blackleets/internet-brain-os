@@ -2,14 +2,15 @@
 
 Before changing code in this repository:
 
-1. Read `ARCHITECTURE.md`.
-2. Inspect the target package, implementation, tests, and exports.
-3. Confirm the current file SHA before sequential updates.
-4. Make the smallest coherent change that advances the current priority.
-5. Preserve backward compatibility unless a deliberate migration is documented.
-6. Add or update tests for behavior changed.
-7. Validate types, tests, and build when the repository provides those commands.
-8. Update `ARCHITECTURE.md` when the architecture or priority queue changes.
+1. Read `PROJECT_STATE.md` and run `pnpm resume`.
+2. Read `ARCHITECTURE.md`.
+3. Inspect the target package, implementation, tests, and exports.
+4. Confirm the current file SHA before sequential updates.
+5. Make the smallest coherent change that advances the current priority.
+6. Preserve backward compatibility unless a deliberate migration is documented.
+7. Add or update tests for behavior changed.
+8. Validate types, tests, and build when the repository provides those commands.
+9. Update `PROJECT_STATE.md` and `ARCHITECTURE.md` when the completed baseline, blocker, recovery procedure, architecture, or priority queue changes.
 
 ## Non-Negotiable Invariants
 
