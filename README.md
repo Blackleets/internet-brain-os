@@ -41,6 +41,7 @@ For the product story behind the demo, read:
 - `docs/ai-forensics-case-study.md`
 - `docs/product-star-roadmap.md`
 - `docs/replay-lab-contract.md`
+- `docs/replay-lab-api.md`
 
 ## Core idea
 
@@ -119,11 +120,12 @@ Every human or AI contributor must read these files before making changes:
 12. `docs/ai-forensics-case-study.md`
 13. `docs/product-star-roadmap.md`
 14. `docs/replay-lab-contract.md`
-15. `docs/obsidian-sync-protocol.md`
-16. `docs/architecture.md`
-17. `ROADMAP.md`
-18. `DECISIONS.md`
-19. The active task or GitHub issue.
+15. `docs/replay-lab-api.md`
+16. `docs/obsidian-sync-protocol.md`
+17. `docs/architecture.md`
+18. `ROADMAP.md`
+19. `DECISIONS.md`
+20. The active task or GitHub issue.
 
 ## Institutional memory
 

@@ -193,6 +193,19 @@ If any of these appear in Hermes output, the visible story should be:
 Hermes attempted to submit Kernel-owned authority fields. The adapter rejected the output before transport or Kernel processing.
 ```
 
+## Local read API
+
+The first local API is documented in:
+
+- `docs/replay-lab-api.md`
+
+Current endpoints:
+
+- `GET /api/replay-lab/cases`
+- `GET /api/replay-lab/cases/:id`
+
+They are read-only, authenticated by the existing `/api/*` token guard, and must not mutate receipts, write durable memory, expose fingerprints, or bypass `/hermes/ingestions`.
+
 ## Empty and partial states
 
 Replay Lab must handle incomplete data honestly.
@@ -220,7 +233,8 @@ Initial read-only actions:
 - open related docs:
   - `docs/hermes-ingestion-contract.md`;
   - `docs/hermes-real-runtime-validation.md`;
-  - `docs/hermes-demo-quickstart.md`.
+  - `docs/hermes-demo-quickstart.md`;
+  - `docs/replay-lab-api.md`.
 
 Future controlled actions:
 
