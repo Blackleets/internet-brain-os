@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- Filesystem-backed Internal Orchestrator CLI for durable task lifecycle, execution reporting, Git-evidence approval, rejection, inspection, and explicit founder gates.
 - Hermes idempotency attack smoke test to verify altered payloads with reused idempotency keys are rejected without rerunning Kernel gates.
 - Hermes native JSONL log extractor, sample native log fixture, and `--native-jsonl` ingestion mode for the Hermes Agent output CLI.
 - Hermes Agent output ingestion CLI and sample JSON fixture for converting, signing, and submitting real-agent run exports to the local Kernel.
