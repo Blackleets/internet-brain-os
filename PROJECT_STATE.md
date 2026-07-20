@@ -33,6 +33,8 @@ Then read, in order:
 - PR #76: approval invariants hardened.
 - PR #77: filesystem-backed Internal Orchestrator CLI merged with cross-process mutation locking, explicit blocked-task retry, founder gates, and corruption visibility.
 - PR #78: durable continuity checkpoint and `pnpm resume` recovery command merged.
+- PR #79: clean Kernel runtime build and deterministic Hermes replay/attack smoke repaired.
+- Issue #10: Internal Orchestrator v0 closed as completed with PR #73–#77 evidence.
 - Validation baseline: clean build, Hermes signed-ingestion smoke, altered-replay attack smoke, 54 test files and 266 tests, and typecheck passing.
 
 ## Current operating state
