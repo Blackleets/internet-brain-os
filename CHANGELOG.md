@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- Product launch kit with the verified one-minute narrative, five-minute demo flow, founder pitch, launch-post draft, and explicit no-overclaim guardrails.
 - Replay Lab authority-boundary projection and operator panel showing forbidden Kernel-owned fields without persisting or attributing rejected payload contents.
 - Canonical `PROJECT_STATE.md` continuity checkpoint and `pnpm resume` command combining recovery instructions with live Git state.
 - Filesystem-backed Internal Orchestrator CLI for durable task lifecycle, execution reporting, Git-evidence approval, rejection, inspection, and explicit founder gates.
@@ -25,6 +26,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- README opening now explains the current AI-forensics wedge, product boundaries, and local architecture before contributor doctrine.
 - Product Star roadmap and AI handoff now distinguish verified, partial, blocked, and deferred sections using the current repository evidence.
 - Kernel builds now emit executable CommonJS alongside declarations, and Hermes smoke replays use a stable signed timestamp so clean-checkout runtime validation is deterministic.
 - Hermes ingestion contract now documents bounded exports, native JSONL logs, both agent-output ingestion CLI modes, and idempotency attack-smoke validation.
