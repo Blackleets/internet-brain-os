@@ -15,6 +15,9 @@ export function evaluateGitEvidence(taskInput, reportInput, evidenceInput) {
   const evidence = validateEvidenceShape(evidenceInput);
   const findings = [];
 
+  if (report.status !== 'completed') {
+    findings.push(finding('REPORT_NOT_COMPLETED', `report status ${report.status} cannot be approved`));
+  }
   if (evidence.branch !== report.branch) findings.push(finding('BRANCH_MISMATCH', 'reported branch does not match Git evidence'));
   if (evidence.headSha !== report.commit) findings.push(finding('HEAD_MOVED', 'reported commit is not the current branch head'));
 
