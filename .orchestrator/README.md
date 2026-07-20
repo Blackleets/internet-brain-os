@@ -45,6 +45,7 @@ pnpm orchestrator status
 pnpm orchestrator create task.json
 pnpm orchestrator activate IBOS-0001
 pnpm orchestrator report IBOS-0001 execution-report.json
+pnpm orchestrator retry IBOS-0001
 pnpm orchestrator approve IBOS-0001 git-evidence.json --founder-approved
 pnpm orchestrator reject IBOS-0001 "correction reason"
 pnpm orchestrator inspect IBOS-0001
