@@ -32,11 +32,12 @@ Then read, in order:
 - Internal Orchestrator phases A-C: task contracts/state, bounded Hermes/Codex prompts, report validation, and Git evidence decisions.
 - PR #76: approval invariants hardened.
 - PR #77: filesystem-backed Internal Orchestrator CLI merged with cross-process mutation locking, explicit blocked-task retry, founder gates, and corruption visibility.
-- Continuity checkpoint validation: 54 test files and 266 tests passing; typecheck and build passing.
+- PR #78: durable continuity checkpoint and `pnpm resume` recovery command merged.
+- Validation baseline: clean build, Hermes signed-ingestion smoke, altered-replay attack smoke, 54 test files and 266 tests, and typecheck passing.
 
 ## Current operating state
 
-- `main` was clean and synchronized after PR #77 at `439ce5b` before this continuity checkpoint was created.
+- `main` was clean and synchronized after PR #78 at `5ad60c2` before the Hermes runtime-build repair was created.
 - There must be only one active implementation task at a time.
 - Do not work directly on `main`.
 - Do not merge, deploy, mutate secrets, delete data, or expand scope without the required human/founder gate.
