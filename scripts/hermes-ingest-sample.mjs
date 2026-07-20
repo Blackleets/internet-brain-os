@@ -9,7 +9,7 @@ if (!secret) {
   process.exit(1);
 }
 
-const timestamp = new Date().toISOString();
+const timestamp = process.env.IBOS_HERMES_TIMESTAMP ?? new Date().toISOString();
 const idempotencyKey = process.env.IBOS_HERMES_IDEMPOTENCY_KEY ?? `hermes-sample-${Date.now()}`;
 const body = JSON.stringify({
   idempotencyKey,
