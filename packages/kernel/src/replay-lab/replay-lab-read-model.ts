@@ -10,6 +10,8 @@ import type {
 import type {
   CognitivePipelineRecord,
   CognitivePipelineRecordId,
+  HermesIngestionReceipt,
+  HermesIngestionReceiptStatus,
 } from '../storage';
 
 export type ReplayLabCaseStatus =
@@ -77,9 +79,17 @@ export interface ReplayLabGateView {
   };
 }
 
+export type ReplayLabIdempotencyStatus = 'not_attached_to_record' | 'attached' | 'record_mismatch';
+
 export interface ReplayLabIdempotencyView {
-  readonly status: 'not_attached_to_record';
+  readonly status: ReplayLabIdempotencyStatus;
   readonly explanation: string;
+  readonly idempotencyKey?: string;
+  readonly receiptStatus?: HermesIngestionReceiptStatus;
+  readonly createdAt?: IsoDateTime;
+  readonly updatedAt?: IsoDateTime;
+  readonly failure?: string;
+  readonly recordMatchesReceipt?: boolean;
 }
 
 export interface ReplayLabCaseView {
@@ -96,7 +106,14 @@ export interface ReplayLabCaseView {
   readonly warnings: readonly string[];
 }
 
-export function buildReplayLabCaseView(record: CognitivePipelineRecord): ReplayLabCaseView {
+export interface BuildReplayLabCaseViewOptions {
+  readonly receipt?: HermesIngestionReceipt;
+}
+
+export function buildReplayLabCaseView(
+  record: CognitivePipelineRecord,
+  options: BuildReplayLabCaseViewOptions = {},
+): ReplayLabCaseView {
   const proposal = record.validation.proposal;
   const task = record.execution.tasks.find((candidate) => candidate.taskId === record.taskResult.taskId);
   const evidence = (task?.evidence ?? []).map((evidenceRef): ReplayLabEvidenceRefView => ({
@@ -106,6 +123,7 @@ export function buildReplayLabCaseView(record: CognitivePipelineRecord): ReplayL
     taskId: task?.taskId ?? record.taskResult.taskId,
     supportsClaimProposal: proposal.evidenceIds.some((candidate) => candidate === evidenceRef.evidenceId),
   }));
+  const idempotency = buildIdempotencyView(record, options.receipt);
 
   return {
     id: record.id,
@@ -145,11 +163,8 @@ export function buildReplayLabCaseView(record: CognitivePipelineRecord): ReplayL
           }
         : undefined,
     },
-    idempotency: {
-      status: 'not_attached_to_record',
-      explanation: 'Replay Lab case views are projected from cognitive pipeline records only. Ingestion receipts must be joined by a dedicated read model before UI display.',
-    },
-    warnings: deriveWarnings(record),
+    idempotency,
+    warnings: deriveWarnings(record, idempotency),
   };
 }
 
@@ -225,7 +240,46 @@ function buildTimeline(record: CognitivePipelineRecord): readonly ReplayLabTimel
   return events.sort((a, b) => a.at.localeCompare(b.at) || a.type.localeCompare(b.type));
 }
 
-function deriveWarnings(record: CognitivePipelineRecord): readonly string[] {
+function buildIdempotencyView(
+  record: CognitivePipelineRecord,
+  receipt: HermesIngestionReceipt | undefined,
+): ReplayLabIdempotencyView {
+  if (!receipt) {
+    return {
+      status: 'not_attached_to_record',
+      explanation: 'No Hermes ingestion receipt was attached to this Replay Lab projection.',
+    };
+  }
+
+  const recordMatchesReceipt = receipt.recordId === record.id;
+  const base = {
+    idempotencyKey: receipt.idempotencyKey,
+    receiptStatus: receipt.status,
+    createdAt: receipt.createdAt,
+    updatedAt: receipt.updatedAt,
+    recordMatchesReceipt,
+    ...(receipt.failure ? { failure: receipt.failure } : {}),
+  };
+
+  if (!recordMatchesReceipt) {
+    return {
+      ...base,
+      status: 'record_mismatch',
+      explanation: 'Attached Hermes ingestion receipt points to a different cognitive pipeline record and must not be trusted for replay status.',
+    };
+  }
+
+  return {
+    ...base,
+    status: 'attached',
+    explanation: 'Hermes ingestion receipt is attached by record id. Fingerprints are intentionally not exposed in Replay Lab views.',
+  };
+}
+
+function deriveWarnings(
+  record: CognitivePipelineRecord,
+  idempotency: ReplayLabIdempotencyView,
+): readonly string[] {
   const warnings: string[] = [];
 
   if (record.validation.decision !== 'accepted') {
@@ -238,6 +292,10 @@ function deriveWarnings(record: CognitivePipelineRecord): readonly string[] {
 
   if (record.contradiction && !record.admission) {
     warnings.push('Contradiction assessment exists, but no knowledge admission result is attached to this record.');
+  }
+
+  if (idempotency.status === 'record_mismatch') {
+    warnings.push('Attached Hermes ingestion receipt does not match this cognitive pipeline record.');
   }
 
   return warnings;
