@@ -8,26 +8,28 @@ Every AI must update this file before ending a work session.
 
 ## Current project state
 
-Status: Foundation runtime is being stabilized.
+Status: Foundation runtime, Replay Lab core, Internal Orchestrator v0, and deterministic Hermes preflight are stable on `main`.
 
-Current phase: Phase 0 foundation hardening / orchestration runtime.
+Current phase: Product Star Phase A is blocked on a sanitized real Hermes runtime capture; Phase B is partially complete; Phase C is complete.
 
-Primary objective: Build the minimum local-first Kernel with Case, Evidence, Memory, Obsidian export, basic report generation, and a robust Hermes ↔ Hephaestus research runtime.
+Primary objective: close Issue #57 with real-runtime evidence, then finish the remaining Replay Lab authority-attempt visibility and product-polish sections without weakening Kernel authority.
 
 ## Mandatory reading order
 
-Before doing work, read:
+Before doing work, run `pnpm resume`, then read:
 
-1. `README.md`
-2. `PROJECT_DNA.md`
-3. `PROJECT_BIBLE.md`
-4. `AI_CONSTITUTION.md`
-5. `LLM_HANDOFF.md`
-6. `ARCHITECTURE.md`
-7. `AGENTS.md`
-8. `ROADMAP.md`
-9. `tasks/phase-0.md`
-10. `DECISIONS.md`
+1. `PROJECT_STATE.md`
+2. `AGENTS.md`
+3. `README.md`
+4. `PROJECT_DNA.md`
+5. `PROJECT_BIBLE.md`
+6. `AI_CONSTITUTION.md`
+7. `LLM_HANDOFF.md`
+8. `docs/architecture.md`
+9. `ROADMAP.md`
+10. `docs/product-star-roadmap.md`
+11. `DECISIONS.md`
+12. The active GitHub issue or pull request.
 
 ## Handoff template
 

@@ -33,6 +33,12 @@ Secure demo-capable foundation: strong.
 Product experience: still early.
 ```
 
+Status legend for the execution sections below:
+
+- `[x]` verified in the repository and current validation baseline.
+- `[ ]` not yet proven or intentionally deferred.
+- A phase is complete only when every required item is checked; partial implementation is stated explicitly.
+
 ## North star
 
 A reviewer should understand the product in five minutes and run a safe demo in ten minutes.
@@ -52,6 +58,8 @@ clone repo
 ## Phase A — Real Hermes validation
 
 Purpose: prove this is not synthetic-only.
+
+Status: **blocked on one sanitized output from the user's real Hermes runtime**. Synthetic fixtures and smoke tests do not complete this phase.
 
 Checklist:
 
@@ -78,22 +86,26 @@ Do not weaken the Kernel contract to make real Hermes fit.
 
 Purpose: make the forensic record understandable without reading JSON.
 
+Status: **implemented core read-only operator view; one authority-attempt visibility item remains**.
+
 Primary contract:
 
 - `docs/replay-lab-contract.md`
 
 Minimum UI should show:
 
-- [ ] Case / cognitive record id.
-- [ ] Mission id.
-- [ ] Task id.
-- [ ] Timeline of Hermes events.
-- [ ] Evidence records.
-- [ ] Claim proposal.
-- [ ] Validation/admission state owned by Kernel.
-- [ ] Idempotency receipt status.
-- [ ] Replay result: original, exact replay, or conflict.
+- [x] Case / cognitive record id.
+- [x] Mission id.
+- [x] Task id.
+- [x] Timeline of Hermes events.
+- [x] Evidence records.
+- [x] Claim proposal.
+- [x] Validation/admission state owned by Kernel.
+- [x] Idempotency receipt status.
+- [x] Replay result derived from the persisted receipt state.
 - [ ] Blocked authority fields if present.
+
+Evidence: `ReplayLabQueryService`, the authenticated read-only `/api/replay-lab/*` API, `apps/local-kernel/replay-lab-page.mjs`, API smoke coverage, and PR #72.
 
 Design principle:
 
@@ -115,15 +127,19 @@ Suggested product labels:
 
 Purpose: make demos repeatable and safe.
 
+Status: **complete through the documented local flow and deterministic smoke commands**.
+
 Checklist:
 
-- [ ] Add a local-only demo command or documented two-terminal flow.
-- [ ] Seed a known sample case.
-- [ ] Show safe replay.
-- [ ] Show altered replay blocked.
-- [ ] Show authority injection blocked.
-- [ ] Keep secrets out of commits and output.
-- [ ] Ensure demo works without external paid APIs.
+- [x] Add a local-only demo command or documented two-terminal flow.
+- [x] Seed a known sample case.
+- [x] Show safe replay.
+- [x] Show altered replay blocked.
+- [x] Show authority injection blocked.
+- [x] Keep secrets out of commits and output.
+- [x] Ensure demo works without external paid APIs.
+
+Evidence: `docs/hermes-demo-quickstart.md`, `pnpm hermes:smoke`, `pnpm hermes:attack-smoke`, both sanitized fixtures under `examples/`, and offline authority-field rejection in the Hermes output adapters.
 
 Potential command shape:
 
@@ -136,6 +152,8 @@ Do not add this until the command can manage local server lifecycle safely.
 ## Phase D — Product narrative polish
 
 Purpose: make the repo understandable to users, contributors, and investors.
+
+Status: **not started as a dedicated polish phase**. Existing narrative material is useful input, but it does not close this checklist.
 
 Checklist:
 
@@ -158,6 +176,8 @@ It turns agent runs into evidence-backed cases before anything becomes durable m
 
 Purpose: move from ingestion safety to long-term cognitive safety.
 
+Status: **not started as a dedicated expansion phase**. Existing validation, contradiction, and admission primitives are the foundation, not completion of these operator-facing capabilities.
+
 Checklist:
 
 - [ ] Add clearer memory admission reports.
@@ -176,6 +196,8 @@ Hermes proposes. Kernel verifies. Contradiction checks. Admission decides. Memor
 ## Phase F — Packaging and release readiness
 
 Purpose: make external review safe.
+
+Status: **not started as a release gate**. Current CI and local preflight are green, but a clean-clone release audit and real Hermes proof remain required.
 
 Checklist:
 
@@ -201,11 +223,11 @@ Do not:
 
 ## Recommended next PRs
 
-1. Real Hermes runtime fixture or extractor.
-2. Replay Lab read model / API for displaying forensic records.
-3. Minimal local dashboard screen for one ingested case.
-4. Demo screenshots and README visual polish.
-5. Memory quarantine / prevention-rule design note.
+1. Real Hermes runtime fixture or thin extractor, once the external capture is available.
+2. Replay Lab authority-attempt visibility design, without persisting rejected payload contents unsafely.
+3. Demo screenshots and README visual polish.
+4. Memory quarantine / prevention-rule design note.
+5. Clean-clone packaging and release-readiness audit.
 
 ## Definition of “project star”
 
