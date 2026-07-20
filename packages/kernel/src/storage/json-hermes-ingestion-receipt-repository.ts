@@ -103,6 +103,10 @@ export class JsonHermesIngestionReceiptRepository {
     return receipt ? structuredClone(receipt) : undefined;
   }
 
+  async list(): Promise<readonly HermesIngestionReceipt[]> {
+    return (await this.collection.read()).map((receipt) => structuredClone(receipt));
+  }
+
   async listPending(): Promise<readonly HermesIngestionReceipt[]> {
     return (await this.collection.read())
       .filter((receipt) => receipt.status === 'pending')

@@ -28,6 +28,7 @@ export async function createHermesLocalIngestionRoute(options = {}) {
 
   const records = new kernel.JsonCognitivePipelineRepository(dataRoot);
   const receipts = new kernel.JsonHermesIngestionReceiptRepository(dataRoot);
+  const replayLabQuery = new kernel.ReplayLabQueryService({ records, receipts });
   const recovery = new kernel.HermesIngestionRecoveryCoordinator(
     receipts,
     records,
@@ -63,5 +64,5 @@ export async function createHermesLocalIngestionRoute(options = {}) {
     },
   );
 
-  return { route, reconciled };
+  return { route, replayLabQuery, reconciled };
 }
