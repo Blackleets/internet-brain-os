@@ -30,14 +30,16 @@ try {
 
   await waitForHealth(`${baseUrl}/health`);
   const health = await (await fetch(`${baseUrl}/health`)).json();
-  assert(health.hermes?.enabled === true, 'Hermes route must be enabled in health response.');
+  assert(isEnabled(health.hermes), 'Hermes route must be enabled in health response.');
 
   const idempotencyKey = `hermes-smoke-${Date.now()}`;
+  const timestamp = new Date().toISOString();
   const commonEnv = {
     ...process.env,
     IBOS_HERMES_SECRET: secret,
     IBOS_HERMES_INGEST_URL: `${baseUrl}/hermes/ingestions`,
     IBOS_HERMES_IDEMPOTENCY_KEY: idempotencyKey,
+    IBOS_HERMES_TIMESTAMP: timestamp,
   };
 
   const first = await runSample(commonEnv);
@@ -93,6 +95,10 @@ function runSample(env) {
       resolve({ status, body });
     });
   });
+}
+
+function isEnabled(value) {
+  return value === true || value?.enabled === true;
 }
 
 function assert(condition, message) {
