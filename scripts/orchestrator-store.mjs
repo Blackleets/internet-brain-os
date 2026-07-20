@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, readdir, rename, unlink, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { transitionTask, validateTaskContract } from './orchestrator-state.mjs';
@@ -30,54 +30,64 @@ export class OrchestratorStore {
 
   async create(taskInput) {
     await this.initialize();
-    const task = validateTaskContract(taskInput);
-    if (task.status !== 'pending') throw new OrchestratorStoreError('TASK_NOT_PENDING', 'New tasks must start pending.');
-    if (await this.find(task.task_id)) throw new OrchestratorStoreError('TASK_EXISTS', `${task.task_id} already exists.`);
-    await atomicWrite(this.taskPath('pending', task.task_id), task);
-    return structuredClone(task);
+    return this.withLock(async () => {
+      const task = validateTaskContract(taskInput);
+      if (task.status !== 'pending') throw new OrchestratorStoreError('TASK_NOT_PENDING', 'New tasks must start pending.');
+      if (await this.find(task.task_id)) throw new OrchestratorStoreError('TASK_EXISTS', `${task.task_id} already exists.`);
+      await atomicWrite(this.taskPath('pending', task.task_id), task);
+      return structuredClone(task);
+    });
   }
 
   async activate(taskId) {
-    const record = await this.require(taskId, 'pending');
-    const tasks = await this.list();
-    const active = transitionTask(record.task, 'active', tasks.map((item) => item.task));
-    await this.move(record.path, this.taskPath('active', taskId), active);
-    return active;
+    return this.withLock(async () => {
+      const record = await this.require(taskId, 'pending');
+      const tasks = await this.list();
+      const active = transitionTask(record.task, 'active', tasks.map((item) => item.task));
+      await this.move(record.path, this.taskPath('active', taskId), active);
+      return active;
+    });
   }
 
   async report(taskId, reportInput) {
-    const record = await this.require(taskId, 'active');
-    const report = validateExecutionReport(reportInput, record.task);
-    const nextStatus = report.status === 'completed' ? 'review' : 'blocked';
-    const updated = transitionTask(record.task, nextStatus);
-    await atomicWrite(join(this.root, 'reports', 'hermes', `${taskId}.json`), report);
-    await this.move(record.path, this.taskPath(nextStatus, taskId), updated);
-    return { task: updated, report };
+    return this.withLock(async () => {
+      const record = await this.require(taskId, 'active');
+      const report = validateExecutionReport(reportInput, record.task);
+      const nextStatus = report.status === 'completed' ? 'review' : 'blocked';
+      const updated = transitionTask(record.task, nextStatus);
+      await atomicWrite(join(this.root, 'reports', 'hermes', `${taskId}.json`), report);
+      await this.move(record.path, this.taskPath(nextStatus, taskId), updated);
+      return { task: updated, report };
+    });
   }
 
   async approve(taskId, evidence, { founderApproved = false } = {}) {
-    const record = await this.require(taskId, 'review');
-    if (record.task.requires_founder_approval && !founderApproved) {
-      throw new OrchestratorStoreError('FOUNDER_APPROVAL_REQUIRED', `${taskId} requires founder approval.`);
-    }
-    const report = await readJson(join(this.root, 'reports', 'hermes', `${taskId}.json`));
-    const decision = evaluateGitEvidence(record.task, report, evidence);
-    if (decision.decision !== 'APPROVED') return decision;
-    const completed = transitionTask(record.task, 'completed');
-    await atomicWrite(join(this.root, 'reports', 'cto', `${taskId}.json`), decision);
-    await this.move(record.path, this.taskPath('completed', taskId), completed);
-    return decision;
+    return this.withLock(async () => {
+      const record = await this.require(taskId, 'review');
+      if (record.task.requires_founder_approval && !founderApproved) {
+        throw new OrchestratorStoreError('FOUNDER_APPROVAL_REQUIRED', `${taskId} requires founder approval.`);
+      }
+      const report = await readJson(join(this.root, 'reports', 'hermes', `${taskId}.json`));
+      const decision = evaluateGitEvidence(record.task, report, evidence);
+      if (decision.decision !== 'APPROVED') return decision;
+      const completed = transitionTask(record.task, 'completed');
+      await atomicWrite(join(this.root, 'reports', 'cto', `${taskId}.json`), decision);
+      await this.move(record.path, this.taskPath('completed', taskId), completed);
+      return decision;
+    });
   }
 
   async reject(taskId, reason) {
     if (typeof reason !== 'string' || reason.trim() === '') throw new OrchestratorStoreError('REASON_REQUIRED', 'A rejection reason is required.');
-    const record = await this.require(taskId, 'review');
-    const tasks = await this.list();
-    const active = transitionTask(record.task, 'active', tasks.map((item) => item.task));
-    const decision = { task_id: taskId, decision: 'CORRECTIONS_REQUIRED', reason: reason.trim() };
-    await atomicWrite(join(this.root, 'reports', 'cto', `${taskId}.json`), decision);
-    await this.move(record.path, this.taskPath('active', taskId), active);
-    return decision;
+    return this.withLock(async () => {
+      const record = await this.require(taskId, 'review');
+      const tasks = await this.list();
+      const active = transitionTask(record.task, 'active', tasks.map((item) => item.task));
+      const decision = { task_id: taskId, decision: 'CORRECTIONS_REQUIRED', reason: reason.trim() };
+      await atomicWrite(join(this.root, 'reports', 'cto', `${taskId}.json`), decision);
+      await this.move(record.path, this.taskPath('active', taskId), active);
+      return decision;
+    });
   }
 
   async inspect(taskId) {
@@ -137,6 +147,23 @@ export class OrchestratorStore {
     await mkdir(join(this.root, 'tasks', value.status), { recursive: true });
     await rename(source, destination);
   }
+
+  async withLock(action) {
+    await this.initialize();
+    const lockPath = join(this.root, '.mutation.lock');
+    let handle;
+    try {
+      handle = await open(lockPath, 'wx', 0o600);
+    } catch (error) {
+      if (error.code === 'EEXIST') throw new OrchestratorStoreError('STORE_BUSY', 'Another orchestrator mutation is in progress.');
+      throw error;
+    }
+    try { return await action(); }
+    finally {
+      await handle.close();
+      await unlink(lockPath).catch(() => {});
+    }
+  }
 }
 
 function assertTaskId(taskId) {
@@ -151,13 +178,16 @@ async function atomicWrite(path, value) {
 
 async function readJson(path) {
   try { return JSON.parse(await readFile(path, 'utf8')); }
-  catch (error) { throw new OrchestratorStoreError('INVALID_STORED_JSON', `Cannot read ${path}: ${error.message}`); }
+  catch (error) {
+    if (error.code === 'ENOENT') throw new OrchestratorStoreError('STORED_FILE_NOT_FOUND', `${path} does not exist.`);
+    throw new OrchestratorStoreError('INVALID_STORED_JSON', `Cannot read ${path}: ${error.message}`);
+  }
 }
 
 async function optionalJson(path) {
   try { return await readJson(path); }
   catch (error) {
-    if (error.cause?.code === 'ENOENT' || error.message.includes('ENOENT')) return null;
-    return null;
+    if (error.code === 'STORED_FILE_NOT_FOUND') return null;
+    throw error;
   }
 }
