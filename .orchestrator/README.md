@@ -35,3 +35,19 @@ The same module validates returned execution reports before review. It rejects:
 - completed reports missing required command output, tests, or acceptance evidence.
 
 A blocked or failed report may omit completion evidence, but it must state the blocker and recommended next action. Prompt generation and report parsing remain local and deterministic; Phase B does not call model APIs, mutate Git, merge changes, deploy, or run autonomously.
+
+## Filesystem CLI
+
+The local CLI persists task contracts under `.orchestrator/tasks/<status>/` and review artifacts under `.orchestrator/reports/`. It never runs Git commands, merges, deploys, modifies secrets, or advances automatically to another task.
+
+```bash
+pnpm orchestrator status
+pnpm orchestrator create task.json
+pnpm orchestrator activate IBOS-0001
+pnpm orchestrator report IBOS-0001 execution-report.json
+pnpm orchestrator approve IBOS-0001 git-evidence.json --founder-approved
+pnpm orchestrator reject IBOS-0001 "correction reason"
+pnpm orchestrator inspect IBOS-0001
+```
+
+Set `IBOS_ORCHESTRATOR_ROOT` to use an isolated task store. Approval requires a completed Hermes report plus matching Git evidence; contracts marked `requires_founder_approval` also require the explicit `--founder-approved` flag.
