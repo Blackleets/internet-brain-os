@@ -28,7 +28,7 @@ Then read, in order:
 
 - Secure local Hermes ingestion, HMAC body binding, idempotency, replay protection, recovery, and startup reconciliation.
 - Mission execution, claim proposal, contradiction, knowledge admission, and durable cognitive-pipeline storage.
-- Replay Lab read model, authenticated local API, smoke test, and minimal operator UI.
+- Replay Lab read model, authenticated local API, smoke test, and minimal operator UI with a safe pre-ingestion authority-boundary explanation.
 - Internal Orchestrator phases A-C: task contracts/state, bounded Hermes/Codex prompts, report validation, and Git evidence decisions.
 - PR #76: approval invariants hardened.
 - PR #77: filesystem-backed Internal Orchestrator CLI merged with cross-process mutation locking, explicit blocked-task retry, founder gates, and corruption visibility.
