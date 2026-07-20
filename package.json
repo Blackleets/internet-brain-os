@@ -17,6 +17,7 @@
     "kernel:serve": "node apps/local-kernel/server.mjs",
     "orchestrator": "node scripts/orchestrator-cli.mjs",
     "replay-lab:api-smoke": "node scripts/replay-lab-api-smoke.mjs",
+    "resume": "node scripts/project-resume.mjs",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc -b --pretty false"
   },
