@@ -1,6 +1,6 @@
 # Internal Orchestrator v0
 
-Phase A provides a filesystem-backed, human-gated task state contract for internal development work.
+The internal orchestrator is a filesystem-backed, human-gated control plane for bounded development work.
 
 ## Safety boundaries
 
@@ -17,4 +17,21 @@ Phase A provides a filesystem-backed, human-gated task state contract for intern
 
 A task may also move from `active` or `review` to `blocked`, and a blocked task may return to `pending`.
 
-The implementation lives in `scripts/orchestrator-state.mjs`. JSON Schemas under `.orchestrator/schemas/` document the durable task and execution-report contracts.
+## Phase A — contracts and state
+
+`scripts/orchestrator-state.mjs` validates bounded task contracts and enforces the approved state machine. JSON Schemas under `.orchestrator/schemas/` document the durable task and execution-report formats.
+
+## Phase B — prompt and report adapters
+
+`scripts/orchestrator-prompt-adapters.mjs` generates separate bounded instructions for Hermes and Codex from one active task contract. Both prompts include the objective, allowed paths, forbidden paths, acceptance criteria, required commands, approval requirements, and the permanent prohibition on production deployment.
+
+The same module validates returned execution reports before review. It rejects:
+
+- reports for a different task;
+- work claimed directly on `main`;
+- invalid commit identifiers;
+- unknown or missing report fields;
+- forbidden or out-of-scope file changes;
+- completed reports missing required command output, tests, or acceptance evidence.
+
+A blocked or failed report may omit completion evidence, but it must state the blocker and recommended next action. Prompt generation and report parsing remain local and deterministic; Phase B does not call model APIs, mutate Git, merge changes, deploy, or run autonomously.
