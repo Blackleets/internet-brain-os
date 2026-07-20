@@ -10,11 +10,6 @@ export interface ReplayLabRecordReader {
   get(id: CognitivePipelineRecordId): Promise<CognitivePipelineRecord>;
 }
 
-export interface ReplayLabReceiptReader {
-  listPending(): Promise<readonly HermesIngestionReceipt[]>;
-  listExpiredPending(at: string): Promise<readonly HermesIngestionReceipt[]>;
-}
-
 export interface ReplayLabReceiptListReader {
   list(): Promise<readonly HermesIngestionReceipt[]>;
 }
