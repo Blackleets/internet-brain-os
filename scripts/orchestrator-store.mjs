@@ -61,6 +61,15 @@ export class OrchestratorStore {
     });
   }
 
+  async retry(taskId) {
+    return this.withLock(async () => {
+      const record = await this.require(taskId, 'blocked');
+      const pending = transitionTask(record.task, 'pending');
+      await this.move(record.path, this.taskPath('pending', taskId), pending);
+      return pending;
+    });
+  }
+
   async approve(taskId, evidence, { founderApproved = false } = {}) {
     return this.withLock(async () => {
       const record = await this.require(taskId, 'review');
