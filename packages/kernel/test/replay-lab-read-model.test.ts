@@ -7,6 +7,7 @@ import type {
   ClaimProposalId,
   CognitivePipelineRecord,
   CognitivePipelineRecordId,
+  HermesIngestionReceipt,
   MissionExecutionState,
   MissionId,
   MissionTaskId,
@@ -141,6 +142,17 @@ function rejectedRecord(): CognitivePipelineRecord {
   };
 }
 
+function receipt(recordId: CognitivePipelineRecordId): HermesIngestionReceipt {
+  return {
+    idempotencyKey: 'demo-key-1',
+    fingerprint: 'secret-fingerprint-not-for-ui',
+    recordId,
+    status: 'completed',
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 describe('Replay Lab read model', () => {
   test('projects an admitted cognitive pipeline record into a case view', () => {
     const view = buildReplayLabCaseView(acceptedRecord());
@@ -190,5 +202,29 @@ describe('Replay Lab read model', () => {
       'validation_evaluated',
     ]);
     expect(view.timeline.every((event) => event.at === now)).toBe(true);
+  });
+
+  test('attaches safe idempotency receipt fields without exposing fingerprints', () => {
+    const record = acceptedRecord();
+    const view = buildReplayLabCaseView(record, { receipt: receipt(record.id) });
+
+    expect(view.idempotency.status).toBe('attached');
+    expect(view.idempotency.idempotencyKey).toBe('demo-key-1');
+    expect(view.idempotency.receiptStatus).toBe('completed');
+    expect(view.idempotency.recordMatchesReceipt).toBe(true);
+    expect(view.idempotency).not.toHaveProperty('fingerprint');
+    expect(view.warnings).toEqual([]);
+  });
+
+  test('warns when an attached idempotency receipt points to another record', () => {
+    const record = acceptedRecord();
+    const view = buildReplayLabCaseView(record, {
+      receipt: receipt('different-record' as CognitivePipelineRecordId),
+    });
+
+    expect(view.idempotency.status).toBe('record_mismatch');
+    expect(view.idempotency.recordMatchesReceipt).toBe(false);
+    expect(view.idempotency).not.toHaveProperty('fingerprint');
+    expect(view.warnings).toContain('Attached Hermes ingestion receipt does not match this cognitive pipeline record.');
   });
 });
