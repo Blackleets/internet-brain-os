@@ -24,6 +24,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Product Star roadmap and AI handoff now distinguish verified, partial, blocked, and deferred sections using the current repository evidence.
 - Kernel builds now emit executable CommonJS alongside declarations, and Hermes smoke replays use a stable signed timestamp so clean-checkout runtime validation is deterministic.
 - Hermes ingestion contract now documents bounded exports, native JSONL logs, both agent-output ingestion CLI modes, and idempotency attack-smoke validation.
 - Hermes operating protocol now requires the signed ingestion contract and `pnpm hermes:smoke` validation for ingestion-related changes.
