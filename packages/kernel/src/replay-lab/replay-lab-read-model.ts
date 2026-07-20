@@ -2,13 +2,15 @@ import type { IsoDateTime } from '@internet-brain-os/shared';
 import type {
   ClaimProposal,
   ClaimValidationDecision,
-  CognitivePipelineRecord,
-  CognitivePipelineRecordId,
   ContradictionAction,
   KnowledgeAdmissionDecision,
   MissionId,
   MissionTaskId,
-} from '..';
+} from '../mission';
+import type {
+  CognitivePipelineRecord,
+  CognitivePipelineRecordId,
+} from '../storage';
 
 export type ReplayLabCaseStatus =
   | 'admitted'
