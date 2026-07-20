@@ -104,7 +104,7 @@ export function buildReplayLabCaseView(record: CognitivePipelineRecord): ReplayL
     requirementKey: evidenceRef.requirementKey,
     recordedAt: evidenceRef.recordedAt,
     taskId: task?.taskId ?? record.taskResult.taskId,
-    supportsClaimProposal: proposal.evidenceIds.includes(evidenceRef.evidenceId),
+    supportsClaimProposal: proposal.evidenceIds.some((candidate) => candidate === evidenceRef.evidenceId),
   }));
 
   return {
