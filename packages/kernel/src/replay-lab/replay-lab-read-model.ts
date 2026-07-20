@@ -92,6 +92,13 @@ export interface ReplayLabIdempotencyView {
   readonly recordMatchesReceipt?: boolean;
 }
 
+export interface ReplayLabAuthorityBoundaryView {
+  readonly status: 'enforced_before_ingestion';
+  readonly forbiddenFields: readonly string[];
+  readonly observedAttempt: 'not_persisted';
+  readonly explanation: string;
+}
+
 export interface ReplayLabCaseView {
   readonly id: CognitivePipelineRecordId;
   readonly missionId: MissionId;
@@ -103,6 +110,7 @@ export interface ReplayLabCaseView {
   readonly claimProposal: ReplayLabClaimProposalView;
   readonly gates: ReplayLabGateView;
   readonly idempotency: ReplayLabIdempotencyView;
+  readonly authorityBoundary: ReplayLabAuthorityBoundaryView;
   readonly warnings: readonly string[];
 }
 
@@ -164,6 +172,20 @@ export function buildReplayLabCaseView(
         : undefined,
     },
     idempotency,
+    authorityBoundary: {
+      status: 'enforced_before_ingestion',
+      forbiddenFields: [
+        'candidate',
+        'validation',
+        'contradiction',
+        'admission',
+        'claimValidation',
+        'durableClaim',
+        'knowledgeAdmission',
+      ],
+      observedAttempt: 'not_persisted',
+      explanation: 'Hermes authority fields are rejected before transport or Kernel processing. Rejected payload contents are intentionally not persisted or attributed to this accepted case.',
+    },
     warnings: deriveWarnings(record, idempotency),
   };
 }
