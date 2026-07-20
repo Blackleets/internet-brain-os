@@ -86,7 +86,7 @@ Do not weaken the Kernel contract to make real Hermes fit.
 
 Purpose: make the forensic record understandable without reading JSON.
 
-Status: **implemented core read-only operator view; one authority-attempt visibility item remains**.
+Status: **complete for the current read-only operator scope**.
 
 Primary contract:
 
@@ -103,9 +103,9 @@ Minimum UI should show:
 - [x] Validation/admission state owned by Kernel.
 - [x] Idempotency receipt status.
 - [x] Replay result derived from the persisted receipt state.
-- [ ] Blocked authority fields if present.
+- [x] Authority boundary status and forbidden fields, with an honest non-persistence explanation for rejected attempts.
 
-Evidence: `ReplayLabQueryService`, the authenticated read-only `/api/replay-lab/*` API, `apps/local-kernel/replay-lab-page.mjs`, API smoke coverage, and PR #72.
+Evidence: `ReplayLabQueryService`, the authenticated read-only `/api/replay-lab/*` API, `apps/local-kernel/replay-lab-page.mjs`, read-model/API coverage, and the explicit pre-ingestion authority-boundary projection.
 
 Design principle:
 
@@ -224,10 +224,9 @@ Do not:
 ## Recommended next PRs
 
 1. Real Hermes runtime fixture or thin extractor, once the external capture is available.
-2. Replay Lab authority-attempt visibility design, without persisting rejected payload contents unsafely.
-3. Demo screenshots and README visual polish.
-4. Memory quarantine / prevention-rule design note.
-5. Clean-clone packaging and release-readiness audit.
+2. Demo screenshots and README visual polish.
+3. Memory quarantine / prevention-rule design note.
+4. Clean-clone packaging and release-readiness audit.
 
 ## Definition of “project star”
 
