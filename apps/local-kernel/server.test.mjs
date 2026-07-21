@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { CaptureCaseEvidenceProjector, LocalKnowledgeStore } from './capture-projector.mjs';
 import { PageContextInbox } from './page-context-inbox.mjs';
 import { ObsidianKnowledgeProjector } from './obsidian-projector.mjs';
+import { OptionalEvidenceSummarizer } from './optional-evidence-summarizer.mjs';
 import { PairingSession } from './pairing-session.mjs';
 import { createLocalKernelServer } from './server.mjs';
 import { ExtensionIdentityRegistry } from './extension-identity-registry.mjs';
@@ -44,6 +45,42 @@ describe('local Kernel HTTP receiver', () => {
       ollama: 'not_configured',
       obsidian: 'not_configured',
     });
+  });
+
+  it('reports Ollama configured only when the summarizer has a model', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    const withoutModel = new OptionalEvidenceSummarizer(store);
+    const withModel = new OptionalEvidenceSummarizer(store, {
+      model: 'local-test-model',
+      baseUrl: 'http://127.0.0.1:11434',
+    });
+
+    server = testServer(
+      new PageContextInbox(join(dir, 'inbox-without-model.jsonl')),
+      undefined,
+      undefined,
+      withoutModel,
+    );
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    let port = server.address().port;
+    const withoutModelStatus = await (await fetch(`http://127.0.0.1:${port}/status`)).json();
+    await new Promise((resolve) => server.close(resolve));
+
+    server = testServer(
+      new PageContextInbox(join(dir, 'inbox-with-model.jsonl')),
+      undefined,
+      undefined,
+      withModel,
+    );
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    port = server.address().port;
+    const withModelStatus = await (await fetch(`http://127.0.0.1:${port}/status`)).json();
+
+    expect(withoutModelStatus.ollama).toBe('not_configured');
+    expect(withModelStatus.ollama).toBe('configured');
+    expect(JSON.stringify(withModelStatus)).not.toContain('local-test-model');
+    expect(JSON.stringify(withModelStatus)).not.toContain('11434');
   });
 
   it('accepts extension context and returns an idempotent receipt', async () => {
