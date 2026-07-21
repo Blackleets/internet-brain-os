@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document is the canonical handoff point for any future agent continuing the repository. Read it before modifying code.
+This document is the canonical architecture handoff point for any future agent continuing the repository. Read `HERMES_WORKSPACE_PROTOCOL.md` first for workspace identity, ownership, and recovery rules.
 
 ## Product Identity
 
