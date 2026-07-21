@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { HermesReplayLabImportService } from './hermes-import-service.mjs';
 
 /**
  * Creates the optional storage-backed Hermes ingestion route for the local Kernel.
@@ -64,5 +65,6 @@ export async function createHermesLocalIngestionRoute(options = {}) {
     },
   );
 
-  return { route, replayLabQuery, reconciled };
+  const importService = new HermesReplayLabImportService({ kernel, route, secret, now });
+  return { route, replayLabQuery, importService, reconciled };
 }

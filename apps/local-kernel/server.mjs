@@ -10,6 +10,7 @@ import { loadOrCreateApiToken, validateApiToken } from './api-token-store.mjs';
 import { PairingError, PairingSession } from './pairing-session.mjs';
 import { ExtensionIdentityRegistry } from './extension-identity-registry.mjs';
 import { createHermesLocalIngestionRoute } from './hermes-route-factory.mjs';
+import { HermesImportError } from './hermes-import-service.mjs';
 import { replayLabPageHtml } from './replay-lab-page.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
@@ -54,6 +55,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const identities = options.extensionRegistry;
   const hermesRoute = options.hermesRoute;
   const replayLabQuery = options.replayLabQuery;
+  const hermesImportService = options.hermesImportService;
   const hermesMaxBodyBytes = Number(options.hermesMaxBodyBytes ?? 256 * 1024);
   return createServer(async (request, response) => {
     if (!isLoopbackHost(request.headers.host)) {
@@ -152,6 +154,24 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         return send(response, 404, { ok: false, code: 'REPLAY_LAB_CASE_NOT_FOUND' });
       }
     }
+    if (request.method === 'POST' && ['/api/replay-lab/imports/validate', '/api/replay-lab/imports'].includes(request.url)) {
+      if (!hermesImportService) return send(response, 404, { ok: false, code: 'HERMES_IMPORT_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) {
+        return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      }
+      try {
+        const body = await readJson(request, hermesMaxBodyBytes);
+        if (request.url.endsWith('/validate')) {
+          const validated = hermesImportService.validate(body);
+          return send(response, 200, { ok: true, runId: validated.runOutput.runId, idempotencyKey: validated.idempotencyKey, eventCount: validated.events.length });
+        }
+        return send(response, 202, { ok: true, ...(await hermesImportService.ingest(body)) });
+      } catch (error) {
+        if (error instanceof HermesImportError) return send(response, error.status, { ok: false, code: error.code, error: error.message, details: error.details });
+        if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code });
+        return send(response, 500, { ok: false, code: 'HERMES_IMPORT_FAILED' });
+      }
+    }
     if (request.method !== 'POST' || request.url !== '/api/browser/page-context') {
       return send(response, 404, { ok: false, code: 'NOT_FOUND' });
     }
@@ -189,6 +209,7 @@ export const server = createLocalKernelServer(inbox, projector, obsidian, summar
   extensionRegistry,
   hermesRoute: hermes?.route,
   replayLabQuery: hermes?.replayLabQuery,
+  hermesImportService: hermes?.importService,
 });
 
 if (isMain) {
@@ -211,8 +232,8 @@ if (isMain) {
   });
 }
 
-async function readJson(request) {
-  const raw = await readRaw(request, MAX_BODY_BYTES);
+async function readJson(request, maxBodyBytes = MAX_BODY_BYTES) {
+  const raw = await readRaw(request, maxBodyBytes);
   try { return JSON.parse(raw); }
   catch { throw new InboxError('INVALID_JSON', 'Request body must be valid JSON'); }
 }

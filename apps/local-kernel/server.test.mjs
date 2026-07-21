@@ -218,6 +218,44 @@ describe('local Kernel HTTP receiver', () => {
     expect(await response.json()).toEqual({ ok: false, code: 'REPLAY_LAB_UNAVAILABLE' });
   });
 
+  it('validates and ingests a Hermes capture through separate authenticated actions', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    const calls = [];
+    const hermesImportService = {
+      validate: (body) => ({ runOutput: { runId: 'real-run-1' }, idempotencyKey: 'hermes-agent-real-run-1', events: [1, 2] }),
+      ingest: async (body) => { calls.push(body); return { recordId: 'pipeline-hermes-agent-real-run-1' }; },
+    };
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, { hermesImportService });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+    const payload = { format: 'json', content: '{"runId":"real-run-1"}' };
+
+    const validate = await fetch(`http://127.0.0.1:${port}/api/replay-lab/imports/validate`, {
+      method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' }, body: JSON.stringify(payload),
+    });
+    const ingest = await fetch(`http://127.0.0.1:${port}/api/replay-lab/imports`, {
+      method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' }, body: JSON.stringify(payload),
+    });
+
+    expect(await validate.json()).toEqual({ ok: true, runId: 'real-run-1', idempotencyKey: 'hermes-agent-real-run-1', eventCount: 2 });
+    expect(ingest.status).toBe(202);
+    expect(await ingest.json()).toMatchObject({ ok: true, recordId: 'pipeline-hermes-agent-real-run-1' });
+    expect(calls).toEqual([payload]);
+  });
+
+  it('requires the local API token before Hermes import validation', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, {
+      hermesImportService: { validate: () => { throw new Error('must not run'); } },
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+    const response = await fetch(`http://127.0.0.1:${port}/api/replay-lab/imports/validate`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
+    });
+    expect(response.status).toBe(401);
+  });
+
   it('serves the minimal Replay Lab operator page without exposing the API token', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
     server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')));
@@ -231,6 +269,8 @@ describe('local Kernel HTTP receiver', () => {
     expect(response.headers.get('content-type')).toContain('text/html');
     expect(html).toContain('Replay Lab');
     expect(html).toContain('/api/replay-lab/cases');
+    expect(html).toContain('/api/replay-lab/imports/validate');
+    expect(html).toContain('Import real Hermes run');
     expect(html).toContain('Authority boundary');
     expect(html).toContain('AI Autopsy');
     expect(html).toContain('Prevention Rules');
