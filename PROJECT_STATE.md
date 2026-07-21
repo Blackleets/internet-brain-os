@@ -31,6 +31,7 @@ Then read, in order:
 - Replay Lab read model, authenticated local API, smoke test, and minimal operator UI with a safe pre-ingestion authority-boundary explanation.
 - Replay Lab Causality Map derived only from explicit persisted evidence, proposal, gate, contradiction, admission, and durable-claim links.
 - Replay Lab AI Autopsy and Prevention projections derived deterministically from recorded state, with observed facts separated from interpretation and all prevention proposals read-only pending human approval.
+- Replay Lab real-capture import flow with separate read-only validation and explicit ingestion, server-side HMAC signing, sensitive-data preflight, bounded input, and automatic case refresh; the browser never receives the Hermes boundary secret.
 - Safe local `/status` readiness contract for Kernel, Hermes, Replay Lab, Ollama, and Obsidian; Ollama is reported configured only when an actual model is configured, without exposing model or endpoint details.
 - Local API tokens reject whitespace/control characters; persisted POSIX token files fail closed when group or world permissions are present, and rotation remains explicit.
 - Internal Orchestrator phases A-C: task contracts/state, bounded Hermes/Codex prompts, report validation, and Git evidence decisions.
@@ -56,7 +57,7 @@ Then read, in order:
 
 ## Next product priority
 
-External acceptance and product evidence — validate one sanitized real Hermes capture for Issue #57 and capture screenshots of that real investigation in Replay Lab. Do not replace either proof with synthetic evidence.
+External acceptance and product evidence — use Replay Lab's local import panel to validate and ingest one sanitized real Hermes capture for Issue #57, then capture screenshots of that real investigation. Do not replace either proof with synthetic evidence.
 
 Issue #57 remains an external acceptance proof, not an implementation blocker: validate the secured Hermes ingestion path when one sanitized output from the user's real Hermes runtime is available.
 

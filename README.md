@@ -64,6 +64,19 @@ For the full demo, including local server ingestion and replay checks, read:
 - `docs/hermes-real-runtime-validation.md`
 - `docs/hermes-ingestion-contract.md`
 
+### Import a real Hermes run in Replay Lab
+
+Build and start the loopback-only Kernel with a local Hermes boundary secret:
+
+```bash
+pnpm build
+IBOS_HERMES_SECRET="use-a-local-development-secret" pnpm kernel:serve
+```
+
+Open `http://127.0.0.1:4000/replay-lab`, paste the private local API token from `.hephaestus/kernel-api-token`, and select a sanitized `.json` or `.jsonl` Hermes capture. **Validate capture** performs no writes. **Ingest validated run** is a separate explicit action that signs server-side, passes through the existing authority and idempotency boundary, and then refreshes the investigation list.
+
+The browser never receives the Hermes boundary secret. Captures containing recognized secrets or Kernel-owned authority fields are rejected before ingestion and are not persisted.
+
 For the product story behind the demo, read:
 
 - `docs/ai-forensics-case-study.md`

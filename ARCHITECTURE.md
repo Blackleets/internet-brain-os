@@ -186,3 +186,5 @@ A task is not done merely because code was written. It is done when:
 - the repository remains buildable;
 - the next agent can understand where to continue.
 Replay Lab projects Causality, AI Autopsy, and Prevention from persisted Kernel-owned records. Autopsy separates observed facts from deterministic interpretation. Prevention outputs are proposals only: they require human approval and cannot mutate policy, admission state, or durable memory.
+
+Replay Lab also provides a local real-capture import boundary. The operator selects JSON or native JSONL, runs a read-only sensitive-data and schema/authority validation, and must separately confirm ingestion. The browser holds only the local API token in tab memory. The Hermes HMAC secret remains server-side, and accepted imports still pass through the existing signed, idempotent ingestion route before appearing as forensic records.
