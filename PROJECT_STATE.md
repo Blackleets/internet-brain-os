@@ -29,6 +29,8 @@ Then read, in order:
 - Secure local Hermes ingestion, HMAC body binding, idempotency, replay protection, recovery, and startup reconciliation.
 - Mission execution, claim proposal, contradiction, knowledge admission, and durable cognitive-pipeline storage.
 - Replay Lab read model, authenticated local API, smoke test, and minimal operator UI with a safe pre-ingestion authority-boundary explanation.
+- Replay Lab Causality Map derived only from explicit persisted evidence, proposal, gate, contradiction, admission, and durable-claim links.
+- Replay Lab AI Autopsy and Prevention projections derived deterministically from recorded state, with observed facts separated from interpretation and all prevention proposals read-only pending human approval.
 - Safe local `/status` readiness contract for Kernel, Hermes, Replay Lab, Ollama, and Obsidian; Ollama is reported configured only when an actual model is configured, without exposing model or endpoint details.
 - Internal Orchestrator phases A-C: task contracts/state, bounded Hermes/Codex prompts, report validation, and Git evidence decisions.
 - PR #76: approval invariants hardened.
@@ -43,7 +45,7 @@ Then read, in order:
 
 ## Current operating state
 
-- `main` is the sole source of truth and includes the verified first-run and readiness baseline through PR #87.
+- `main` is the sole source of truth and includes the verified first-run, readiness, and sensitive-preflight ordering baseline through PR #91.
 - There must be only one active implementation task at a time.
 - Do not work directly on `main`.
 - Do not merge, deploy, mutate secrets, delete data, or expand scope without the required human/founder gate.
@@ -51,7 +53,9 @@ Then read, in order:
 
 ## Next product priority
 
-Issue #57 — validate the secured Hermes ingestion path using one sanitized output from the user's real Hermes runtime.
+External acceptance and product evidence — publish the reviewed Causality/Autopsy/Prevention change, validate one sanitized real Hermes capture for Issue #57, and capture screenshots of the real Replay Lab. Do not replace either proof with synthetic evidence.
+
+Issue #57 remains an external acceptance proof, not an implementation blocker: validate the secured Hermes ingestion path when one sanitized output from the user's real Hermes runtime is available.
 
 Required proof:
 

@@ -173,6 +173,25 @@ describe('Replay Lab read model', () => {
     expect(view.gates.contradiction?.action).toBe('admit');
     expect(view.gates.admission?.decision).toBe('admitted');
     expect(view.gates.admission?.durableClaimId).toBe('durable-replay-1');
+    expect(view.causality.nodes.map((node) => node.type)).toEqual([
+      'evidence',
+      'claim_proposal',
+      'validation_gate',
+      'contradiction_gate',
+      'admission_gate',
+      'durable_claim',
+    ]);
+    expect(view.causality.edges).toEqual([
+      { from: `evidence:${evidenceId}`, to: 'proposal:proposal-replay-1', type: 'supports', basis: 'persisted_record' },
+      { from: 'proposal:proposal-replay-1', to: 'validation:proposal-replay-1', type: 'evaluated_by', basis: 'persisted_record' },
+      { from: 'validation:proposal-replay-1', to: 'contradiction:proposal-replay-1', type: 'checked_by', basis: 'persisted_record' },
+      { from: 'contradiction:proposal-replay-1', to: 'admission:proposal-replay-1', type: 'decided_by', basis: 'persisted_record' },
+      { from: 'admission:proposal-replay-1', to: 'durable-claim:durable-replay-1', type: 'produced', basis: 'persisted_record' },
+    ]);
+    expect(view.causality.explanation).toContain('does not infer hidden causes');
+    expect(view.autopsy.outcome).toBe('no_failure_observed');
+    expect(view.autopsy.interpretation).toBeUndefined();
+    expect(view.prevention.proposals).toEqual([]);
     expect(view.idempotency.status).toBe('not_attached_to_record');
     expect(view.authorityBoundary).toEqual({
       status: 'enforced_before_ingestion',
@@ -199,7 +218,53 @@ describe('Replay Lab read model', () => {
     expect(view.gates.validation.reasons).toEqual(['Claim confidence is below the acceptance threshold.']);
     expect(view.gates.contradiction).toBeUndefined();
     expect(view.gates.admission).toBeUndefined();
+    expect(view.causality.nodes.map((node) => node.type)).toEqual([
+      'evidence',
+      'claim_proposal',
+      'validation_gate',
+    ]);
+    expect(view.causality.edges).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'checked_by' }),
+    ]));
     expect(view.warnings).toContain('Downstream contradiction and admission gates did not run because validation did not accept the claim proposal.');
+    expect(view.autopsy).toMatchObject({ outcome: 'validation_rejected', basis: 'deterministic_projection', observedFacts: [{ source: 'validation', sourceId: 'proposal-replay-1', statement: 'Claim confidence is below the acceptance threshold.' }] });
+    expect(view.autopsy.limitation).toContain('does not infer hidden agent intent');
+    expect(view.prevention.proposals).toEqual([expect.objectContaining({ status: 'proposed_not_enforced', sourceOutcome: 'validation_rejected', requiresHumanApproval: true })]);
+  });
+
+  test('shows only explicitly recorded contradictions in the causality map', () => {
+    const record = acceptedRecord();
+    const contradiction = {
+      ...record.contradiction!,
+      action: 'review' as const,
+      contradictsClaimIds: ['claim-existing-1'],
+    };
+    const view = buildReplayLabCaseView({
+      ...record,
+      contradiction,
+      admission: {
+        decision: 'review',
+        candidate: contradiction.candidate,
+        contradiction,
+        admittedAt: now,
+      },
+    });
+
+    expect(view.causality.nodes).toContainEqual({
+      id: 'existing-claim:claim-existing-1',
+      type: 'existing_claim',
+      label: 'Existing claim',
+      sourceId: 'claim-existing-1',
+    });
+    expect(view.causality.edges).toContainEqual({
+      from: 'proposal:proposal-replay-1',
+      to: 'existing-claim:claim-existing-1',
+      type: 'contradicts',
+      basis: 'persisted_record',
+    });
+    expect(view.causality.nodes.some((node) => node.type === 'durable_claim')).toBe(false);
+    expect(view.autopsy.outcome).toBe('human_review_required');
+    expect(view.prevention.proposals[0]?.action).toContain('human approval');
   });
 
   test('creates a forensic timeline from persisted record timestamps', () => {
@@ -240,5 +305,16 @@ describe('Replay Lab read model', () => {
     expect(view.idempotency.recordMatchesReceipt).toBe(false);
     expect(view.idempotency).not.toHaveProperty('fingerprint');
     expect(view.warnings).toContain('Attached Hermes ingestion receipt does not match this cognitive pipeline record.');
+    expect(view.autopsy.outcome).toBe('receipt_record_mismatch');
+    expect(view.prevention.proposals[0]?.action).toContain('reconciliation');
+  });
+
+  test('reports an incomplete accepted pipeline without inventing a downstream outcome', () => {
+    const record = acceptedRecord();
+    const view = buildReplayLabCaseView({ ...record, contradiction: undefined, admission: undefined });
+
+    expect(view.autopsy.outcome).toBe('pipeline_incomplete');
+    expect(view.autopsy.observedFacts).toEqual([{ source: 'validation', sourceId: 'proposal-replay-1', statement: 'No contradiction assessment is attached.' }]);
+    expect(view.prevention.proposals[0]).toMatchObject({ sourceOutcome: 'pipeline_incomplete', basis: 'deterministic_projection', requiresHumanApproval: true });
   });
 });

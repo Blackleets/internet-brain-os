@@ -104,8 +104,11 @@ Minimum UI should show:
 - [x] Idempotency receipt status.
 - [x] Replay result derived from the persisted receipt state.
 - [x] Authority boundary status and forbidden fields, with an honest non-persistence explanation for rejected attempts.
+- [x] Deterministic Causality Map derived only from persisted evidence, claim, gate, contradiction, and admission links.
+- [x] Evidence-backed AI Autopsy separating observed facts from deterministic interpretation.
+- [x] Read-only Prevention Rule proposals that require human approval and never mutate Kernel policy.
 
-Evidence: `ReplayLabQueryService`, the authenticated read-only `/api/replay-lab/*` API, `apps/local-kernel/replay-lab-page.mjs`, read-model/API coverage, and the explicit pre-ingestion authority-boundary projection.
+Evidence: `ReplayLabQueryService`, the authenticated read-only `/api/replay-lab/*` API, `apps/local-kernel/replay-lab-page.mjs`, read-model/API coverage, the explicit pre-ingestion authority-boundary projection, persisted-record-only causality edges, deterministic autopsy findings, and non-enforced prevention proposals.
 
 Design principle:
 
@@ -184,10 +187,10 @@ Checklist:
 
 - [ ] Add clearer memory admission reports.
 - [ ] Add contradiction summaries.
-- [ ] Add prevention-rule proposals from repeated failures.
+- [x] Add conservative prevention-rule proposals from recorded forensic outcomes. Repeated-failure aggregation remains future work.
 - [ ] Add toxic-memory flags.
 - [ ] Add reversible memory writes or quarantine state.
-- [ ] Add explicit “why this was not admitted” explanations.
+- [x] Add explicit “why this was not admitted” explanations in AI Autopsy.
 
 Invariant:
 
@@ -199,17 +202,17 @@ Hermes proposes. Kernel verifies. Contradiction checks. Admission decides. Memor
 
 Purpose: make external review safe.
 
-Status: **not started as a release gate**. Current CI and local preflight are green, but a clean-clone release audit and real Hermes proof remain required.
+Status: **local release gate passes** with 56 test files / 275 tests plus the complete first-run smoke chain. A clean-clone audit, publication/CI of the current forensic UI, and real Hermes proof remain required before a pre-alpha tag.
 
 Checklist:
 
-- [ ] Confirm `pnpm install`, `pnpm build`, `pnpm test` pass from clean clone.
+- [ ] Confirm `pnpm install`, `pnpm build`, `pnpm test` pass from clean clone. The existing-worktree gate passes but is not a substitute for this check.
 - [ ] Confirm demo commands pass from clean clone.
 - [ ] Remove or document stale references.
 - [ ] Check docs for overclaiming.
 - [ ] Check all public examples are sanitized.
 - [ ] Confirm no secrets in repo.
-- [ ] Confirm local server does not bind publicly.
+- [x] Confirm local server rejects non-loopback hosts before binding publicly.
 - [ ] Tag a pre-alpha release only when demo and docs are coherent.
 
 ## What not to do
