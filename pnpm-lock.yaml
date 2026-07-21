@@ -225,6 +225,8 @@ importers:
 
   packages/agents: {}
 
+  packages/connectors: {}
+
   packages/kernel:
     devDependencies:
       '@types/node':
