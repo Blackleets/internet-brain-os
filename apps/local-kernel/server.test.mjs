@@ -27,6 +27,25 @@ describe('local Kernel HTTP receiver', () => {
       .toThrow('HEPHAESTUS_API_TOKEN must contain 32-512 characters');
   });
 
+  it('reports safe local readiness without exposing configuration secrets', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')));
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const response = await fetch(`http://127.0.0.1:${port}/status`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      ok: true,
+      service: 'hephaestus-local-kernel',
+      kernel: 'ready',
+      hermes: 'disabled',
+      replayLab: 'disabled',
+      ollama: 'not_configured',
+      obsidian: 'not_configured',
+    });
+  });
+
   it('accepts extension context and returns an idempotent receipt', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
     const projector = new CaptureCaseEvidenceProjector(new LocalKnowledgeStore(join(dir, 'store.json')));
