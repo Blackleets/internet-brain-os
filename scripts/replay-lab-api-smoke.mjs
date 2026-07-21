@@ -11,6 +11,7 @@ const apiToken = 'replay-lab-smoke-token-long-enough-32';
 const baseUrl = `http://${host}:${port}`;
 const dataDir = await mkdtemp(join(tmpdir(), 'ibos-replay-lab-smoke-'));
 let server;
+const output = [];
 
 try {
   server = spawn(process.execPath, ['apps/local-kernel/server.mjs'], {
@@ -25,7 +26,6 @@ try {
     },
   });
 
-  const output = [];
   server.stdout.on('data', (chunk) => output.push(chunk.toString('utf8')));
   server.stderr.on('data', (chunk) => output.push(chunk.toString('utf8')));
 
