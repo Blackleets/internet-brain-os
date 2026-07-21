@@ -35,11 +35,13 @@ Then read, in order:
 - PR #78: durable continuity checkpoint and `pnpm resume` recovery command merged.
 - PR #79: clean Kernel runtime build and deterministic Hermes replay/attack smoke repaired.
 - Issue #10: Internal Orchestrator v0 closed as completed with PR #73–#77 evidence.
-- Validation baseline: clean build, Hermes signed-ingestion smoke, altered-replay attack smoke, 54 test files and 266 tests, and typecheck passing.
+- Issue #57: real local Hermes runtime validation completed and closed with sanitized session-derived evidence, signed ingestion, exact replay, altered-replay rejection, authority-field rejection, and Replay Lab visibility.
+- Validation baseline on the updated PR branch: clean lint, typecheck, build, Hermes signed-ingestion smoke, altered-replay attack smoke, 59 test files and 287 tests passing.
 
 ## Current operating state
 
-- `main` was clean and synchronized after PR #78 at `5ad60c2` before the Hermes runtime-build repair was created.
+- PR #83 is open for authorized profile/token hardening, updated with `origin/main`, mergeable, and CI green.
+- Issue #57 is closed with evidence in the GitHub issue comment.
 - There must be only one active implementation task at a time.
 - Do not work directly on `main`.
 - Do not merge, deploy, mutate secrets, delete data, or expand scope without the required human/founder gate.
@@ -47,20 +49,18 @@ Then read, in order:
 
 ## Next product priority
 
-Issue #57 — validate the secured Hermes ingestion path using one sanitized output from the user's real Hermes runtime.
+Capture sanitized screenshots from the real local Replay Lab interface, then proceed to the bounded memory-safety expansion.
 
-Required proof:
+Required proof for screenshots:
 
-1. Validate the real output without weakening Kernel authority.
-2. Ingest it through the signed local boundary.
-3. Prove exact replay returns the same cognitive record.
-4. Prove altered replay is rejected.
-5. Prove Hermes cannot submit validation, contradiction, admission, candidate, claim, or durable-memory authority.
-6. Display the resulting investigation in Replay Lab.
+1. Use a real local Replay Lab case, not a generated mockup.
+2. Hide or omit tokens, secrets, raw prompts, and private data.
+3. Show the investigation-level view: case, evidence, claim proposal, Kernel gates, idempotency/replay state, and authority boundary.
+4. Add the screenshot only if it is a real local interface capture and safe for public repo review.
 
 ## External blocker
 
-The repository cannot manufacture a real Hermes execution. The user must provide a sanitized console, Telegram, JSON, or JSONL output. Never fabricate this evidence or mark Issue #57 complete using only the existing synthetic fixtures.
+The previous real-Hermes-output blocker is resolved. Future real-runtime validations must still use sanitized outputs and must never fabricate evidence or grant Hermes Kernel authority.
 
 ## Recovery prompt
 

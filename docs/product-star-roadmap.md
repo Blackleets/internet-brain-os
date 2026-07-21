@@ -59,18 +59,18 @@ clone repo
 
 Purpose: prove this is not synthetic-only.
 
-Status: **blocked on one sanitized output from the user's real Hermes runtime**. Synthetic fixtures and smoke tests do not complete this phase.
+Status: **complete for one sanitized real local Hermes runtime session**. The proof used a real Hermes TUI session from the local session store, converted into the bounded export without persisting raw prompts, responses, tool outputs, tokens, or secrets.
 
 Checklist:
 
-- [ ] Capture one real Hermes runtime output.
-- [ ] Redact secrets and private data.
-- [ ] Validate it with `pnpm hermes:validate-agent` or `--native-jsonl`.
-- [ ] Ingest it through `/hermes/ingestions`.
-- [ ] Confirm exact replay returns the same record id.
-- [ ] Confirm altered replay returns `409 HERMES_IDEMPOTENCY_CONFLICT`.
-- [ ] Confirm forbidden Kernel authority fields fail before ingestion.
-- [ ] Close Issue #57 only after the above is proven.
+- [x] Capture one real Hermes runtime output.
+- [x] Redact secrets and private data.
+- [x] Validate it with `pnpm hermes:validate-agent` or `--native-jsonl`.
+- [x] Ingest it through `/hermes/ingestions`.
+- [x] Confirm exact replay returns the same record id.
+- [x] Confirm altered replay returns `409 HERMES_IDEMPOTENCY_CONFLICT`.
+- [x] Confirm forbidden Kernel authority fields fail before ingestion.
+- [x] Close Issue #57 only after the above is proven.
 
 If Hermes emits an unsupported structure:
 
