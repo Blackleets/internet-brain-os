@@ -41,8 +41,8 @@ describe('local Kernel HTTP receiver', () => {
       kernel: 'ready',
       hermes: 'disabled',
       replayLab: 'disabled',
-      ollama: 'configured',
-      obsidian: 'configured',
+      ollama: 'not_configured',
+      obsidian: 'not_configured',
     });
   });
 
