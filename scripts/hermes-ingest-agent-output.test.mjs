@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
@@ -9,6 +9,16 @@ const execFileAsync = promisify(execFile);
 const scriptPath = resolve('scripts/hermes-ingest-agent-output.mjs');
 
 describe('Hermes ingestion sensitive-data boundary', () => {
+  it('keeps sensitive preflight ahead of the Kernel build import', async () => {
+    const source = await readFile(scriptPath, 'utf8');
+    const preflightIndex = source.indexOf('scanHermesSensitiveData(source)');
+    const kernelImportIndex = source.indexOf("await import('../packages/kernel/dist/index.js')");
+
+    expect(preflightIndex).toBeGreaterThan(-1);
+    expect(kernelImportIndex).toBeGreaterThan(-1);
+    expect(preflightIndex).toBeLessThan(kernelImportIndex);
+  });
+
   it('blocks a sensitive capture before build, signing, or transport', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'hermes-ingest-preflight-'));
     const inputPath = join(directory, 'capture.json');

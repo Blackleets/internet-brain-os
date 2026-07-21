@@ -24,14 +24,6 @@ if (!secret) {
   process.exit(1);
 }
 
-let kernel;
-try {
-  kernel = await import('../packages/kernel/dist/index.js');
-} catch (error) {
-  console.error(`Kernel build is required first. Run pnpm build. ${error instanceof Error ? error.message : String(error)}`);
-  process.exit(1);
-}
-
 const source = await readFile(resolve(inputPath), 'utf8');
 const sensitiveFindings = scanHermesSensitiveData(source);
 if (sensitiveFindings.length > 0) {
@@ -39,6 +31,14 @@ if (sensitiveFindings.length > 0) {
   for (const finding of sensitiveFindings) console.error(`- ${finding.code} at line ${finding.line}`);
   console.error('Sanitize a copy of the capture and retry. No request was signed or sent.');
   process.exit(2);
+}
+
+let kernel;
+try {
+  kernel = await import('../packages/kernel/dist/index.js');
+} catch (error) {
+  console.error(`Kernel build is required first. Run pnpm build. ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
 }
 
 let runOutput;
