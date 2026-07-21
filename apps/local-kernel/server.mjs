@@ -68,6 +68,17 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     if (request.method === 'GET' && request.url === '/health') {
       return send(response, 200, { ok: true, service: 'hephaestus-local-kernel', hermes: Boolean(hermesRoute), replayLab: Boolean(replayLabQuery) });
     }
+    if (request.method === 'GET' && request.url === '/status') {
+      return send(response, 200, {
+        ok: true,
+        service: 'hephaestus-local-kernel',
+        kernel: 'ready',
+        hermes: hermesRoute ? 'ready' : 'disabled',
+        replayLab: replayLabQuery ? 'ready' : 'disabled',
+        ollama: evidenceSummarizer ? 'configured' : 'not_configured',
+        obsidian: obsidianProjector ? 'configured' : 'not_configured',
+      });
+    }
     if (request.method === 'GET' && request.url === '/replay-lab') {
       return sendHtml(response, 200, replayLabPageHtml);
     }
