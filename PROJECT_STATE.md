@@ -32,6 +32,7 @@ Then read, in order:
 - Replay Lab Causality Map derived only from explicit persisted evidence, proposal, gate, contradiction, admission, and durable-claim links.
 - Replay Lab AI Autopsy and Prevention projections derived deterministically from recorded state, with observed facts separated from interpretation and all prevention proposals read-only pending human approval.
 - Safe local `/status` readiness contract for Kernel, Hermes, Replay Lab, Ollama, and Obsidian; Ollama is reported configured only when an actual model is configured, without exposing model or endpoint details.
+- Local API tokens reject whitespace/control characters; persisted POSIX token files fail closed when group or world permissions are present, and rotation remains explicit.
 - Internal Orchestrator phases A-C: task contracts/state, bounded Hermes/Codex prompts, report validation, and Git evidence decisions.
 - PR #76: approval invariants hardened.
 - PR #77: filesystem-backed Internal Orchestrator CLI merged with cross-process mutation locking, explicit blocked-task retry, founder gates, and corruption visibility.
@@ -42,7 +43,7 @@ Then read, in order:
 - PR #87: truthful Ollama readiness contract merged and proven in CI.
 - PR #92: deterministic Causality Map, AI Autopsy, and read-only Prevention proposals merged and proven in CI.
 - Issue #10: Internal Orchestrator v0 closed as completed with PR #73–#77 evidence.
-- Validation baseline: `pnpm verify:first-run` passes in CI and from a clean Git clone with 56 test files / 275 tests, covering typecheck, build, bounded JSON and native JSONL validation, signed ingestion, exact replay, altered-replay rejection, and Replay Lab API.
+- Validation baseline: `pnpm verify:first-run` passes in CI and from a clean Git clone with 56 test files / 277 tests, covering typecheck, build, bounded JSON and native JSONL validation, signed ingestion, exact replay, altered-replay rejection, Replay Lab API, and fail-closed local token-file handling.
 
 ## Current operating state
 

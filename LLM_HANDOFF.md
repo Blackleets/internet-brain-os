@@ -8,7 +8,7 @@ Every AI must update this file before ending a work session.
 
 ## Current project state
 
-Status: Foundation runtime, Replay Lab core, Internal Orchestrator v0, and deterministic Hermes preflight are stable on `main`.
+Status: Foundation runtime, Replay Lab forensics, Internal Orchestrator v0, deterministic Hermes preflight, and local API token hardening are stable on `main`.
 
 Current phase: Product Star Phase A is blocked on a sanitized real Hermes runtime capture; Phases B and C are complete for their current read-only/local scopes.
 
