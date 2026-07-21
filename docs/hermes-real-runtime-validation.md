@@ -123,7 +123,7 @@ Expected output:
 Hermes sensitive-data preflight PASS
 ```
 
-The preflight is deliberately read-only. It never rewrites the capture and never prints matched values. If it reports a finding, replace the sensitive value in a copy of the capture and rerun it. A passing scan reduces accidental exposure risk but does not replace human review.
+The preflight is deliberately read-only. It never rewrites the capture and never prints matched values. If it reports a finding, replace the sensitive value in a copy of the capture and rerun it. A passing scan reduces accidental exposure risk but does not replace human review.\n\nThe ingestion CLI enforces this same preflight again before it builds execution events, signs a request, or contacts the Kernel. A sensitive capture exits with code `2`; there is no bypass flag.
 
 ## Step 4 — Validate captured output offline
 
