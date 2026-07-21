@@ -75,7 +75,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         kernel: 'ready',
         hermes: hermesRoute ? 'ready' : 'disabled',
         replayLab: replayLabQuery ? 'ready' : 'disabled',
-        ollama: evidenceSummarizer ? 'configured' : 'not_configured',
+        ollama: evidenceSummarizer?.isConfigured?.() === true ? 'configured' : 'not_configured',
         obsidian: obsidianProjector ? 'configured' : 'not_configured',
       });
     }
