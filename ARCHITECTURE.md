@@ -124,7 +124,8 @@ The extension popup lets the user start a new Case or select an active local Cas
 - [x] Add explicit extension UX for choosing an existing Case instead of starting a new one.
 - [x] Connect newly created Evidence to automatic Obsidian export and evidence-report generation.
 - [x] Connect Evidence to the summarization Skill contract through an optional loopback-only local Ollama adapter.
-- Add a local status/setup surface that explains Kernel, Ollama, and Obsidian readiness without requiring cloud services.
+- [x] Add a safe local `/status` surface that explains Kernel, Hermes, Replay Lab, Ollama, and Obsidian readiness without requiring cloud services.
+- Add the visual setup workflow only after the first authentic Hermes runtime proof establishes the real operator requirements.
 
 ### P2 — Make research resumable end-to-end
 

@@ -29,17 +29,21 @@ Then read, in order:
 - Secure local Hermes ingestion, HMAC body binding, idempotency, replay protection, recovery, and startup reconciliation.
 - Mission execution, claim proposal, contradiction, knowledge admission, and durable cognitive-pipeline storage.
 - Replay Lab read model, authenticated local API, smoke test, and minimal operator UI with a safe pre-ingestion authority-boundary explanation.
+- Safe local `/status` readiness contract for Kernel, Hermes, Replay Lab, Ollama, and Obsidian; Ollama is reported configured only when an actual model is configured, without exposing model or endpoint details.
 - Internal Orchestrator phases A-C: task contracts/state, bounded Hermes/Codex prompts, report validation, and Git evidence decisions.
 - PR #76: approval invariants hardened.
 - PR #77: filesystem-backed Internal Orchestrator CLI merged with cross-process mutation locking, explicit blocked-task retry, founder gates, and corruption visibility.
 - PR #78: durable continuity checkpoint and `pnpm resume` recovery command merged.
 - PR #79: clean Kernel runtime build and deterministic Hermes replay/attack smoke repaired.
+- PR #85: safe local readiness endpoint merged from a clean `main` branch.
+- PR #86: one-command `pnpm verify:first-run` gate merged and proven in CI.
+- PR #87: truthful Ollama readiness contract merged and proven in CI.
 - Issue #10: Internal Orchestrator v0 closed as completed with PR #73–#77 evidence.
-- Validation baseline: clean build, Hermes signed-ingestion smoke, altered-replay attack smoke, 54 test files and 266 tests, and typecheck passing.
+- Validation baseline: `pnpm verify:first-run` passes in CI, covering typecheck, tests, build, bounded JSON and native JSONL validation, signed ingestion, exact replay, altered-replay rejection, and Replay Lab API.
 
 ## Current operating state
 
-- `main` was clean and synchronized after PR #78 at `5ad60c2` before the Hermes runtime-build repair was created.
+- `main` is the sole source of truth and includes the verified first-run and readiness baseline through PR #87.
 - There must be only one active implementation task at a time.
 - Do not work directly on `main`.
 - Do not merge, deploy, mutate secrets, delete data, or expand scope without the required human/founder gate.
