@@ -19,6 +19,7 @@
     "replay-lab:api-smoke": "node scripts/replay-lab-api-smoke.mjs",
     "resume": "node scripts/project-resume.mjs",
     "test": "vitest run --passWithNoTests",
+    "verify:first-run": "pnpm typecheck && pnpm test && pnpm build && pnpm hermes:validate-agent examples/hermes-agent-run-output.sample.json && pnpm hermes:validate-agent --native-jsonl examples/hermes-native-log.sample.jsonl && pnpm hermes:smoke && pnpm hermes:attack-smoke && pnpm replay-lab:api-smoke",
     "typecheck": "tsc -b --pretty false"
   },
   "packageManager": "pnpm@11.11.0",

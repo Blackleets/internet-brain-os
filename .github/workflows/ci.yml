@@ -45,3 +45,5 @@ jobs:
         run: test "${{ steps.typecheck.outputs.status }}" = "0"
       - run: pnpm test
       - run: pnpm build
+      - name: First-run end-to-end verification
+        run: pnpm verify:first-run

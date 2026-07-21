@@ -50,6 +50,14 @@ pnpm hermes:validate-agent examples/hermes-agent-run-output.sample.json
 pnpm hermes:validate-agent --native-jsonl examples/hermes-native-log.sample.jsonl
 ```
 
+To run the complete first-test gate with one command:
+
+```bash
+pnpm verify:first-run
+```
+
+This verifies type safety, unit/integration tests, the production build, both supported Hermes export formats, signed ingestion, exact replay, altered-replay rejection, and the authenticated Replay Lab API. It uses temporary local data and development-only smoke credentials; it does not write secrets or test records into the repository.
+
 For the full demo, including local server ingestion and replay checks, read:
 
 - `docs/hermes-demo-quickstart.md`
