@@ -107,7 +107,25 @@ Save as `tmp/hermes-real-native.jsonl`:
 {"type":"run_completed","summary":"Hermes completed a real runtime task.","at":"2026-07-20T00:00:05.000Z"}
 ```
 
-## Step 3 — Validate captured output offline
+## Step 3 — Run the sensitive-data preflight
+
+Inspect the sanitized copy before validation or sharing:
+
+```bash
+pnpm hermes:scan-sensitive tmp/hermes-real-run-output.json
+# or
+pnpm hermes:scan-sensitive tmp/hermes-real-native.jsonl
+```
+
+Expected output:
+
+```text
+Hermes sensitive-data preflight PASS
+```
+
+The preflight is deliberately read-only. It never rewrites the capture and never prints matched values. If it reports a finding, replace the sensitive value in a copy of the capture and rerun it. A passing scan reduces accidental exposure risk but does not replace human review.
+
+## Step 4 — Validate captured output offline
 
 Validate the file before sending it to the local Kernel server.
 
@@ -138,7 +156,7 @@ pnpm hermes:validate-agent --json --native-jsonl tmp/hermes-real-native.jsonl
 
 The offline validator must fail before transport if the file has invalid JSON/JSONL, missing evidence, unknown evidence references, or forbidden Kernel authority fields.
 
-## Step 4 — Ingest real bounded JSON
+## Step 5 — Ingest real bounded JSON
 
 ```bash
 IBOS_HERMES_SECRET="$IBOS_HERMES_SECRET" \
@@ -159,7 +177,7 @@ The response body must include:
 - `validationDecision`
 - `recordedAt`
 
-## Step 5 — Ingest real native JSONL
+## Step 6 — Ingest real native JSONL
 
 Use this only if the captured output is JSONL:
 
@@ -175,7 +193,7 @@ Expected response:
 202 Accepted
 ```
 
-## Step 6 — Replay validation
+## Step 7 — Replay validation
 
 Run the exact same command again with the exact same file and the exact same `IBOS_HERMES_IDEMPOTENCY_KEY`.
 
@@ -188,7 +206,7 @@ same recordId as first ingestion
 
 Replay must not re-run validation, contradiction, admission, or storage.
 
-## Step 7 — Attack validation
+## Step 8 — Attack validation
 
 Copy the real file and alter the claim statement, confidence, evidence list, or timestamps while keeping the same idempotency key.
 
@@ -215,7 +233,7 @@ HERMES_IDEMPOTENCY_CONFLICT
 
 This proves the same idempotency key cannot be reused for a different semantic run.
 
-## Step 8 — Authority-field validation
+## Step 9 — Authority-field validation
 
 Add any forbidden field to the captured output, such as:
 
@@ -249,6 +267,7 @@ Mark Issue #57 complete only when all are true:
 - `pnpm hermes:smoke` passes locally.
 - `pnpm hermes:attack-smoke` passes locally.
 - One real Hermes bounded JSON or JSONL output is captured.
+- `pnpm hermes:scan-sensitive` passes on the sanitized copy and a human confirms no private data remains.
 - `pnpm hermes:validate-agent` passes on the captured output.
 - First ingestion returns `202`.
 - Exact replay returns `202` with the same record id.
