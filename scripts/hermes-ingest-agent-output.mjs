@@ -2,6 +2,7 @@
 import { createHmac } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { scanHermesSensitiveData } from './hermes-sensitive-data-scan.mjs';
 
 const endpoint = process.env.IBOS_HERMES_INGEST_URL ?? 'http://127.0.0.1:4000/hermes/ingestions';
 const secret = process.env.IBOS_HERMES_SECRET ?? process.env.HEPHAESTUS_HERMES_SECRET;
@@ -32,6 +33,14 @@ try {
 }
 
 const source = await readFile(resolve(inputPath), 'utf8');
+const sensitiveFindings = scanHermesSensitiveData(source);
+if (sensitiveFindings.length > 0) {
+  console.error('Hermes ingestion blocked by sensitive-data preflight.');
+  for (const finding of sensitiveFindings) console.error(`- ${finding.code} at line ${finding.line}`);
+  console.error('Sanitize a copy of the capture and retry. No request was signed or sent.');
+  process.exit(2);
+}
+
 let runOutput;
 try {
   runOutput = nativeJsonl
