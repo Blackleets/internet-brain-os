@@ -12,6 +12,10 @@ export class OptionalEvidenceSummarizer {
     this.now = options.now ?? (() => new Date().toISOString());
   }
 
+  isConfigured() {
+    return Boolean(this.model);
+  }
+
   async summarize(evidenceId) {
     if (!this.model) return { status: 'skipped', reason: 'OLLAMA_MODEL_NOT_CONFIGURED' };
     const data = await this.store.read();
