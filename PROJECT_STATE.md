@@ -40,12 +40,13 @@ Then read, in order:
 - PR #85: safe local readiness endpoint merged from a clean `main` branch.
 - PR #86: one-command `pnpm verify:first-run` gate merged and proven in CI.
 - PR #87: truthful Ollama readiness contract merged and proven in CI.
+- PR #92: deterministic Causality Map, AI Autopsy, and read-only Prevention proposals merged and proven in CI.
 - Issue #10: Internal Orchestrator v0 closed as completed with PR #73–#77 evidence.
-- Validation baseline: `pnpm verify:first-run` passes in CI, covering typecheck, tests, build, bounded JSON and native JSONL validation, signed ingestion, exact replay, altered-replay rejection, and Replay Lab API.
+- Validation baseline: `pnpm verify:first-run` passes in CI and from a clean Git clone with 56 test files / 275 tests, covering typecheck, build, bounded JSON and native JSONL validation, signed ingestion, exact replay, altered-replay rejection, and Replay Lab API.
 
 ## Current operating state
 
-- `main` is the sole source of truth and includes the verified first-run, readiness, and sensitive-preflight ordering baseline through PR #91.
+- `main` is the sole source of truth and includes the complete deterministic forensic read path through PR #92.
 - There must be only one active implementation task at a time.
 - Do not work directly on `main`.
 - Do not merge, deploy, mutate secrets, delete data, or expand scope without the required human/founder gate.
@@ -53,7 +54,7 @@ Then read, in order:
 
 ## Next product priority
 
-External acceptance and product evidence — publish the reviewed Causality/Autopsy/Prevention change, validate one sanitized real Hermes capture for Issue #57, and capture screenshots of the real Replay Lab. Do not replace either proof with synthetic evidence.
+External acceptance and product evidence — validate one sanitized real Hermes capture for Issue #57 and capture screenshots of that real investigation in Replay Lab. Do not replace either proof with synthetic evidence.
 
 Issue #57 remains an external acceptance proof, not an implementation blocker: validate the secured Hermes ingestion path when one sanitized output from the user's real Hermes runtime is available.
 

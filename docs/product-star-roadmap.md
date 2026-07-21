@@ -202,16 +202,16 @@ Hermes proposes. Kernel verifies. Contradiction checks. Admission decides. Memor
 
 Purpose: make external review safe.
 
-Status: **local release gate passes** with 56 test files / 275 tests plus the complete first-run smoke chain. A clean-clone audit, publication/CI of the current forensic UI, and real Hermes proof remain required before a pre-alpha tag.
+Status: **local and clean-clone release gates pass** with 56 test files / 275 tests plus the complete first-run smoke chain. The forensic UI is merged with green CI. A real Hermes proof remains required before a pre-alpha tag.
 
 Checklist:
 
-- [ ] Confirm `pnpm install`, `pnpm build`, `pnpm test` pass from clean clone. The existing-worktree gate passes but is not a substitute for this check.
-- [ ] Confirm demo commands pass from clean clone.
+- [x] Confirm `pnpm install --frozen-lockfile` and `pnpm verify:first-run` pass from a clean Git clone.
+- [x] Confirm demo commands pass from clean clone.
 - [ ] Remove or document stale references.
 - [ ] Check docs for overclaiming.
-- [ ] Check all public examples are sanitized.
-- [ ] Confirm no secrets in repo.
+- [x] Check all public Hermes examples pass the sensitive-data preflight.
+- [x] Confirm tracked secret-pattern matches are limited to deliberate negative-test fixtures.
 - [x] Confirm local server rejects non-loopback hosts before binding publicly.
 - [ ] Tag a pre-alpha release only when demo and docs are coherent.
 
