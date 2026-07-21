@@ -7,13 +7,14 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "verbatimModuleSyntax": false,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "module": "CommonJS",
-    "moduleResolution": "node",
-    "verbatimModuleSyntax": false,
+    "emitDeclarationOnly": false,
     "baseUrl": ".",
     "paths": {
       "@internet-brain-os/shared": ["../shared/src/index.ts"]

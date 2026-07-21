@@ -72,6 +72,10 @@ Failures transition to `failed`. Retry and checkpoint recovery are supported by 
 - `runResearchStage`: bounded retries and failure telemetry for one stage.
 - `HermesHephaestusOrchestrator`: adapts Hermes tools into Hephaestus research stages.
 
+## Internal Development Orchestrator
+
+The repository also contains a separate, human-gated development orchestrator under `.orchestrator/` and `scripts/orchestrator-*`. Its filesystem CLI persists bounded task contracts and review reports, enforces one active task, validates Hermes execution reports against Git evidence, and requires explicit founder approval when a contract declares it. It does not run product research, call model APIs, mutate Git, merge, deploy, or advance autonomously.
+
 ## Memory Architecture
 
 Memory lifecycle supports:

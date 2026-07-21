@@ -115,6 +115,71 @@ describe('local Kernel HTTP receiver', () => {
     });
   });
 
+  it('lists Replay Lab cases through the authenticated local API', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    const caseView = { id: 'pipeline:1', recordedAt: '2026-07-20T00:00:00.000Z', status: 'admitted' };
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, {
+      replayLabQuery: { listCases: async () => [caseView], getCase: async () => caseView },
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const response = await fetch(`http://127.0.0.1:${port}/api/replay-lab/cases`, { headers: authHeaders });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, cases: [caseView] });
+  });
+
+  it('fetches one Replay Lab case by encoded id', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    const caseView = { id: 'pipeline:encoded/1', recordedAt: '2026-07-20T00:00:00.000Z', status: 'rejected' };
+    let requestedId;
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, {
+      replayLabQuery: {
+        listCases: async () => [caseView],
+        getCase: async (id) => { requestedId = id; return caseView; },
+      },
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const response = await fetch(`http://127.0.0.1:${port}/api/replay-lab/cases/${encodeURIComponent(caseView.id)}`, { headers: authHeaders });
+
+    expect(response.status).toBe(200);
+    expect(requestedId).toBe(caseView.id);
+    expect(await response.json()).toEqual({ ok: true, case: caseView });
+  });
+
+  it('keeps Replay Lab unavailable unless configured', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')));
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const response = await fetch(`http://127.0.0.1:${port}/api/replay-lab/cases`, { headers: authHeaders });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ ok: false, code: 'REPLAY_LAB_UNAVAILABLE' });
+  });
+
+  it('serves the minimal Replay Lab operator page without exposing the API token', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')));
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const response = await fetch(`http://127.0.0.1:${port}/replay-lab`);
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('text/html');
+    expect(html).toContain('Replay Lab');
+    expect(html).toContain('/api/replay-lab/cases');
+    expect(html).toContain('Authority boundary');
+    expect(html).toContain('Rejected payload contents are not persisted.');
+    expect(html).not.toContain(apiToken);
+  });
+
   it('updates Obsidian notes after a successful capture projection', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));
@@ -145,9 +210,11 @@ describe('local Kernel HTTP receiver', () => {
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     const { port } = server.address();
     const url = `http://127.0.0.1:${port}/api/cases`;
+    const replayLabUrl = `http://127.0.0.1:${port}/api/replay-lab/cases`;
 
     expect((await fetch(url)).status).toBe(401);
     expect((await fetch(url, { headers: { 'x-hephaestus-token': `${apiToken}x` } })).status).toBe(401);
+    expect((await fetch(replayLabUrl)).status).toBe(401);
   });
 
   it('pairs once with an expiring bounded-attempt code and never exposes it through health', async () => {

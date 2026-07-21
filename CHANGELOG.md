@@ -1,6 +1,16 @@
 ## [Unreleased]
 
 ### Added
+- Product launch kit with the verified one-minute narrative, five-minute demo flow, founder pitch, launch-post draft, and explicit no-overclaim guardrails.
+- Replay Lab authority-boundary projection and operator panel showing forbidden Kernel-owned fields without persisting or attributing rejected payload contents.
+- Canonical `PROJECT_STATE.md` continuity checkpoint and `pnpm resume` command combining recovery instructions with live Git state.
+- Filesystem-backed Internal Orchestrator CLI for durable task lifecycle, execution reporting, Git-evidence approval, rejection, inspection, and explicit founder gates.
+- Hermes idempotency attack smoke test to verify altered payloads with reused idempotency keys are rejected without rerunning Kernel gates.
+- Hermes native JSONL log extractor, sample native log fixture, and `--native-jsonl` ingestion mode for the Hermes Agent output CLI.
+- Hermes Agent output ingestion CLI and sample JSON fixture for converting, signing, and submitting real-agent run exports to the local Kernel.
+- Hermes Agent output adapter for converting bounded real-agent run exports into Kernel ingestion events while rejecting Kernel authority fields.
+- Hermes ingestion smoke test script and signed Hermes → Internet Brain OS ingestion contract documentation.
+- Storage-backed, optional local Hermes ingestion route wired into the local Kernel server behind HMAC, freshness, idempotency, local-only, and startup-reconciliation safeguards.
 - Persistent Chrome extension identity allowlisting activated by pairing, with token-rotation revocation and compatibility for pre-pairing installations.
 - Secure local extension pairing with an ephemeral one-use code, five-minute expiry, five-attempt lockout, extension-origin enforcement, and no long-lived token disclosure.
 - Persistent private local API credentials with explicit rotation, DNS-pinned public connections, and CI production-dependency auditing with least-privilege workflow permissions.
@@ -16,6 +26,11 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- README opening now explains the current AI-forensics wedge, product boundaries, and local architecture before contributor doctrine.
+- Product Star roadmap and AI handoff now distinguish verified, partial, blocked, and deferred sections using the current repository evidence.
+- Kernel builds now emit executable CommonJS alongside declarations, and Hermes smoke replays use a stable signed timestamp so clean-checkout runtime validation is deterministic.
+- Hermes ingestion contract now documents bounded exports, native JSONL logs, both agent-output ingestion CLI modes, and idempotency attack-smoke validation.
+- Hermes operating protocol now requires the signed ingestion contract and `pnpm hermes:smoke` validation for ingestion-related changes.
 - Updated validation to enforce canonical ISO-8601 UTC timestamps.
 - Moved test file to packages/shared/test/.
 - Exported public API via index.ts.

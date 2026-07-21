@@ -1,31 +1,35 @@
 # LLM HANDOFF
 
+> Recovery entrypoint: read `PROJECT_STATE.md` and run `pnpm resume` before relying on older entries in this historical handoff log.
+
 This file lets Hermes, OpenCode, Codex, GPT, and future models continue work without losing logic.
 
 Every AI must update this file before ending a work session.
 
 ## Current project state
 
-Status: Foundation runtime is being stabilized.
+Status: Foundation runtime, Replay Lab core, Internal Orchestrator v0, and deterministic Hermes preflight are stable on `main`.
 
-Current phase: Phase 0 foundation hardening / orchestration runtime.
+Current phase: Product Star Phase A is blocked on a sanitized real Hermes runtime capture; Phases B and C are complete for their current read-only/local scopes.
 
-Primary objective: Build the minimum local-first Kernel with Case, Evidence, Memory, Obsidian export, basic report generation, and a robust Hermes ↔ Hephaestus research runtime.
+Primary objective: close Issue #57 with real-runtime evidence, capture sanitized real Replay Lab screenshots, then proceed to the bounded memory-safety expansion without weakening Kernel authority.
 
 ## Mandatory reading order
 
-Before doing work, read:
+Before doing work, run `pnpm resume`, then read:
 
-1. `README.md`
-2. `PROJECT_DNA.md`
-3. `PROJECT_BIBLE.md`
-4. `AI_CONSTITUTION.md`
-5. `LLM_HANDOFF.md`
-6. `ARCHITECTURE.md`
-7. `AGENTS.md`
-8. `ROADMAP.md`
-9. `tasks/phase-0.md`
-10. `DECISIONS.md`
+1. `PROJECT_STATE.md`
+2. `AGENTS.md`
+3. `README.md`
+4. `PROJECT_DNA.md`
+5. `PROJECT_BIBLE.md`
+6. `AI_CONSTITUTION.md`
+7. `LLM_HANDOFF.md`
+8. `docs/architecture.md`
+9. `ROADMAP.md`
+10. `docs/product-star-roadmap.md`
+11. `DECISIONS.md`
+12. The active GitHub issue or pull request.
 
 ## Handoff template
 
@@ -201,36 +205,6 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 ### Tests or checks performed
 - pnpm install: succeeded (with warning about packageManager version format, non-blocking)
 - pnpm typecheck: succeeded (exit code 0)
-- pnpm test: succeeded (exit code 0, no test files found, but passWithNoTests configured)
-- pnpm build: succeeded (exit code 0)
-- git status: clean after committing
-
-### Risks / uncertainties
-- Vite CJS deprecation warning is non-blocking.
-- Apps are placeholders only.
-- No production tests or business logic exist yet.
-- Phase 0.1 is structural only.
-
-### Next recommended step
-- Strategic review and merge decision for PR #2.
-- Phase 0.2 must not start before PR #2 is merged.
-
-### Do not forget
-- Update CHANGELOG.md with the entry for 2026-07-11.
-- Update brain/BRAIN_LOG.md with session notes.
-- Create the Obsidian session note at knowledge/agent-sessions/2026-07-11-hermes-phase-0-1-technical-skeleton.md.
-
-## Phase 0.2: Shared Domain Types (Completed)
-
-### Work Completed
-- Defined shared domain types in `packages/shared/src`.
-- Added branded IDs, verification status, confidence, timestamps, evidence, entity, relationship, report, skill, LLM, and validation contracts.
-- Moved tests to `packages/shared/test/validation.test.ts`.
-- All types are provider-agnostic, use readonly where appropriate, and avoid framework dependencies.
-- Validation enforces canonical UTC ISO-8601 timestamps and rejects invalid confidence values.
-
-### Validation
-- TypeScript typecheck: passes
 - Unit tests: 29/29 pass
 - Build: passes
 
@@ -239,370 +213,156 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 - LLMRequest/LLMResponse are minimal and may need extension for provider-specific features handled in adapters.
 - Validation functions throw RangeError for invalid inputs, which must be caught by callers.
 
-## Handoff 2026-07-12 - Codex strategic review
+## Handoff 2026-07-20 - GPT-5.5 Thinking
 
 ### What I changed
-- Reviewed and completed Phase 0.4 Evidence Manager in PR #7.
-- Added explicit Case attach/detach operations.
-- Added focused tests for Entity, Relationship, and Case link lifecycles.
-- Removed the unused immutable-field runtime error; immutability remains enforced structurally by the public update contract.
-- Completed institutional-memory synchronization.
+- Completed the Hermes ingestion hardening sequence through storage-backed local server wiring.
+- Merged PR #52 after CI passed, enabling optional `/hermes/ingestions` in the real local Kernel server when `IBOS_HERMES_SECRET` or `HEPHAESTUS_HERMES_SECRET` is configured.
+- Added a reproducible Hermes smoke test script that starts the local Kernel, checks `/health`, sends a signed Hermes sample payload, retries the same idempotency key, and verifies replay returns the same cognitive record id.
+- Documented the signed Hermes → Internet Brain OS ingestion contract, including endpoint, headers, HMAC signing string, event rules, idempotency behavior, authority boundary, smoke test, and failure signals.
+- Updated README and Hermes operating protocol so future contributors read the ingestion contract and run `pnpm hermes:smoke` after ingestion-related changes.
+- Updated CHANGELOG with the local Hermes ingestion route and smoke contract work.
 
 ### Files changed
-- `packages/kernel/src/evidence/evidence-manager.ts`
-- `packages/kernel/src/evidence/evidence-errors.ts`
-- `packages/kernel/src/evidence/index.ts`
-- `packages/kernel/test/evidence-public-api.test.ts`
-- `packages/kernel/test/evidence-links.test.ts`
-- `LLM_HANDOFF.md`
-- `brain/BRAIN_LOG.md`
-- `knowledge/agent-sessions/2026-07-12-chatgpt-phase-0-4-evidence-manager.md`
-
-### Why I changed it
-To close the review gaps in Issue #6 before integration and ensure the Evidence Manager exposes every required link operation with executable coverage.
-
-### Tests or checks performed
-- Added deterministic unit coverage for link/unlink and attach/detach behavior.
-- GitHub Actions must run on the new commits before merge.
-- Existing PR validation previously passed install, typecheck, test, and build.
-
-### Risks / uncertainties
-- Storage adapters must later implement atomic compare-and-update semantics to protect concurrent writes.
-- Hash validation confirms SHA-256 syntax, not correspondence with unavailable content bytes.
-
-### Next recommended step
-- Confirm CI on PR #7.
-- Merge PR #7 only if all required checks pass.
-- Create the next bounded Phase 0 task from `tasks/phase-0.md`; do not jump to the browser extension.
-
-### Do not forget
-- GitHub remains canonical.
-- Phase 0 is incomplete until local persistence, ingestion, Obsidian export, report generation, and a minimal runner exist.
-
-## Handoff 2026-07-17 - GPT 5.5 / Hephaestus Runtime Hardening
-
-### What I changed
-- Added the Hermes + Hephaestus architecture continuation guide.
-- Added the agent continuation contract.
-- Added append-only memory lifecycle event logging.
-- Added conservative memory consolidation with canonical-memory selection.
-- Added memory provenance merging that preserves source memory IDs and evidence IDs.
-- Added an explicit research state machine.
-- Added append-only research transition history and resumable checkpoints.
-- Added executable research stages with structured results.
-- Added bounded retry policy and failure telemetry.
-- Integrated retries and failure telemetry into `ResearchExecutionRuntime`.
-- Added `HermesHephaestusOrchestrator` to adapt Hermes tools into Hephaestus research stages.
-- Added initial runtime tests covering full lifecycle execution, retries, failure transitions, and typed retry errors.
-- Updated the architecture continuation guide and active handoff instructions so future agents can continue from the current state safely.
-
-### Files changed
-- `ARCHITECTURE.md`
-- `AGENTS.md`
-- `LLM_HANDOFF.md`
-- `packages/kernel/src/memory/memory-event-log.ts`
-- `packages/kernel/src/memory/memory-consolidation.ts`
-- `packages/kernel/src/memory/memory-provenance.ts`
-- `packages/kernel/src/memory/index.ts`
-- `packages/kernel/src/orchestration/research-state-machine.ts`
-- `packages/kernel/src/orchestration/research-state-machine-history.ts`
-- `packages/kernel/src/orchestration/research-execution.ts`
-- `packages/kernel/src/orchestration/research-retry-policy.ts`
-- `packages/kernel/src/orchestration/hermes-hephaestus-orchestrator.ts`
-- `packages/kernel/src/orchestration/index.ts`
-- `packages/kernel/test/research-runtime.test.ts`
-
-### Why I changed it
-To move the project from a collection of domain primitives toward a recoverable, observable research execution runtime while preserving the separation between Hermes (external execution) and Hephaestus (knowledge forging).
-
-### Tests or checks performed
-- Added deterministic Vitest coverage for the new research runtime and retry policy.
-- The repository's full typecheck/test/build commands still need to be run against the latest commit before claiming the foundation is fully validated.
-
-### Risks / uncertainties
-- The current Hermes orchestrator selects the first available tool; deterministic multi-provider fallback is still a P1 task.
-- Checkpoints are currently in-memory; durable persistence is still a P2 task.
-- Runtime tests were added but CI/local validation of the latest combined state remains outstanding.
-
-### Next recommended step
-- Run typecheck, tests, and build on the latest repository state.
-- Fix any compile or behavioral regressions before adding more architecture.
-- Then add memory lifecycle/consolidation/provenance tests and strengthen Hermes multi-provider fallback.
-
-### Do not forget
-- Read `ARCHITECTURE.md` and `AGENTS.md` before continuing.
-- Do not add Nametrom model-specific logic to the kernel.
-- Preserve evidence, provenance, and history.
-- Make one bounded change at a time.
-
-## Handoff 2026-07-19 - Codex local Kernel receiver
-
-### What I changed
-- Reviewed and merged PR #22 after local and GitHub CI validation.
-- Added a dependency-free local HTTP receiver for extension page-context captures.
-- Added bounded schema validation, 32 KiB request limits, enforced local/extension origin policy, JSON-only ingestion, deterministic receipts, durable JSONL journaling, and restart-safe deduplication.
-- Added unit and real HTTP integration coverage.
-
-### Files changed
-- `apps/local-kernel/*`
+- `scripts/hermes-smoke-test.mjs`
+- `docs/hermes-ingestion-contract.md`
 - `package.json`
-- `pnpm-lock.yaml`
-- `ARCHITECTURE.md`
+- `README.md`
+- `docs/hermes-operating-protocol.md`
 - `CHANGELOG.md`
 - `LLM_HANDOFF.md`
-- `brain/BRAIN_LOG.md`
-- `knowledge/agent-sessions/2026-07-19-codex-local-kernel-receiver.md`
 
 ### Why I changed it
-The Phase 1 extension transport pointed to `/api/browser/page-context`, but no local receiver existed. The new durable inbox closes the transport gap without prematurely coupling browser payloads to Kernel domain objects.
+- The system needed a reproducible test path for real Hermes ingestion after the authenticated local boundary and server route were built.
+- The contract needed to be explicit so Hermes can emit accepted events without inventing Kernel authority fields.
+- The smoke path protects against regressions in local server wiring, HMAC signing, idempotent replay, and Kernel cognitive record creation.
 
 ### Tests or checks performed
-- `pnpm typecheck`: passed.
-- `pnpm test`: 95/95 passed.
-- `pnpm build`: passed.
-- `git diff --check`: passed.
+- PR #52 CI passed before merge: typecheck, tests, and build through GitHub Actions.
+- PR #53 CI passed before merge: typecheck, tests, and build through GitHub Actions.
+- The new `pnpm hermes:smoke` script is designed to be run after `pnpm build` because the local Kernel imports the built Kernel package.
 
 ### Risks / uncertainties
-- Inbox records are durably preserved but are not yet projected into Case and Evidence repositories.
-- The server intentionally binds to `127.0.0.1` by default and has no remote deployment/authentication design.
+- I did not execute the smoke test inside this chat runtime; it requires the repo checkout plus dependencies/build artifacts in a local or CI runner.
+- The current sample payload is synthetic. The next validation step must run an actual Hermes Agent output through the same signed path.
+- The local server route intentionally remains disabled unless a Hermes secret is configured.
 
 ### Next recommended step
-- Add a typed, idempotent inbox projector that creates or attaches Case and Evidence records while preserving the receipt ID as correlation provenance.
+- Validate PR for `phase/2.9-hermes-agent-output-adapter`.
+- Then add a CLI path that reads a real Hermes Agent run export JSON, converts it through `HermesAgentOutputAdapter`, signs it, and submits it to `/hermes/ingestions`.
 
 ### Do not forget
-- Do not expose this receiver publicly without authentication, origin policy, and deployment threat modeling.
-- Do not delete inbox records after projection until durable Case/Evidence persistence and recovery are proven.
+- Never allow Hermes to submit `validation`, `contradiction`, `admission`, `claim`, `candidate`, or `durableClaim`.
+- For ingestion-related changes, run `pnpm build` and then `pnpm hermes:smoke`.
+- The smoke script validates replay/idempotency but not yet a live Hermes provider output.
 
-## Handoff 2026-07-19 - Codex browser capture projector
+## Handoff 2026-07-20 - GPT-5.5 Thinking - Hermes Agent Adapter
 
 ### What I changed
-- Added an idempotent capture projector that converts each accepted receipt into one deterministic Case and Evidence pair.
-- Preserved the receipt ID as correlation provenance on Evidence.
-- Reused the existing `.hephaestus/store.json` shape so browser captures and CLI knowledge remain compatible.
-- Integrated projection after durable inbox acknowledgement, allowing failed projections to be retried without losing the original capture.
+- Added `HermesAgentOutputAdapter` to convert bounded Hermes Agent run exports into Kernel `HermesExecutionEvent[]`.
+- Added authority-field rejection for embedded Kernel-owned fields such as `validation`, `contradiction`, `admission`, `candidate`, `durableClaim`, and `knowledgeAdmission`.
+- Added tests for valid conversion, authority-field rejection, and claim references to unknown evidence.
+- Updated the ingestion contract to document the bounded real-agent export shape.
+- Updated CHANGELOG with the adapter work.
 
 ### Files changed
-- `apps/local-kernel/capture-projector.mjs`
-- `apps/local-kernel/capture-projector.test.mjs`
-- `apps/local-kernel/server.mjs`
-- `apps/local-kernel/server.test.mjs`
-- Architecture and institutional-memory documents.
+- `packages/kernel/src/orchestration/hermes-agent-output-adapter.ts`
+- `packages/kernel/src/orchestration/index.ts`
+- `packages/kernel/test/hermes-agent-output-adapter.test.ts`
+- `docs/hermes-ingestion-contract.md`
+- `CHANGELOG.md`
+- `LLM_HANDOFF.md`
 
 ### Why I changed it
-The receiver preserved raw captures but did not yet feed the Hephaestus knowledge loop. This change establishes the first real browser-to-Kernel Case/Evidence path without changing shared domain contracts.
+- The project needed a bridge between real Hermes Agent output and the already-secured IBOS ingestion event contract.
+- The bridge must remain provider-neutral and must not let Hermes manufacture Kernel authority decisions.
 
 ### Tests or checks performed
-- `pnpm test`: 99/99 passed.
-- `pnpm typecheck`: passed.
-- `pnpm build`: passed.
-- `git diff --check`: passed.
+- PR #54 CI passed before merge: typecheck, tests, and build through GitHub Actions.
 
 ### Risks / uncertainties
-- The current extension message has no Case selector, so each unique capture starts a new draft Case.
-- The local JSON store is protected against concurrent writes inside one server process, not multiple simultaneous server processes.
+- The adapter expects an explicit bounded export shape. If the real Hermes Agent emits a different native structure, a thin extractor should map native logs/traces into this shape before using the adapter.
+- A CLI that reads the bounded export and submits it through signed ingestion is still the next useful layer.
 
 ### Next recommended step
-- Add extension UX and transport metadata to choose an existing Case or explicitly start a new Case.
-- Then connect created Evidence to the existing summarization Skill and Obsidian export flow.
+- Implement `scripts/hermes-ingest-agent-output.mjs` to read a real export file, adapt it, sign it, and POST it to the local Kernel.
 
 ### Do not forget
-- Never remove `sourceReceiptId`; it is the correlation link back to the durable inbox.
-- Keep capture projection deterministic and replay-safe.
+- The adapter only normalizes operational output. Kernel validation, contradiction, admission, storage, idempotency, and recovery remain Kernel-owned.
 
-## Handoff 2026-07-19 - Codex extension Case destination UX
+## Handoff 2026-07-20 - GPT-5.5 Thinking - Hermes Agent CLI
 
 ### What I changed
-- Added the first visible extension popup and action entry point.
-- Added active Case discovery through `GET /api/cases`.
-- Let users start a new Case or attach captured Evidence to an existing active Case.
-- Included target Case in the durable receipt identity so the same page can be attached deliberately to different Cases.
-- Rejected missing and archived target Cases.
-- Recovered the local write queue after rejected projections instead of repeating a stale failure.
+- Added `scripts/hermes-ingest-agent-output.mjs` to read a Hermes Agent run export JSON, convert it with `HermesAgentOutputAdapter`, sign the resulting ingestion payload, and submit it to `/hermes/ingestions`.
+- Added `pnpm hermes:ingest-agent` command.
+- Added `examples/hermes-agent-run-output.sample.json` as a runnable export shape reference.
+- Updated `docs/hermes-ingestion-contract.md` with the agent-output CLI flow.
+- Updated CHANGELOG with the CLI and sample fixture.
+
+### Files changed
+- `scripts/hermes-ingest-agent-output.mjs`
+- `examples/hermes-agent-run-output.sample.json`
+- `package.json`
+- `docs/hermes-ingestion-contract.md`
+- `CHANGELOG.md`
+- `LLM_HANDOFF.md`
+
+### Why I changed it
+- The system needed a direct way to take real Hermes Agent output from disk and push it through the same secured local Kernel ingestion path used by the smoke test.
+- This makes the next real-world validation step operational instead of theoretical.
 
 ### Tests or checks performed
-- `pnpm test`: 104/104 passed.
-- `pnpm typecheck`: passed.
-- `pnpm build`: passed.
-- `git diff --check`: passed.
+- PR #54 CI passed before merge: typecheck, tests, and build through GitHub Actions.
+- PR #55 CI passed before merge: typecheck, tests, and build through GitHub Actions.
 
 ### Risks / uncertainties
-- The popup is intentionally minimal and has not yet been manually loaded in Chrome for visual QA.
-- The Case list is unpaginated; local early-stage datasets are expected to remain small.
+- The CLI imports the built Kernel package, so `pnpm build` must run before `pnpm hermes:ingest-agent`.
+- A live server with matching `IBOS_HERMES_SECRET` must be running for the CLI to succeed.
+- The sample fixture is representative; a native Hermes Agent extractor may still be needed if the actual Hermes runtime emits a different log shape.
 
 ### Next recommended step
-- Feed created Evidence through the existing summarization Skill with an optional local Ollama adapter.
-- Add one-click Obsidian export/report generation from the selected Case.
+- Capture actual Hermes native output and add a thin extractor if the runtime emits logs/traces instead of the bounded JSON export.
 
 ### Do not forget
-- Keep the extension thin; analysis stays in the local Kernel.
-- Never show archived Cases as valid capture targets.
+- Hermes still cannot submit Kernel authority fields.
+- The CLI is only a transport client; Kernel ingestion still owns validation, contradiction, admission, idempotency, recovery, and persistence.
 
-## Handoff 2026-07-19 - Codex automatic Obsidian sync
+## Handoff 2026-07-20 - GPT-5.5 Thinking - Hermes Native JSONL Extractor
 
 ### What I changed
-- Added automatic Obsidian-compatible projection after successful browser capture projection.
-- Generates stable Case, Evidence, and evidence-report Markdown notes with YAML frontmatter and backlinks.
-- Refreshes Case and report notes when new Evidence is attached.
-- Preserves receipt ID, content hash, source, extraction method, timestamps, and confidence in Evidence notes.
-- Added `HEPHAESTUS_OBSIDIAN_DIR` for a configurable vault destination.
+- Added `HermesNativeLogExtractor` to extract bounded Hermes Agent run output from explicit native JSONL operational events.
+- Added tests for JSONL extraction, authority-field rejection, unknown evidence references, and invalid JSONL line errors.
+- Exported the extractor through the Kernel API.
+- Added `examples/hermes-native-log.sample.jsonl`.
+- Extended `scripts/hermes-ingest-agent-output.mjs` with `--native-jsonl` support.
+- Corrected the CLI to call `HermesAgentOutputAdapter.toExecutionEvents`.
+- Updated the Hermes ingestion contract and CHANGELOG.
+
+### Files changed
+- `packages/kernel/src/orchestration/hermes-native-log-extractor.ts`
+- `packages/kernel/src/orchestration/index.ts`
+- `packages/kernel/test/hermes-native-log-extractor.test.ts`
+- `scripts/hermes-ingest-agent-output.mjs`
+- `examples/hermes-native-log.sample.jsonl`
+- `docs/hermes-ingestion-contract.md`
+- `CHANGELOG.md`
+- `LLM_HANDOFF.md`
+
+### Why I changed it
+- The project needed a conservative path for native Hermes logs that are not already in the bounded JSON export format.
+- This keeps the runtime usable with JSONL operational logs while still requiring explicit evidence and claim entries.
 
 ### Tests or checks performed
-- `pnpm test`: 107/107 passed.
-- `pnpm typecheck`: passed.
-- `pnpm build`: passed.
-- `git diff --check`: passed.
+- PR #55 CI passed before merge: typecheck, tests, and build through GitHub Actions.
+- PR validation for native extractor phase is pending.
 
 ### Risks / uncertainties
-- Reports are deterministic evidence inventories, not LLM-generated conclusions.
-- Concurrent synchronization from multiple server processes is not supported.
+- The native extractor supports an explicit JSONL event shape. If Hermes emits a different console/Telegram format, another thin extractor should map that format into this JSONL contract.
+- `--native-jsonl` still requires `pnpm build` and a running local Kernel server with matching Hermes secret.
 
 ### Next recommended step
-- Add optional local-LLM Evidence summarization with a conservative offline fallback.
-- Preserve the current deterministic report whenever no model is available.
+- Open PR for `phase/3.1-hermes-native-output-extractor`, wait for CI, and merge if green.
+- Then run the full local flow with `examples/hermes-native-log.sample.jsonl`.
 
 ### Do not forget
-- Obsidian Markdown must remain readable without Hephaestus.
-- Never replace raw Evidence with generated summaries.
-
-## Handoff 2026-07-19 - Codex optional local Evidence summary
-
-### What I changed
-- Added an optional Ollama adapter to summarize newly projected Evidence before Obsidian synchronization.
-- Restricted model traffic to loopback HTTP endpoints and disabled the feature unless `HEPHAESTUS_OLLAMA_MODEL` is configured.
-- Stored structured summaries, explicitly uncertain hypotheses, limitations, model identity, Skill identity, prompt version, and generation time alongside raw Evidence.
-- Kept capture, persistence, and deterministic reporting successful when Ollama is missing, unavailable, slow, or returns invalid output.
-- Exposed the intelligence result in the receiver response and extension popup status.
-
-### Tests or checks performed
-- `pnpm test`: 112/112 passed.
-- `pnpm typecheck`: passed.
-- `pnpm build`: passed.
-- `git diff --check`: passed.
-
-### Risks / uncertainties
-- Ollama integration is covered with mocked HTTP responses; a real local model smoke test still depends on the user's installed model.
-- Generated summaries are advisory and must never be treated as verified facts.
-
-### Next recommended step
-- Add a simple local readiness view for Kernel, configured Ollama model, and Obsidian destination.
-- Later, add claim extraction only behind explicit evidence links and uncertainty labels.
-
-### Do not forget
-- Raw Evidence is authoritative; `aiSummary` is derived metadata.
-- Never permit a non-loopback Ollama endpoint without a deliberate security design.
-
-## Handoff 2026-07-19 - Codex local capture security hardening
-
-### Confirmed vulnerabilities corrected
-- Local API routes had no authentication, so another local process or installed extension could read Cases or submit captures.
-- The receiver trusted the listening configuration and did not reject hostile `Host` headers.
-- Captured page text and model output were emitted as active Obsidian Markdown, allowing hostile content to create embeds, links, or HTML-like markup in the vault.
-- The extension transport allowed non-loopback HTTP(S) Kernel endpoints, creating an Evidence exfiltration configuration risk.
-- Public-page fetchers accepted private/link-local targets and automatic redirects, enabling SSRF, and read response bodies without a hard memory bound.
-
-### Controls added
-- High-entropy local API token with timing-safe comparison on every `/api/*` route.
-- Strict loopback listener, request `Host`, and extension endpoint enforcement.
-- `Cache-Control: no-store` and explicit authenticated CORS header support.
-- Extension token storage/setup UI.
-- Escaped summaries/headings/link labels and indented-code rendering for raw captured text.
-- DNS/private-address validation before public fetches and every redirect, manual bounded redirects, and a 2 MiB response limit.
-
-### Validation
-- `pnpm test`: 125/125 passed.
-- `pnpm typecheck`: passed.
-- `pnpm build`: passed.
-- `pnpm audit --prod`: no known vulnerabilities.
-- `git diff --check`: passed.
-
-### Residual risks
-- The token is stored in extension-local storage; a fully compromised browser profile or operating-system account remains outside this boundary.
-- Obsidian community plugins can expand Markdown behavior. Keep plugins trusted and raw Evidence inert.
-- Local JSON files use restrictive creation modes, but operating-system account compromise can still access them.
-- DNS rebinding pinning was still pending in this handoff and was completed by the subsequent user-security-shield change.
-
-### Next recommended step
-- Add token rotation/pairing UX that avoids manual copying while requiring explicit local user approval.
-- Add automated security checks for dependency advisories and secret scanning in CI.
-
-## Handoff 2026-07-19 - Codex user security shield
-
-### What changed
-- Generated Kernel API tokens now persist in the configured Hephaestus data directory with `0600` permissions and survive restarts.
-- Added explicit token rotation through `HEPHAESTUS_ROTATE_API_TOKEN=1`; old credentials stop working after the extension is updated.
-- Public web connector and CLI now connect to the exact public IP validated by DNS while preserving the original hostname for TLS verification, closing DNS rebinding TOCTOU.
-- CI runs production dependency auditing with read-only repository permissions, concurrency cancellation, and a bounded timeout.
-- Added a user-facing security baseline and incident guidance in `SECURITY.md`.
-
-### Validation
-- `pnpm test`: 128/128 passed.
-- `pnpm typecheck`: passed.
-- `pnpm build`: passed.
-- `pnpm audit --prod`: no known vulnerabilities.
-- `git diff --check`: passed.
-
-### Next recommended step
-- Design an explicit one-click local pairing ceremony with short-lived approval codes instead of exposing the long-lived token in the popup.
-- Add a pinned secret-scanning tool after selecting and documenting its update policy.
-
-### Do not forget
-- Never print an existing persistent token on routine restarts.
-- Token rotation must always remain explicit and invalidate the extension's old credential.
-- Public network requests must never fall back from pinned connections to ordinary DNS-resolving fetches.
-
-## Handoff 2026-07-19 - Codex secure local extension pairing
-
-### What changed
-- Added an in-memory pairing session that generates an eight-character code with roughly 40 bits of entropy.
-- Codes expire after five minutes, lock after five failed attempts, and deliver the persistent API token exactly once.
-- Pairing is accepted only from a valid Chrome extension origin over the existing loopback/Host boundary.
-- First token creation and explicit rotation enable pairing automatically; `HEPHAESTUS_PAIRING=1` enables pairing for an additional trusted browser profile.
-- The long-lived token is no longer printed. Manual token entry remains inside a collapsed recovery section.
-
-### Security properties
-- Pairing codes are stored as SHA-256 digests for comparison and checked with constant-time equality.
-- Health and ordinary API responses never expose pairing material.
-- Invalid, expired, used, and locked sessions return bounded generic error codes without tokens.
-
-### Validation
-- `pnpm test`: 133/133 passed.
-- `pnpm typecheck`: passed.
-- `pnpm build`: passed.
-- `pnpm audit --prod`: no known vulnerabilities.
-- `git diff --check`: passed.
-
-### Next recommended step
-- Add extension identity allowlisting after packaging provides a stable signed extension ID.
-- Add browser-level integration testing for the popup pairing ceremony.
-
-### Do not forget
-- Never make `/pair` available to ordinary localhost web origins or requests without an extension origin.
-- Do not persist pairing codes; restart or expiry should destroy them.
-
-## Handoff 2026-07-19 - Codex persistent extension identity
-
-### What changed
-- Successful pairing now persists the exact Chrome extension ID in `authorized-extensions.json` with `0600` permissions.
-- After the first identity is registered, extension API requests require both the valid token and an allowlisted extension origin.
-- Empty registries preserve compatibility for installations created before identity binding; their next pairing activates strict enforcement.
-- Explicit token rotation clears the identity registry, revoking previously paired profiles before the new pairing ceremony.
-
-### Security properties
-- A different installed extension is rejected with `EXTENSION_NOT_AUTHORIZED` even if it presents the correct API token.
-- Originless native local clients still require the token and are not incorrectly treated as browser extensions.
-- Corrupt identity state fails closed for extension requests.
-
-### Validation
-- `pnpm test`: 135/135 passed.
-- `pnpm typecheck`: passed.
-- `pnpm build`: passed.
-- `pnpm audit --prod`: no known vulnerabilities.
-- `git diff --check`: passed.
-
-### Next recommended step
-- Package/sign the extension with a stable published ID and optionally seed a strict expected-ID policy for new installations.
-- Add a user-visible authorized-device management and revocation surface.
-
-### Do not forget
-- Never silently auto-register an identity after the registry becomes non-empty.
-- Token rotation is also an identity revocation boundary.
+- The extractor must stay dumb: no inferred claims, no fabricated evidence, no Kernel authority decisions.

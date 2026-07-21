@@ -10,8 +10,15 @@
   "scripts": {
     "build": "tsc -b",
     "clean": "tsc -b --clean",
+    "hermes:attack-smoke": "node scripts/hermes-idempotency-attack-test.mjs",
+    "hermes:ingest-agent": "node scripts/hermes-ingest-agent-output.mjs",
+    "hermes:smoke": "node scripts/hermes-smoke-test.mjs",
+    "hermes:validate-agent": "node scripts/hermes-validate-agent-output.mjs",
     "kernel:serve": "node apps/local-kernel/server.mjs",
     "lint": "pnpm --filter @internet-brain-os/kernel lint && pnpm --filter @internet-brain-os/shared lint",
+    "orchestrator": "node scripts/orchestrator-cli.mjs",
+    "replay-lab:api-smoke": "node scripts/replay-lab-api-smoke.mjs",
+    "resume": "node scripts/project-resume.mjs",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc -b --pretty false"
   },

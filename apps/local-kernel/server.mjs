@@ -9,6 +9,8 @@ import { OptionalEvidenceSummarizer } from './optional-evidence-summarizer.mjs';
 import { loadOrCreateApiToken, validateApiToken } from './api-token-store.mjs';
 import { PairingError, PairingSession } from './pairing-session.mjs';
 import { ExtensionIdentityRegistry } from './extension-identity-registry.mjs';
+import { createHermesLocalIngestionRoute } from './hermes-route-factory.mjs';
+import { replayLabPageHtml } from './replay-lab-page.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
@@ -39,11 +41,20 @@ const summarizer = new OptionalEvidenceSummarizer(knowledgeStore, {
   baseUrl: process.env.HEPHAESTUS_OLLAMA_URL,
   timeoutMs: Number(process.env.HEPHAESTUS_OLLAMA_TIMEOUT_MS ?? 20_000),
 });
+const hermes = isMain
+  ? await createHermesLocalIngestionRoute({
+    dataDir,
+    secret: process.env.IBOS_HERMES_SECRET ?? process.env.HEPHAESTUS_HERMES_SECRET,
+  })
+  : undefined;
 
 export function createLocalKernelServer(captureInbox, captureProjector, obsidianProjector, evidenceSummarizer, options = {}) {
   const requiredToken = options.apiToken === undefined ? undefined : validateApiToken(options.apiToken);
   const activePairing = options.pairingSession;
   const identities = options.extensionRegistry;
+  const hermesRoute = options.hermesRoute;
+  const replayLabQuery = options.replayLabQuery;
+  const hermesMaxBodyBytes = Number(options.hermesMaxBodyBytes ?? 256 * 1024);
   return createServer(async (request, response) => {
     if (!isLoopbackHost(request.headers.host)) {
       return send(response, 403, { ok: false, code: 'HOST_FORBIDDEN' });
@@ -55,7 +66,29 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     setCors(origin, response);
     if (request.method === 'OPTIONS') return send(response, 204);
     if (request.method === 'GET' && request.url === '/health') {
-      return send(response, 200, { ok: true, service: 'hephaestus-local-kernel' });
+      return send(response, 200, { ok: true, service: 'hephaestus-local-kernel', hermes: Boolean(hermesRoute), replayLab: Boolean(replayLabQuery) });
+    }
+    if (request.method === 'GET' && request.url === '/replay-lab') {
+      return sendHtml(response, 200, replayLabPageHtml);
+    }
+    if (request.url === '/hermes/ingestions') {
+      if (!hermesRoute) return send(response, 404, { ok: false, code: 'HERMES_INGESTION_DISABLED' });
+      try {
+        const rawBody = request.method === 'POST' && String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')
+          ? await readRaw(request, hermesMaxBodyBytes)
+          : '';
+        const routed = await hermesRoute.handle({
+          method: request.method ?? 'GET',
+          url: request.url,
+          headers: request.headers,
+          remoteAddress: request.socket.remoteAddress ?? '',
+          rawBody,
+        });
+        return send(response, routed.status, routed.body);
+      } catch (error) {
+        if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'HERMES_INGESTION_FAILED' });
+      }
     }
     if (request.method === 'POST' && request.url === '/pair') {
       if (!isExtensionOrigin(origin)) return send(response, 403, { ok: false, code: 'PAIRING_ORIGIN_REQUIRED' });
@@ -91,6 +124,23 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         return send(response, 500, { ok: false, code: 'INTERNAL_ERROR' });
       }
     }
+    if (request.method === 'GET' && request.url === '/api/replay-lab/cases') {
+      if (!replayLabQuery) return send(response, 404, { ok: false, code: 'REPLAY_LAB_UNAVAILABLE' });
+      try {
+        return send(response, 200, { ok: true, cases: await replayLabQuery.listCases() });
+      } catch {
+        return send(response, 500, { ok: false, code: 'REPLAY_LAB_QUERY_FAILED' });
+      }
+    }
+    if (request.method === 'GET' && request.url?.startsWith('/api/replay-lab/cases/')) {
+      if (!replayLabQuery) return send(response, 404, { ok: false, code: 'REPLAY_LAB_UNAVAILABLE' });
+      try {
+        const caseId = decodeURIComponent(request.url.slice('/api/replay-lab/cases/'.length));
+        return send(response, 200, { ok: true, case: await replayLabQuery.getCase(caseId) });
+      } catch {
+        return send(response, 404, { ok: false, code: 'REPLAY_LAB_CASE_NOT_FOUND' });
+      }
+    }
     if (request.method !== 'POST' || request.url !== '/api/browser/page-context') {
       return send(response, 404, { ok: false, code: 'NOT_FOUND' });
     }
@@ -122,7 +172,13 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   });
 }
 
-export const server = createLocalKernelServer(inbox, projector, obsidian, summarizer, { apiToken, pairingSession, extensionRegistry });
+export const server = createLocalKernelServer(inbox, projector, obsidian, summarizer, {
+  apiToken,
+  pairingSession,
+  extensionRegistry,
+  hermesRoute: hermes?.route,
+  replayLabQuery: hermes?.replayLabQuery,
+});
 
 if (isMain) {
   if (!isLoopbackHostname(host)) throw new Error('HEPHAESTUS_HOST must be a loopback address');
@@ -131,6 +187,12 @@ if (isMain) {
     if (tokenRecord.source === 'created') console.log(`Extension token created privately at ${tokenRecord.filePath}`);
     else if (tokenRecord.source === 'rotated') console.log(`Extension token rotated privately at ${tokenRecord.filePath}`);
     else if (tokenRecord.source === 'file') console.log(`Using persistent extension token from ${tokenRecord.filePath}`);
+    if (hermes?.route) {
+      console.log('Hermes local ingestion enabled at /hermes/ingestions');
+      console.log('Replay Lab API enabled at /api/replay-lab/cases');
+      console.log('Replay Lab UI available at /replay-lab');
+      console.log(`Hermes startup reconciliation: ${JSON.stringify(hermes.reconciled)}`);
+    }
     if (pairingSession) {
       const pairing = pairingSession.details();
       console.log(`Extension pairing code: ${pairing.code} (expires ${pairing.expiresAt}, one use, five attempts)`);
@@ -139,15 +201,20 @@ if (isMain) {
 }
 
 async function readJson(request) {
+  const raw = await readRaw(request, MAX_BODY_BYTES);
+  try { return JSON.parse(raw); }
+  catch { throw new InboxError('INVALID_JSON', 'Request body must be valid JSON'); }
+}
+
+async function readRaw(request, maxBodyBytes) {
   const chunks = [];
   let size = 0;
   for await (const chunk of request) {
     size += chunk.length;
-    if (size > MAX_BODY_BYTES) throw new InboxError('PAYLOAD_TOO_LARGE', 'Payload exceeds 32 KiB', 413);
+    if (size > maxBodyBytes) throw new InboxError('PAYLOAD_TOO_LARGE', `Payload exceeds ${maxBodyBytes} bytes`, 413);
     chunks.push(chunk);
   }
-  try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
-  catch { throw new InboxError('INVALID_JSON', 'Request body must be valid JSON'); }
+  return Buffer.concat(chunks).toString('utf8');
 }
 
 function isAllowedOrigin(origin) {
@@ -182,7 +249,7 @@ function setCors(origin, response) {
     response.setHeader('vary', 'Origin');
   }
   response.setHeader('access-control-allow-methods', 'POST, GET, OPTIONS');
-  response.setHeader('access-control-allow-headers', 'content-type, x-hephaestus-token');
+  response.setHeader('access-control-allow-headers', 'content-type, x-hephaestus-token, x-ibos-idempotency-key, x-ibos-timestamp, x-ibos-signature');
   response.setHeader('x-content-type-options', 'nosniff');
   response.setHeader('cache-control', 'no-store');
 }
@@ -192,4 +259,11 @@ function send(response, status, body) {
   if (body === undefined) return response.end();
   response.setHeader('content-type', 'application/json; charset=utf-8');
   response.end(JSON.stringify(body));
+}
+
+function sendHtml(response, status, html) {
+  response.statusCode = status;
+  response.setHeader('content-type', 'text/html; charset=utf-8');
+  response.setHeader('cache-control', 'no-store');
+  response.end(html);
 }
