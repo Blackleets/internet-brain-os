@@ -2,9 +2,10 @@
 
 Before changing code in this repository:
 
-1. Read `PROJECT_STATE.md` and run `pnpm resume`.
-2. Read `ARCHITECTURE.md`.
-3. Inspect the target package, implementation, tests, and exports.
+1. Verify the repository root and read `HERMES_WORKSPACE_PROTOCOL.md`.
+2. Read `PROJECT_STATE.md` and run `pnpm resume`.
+3. Read `ARCHITECTURE.md`.
+4. Inspect the target package, implementation, tests, and exports.
 4. Confirm the current file SHA before sequential updates.
 5. Make the smallest coherent change that advances the current priority.
 6. Preserve backward compatibility unless a deliberate migration is documented.
