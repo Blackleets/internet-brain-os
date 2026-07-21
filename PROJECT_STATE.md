@@ -42,12 +42,13 @@ Then read, in order:
 - PR #86: one-command `pnpm verify:first-run` gate merged and proven in CI.
 - PR #87: truthful Ollama readiness contract merged and proven in CI.
 - PR #92: deterministic Causality Map, AI Autopsy, and read-only Prevention proposals merged and proven in CI.
+- PR #94: local API token validation and fail-closed POSIX permission handling merged and proven in CI.
 - Issue #10: Internal Orchestrator v0 closed as completed with PR #73–#77 evidence.
 - Validation baseline: `pnpm verify:first-run` passes in CI and from a clean Git clone with 56 test files / 277 tests, covering typecheck, build, bounded JSON and native JSONL validation, signed ingestion, exact replay, altered-replay rejection, Replay Lab API, and fail-closed local token-file handling.
 
 ## Current operating state
 
-- `main` is the sole source of truth and includes the complete deterministic forensic read path through PR #92.
+- `main` is the sole source of truth and includes the deterministic forensic read path plus local token-file hardening through PR #94.
 - There must be only one active implementation task at a time.
 - Do not work directly on `main`.
 - Do not merge, deploy, mutate secrets, delete data, or expand scope without the required human/founder gate.
