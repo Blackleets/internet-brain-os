@@ -99,6 +99,50 @@ export interface ReplayLabAuthorityBoundaryView {
   readonly explanation: string;
 }
 
+export type ReplayLabCausalityNodeType =
+  | 'evidence'
+  | 'claim_proposal'
+  | 'validation_gate'
+  | 'existing_claim'
+  | 'contradiction_gate'
+  | 'admission_gate'
+  | 'durable_claim';
+
+export type ReplayLabCausalityEdgeType =
+  | 'supports'
+  | 'evaluated_by'
+  | 'contradicts'
+  | 'checked_by'
+  | 'decided_by'
+  | 'produced';
+
+export interface ReplayLabCausalityNode {
+  readonly id: string;
+  readonly type: ReplayLabCausalityNodeType;
+  readonly label: string;
+  readonly sourceId?: string;
+  readonly status?: string;
+}
+
+export interface ReplayLabCausalityEdge {
+  readonly from: string;
+  readonly to: string;
+  readonly type: ReplayLabCausalityEdgeType;
+  readonly basis: 'persisted_record';
+}
+
+export interface ReplayLabCausalityView {
+  readonly nodes: readonly ReplayLabCausalityNode[];
+  readonly edges: readonly ReplayLabCausalityEdge[];
+  readonly explanation: string;
+}
+
+export type ReplayLabAutopsyOutcome = 'no_failure_observed' | 'task_failed' | 'validation_rejected' | 'contradiction_blocked' | 'human_review_required' | 'pipeline_incomplete' | 'receipt_record_mismatch';
+export interface ReplayLabObservedFact { readonly source: 'execution' | 'validation' | 'contradiction' | 'admission' | 'ingestion_receipt'; readonly sourceId: string; readonly statement: string; }
+export interface ReplayLabAutopsyView { readonly outcome: ReplayLabAutopsyOutcome; readonly summary: string; readonly observedFacts: readonly ReplayLabObservedFact[]; readonly interpretation?: string; readonly basis: 'deterministic_projection'; readonly limitation: string; }
+export interface ReplayLabPreventionRuleProposal { readonly id: string; readonly status: 'proposed_not_enforced'; readonly trigger: string; readonly action: string; readonly sourceOutcome: Exclude<ReplayLabAutopsyOutcome, 'no_failure_observed'>; readonly basis: 'deterministic_projection'; readonly requiresHumanApproval: true; }
+export interface ReplayLabPreventionView { readonly proposals: readonly ReplayLabPreventionRuleProposal[]; readonly explanation: string; }
+
 export interface ReplayLabCaseView {
   readonly id: CognitivePipelineRecordId;
   readonly missionId: MissionId;
@@ -111,6 +155,9 @@ export interface ReplayLabCaseView {
   readonly gates: ReplayLabGateView;
   readonly idempotency: ReplayLabIdempotencyView;
   readonly authorityBoundary: ReplayLabAuthorityBoundaryView;
+  readonly causality: ReplayLabCausalityView;
+  readonly autopsy: ReplayLabAutopsyView;
+  readonly prevention: ReplayLabPreventionView;
   readonly warnings: readonly string[];
 }
 
@@ -132,6 +179,7 @@ export function buildReplayLabCaseView(
     supportsClaimProposal: proposal.evidenceIds.some((candidate) => candidate === evidenceRef.evidenceId),
   }));
   const idempotency = buildIdempotencyView(record, options.receipt);
+  const autopsyView = buildAutopsyView(record, idempotency);
 
   return {
     id: record.id,
@@ -186,7 +234,112 @@ export function buildReplayLabCaseView(
       observedAttempt: 'not_persisted',
       explanation: 'Hermes authority fields are rejected before transport or Kernel processing. Rejected payload contents are intentionally not persisted or attributed to this accepted case.',
     },
+    causality: buildCausalityView(record, evidence),
+    autopsy: autopsyView,
+    prevention: buildPreventionView(record, autopsyView),
     warnings: deriveWarnings(record, idempotency),
+  };
+}
+
+function buildAutopsyView(record: CognitivePipelineRecord, idempotency: ReplayLabIdempotencyView): ReplayLabAutopsyView {
+  const limitation = 'This finding explains recorded state transitions only; it does not infer hidden agent intent or an unrecorded root cause.';
+  const make = (outcome: ReplayLabAutopsyOutcome, summary: string, observedFacts: readonly ReplayLabObservedFact[], interpretation?: string): ReplayLabAutopsyView => ({ outcome, summary, observedFacts, ...(interpretation ? { interpretation } : {}), basis: 'deterministic_projection', limitation });
+  const failedTask = record.execution.tasks.find((task) => task.status === 'failed');
+  if (idempotency.status === 'record_mismatch') return make('receipt_record_mismatch', 'The attached ingestion receipt points to a different cognitive record.', [{ source: 'ingestion_receipt', sourceId: idempotency.idempotencyKey ?? 'unknown', statement: idempotency.explanation }], 'The receipt-to-record association is inconsistent and must not be trusted for replay status.');
+  if (failedTask) return make('task_failed', 'A mission task recorded a failure before the cognitive pipeline completed.', [{ source: 'execution', sourceId: failedTask.taskId, statement: failedTask.failureReason ?? 'Task failed without a recorded reason.' }], 'The recorded task failure prevented a complete evidence-to-memory path.');
+  if (record.validation.decision === 'rejected') return make('validation_rejected', 'The Kernel rejected the claim proposal during validation.', record.validation.reasons.map((reason) => ({ source: 'validation', sourceId: record.validation.proposal.id, statement: reason.message })), 'The proposal did not satisfy the recorded validation requirements, so downstream gates did not run.');
+  if (record.validation.decision === 'needs_review') return make('human_review_required', 'Claim validation requires human review.', record.validation.reasons.map((reason) => ({ source: 'validation', sourceId: record.validation.proposal.id, statement: reason.message })), 'The Kernel did not accept enough evidence to continue automatically.');
+  if (record.contradiction?.action === 'block') return make('contradiction_blocked', 'The contradiction gate blocked knowledge admission.', record.contradiction.reasons.map((reason) => ({ source: 'contradiction', sourceId: record.validation.proposal.id, statement: reason.message })), 'A recorded material contradiction prevented the proposal from becoming durable knowledge.');
+  if (record.contradiction?.action === 'review' || record.admission?.decision === 'review') return make('human_review_required', 'The recorded contradiction or admission decision requires human review.', (record.contradiction?.reasons ?? []).map((reason) => ({ source: 'contradiction', sourceId: record.validation.proposal.id, statement: reason.message })), 'The Kernel stopped automatic admission at an explicit review gate.');
+  if (!record.contradiction || !record.admission) return make('pipeline_incomplete', 'The persisted cognitive pipeline ends before all required gates completed.', [{ source: 'validation', sourceId: record.validation.proposal.id, statement: !record.contradiction ? 'No contradiction assessment is attached.' : 'No knowledge admission result is attached.' }], 'The record is incomplete and cannot prove a final durable-memory outcome.');
+  return make('no_failure_observed', 'No failure or block is recorded in the completed cognitive pipeline.', [{ source: 'admission', sourceId: record.admission.claim?.id ?? record.validation.proposal.id, statement: `Knowledge admission decision: ${record.admission.decision}.` }]);
+}
+
+function buildPreventionView(record: CognitivePipelineRecord, autopsy: ReplayLabAutopsyView): ReplayLabPreventionView {
+  if (autopsy.outcome === 'no_failure_observed') return { proposals: [], explanation: 'No prevention rule is proposed because the persisted pipeline records no failure or block.' };
+  const actions: Record<Exclude<ReplayLabAutopsyOutcome, 'no_failure_observed'>, string> = {
+    task_failed: 'Require the task to complete successfully with a recorded failure reason before claim validation.',
+    validation_rejected: 'Keep the proposal out of downstream gates until the recorded validation reasons are resolved.',
+    contradiction_blocked: 'Quarantine the proposal and require review of the recorded contradictory claims before admission.',
+    human_review_required: 'Require explicit human approval before continuing to knowledge admission.',
+    pipeline_incomplete: 'Do not treat the case as complete until contradiction and admission results are durably recorded.',
+    receipt_record_mismatch: 'Block replay trust and require receipt-to-record reconciliation before further processing.',
+  };
+  return { proposals: [{ id: `prevention:${record.id}:${autopsy.outcome}`, status: 'proposed_not_enforced', trigger: autopsy.summary, action: actions[autopsy.outcome], sourceOutcome: autopsy.outcome, basis: 'deterministic_projection', requiresHumanApproval: true }], explanation: 'Proposals are derived from the recorded autopsy outcome. They are read-only and are not active Kernel policy.' };
+}
+
+function buildCausalityView(
+  record: CognitivePipelineRecord,
+  evidence: readonly ReplayLabEvidenceRefView[],
+): ReplayLabCausalityView {
+  const proposal = record.validation.proposal;
+  const proposalNodeId = `proposal:${proposal.id}`;
+  const validationNodeId = `validation:${proposal.id}`;
+  const nodes: ReplayLabCausalityNode[] = evidence.map((item) => ({
+    id: `evidence:${item.evidenceId}`,
+    type: 'evidence',
+    label: `Evidence ${item.requirementKey}`,
+    sourceId: item.evidenceId,
+  }));
+  const edges: ReplayLabCausalityEdge[] = evidence
+    .filter((item) => item.supportsClaimProposal)
+    .map((item) => ({
+      from: `evidence:${item.evidenceId}`,
+      to: proposalNodeId,
+      type: 'supports',
+      basis: 'persisted_record',
+    }));
+
+  nodes.push(
+    { id: proposalNodeId, type: 'claim_proposal', label: proposal.statement, sourceId: proposal.id, status: proposal.status },
+    { id: validationNodeId, type: 'validation_gate', label: 'Claim validation', status: record.validation.decision },
+  );
+  edges.push({ from: proposalNodeId, to: validationNodeId, type: 'evaluated_by', basis: 'persisted_record' });
+
+  if (record.contradiction) {
+    const contradictionNodeId = `contradiction:${proposal.id}`;
+    nodes.push({
+      id: contradictionNodeId,
+      type: 'contradiction_gate',
+      label: 'Contradiction check',
+      status: record.contradiction.action,
+    });
+    edges.push({ from: validationNodeId, to: contradictionNodeId, type: 'checked_by', basis: 'persisted_record' });
+
+    for (const claimId of record.contradiction.contradictsClaimIds) {
+      const claimNodeId = `existing-claim:${claimId}`;
+      nodes.push({ id: claimNodeId, type: 'existing_claim', label: 'Existing claim', sourceId: claimId });
+      edges.push({ from: proposalNodeId, to: claimNodeId, type: 'contradicts', basis: 'persisted_record' });
+    }
+
+    if (record.admission) {
+      const admissionNodeId = `admission:${proposal.id}`;
+      nodes.push({
+        id: admissionNodeId,
+        type: 'admission_gate',
+        label: 'Knowledge admission',
+        status: record.admission.decision,
+      });
+      edges.push({ from: contradictionNodeId, to: admissionNodeId, type: 'decided_by', basis: 'persisted_record' });
+
+      if (record.admission.claim) {
+        const durableClaimNodeId = `durable-claim:${record.admission.claim.id}`;
+        nodes.push({
+          id: durableClaimNodeId,
+          type: 'durable_claim',
+          label: record.admission.claim.statement,
+          sourceId: record.admission.claim.id,
+          status: record.admission.claim.status,
+        });
+        edges.push({ from: admissionNodeId, to: durableClaimNodeId, type: 'produced', basis: 'persisted_record' });
+      }
+    }
+  }
+
+  return {
+    nodes,
+    edges,
+    explanation: 'This map contains only links stated by the persisted cognitive pipeline record; it does not infer hidden causes.',
   };
 }
 

@@ -232,6 +232,8 @@ describe('local Kernel HTTP receiver', () => {
     expect(html).toContain('Replay Lab');
     expect(html).toContain('/api/replay-lab/cases');
     expect(html).toContain('Authority boundary');
+    expect(html).toContain('AI Autopsy');
+    expect(html).toContain('Prevention Rules');
     expect(html).toContain('Rejected payload contents are not persisted.');
     expect(html).not.toContain(apiToken);
   });

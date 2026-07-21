@@ -173,6 +173,22 @@ Each gate should show:
 - output ids;
 - whether the gate was skipped because a previous gate blocked execution.
 
+## Causality Map
+
+Replay Lab exposes a deterministic causality projection from the persisted cognitive pipeline record. It may show only explicit links: evidence supporting a proposal, the Kernel gates that evaluated it, recorded contradictions with existing claims, and an admitted durable claim.
+
+Every edge carries `basis: persisted_record`. Missing gates or links remain absent; the map must not infer hidden causes, model intent, or explanations that were not recorded.
+
+## AI Autopsy
+
+Replay Lab derives one read-only forensic outcome from persisted execution, validation, contradiction, admission, and attached receipt state. Observed facts retain their system source and source id. Any interpretation is separate, explicitly marked `basis: deterministic_projection`, and carries a limitation that hidden intent and unrecorded root causes are unknown.
+
+Successful admitted cases report `no_failure_observed`; they must not manufacture a failure finding.
+
+## Prevention Rules
+
+For a recorded failure, block, review requirement, incomplete pipeline, or receipt mismatch, Replay Lab may derive one conservative prevention proposal. Every proposal is `proposed_not_enforced`, requires human approval, and cannot mutate Kernel policy or memory. A completed case with no recorded failure produces no prevention proposal.
+
 ## Authority boundary warnings
 
 Replay Lab must highlight blocked authority escalation attempts.

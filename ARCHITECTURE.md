@@ -87,6 +87,10 @@ Memory lifecycle supports:
 
 Memory changes are recorded through an append-only event log. Duplicate normalized memories can be consolidated conservatively. Consolidation preserves source memory IDs and evidence IDs through provenance records.
 
+## Forensic Causality
+
+Replay Lab derives a Causality Map from the persisted cognitive pipeline record. The projection links evidence, claim proposals, validation, contradiction, admission, and durable claims only when those relationships are explicitly present. Every edge is marked as persisted-record evidence; the Kernel does not infer agent intent or hidden causes.
+
 ## Continuation Rules
 
 1. Read the relevant package and its tests before editing.
@@ -177,3 +181,4 @@ A task is not done merely because code was written. It is done when:
 - provenance and history are preserved;
 - the repository remains buildable;
 - the next agent can understand where to continue.
+Replay Lab projects Causality, AI Autopsy, and Prevention from persisted Kernel-owned records. Autopsy separates observed facts from deterministic interpretation. Prevention outputs are proposals only: they require human approval and cannot mutate policy, admission state, or durable memory.
