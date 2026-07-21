@@ -3,6 +3,7 @@ import type { Confidence, EvidenceId, IsoDateTime } from '@internet-brain-os/sha
 export type MemoryId = string & { readonly __brand: 'MemoryId' };
 
 export type MemoryKind = 'fact' | 'observation' | 'hypothesis' | 'decision' | 'lesson';
+export type MemoryStatus = 'active' | 'archived';
 
 export interface Memory {
   readonly id: MemoryId;
@@ -11,6 +12,7 @@ export interface Memory {
   readonly content: string;
   readonly confidence: Confidence;
   readonly evidenceIds: readonly EvidenceId[];
+  readonly status: MemoryStatus;
   readonly createdAt: IsoDateTime;
   readonly updatedAt: IsoDateTime;
 }

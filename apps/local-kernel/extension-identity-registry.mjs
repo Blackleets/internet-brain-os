@@ -1,4 +1,4 @@
-import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
 export class ExtensionIdentityRegistry {
@@ -28,7 +28,7 @@ export class ExtensionIdentityRegistry {
     await this.ready;
     const id = extensionId(origin);
     if (!id) return false;
-    return this.identities.size === 0 || this.identities.has(id);
+    return this.identities.has(id);
   }
 
   async clear() {
@@ -42,8 +42,12 @@ export class ExtensionIdentityRegistry {
 
   async load() {
     try {
+      await assertPrivateFile(this.filePath);
       const parsed = JSON.parse(await readFile(this.filePath, 'utf8'));
-      if (!Array.isArray(parsed.extensionIds) || !parsed.extensionIds.every((id) => /^[a-p]{32}$/.test(id))) {
+      if (parsed.version !== 1 || !Array.isArray(parsed.extensionIds) || !parsed.extensionIds.every((id) => /^[a-p]{32}$/.test(id))) {
+        throw new Error('Invalid extension identity registry');
+      }
+      if (new Set(parsed.extensionIds).size !== parsed.extensionIds.length) {
         throw new Error('Invalid extension identity registry');
       }
       this.identities = new Set(parsed.extensionIds);
@@ -64,4 +68,12 @@ export class ExtensionIdentityRegistry {
 
 function extensionId(origin) {
   return typeof origin === 'string' ? origin.match(/^chrome-extension:\/\/([a-p]{32})$/)?.[1] : undefined;
+}
+
+async function assertPrivateFile(filePath) {
+  if (process.platform === 'win32') return;
+  const mode = (await stat(filePath)).mode & 0o777;
+  if ((mode & 0o077) !== 0) {
+    throw new Error('Extension identity registry must have private file permissions');
+  }
 }

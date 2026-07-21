@@ -8,7 +8,7 @@ export interface MemoryConsolidationGroup {
 
 /**
  * Conservative consolidation of semantically identical memory records.
- * The engine only consolidates exact normalized content matches and never
+ * The engine only consolidates exact normalized subject/content/kind matches and never
  * silently discards provenance: source IDs are returned with the canonical memory.
  */
 export class MemoryConsolidationEngine {
@@ -16,7 +16,7 @@ export class MemoryConsolidationEngine {
     const groups = new Map<string, MemoryConsolidationGroup>();
 
     for (const memory of memories) {
-      const key = normalize(memory.content);
+      const key = [memory.kind, normalize(memory.subject), normalize(memory.content)].join('\u001f');
       const existing = groups.get(key);
 
       if (!existing) {
@@ -39,6 +39,7 @@ export class MemoryConsolidationEngine {
 
 function chooseCanonical(left: Memory, right: Memory): Memory {
   if (confidence(right.confidence) > confidence(left.confidence)) return right;
+  if (confidence(left.confidence) > confidence(right.confidence)) return left;
   if (right.updatedAt > left.updatedAt) return right;
   return left;
 }

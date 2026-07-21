@@ -1,4 +1,4 @@
-import type { Case, CaseId, Claim, ClaimId, Entity, EntityId, Evidence, EvidenceId, Relationship, RelationshipId } from '@internet-brain-os/shared';
+import type { Case, CaseId, Claim, ClaimId, Entity, EntityId, EvidenceId, Relationship, RelationshipId } from '@internet-brain-os/shared';
 import type { CaseRepository } from '../case';
 import type { ClaimRepository } from '../claim';
 import type { EvidenceRecord, EvidenceRepository } from '../evidence';

@@ -187,6 +187,21 @@ describe('local Kernel HTTP receiver', () => {
     expect(await noOrigin.json()).toEqual({ ok: false, code: 'PAIRING_ORIGIN_REQUIRED' });
   });
 
+  it('does not let an extension reuse a stolen token before explicit authorization', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    const identities = new ExtensionIdentityRegistry(join(dir, 'extensions.json'));
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, { extensionRegistry: identities });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const response = await fetch(`http://127.0.0.1:${port}/api/cases`, {
+      headers: { ...authHeaders, origin: `chrome-extension://${'b'.repeat(32)}` },
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ ok: false, code: 'EXTENSION_NOT_AUTHORIZED' });
+  });
+
   it('rejects non-loopback Host headers before routing', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
     server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')));

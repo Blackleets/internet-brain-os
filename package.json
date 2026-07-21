@@ -11,13 +11,17 @@
     "build": "tsc -b",
     "clean": "tsc -b --clean",
     "kernel:serve": "node apps/local-kernel/server.mjs",
+    "lint": "pnpm --filter @internet-brain-os/kernel lint && pnpm --filter @internet-brain-os/shared lint",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc -b --pretty false"
   },
   "packageManager": "pnpm@11.11.0",
   "devDependencies": {
+    "@types/node": "^20.12.11",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
     "typescript": "^5.4.5",
-    "vitest": "^1.6.0",
-    "@types/node": "^20.12.11"
+    "vitest": "^1.6.0"
   }
 }
