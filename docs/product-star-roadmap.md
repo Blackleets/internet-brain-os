@@ -153,7 +153,7 @@ Do not add this until the command can manage local server lifecycle safely.
 
 Purpose: make the repo understandable to users, contributors, and investors.
 
-Status: **narrative package complete; real interface screenshots remain**.
+Status: **narrative package complete with one sanitized real Replay Lab screenshot**.
 
 Checklist:
 
@@ -161,11 +161,11 @@ Checklist:
 - [x] Add a simple architecture diagram in Markdown.
 - [x] Add a short “What this is / What this is not” section.
 - [x] Add a one-minute demo script.
-- [ ] Add screenshots once UI exists.
+- [x] Add a sanitized screenshot from the real local Replay Lab interface.
 - [x] Add a short X/Twitter launch post draft.
 - [x] Add a founder-facing pitch paragraph.
 
-Evidence: the README product opening and architecture view plus `docs/launch-kit.md`. Screenshots must depict the real local interface and must not be replaced with generated mockups presented as product evidence.
+Evidence: the README product opening and architecture view, `docs/launch-kit.md`, and `docs/assets/replay-lab-real-hermes-validation.png`. Screenshots must depict the real local interface and must not be replaced with generated mockups presented as product evidence.
 
 Core message:
 
@@ -225,10 +225,8 @@ Do not:
 
 ## Recommended next PRs
 
-1. Real Hermes runtime fixture or thin extractor, once the external capture is available.
-2. Capture sanitized screenshots from the real local Replay Lab interface.
-3. Memory quarantine / prevention-rule design note.
-4. Clean-clone packaging and release-readiness audit.
+1. Memory quarantine / prevention-rule design note.
+2. Clean-clone packaging and release-readiness audit.
 
 ## Definition of “project star”
 

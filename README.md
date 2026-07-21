@@ -127,6 +127,12 @@ Evidence   Cognitive   Replay-safe
 
 See `docs/architecture.md` for system boundaries and `docs/launch-kit.md` for the one-minute explanation and demo narrative.
 
+## Replay Lab preview
+
+The screenshot below is captured from the real local Replay Lab interface after ingesting a sanitized Hermes runtime session. It shows the case, evidence, claim proposal, Kernel gates, replay/idempotency state, and enforced authority boundary without exposing tokens or raw prompts.
+
+![Replay Lab showing a sanitized real Hermes validation case](docs/assets/replay-lab-real-hermes-validation.png)
+
 ## Non-negotiable direction
 
 Hephaestus must remain:
