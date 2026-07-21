@@ -91,6 +91,10 @@ Memory changes are recorded through an append-only event log. Duplicate normaliz
 
 Replay Lab derives a Causality Map from the persisted cognitive pipeline record. The projection links evidence, claim proposals, validation, contradiction, admission, and durable claims only when those relationships are explicitly present. Every edge is marked as persisted-record evidence; the Kernel does not infer agent intent or hidden causes.
 
+## Local API Token Safety
+
+The local Kernel accepts only 32–512 character tokens made from printable, non-whitespace ASCII. Generated token files are created with owner-only permissions. On POSIX systems, an existing token file with group or world permissions is rejected before its contents are read; the Kernel does not silently repair and trust an exposed credential. Token rotation uses a collision-resistant temporary filename and remains an explicit operator action. Windows keeps functional compatibility without claiming POSIX permission enforcement.
+
 ## Continuation Rules
 
 1. Read the relevant package and its tests before editing.
