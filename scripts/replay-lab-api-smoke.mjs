@@ -51,7 +51,9 @@ try {
   assert(typeof ingestBody.recordId === 'string', 'Sample ingest response must include recordId.');
 
   const listResponse = await fetch(`${baseUrl}/api/replay-lab/cases`, { headers: authHeaders() });
-  assert(listResponse.status === 200, `Replay Lab list expected 200, got ${listResponse.status}: ${await listResponse.text()}`);
+  if (listResponse.status !== 200) {
+    throw new Error(`Replay Lab list expected 200, got ${listResponse.status}: ${await listResponse.text()}`);
+  }
   const listBody = await listResponse.json();
   assert(listBody.ok === true, 'Replay Lab list response must be ok.');
   assert(Array.isArray(listBody.cases), 'Replay Lab list response must include cases array.');
@@ -62,7 +64,9 @@ try {
 
   const encodedRecordId = encodeURIComponent(ingestBody.recordId);
   const detailResponse = await fetch(`${baseUrl}/api/replay-lab/cases/${encodedRecordId}`, { headers: authHeaders() });
-  assert(detailResponse.status === 200, `Replay Lab detail expected 200, got ${detailResponse.status}: ${await detailResponse.text()}`);
+  if (detailResponse.status !== 200) {
+    throw new Error(`Replay Lab detail expected 200, got ${detailResponse.status}: ${await detailResponse.text()}`);
+  }
   const detailBody = await detailResponse.json();
   assert(detailBody.ok === true, 'Replay Lab detail response must be ok.');
   assert(detailBody.case.id === ingestBody.recordId, 'Replay Lab detail must return the requested record.');
