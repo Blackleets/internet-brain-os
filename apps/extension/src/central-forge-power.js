@@ -1,6 +1,6 @@
 import './unsupported-page-guard.js';
 import { DEFAULT_KERNEL_BASE_URL, getKernelStatus, listAgentMissions, listGoals, startGoalResearch } from './local-transport.js';
-import { deriveEfestoOrbState, selectNextGoal, shouldCreateMission } from './efesto-orb-state.js';
+import { deriveEfestoOrbState, resolveForgePowerIntent, selectNextGoal, shouldCreateMission } from './efesto-orb-state.js';
 
 const ACTIVE_STATUSES = new Set(['queued', 'running']);
 const POLL_MS = 2000;
@@ -13,15 +13,19 @@ const orbSummary = document.querySelector('#forge-orb-summary');
 const obsidianReceipt = document.querySelector('#forge-obsidian-receipt');
 let timer;
 let cycleRunning = false;
+let currentOrbState = 'idle';
 
 void initializePower();
 
 powerButton?.addEventListener('click', async () => {
   const stored = await chrome.storage.local.get(['efestoForgeEnabled']);
-  const enabled = !Boolean(stored.efestoForgeEnabled);
-  await chrome.storage.local.set({ efestoForgeEnabled: enabled });
-  renderOrb(deriveEfestoOrbState({ enabled, kernel: 'ready', services: {}, mission: undefined }), enabled ? 'Starting the forge' : 'Active work will finish safely.');
-  if (enabled) void runCycle();
+  const intent = resolveForgePowerIntent({ enabled: Boolean(stored.efestoForgeEnabled), state: currentOrbState });
+  await chrome.storage.local.set({ efestoForgeEnabled: intent.enabled });
+  renderOrb(
+    deriveEfestoOrbState({ enabled: intent.enabled, kernel: 'ready', services: {}, mission: undefined }),
+    intent.retry ? 'Retrying the failed mission safely.' : intent.enabled ? 'Starting the forge' : 'Active work will finish safely.',
+  );
+  if (intent.enabled) void runCycle();
 });
 
 document.addEventListener('visibilitychange', () => {
@@ -91,7 +95,7 @@ async function runCycle() {
     await startGoalResearch(nextGoal.id, options);
     schedule(1000);
   } catch (error) {
-    renderOrb({ state: 'failed', label: 'Forge needs attention', detail: error instanceof Error ? error.message : 'Unable to read Kernel state.', active: false, smithActive: false, action: 'Retry safely' });
+    renderOrb({ state: 'failed', label: 'Forge needs attention', detail: error instanceof Error ? error.message : 'Unable to read Kernel state.', active: false, smithActive: false, action: 'Retry safely', enabled: true });
     schedule(5000);
   } finally {
     cycleRunning = false;
@@ -105,6 +109,7 @@ function schedule(delay = POLL_MS) {
 
 function renderOrb(view, overrideDetail) {
   if (!powerButton || !powerLabel || !powerDetail) return;
+  currentOrbState = view.state;
   const enabled = Boolean(view.enabled);
   powerButton.dataset.enabled = enabled ? 'true' : 'false';
   powerButton.dataset.state = view.state;
