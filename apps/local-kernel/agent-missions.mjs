@@ -3,6 +3,7 @@ import { InboxError } from './page-context-inbox.mjs';
 
 const AGENTS = new Set(['hermes']);
 const ACTIVE_STATUSES = new Set(['waiting_for_agent', 'queued']);
+const MAX_ATTEMPTS = 3;
 
 export class AgentMissionManager {
   constructor(store, options = {}) {
@@ -49,8 +50,22 @@ export class AgentMissionManager {
   }
 
   async list() {
-    const data = await this.store.read();
-    return (data.agentMissions ?? []).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const now = this.now();
+    return this.store.project(async (data) => {
+      const missions = Array.isArray(data.agentMissions) ? data.agentMissions : [];
+      let changed = false;
+      const reconciled = missions.map((mission) => {
+        const next = reconcileExpiredMission(mission, now);
+        if (next !== mission) changed = true;
+        return next;
+      });
+      const sorted = [...reconciled].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+      return {
+        changed,
+        data: changed ? { ...data, agentMissions: reconciled } : data,
+        result: sorted,
+      };
+    });
   }
 }
 
@@ -61,8 +76,30 @@ function isActive(mission, now) {
     && Date.parse(mission.leaseExpiresAt) > now.getTime();
 }
 
+function reconcileExpiredMission(mission, now) {
+  if (mission.status !== 'running') return mission;
+  const expiresAt = Date.parse(mission.leaseExpiresAt);
+  if (!Number.isFinite(expiresAt) || expiresAt > now.getTime()) return mission;
+  const exhausted = Number(mission.attempt ?? 0) >= MAX_ATTEMPTS;
+  const reconciledAt = now.toISOString();
+  const next = {
+    ...mission,
+    status: exhausted ? 'failed' : 'queued',
+    executionPhase: exhausted ? 'failed' : 'queued',
+    lastFailure: {
+      reason: exhausted ? 'Hermes did not complete before the final lease expired' : 'Hermes lease expired before completion',
+      recordedAt: reconciledAt,
+      attempt: Number(mission.attempt ?? 0),
+    },
+    limitation: exhausted ? 'Bounded external-agent attempts exhausted; explicit retry required' : 'Expired lease recovered and queued for retry',
+  };
+  delete next.leaseId;
+  delete next.leaseExpiresAt;
+  return next;
+}
+
 function restartMission(existing, goal, ready, now) {
-  const mission = {
+  return {
     id: existing.id,
     goalId: existing.goalId,
     goalTitle: goal.title,
@@ -74,7 +111,6 @@ function restartMission(existing, goal, ready, now) {
     attempt: 0,
     limitation: ready ? 'Awaiting bounded external-agent execution' : `${existing.agent} is not connected`,
   };
-  return mission;
 }
 
 function clean(value, max) {
