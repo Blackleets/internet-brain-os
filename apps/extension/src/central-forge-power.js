@@ -9,10 +9,18 @@ const livingForge = document.querySelector('#living-forge');
 let timer;
 let cycleRunning = false;
 
+document.body.dataset.efestoSimple = 'true';
 void initializePower();
 
 powerButton?.addEventListener('click', async () => {
-  const stored = await chrome.storage.local.get(['efestoForgeEnabled']);
+  const stored = await chrome.storage.local.get(['efestoForgeEnabled', 'kernelApiToken']);
+  if (!stored.kernelApiToken) {
+    document.body.dataset.needsKernel = 'true';
+    renderPower(false, 'Connect the private Kernel once, then press Efesto again.');
+    document.querySelector('#pairing-code')?.focus();
+    return;
+  }
+  document.body.dataset.needsKernel = 'false';
   const enabled = !Boolean(stored.efestoForgeEnabled);
   await chrome.storage.local.set({ efestoForgeEnabled: enabled });
   renderPower(enabled, enabled ? 'Starting the forge…' : 'Paused. Active work will finish safely.');
@@ -26,8 +34,9 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', () => clearTimeout(timer), { once: true });
 
 async function initializePower() {
-  const stored = await chrome.storage.local.get(['efestoForgeEnabled']);
+  const stored = await chrome.storage.local.get(['efestoForgeEnabled', 'kernelApiToken']);
   const enabled = Boolean(stored.efestoForgeEnabled);
+  document.body.dataset.needsKernel = stored.kernelApiToken ? 'false' : 'true';
   renderPower(enabled, enabled ? 'Efesto is watching your authorized Goals.' : 'Press once to start forging.');
   if (enabled) void runCycle();
 }
@@ -48,10 +57,12 @@ async function runCycle() {
       return;
     }
     if (!stored.kernelApiToken) {
-      renderPower(false, 'Connect the private Kernel before starting.');
+      document.body.dataset.needsKernel = 'true';
+      renderPower(false, 'Connect the private Kernel once, then press Efesto again.');
       await chrome.storage.local.set({ efestoForgeEnabled: false });
       return;
     }
+    document.body.dataset.needsKernel = 'false';
 
     const options = {
       baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL,
@@ -76,7 +87,7 @@ async function runCycle() {
 
     if (!nextGoal) {
       await chrome.storage.local.set({ efestoForgeEnabled: false, efestoForgeCompletedGoals: [] });
-      renderPower(false, goals.length ? 'Forge cycle complete. Results are in Finds and Obsidian.' : 'Create a Goal, then start the forge.');
+      renderPower(false, goals.length ? 'Cycle complete. Results saved in Finds and Obsidian.' : 'Add a Goal once from Advanced, then start Efesto.');
       livingForge?.setAttribute('data-activity', goals.length ? 'success' : 'idle');
       return;
     }
