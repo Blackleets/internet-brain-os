@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildHermesPrompt, parseHermesFindings } from './hermes-efesto-adapter.mjs';
+import { buildHermesArgs, buildHermesPrompt, parseHermesFindings } from './hermes-efesto-adapter.mjs';
 
 describe('Hermes Efesto adapter', () => {
   it('builds a bounded public research prompt from an authorized mission', () => {
@@ -10,6 +10,11 @@ describe('Hermes Efesto adapter', () => {
     expect(prompt).toContain('Return ONLY one valid JSON object');
     expect(prompt).toContain('Find grants in Madrid');
     expect(prompt).toContain('public-source research mission');
+  });
+
+  it('uses the Hermes v0.19 scripted one-shot CLI contract', () => {
+    const prompt = 'Return JSON only';
+    expect(buildHermesArgs(prompt)).toEqual(['-z', prompt]);
   });
 
   it('accepts strict JSON and bounded findings', () => {
