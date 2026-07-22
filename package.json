@@ -11,6 +11,7 @@
     "build": "tsc -b",
     "clean": "tsc -b --clean",
     "hermes:attack-smoke": "node scripts/hermes-idempotency-attack-test.mjs",
+    "hermes:efesto-adapter": "node scripts/hermes-efesto-adapter.mjs",
     "hermes:ingest-agent": "node scripts/hermes-ingest-agent-output.mjs",
     "hermes:smoke": "node scripts/hermes-smoke-test.mjs",
     "hermes:scan-sensitive": "node scripts/hermes-sensitive-data-scan.mjs",
