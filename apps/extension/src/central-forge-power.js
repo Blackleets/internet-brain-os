@@ -23,7 +23,7 @@ powerButton?.addEventListener('click', async () => {
   document.body.dataset.needsKernel = 'false';
   const enabled = !Boolean(stored.efestoForgeEnabled);
   await chrome.storage.local.set({ efestoForgeEnabled: enabled });
-  renderPower(enabled, enabled ? 'Starting the forge…' : 'Paused. Active work will finish safely.');
+  renderPower(enabled, enabled ? 'Starting the forge…' : 'Paused. Active work will finish safely in the background.');
   if (enabled) void runCycle();
 });
 
@@ -118,6 +118,8 @@ function renderPower(enabled, detail) {
   powerButton.setAttribute('aria-label', enabled ? 'Pause Efesto after current work' : 'Start Efesto');
   powerLabel.textContent = enabled ? 'EFESTO ON' : 'START EFESTO';
   powerDetail.textContent = detail;
+  document.body.dataset.efestoPowered = enabled ? 'true' : 'false';
+  if (!enabled) livingForge?.setAttribute('data-activity', 'idle');
 }
 
 function formatElapsed(milliseconds) {
