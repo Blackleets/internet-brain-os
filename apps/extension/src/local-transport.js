@@ -211,6 +211,23 @@ export async function getKernelStatus(options = {}) {
   };
 }
 
+export async function getEfestoBootstrapStatus(options = {}) {
+  const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  let response;
+  try {
+    response = await fetchImpl(`${baseUrl}/bootstrap/status`);
+  } catch {
+    throw new LocalTransportError('TRANSPORT', 'Unable to reach the Efesto bootstrap service');
+  }
+  if (!response.ok) throw new LocalTransportError('KERNEL_REJECTED', `Efesto bootstrap request failed with HTTP ${response.status}`);
+  const payload = await response.json();
+  if (payload?.schemaVersion !== 'efesto.bootstrap-status.v1' || !payload.overall || !payload.message) {
+    throw new LocalTransportError('INVALID_RESPONSE', 'Local Kernel returned an invalid Efesto bootstrap status');
+  }
+  return payload;
+}
+
 export async function pairKernel(code, options = {}) {
   const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
   const normalizedCode = typeof code === 'string' ? code.trim() : '';

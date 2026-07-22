@@ -53,6 +53,24 @@ describe('local Kernel HTTP receiver', () => {
     });
   });
 
+  it('exposes the shared Efesto bootstrap status contract without credentials', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, {
+      bootstrapStatus: () => ({
+        schemaVersion: 'efesto.bootstrap-status.v1',
+        ok: true,
+        kernel: 'ready', hermes: 'ready', obsidian: 'ready', pairing: 'paired', overall: 'ready',
+        message: 'Efesto is ready.', diagnostics: {}, actions: [{ id: 'open_efesto', label: 'Open Efesto' }],
+      }),
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const response = await fetch(`http://127.0.0.1:${server.address().port}/bootstrap/status`);
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({ schemaVersion: 'efesto.bootstrap-status.v1', overall: 'ready', pairing: 'paired' });
+    expect(JSON.stringify(body)).not.toContain(apiToken);
+  });
+
   it('reports Ollama configured only when the summarizer has a model', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));

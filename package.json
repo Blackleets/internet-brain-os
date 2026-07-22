@@ -18,6 +18,8 @@
     "hermes:validate-agent": "node scripts/hermes-validate-agent-output.mjs",
     "kernel:serve": "node apps/local-kernel/one-click-kernel.mjs",
     "kernel:serve:legacy": "node apps/local-kernel/server.mjs",
+    "efesto:bootstrap": "node scripts/efesto-bootstrap.mjs",
+    "efesto:launcher": "node scripts/efesto-launcher.mjs",
     "hermes:mission-worker": "node apps/local-kernel/hermes-mission-worker.mjs",
     "hermes:worker:doctor": "node scripts/hermes-worker-doctor.mjs",
     "orchestrator": "node scripts/orchestrator-cli.mjs",

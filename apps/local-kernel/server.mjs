@@ -18,11 +18,14 @@ import { AgentMissionManager } from './agent-missions.mjs';
 import { PreferenceLearner } from './preference-learner.mjs';
 import { AgentMissionExecutor } from './agent-mission-executor.mjs';
 import { ModelForge } from './model-forge.mjs';
+import { defaultEfestoPaths, inspectEfestoBootstrap, readLauncherConfig } from '../../scripts/efesto-bootstrap.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
 const dataDir = resolve(process.env.HEPHAESTUS_DATA_DIR ?? '.hephaestus');
 const isMain = Boolean(process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href);
+const launcherPaths = defaultEfestoPaths(process.env, process.cwd());
+const launcherConfig = isMain ? await readLauncherConfig({ paths: launcherPaths, env: process.env, cwd: process.cwd() }) : {};
 const tokenRecord = isMain
   ? await loadOrCreateApiToken(resolve(dataDir, 'kernel-api-token'), {
     envToken: process.env.HEPHAESTUS_API_TOKEN,
@@ -43,7 +46,7 @@ const opportunityProjector = new OpportunityProjector(knowledgeStore);
 const goalManager = new GoalManager(knowledgeStore);
 const obsidian = new ObsidianKnowledgeProjector(
   knowledgeStore,
-  resolve(process.env.HEPHAESTUS_OBSIDIAN_DIR ?? '.hephaestus/obsidian-vault'),
+  resolve(process.env.HEPHAESTUS_OBSIDIAN_DIR ?? launcherConfig.obsidianDir ?? '.hephaestus/obsidian-vault'),
 );
 const summarizer = new OptionalEvidenceSummarizer(knowledgeStore, {
   model: process.env.HEPHAESTUS_OLLAMA_MODEL,
@@ -78,6 +81,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const preferences = options.preferenceLearner;
   const missionExecutor = options.agentMissionExecutor;
   const models = options.modelForge;
+  const bootstrapStatus = options.bootstrapStatus;
   const hermesMaxBodyBytes = Number(options.hermesMaxBodyBytes ?? 256 * 1024);
   return createServer(async (request, response) => {
     if (!isLoopbackHost(request.headers.host)) {
@@ -102,6 +106,20 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         ollama: evidenceSummarizer?.isConfigured?.() === true ? 'configured' : 'not_configured',
         obsidian: obsidianProjector ? 'configured' : 'not_configured',
       });
+    }
+    if (request.method === 'GET' && request.url === '/bootstrap/status') {
+      try {
+        const body = bootstrapStatus
+          ? await bootstrapStatus()
+          : await inspectEfestoBootstrap({
+            ...(options.bootstrapProbeOptions ?? {}),
+            env: options.bootstrapProbeOptions?.env ?? process.env,
+            cwd: options.bootstrapProbeOptions?.cwd ?? process.cwd(),
+          });
+        return send(response, 200, body);
+      } catch {
+        return send(response, 500, { ok: false, code: 'BOOTSTRAP_STATUS_FAILED' });
+      }
     }
     if (request.method === 'GET' && request.url === '/replay-lab') {
       return sendHtml(response, 200, replayLabPageHtml);
