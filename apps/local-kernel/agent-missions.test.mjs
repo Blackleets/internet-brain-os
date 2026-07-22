@@ -46,4 +46,40 @@ describe('consented agent missions', () => {
     expect(restarted.lastFailure).toBeUndefined();
     expect(restarted.completedAt).toBeUndefined();
   });
+
+  it('marks an expired final lease as failed instead of reporting endless research', async () => {
+    const store = new LocalKnowledgeStore(join(await mkdtemp(join(tmpdir(), 'efesto-missions-')), 'store.json'));
+    const goal = await new GoalManager(store).create({ title: 'Find real funding', categories: ['grant'] });
+    const now = new Date('2026-07-22T22:30:00.000Z');
+    const manager = new AgentMissionManager(store, { isAgentReady: () => true, now: () => now });
+    const mission = await manager.create(goal.id, { agent: 'hermes', confirmed: true });
+
+    await store.project(async (data) => {
+      const stale = {
+        ...data.agentMissions[0],
+        status: 'running',
+        executionPhase: 'investigating',
+        attempt: 3,
+        claimedAt: '2026-07-22T18:00:00.000Z',
+        leaseId: 'stale-lease',
+        leaseExpiresAt: '2026-07-22T18:30:00.000Z',
+      };
+      return { changed: true, data: { ...data, agentMissions: [stale] }, result: stale };
+    });
+
+    const [reconciled] = await manager.list();
+    expect(reconciled).toMatchObject({
+      id: mission.id,
+      status: 'failed',
+      executionPhase: 'failed',
+      attempt: 3,
+      limitation: 'Bounded external-agent attempts exhausted; explicit retry required',
+      lastFailure: { reason: 'Hermes did not complete before the final lease expired', attempt: 3 },
+    });
+    expect(reconciled.leaseId).toBeUndefined();
+    expect(reconciled.leaseExpiresAt).toBeUndefined();
+
+    const persisted = (await store.read()).agentMissions[0];
+    expect(persisted.status).toBe('failed');
+  });
 });
