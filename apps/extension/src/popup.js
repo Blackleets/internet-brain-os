@@ -1,5 +1,7 @@
 import { createGoal, DEFAULT_KERNEL_BASE_URL, getKernelStatus, inspectModelForge, listAgentMissions, listCases, listGoals, listOpportunities, pairKernel, sendOpportunityFeedback, startGoalResearch } from './local-transport.js';
 import { presentFind } from './find-presentation.js';
+import { buildOpportunityCommandCenter } from './opportunity-command-center.js';
+import { buildOpportunityActionPlan, normalizeOpportunityReviewState, updateOpportunityReviewState } from './opportunity-action-workspace.js';
 import { normalizePublicOrigin } from './auto-capture-policy.js';
 import { forgeActivityForMission, temporaryForgeActivity } from './forge-activity.js';
 import { normalizeWorkspaceView, workspaceVisibility } from './workspace-navigation.js';
@@ -238,10 +240,13 @@ async function loadOpportunities(stored) {
   const inbox = $('#opportunity-list');
   if (!stored.kernelApiToken) return;
   const opportunities = await listOpportunities({ baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL, apiToken: stored.kernelApiToken });
+  const localReview = await chrome.storage.local.get('opportunityReviewState');
+  const reviewState = normalizeOpportunityReviewState(localReview.opportunityReviewState);
   $('#opportunity-count').textContent = String(opportunities.length);
   $('#find-nav-count').textContent = String(opportunities.length);
   productState.findCount = opportunities.length;
   renderGuide();
+  renderCommandCenter(opportunities);
   inbox.replaceChildren();
   if (!opportunities.length) {
     const empty = document.createElement('p');
@@ -250,10 +255,34 @@ async function loadOpportunities(stored) {
     inbox.append(empty);
     return;
   }
-  for (const item of opportunities.slice(0, 3)) inbox.append(renderOpportunity(item, stored));
+  for (const item of opportunities.slice(0, 3)) inbox.append(renderOpportunity(item, stored, reviewState));
 }
 
-function renderOpportunity(item, stored) {
+function renderCommandCenter(opportunities) {
+  const center = buildOpportunityCommandCenter(opportunities);
+  const container = $('#command-center-content');
+  container.replaceChildren();
+  if (!center.lead) {
+    const empty = document.createElement('p'); empty.className = 'empty'; empty.textContent = 'No action queue yet. Efesto needs a provenance-backed Find first.'; container.append(empty); return;
+  }
+
+  const lead = document.createElement('article'); lead.className = 'command-lead';
+  const flag = document.createElement('span'); flag.className = 'command-flag'; flag.textContent = 'ATTEND FIRST';
+  const title = document.createElement('strong'); title.textContent = center.lead.title;
+  const trust = document.createElement('small'); trust.textContent = `${center.lead.verificationLabel} · ${center.lead.objectiveRelevance}% Evidence relevance · ${center.lead.personalizedRelevance}% private match`;
+  lead.append(flag, title, trust, findSection('Why it is first', center.lead.reasons), findSection('Safe next move', [center.lead.nextAction]));
+  const openFind = document.createElement('button'); openFind.type = 'button'; openFind.textContent = 'Inspect full Evidence';
+  openFind.addEventListener('click', () => document.querySelector('.opportunity')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  lead.append(openFind); container.append(lead);
+
+  const metrics = document.createElement('div'); metrics.className = 'command-metrics';
+  for (const [value, label] of [[center.queue.length, 'in queue'], [center.goalLinkedCount, 'Goal-linked'], [center.deadlineCount, 'dates detected']]) {
+    const metric = document.createElement('span'); const strong = document.createElement('strong'); strong.textContent = String(value); const small = document.createElement('small'); small.textContent = label; metric.append(strong, small); metrics.append(metric);
+  }
+  container.append(metrics);
+}
+
+function renderOpportunity(item, stored, reviewState) {
   const presentation = presentFind(item);
   const card = document.createElement('article');
   card.className = 'opportunity';
@@ -282,6 +311,7 @@ function renderOpportunity(item, stored) {
   detail.append(findSection('Provenance', [presentation.sourceHost, presentation.evidenceId ? `Evidence: ${presentation.evidenceId}` : 'Evidence reference unavailable']));
   detail.append(findSection('Risks & limits', presentation.cautions));
   detail.append(findSection('Safe next step', [presentation.nextAction]));
+  detail.append(renderActionWorkspace(item, reviewState));
   card.append(detail);
   const actions = document.createElement('span'); actions.className = 'opportunity-actions';
   for (const [signal, label] of [['useful', 'Useful'], ['saved', 'Save'], ['not_interested', 'Not for me']]) {
@@ -299,6 +329,34 @@ function renderOpportunity(item, stored) {
   if (typeof item.sourceUrl === 'string') { const open = document.createElement('button'); open.type = 'button'; open.textContent = 'Open'; open.addEventListener('click', () => chrome.tabs.create({ url: item.sourceUrl })); actions.append(open); }
   card.append(actions);
   return card;
+}
+
+function renderActionWorkspace(item, reviewState) {
+  const section = document.createElement('section'); section.className = 'action-workspace';
+  const heading = document.createElement('span'); heading.className = 'action-workspace-heading';
+  const title = document.createElement('b'); title.textContent = 'SAFE ACTION WORKSPACE';
+  const progress = document.createElement('small');
+  heading.append(title, progress); section.append(heading);
+  const list = document.createElement('span'); list.className = 'action-checklist'; section.append(list);
+
+  const render = () => {
+    const plan = buildOpportunityActionPlan(item, reviewState[item.id]);
+    progress.textContent = `${plan.completedCount}/${plan.totalCount} · ${plan.statusLabel}`;
+    list.replaceChildren();
+    for (const step of plan.steps) {
+      const label = document.createElement('label');
+      const input = document.createElement('input'); input.type = 'checkbox'; input.checked = step.completed;
+      const copy = document.createElement('span'); copy.textContent = step.label;
+      input.addEventListener('change', async () => {
+        const next = updateOpportunityReviewState(reviewState, item.id, step.id, input.checked);
+        Object.keys(reviewState).forEach((key) => delete reviewState[key]); Object.assign(reviewState, next);
+        await chrome.storage.local.set({ opportunityReviewState: reviewState });
+        render(); setStatus('Private review progress saved locally. The lead remains unverified.');
+      });
+      label.append(input, copy); list.append(label);
+    }
+  };
+  render(); return section;
 }
 
 function findSection(title, lines) {

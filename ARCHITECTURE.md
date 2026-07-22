@@ -78,6 +78,10 @@ While the extension popup is visible, Agent Hub re-reads that authenticated miss
 
 When the popup is closed, a local Mission Watchtower uses a one-minute Manifest V3 alarm to read the same authenticated loopback mission list. Its first successful observation is only a baseline, so installation cannot replay historical notifications. It records at most 100 mission revisions and 20 terminal result events in extension-local storage, emits at most one generic desktop notification for a known mission entering `completed` or `failed`, and retains state across service-worker restarts. Notification text excludes Goal titles, sources, findings, and failure details to avoid leaking private context on a locked screen. Opening a notification routes to the Mission Forge Ledger; marking its result-center event read changes presentation state only and never advances, retries, or mutates the mission.
 
+The Finds workspace includes an Opportunity Command Center derived from the authenticated Inbox order already computed by the Kernel. It may identify the first record to inspect and explain that position using only retained Goal matches, objective Evidence relevance, personalized ordering, raw deadline presence, source, and the Kernel-provided next action. It must keep the record labeled as an unverified lead, must not parse raw deadline text into asserted urgency, must not create a hidden confidence score, and cannot open sources, submit forms, spend money, contact people, or otherwise act without the user.
+
+Each Find may also expose a Safe Action Workspace: a bounded category-aware checklist whose completion is stored only in extension-local storage. Checklist state is private human-review progress, not Evidence, Kernel verification, eligibility confirmation, source certification, or permission to act. It never changes Inbox ordering, feedback, mission state, or the permanent unverified-lead label, and retains at most 100 Find records.
+
 ## Research Runtime
 
 The research lifecycle is explicitly modeled:
