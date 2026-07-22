@@ -40,4 +40,17 @@ describe('Efesto orb UI static contract', () => {
     expect(guard).toContain('Receiving end does not exist');
     expect(guard).toContain("parsed.protocol === 'http:' || parsed.protocol === 'https:'");
   });
+
+  it('renders the mission returned by the Kernel immediately after starting research', () => {
+    const source = readFileSync(resolve('apps/extension/src/central-forge-power.js'), 'utf8');
+    expect(source).toContain('const startedMission = await startGoalResearch(nextGoal.id, options)');
+    expect(source).toContain('mission: startedMission');
+  });
+
+  it('never displays empty summaries or Obsidian receipts outside completed state', () => {
+    const source = readFileSync(resolve('apps/extension/src/central-forge-power.js'), 'utf8');
+    const css = readFileSync(resolve('apps/extension/src/central-forge-power.css'), 'utf8');
+    expect(source).toContain("renderObsidianReceipt(view.state === 'completed' ? view.obsidianReceipt : undefined)");
+    expect(css).toContain('.forge-power-panel [hidden]{display:none!important}');
+  });
 });
