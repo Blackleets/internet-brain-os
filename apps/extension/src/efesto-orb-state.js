@@ -23,6 +23,11 @@ export function deriveEfestoOrbState({ enabled = false, kernel = 'offline', serv
   return base('idle', 'START EFESTO', 'No active mission is present.', { enabled, active: false, smithActive: false, services: { hermesReady, obsidian } });
 }
 
+export function resolveForgePowerIntent({ enabled = false, state = 'idle' } = {}) {
+  if (state === 'failed') return { enabled: true, retry: true };
+  return { enabled: !enabled, retry: false };
+}
+
 export function selectNextGoal(goals = [], completedGoalIds = []) {
   const completed = new Set(completedGoalIds);
   return [...goals]
