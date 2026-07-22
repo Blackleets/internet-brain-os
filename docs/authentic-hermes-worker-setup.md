@@ -4,7 +4,7 @@ This guide prepares Efesto's Agent Hub worker to invoke the user's authentic Her
 
 ## Security boundary
 
-The worker sends one bounded `efesto.hermes-mission.v1` JSON object to the configured adapter over stdin. The adapter may invoke Hermes, but it must return only:
+The worker sends one bounded `efesto.hermes-mission.v1` JSON object to the bundled adapter over stdin. The adapter invokes the authentic Hermes CLI in scripted one-shot mode and returns only:
 
 ```json
 {
@@ -22,56 +22,55 @@ The worker sends one bounded `efesto.hermes-mission.v1` JSON object to the confi
 
 The Kernel still owns URL validation, Evidence creation, deduplication, Goal-scope enforcement, Opportunity classification, persistence, retry state, and final mission state.
 
-## Local configuration
+## Bundled adapter
 
-Use `examples/hermes-worker.env.example` as a reference. Keep the real values outside Git.
+`scripts/hermes-efesto-adapter.mjs`:
 
-Required variables:
+1. reads exactly one mission JSON object from stdin;
+2. validates `efesto.hermes-mission.v1`;
+3. builds a bounded public-research prompt;
+4. invokes the authentic CLI with `hermes -z`, source `tool`, and bounded turns;
+5. accepts only JSON containing at most 20 findings;
+6. rejects unsupported authority fields, oversized values, invalid output, timeouts, and non-zero exits;
+7. writes only `{ "findings": [...] }` to stdout.
 
-- `HEPHAESTUS_KERNEL_URL`: loopback HTTP only. Defaults to `http://127.0.0.1:4000`.
-- `HEPHAESTUS_API_TOKEN`: private token stored by the local Kernel.
-- `HEPHAESTUS_HERMES_COMMAND`: executable thin adapter for the user's real Hermes installation.
-- `HEPHAESTUS_HERMES_ARGS_JSON`: optional JSON array of adapter arguments.
+The Kernel performs the final URL, scope, provenance, deduplication, and persistence validation again.
 
-## Adapter contract
+## Windows local configuration
 
-The adapter must:
+Keep all values in the current PowerShell session or another ignored private environment file. Never commit tokens or private paths.
 
-1. Read exactly one JSON object from stdin.
-2. Confirm `schemaVersion` equals `efesto.hermes-mission.v1`.
-3. Use only the authorized mission scope supplied by Efesto.
-4. Invoke the authentic Hermes runtime without shell interpolation.
-5. Write exactly one result JSON object to stdout.
-6. Write diagnostic logs only to stderr.
-7. Exit non-zero on runtime or conversion failure.
-8. Never return credentials, raw private sessions, local URLs, private-network URLs, or Kernel authority fields.
+```powershell
+$env:HEPHAESTUS_API_TOKEN = (Get-Content ".hephaestus\kernel-api-token" -Raw).Trim()
+$env:HEPHAESTUS_HERMES_COMMAND = (Get-Command node).Source
+$env:HEPHAESTUS_HERMES_ARGS_JSON = '["scripts/hermes-efesto-adapter.mjs"]'
+$env:HEPHAESTUS_HERMES_EXECUTABLE = "C:\Users\Usuario\AppData\Local\hermes\hermes-agent\venv\Scripts\hermes.exe"
+```
 
-The worker enforces a four-minute default timeout, a 512 KiB total output limit, and a maximum of 20 findings.
+`HEPHAESTUS_KERNEL_URL` defaults to `http://127.0.0.1:4000` and remains loopback-only.
 
 ## Readiness check
 
-Start the local Kernel, export the private variables, and run:
+Start the Kernel in one terminal:
 
-```bash
-pnpm hermes:worker:doctor
+```powershell
+pnpm run kernel:serve
 ```
 
-The doctor verifies:
+In the configured second terminal:
 
-- loopback-only Kernel URL;
-- token presence without printing it;
-- valid JSON adapter arguments;
-- adapter executable resolution;
-- authenticated Kernel reachability.
+```powershell
+pnpm run hermes:worker:doctor
+```
 
-It does not invoke Hermes and does not consume model credits.
+The doctor verifies the Kernel URL, token presence, adapter command, arguments, and authenticated Kernel reachability without invoking Hermes or consuming credits.
 
 ## Execute one worker cycle
 
-After creating a consented Goal mission in Efesto:
+After creating an explicitly consented Goal mission in Efesto:
 
-```bash
-pnpm hermes:mission-worker
+```powershell
+pnpm run hermes:mission-worker
 ```
 
 Possible results:
@@ -82,4 +81,4 @@ Possible results:
 
 ## Acceptance evidence
 
-Issue #101 is complete only after a real configured Hermes runtime executes a consented mission. Do not use a fake adapter, generated screenshot, or synthetic fixture as proof. Sanitized evidence may include mission identifiers, timestamps, state transitions, counts, and public URLs, but not raw private prompts, tool output, tokens, credentials, or session contents.
+Issue #101 is complete only after the user's authentic Hermes CLI executes a consented mission. Do not use a fake adapter, generated screenshot, or synthetic fixture as proof. Sanitized evidence may include mission identifiers, timestamps, state transitions, counts, and public URLs, but not raw private prompts, tool output, tokens, credentials, or session contents.
