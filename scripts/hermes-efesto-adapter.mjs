@@ -28,6 +28,11 @@ export function buildHermesPrompt(payload) {
   ].join('\n');
 }
 
+export function buildHermesArgs(prompt) {
+  if (typeof prompt !== 'string' || !prompt.trim()) throw new Error('Hermes prompt is required');
+  return ['-z', prompt];
+}
+
 export function parseHermesFindings(text) {
   if (typeof text !== 'string' || !text.trim()) throw new Error('Hermes returned empty output');
   const trimmed = text.trim();
@@ -66,7 +71,7 @@ function bounded(value, max, label) {
 export async function runHermesOneShot(payload, options = {}) {
   const executable = options.executable ?? process.env.HEPHAESTUS_HERMES_EXECUTABLE ?? 'hermes';
   const prompt = buildHermesPrompt(payload);
-  const args = ['-z', prompt, '--source', 'tool', '--max-turns', String(options.maxTurns ?? 24)];
+  const args = buildHermesArgs(prompt);
   return new Promise((resolve, reject) => {
     const child = spawn(executable, args, { shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = ''; let stderr = ''; let bytes = 0; let settled = false;
