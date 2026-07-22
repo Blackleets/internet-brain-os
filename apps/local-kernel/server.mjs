@@ -12,6 +12,12 @@ import { ExtensionIdentityRegistry } from './extension-identity-registry.mjs';
 import { createHermesLocalIngestionRoute } from './hermes-route-factory.mjs';
 import { HermesImportError } from './hermes-import-service.mjs';
 import { replayLabPageHtml } from './replay-lab-page.mjs';
+import { OpportunityProjector } from './opportunity-classifier.mjs';
+import { GoalManager } from './goals.mjs';
+import { AgentMissionManager } from './agent-missions.mjs';
+import { PreferenceLearner } from './preference-learner.mjs';
+import { AgentMissionExecutor } from './agent-mission-executor.mjs';
+import { ModelForge } from './model-forge.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
@@ -33,6 +39,8 @@ const dataFile = resolve(dataDir, 'page-context-inbox.jsonl');
 const inbox = new PageContextInbox(dataFile);
 const knowledgeStore = new LocalKnowledgeStore(resolve(dataDir, 'store.json'));
 const projector = new CaptureCaseEvidenceProjector(knowledgeStore);
+const opportunityProjector = new OpportunityProjector(knowledgeStore);
+const goalManager = new GoalManager(knowledgeStore);
 const obsidian = new ObsidianKnowledgeProjector(
   knowledgeStore,
   resolve(process.env.HEPHAESTUS_OBSIDIAN_DIR ?? '.hephaestus/obsidian-vault'),
@@ -48,6 +56,13 @@ const hermes = isMain
     secret: process.env.IBOS_HERMES_SECRET ?? process.env.HEPHAESTUS_HERMES_SECRET,
   })
   : undefined;
+const agentMissionManager = new AgentMissionManager(knowledgeStore, { isAgentReady: (agent) => agent === 'hermes' && Boolean(hermes) });
+const preferenceLearner = new PreferenceLearner(knowledgeStore);
+const agentMissionExecutor = new AgentMissionExecutor(knowledgeStore, opportunityProjector);
+const modelForge = new ModelForge({
+  baseUrl: process.env.HEPHAESTUS_OLLAMA_URL,
+  activeModel: process.env.HEPHAESTUS_OLLAMA_MODEL,
+});
 
 export function createLocalKernelServer(captureInbox, captureProjector, obsidianProjector, evidenceSummarizer, options = {}) {
   const requiredToken = options.apiToken === undefined ? undefined : validateApiToken(options.apiToken);
@@ -56,6 +71,12 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const hermesRoute = options.hermesRoute;
   const replayLabQuery = options.replayLabQuery;
   const hermesImportService = options.hermesImportService;
+  const opportunities = options.opportunityProjector;
+  const goals = options.goalManager;
+  const agentMissions = options.agentMissionManager;
+  const preferences = options.preferenceLearner;
+  const missionExecutor = options.agentMissionExecutor;
+  const models = options.modelForge;
   const hermesMaxBodyBytes = Number(options.hermesMaxBodyBytes ?? 256 * 1024);
   return createServer(async (request, response) => {
     if (!isLoopbackHost(request.headers.host)) {
@@ -137,6 +158,105 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         return send(response, 500, { ok: false, code: 'INTERNAL_ERROR' });
       }
     }
+    if (request.method === 'GET' && request.url === '/api/model-forge') {
+      if (!models) return send(response, 404, { ok: false, code: 'MODEL_FORGE_UNAVAILABLE' });
+      try { return send(response, 200, { ok: true, forge: await models.inspect() }); }
+      catch { return send(response, 500, { ok: false, code: 'MODEL_FORGE_INSPECTION_FAILED' }); }
+    }
+    if (request.method === 'GET' && request.url === '/api/opportunities') {
+      if (!opportunities) return send(response, 404, { ok: false, code: 'OPPORTUNITY_INBOX_UNAVAILABLE' });
+      try {
+        return send(response, 200, { ok: true, opportunities: await opportunities.list() });
+      } catch {
+        return send(response, 500, { ok: false, code: 'OPPORTUNITY_INBOX_FAILED' });
+      }
+    }
+    if (request.method === 'POST' && request.url?.startsWith('/api/opportunities/') && request.url.endsWith('/feedback')) {
+      if (!preferences) return send(response, 404, { ok: false, code: 'PREFERENCE_LEARNING_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try {
+        const opportunityId = decodeURIComponent(request.url.slice('/api/opportunities/'.length, -'/feedback'.length));
+        return send(response, 201, { ok: true, feedback: await preferences.record(opportunityId, await readJson(request)) });
+      } catch (error) {
+        if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'PREFERENCE_FEEDBACK_FAILED' });
+      }
+    }
+    if (request.method === 'GET' && request.url === '/api/preferences') {
+      if (!preferences) return send(response, 404, { ok: false, code: 'PREFERENCE_LEARNING_UNAVAILABLE' });
+      try { return send(response, 200, { ok: true, profile: await preferences.profile() }); }
+      catch { return send(response, 500, { ok: false, code: 'PREFERENCE_PROFILE_FAILED' }); }
+    }
+    if (request.method === 'DELETE' && request.url === '/api/preferences') {
+      if (!preferences) return send(response, 404, { ok: false, code: 'PREFERENCE_LEARNING_UNAVAILABLE' });
+      try { return send(response, 200, { ok: true, ...(await preferences.reset()) }); }
+      catch { return send(response, 500, { ok: false, code: 'PREFERENCE_RESET_FAILED' }); }
+    }
+    if (request.url === '/api/goals' && request.method === 'GET') {
+      if (!goals) return send(response, 404, { ok: false, code: 'GOALS_UNAVAILABLE' });
+      try { return send(response, 200, { ok: true, goals: await goals.list() }); }
+      catch { return send(response, 500, { ok: false, code: 'GOALS_FAILED' }); }
+    }
+    if (request.url === '/api/goals' && request.method === 'POST') {
+      if (!goals) return send(response, 404, { ok: false, code: 'GOALS_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try {
+        const goal = await goals.create(await readJson(request));
+        const obsidianNotes = obsidianProjector?.syncGoals ? await obsidianProjector.syncGoals() : undefined;
+        return send(response, 201, { ok: true, goal, obsidianNotes });
+      }
+      catch (error) {
+        if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'GOAL_CREATE_FAILED' });
+      }
+    }
+    if (request.url === '/api/agent-missions' && request.method === 'GET') {
+      if (!agentMissions) return send(response, 404, { ok: false, code: 'AGENT_MISSIONS_UNAVAILABLE' });
+      try { return send(response, 200, { ok: true, missions: await agentMissions.list() }); }
+      catch { return send(response, 500, { ok: false, code: 'AGENT_MISSIONS_FAILED' }); }
+    }
+    if (request.method === 'POST' && request.url?.startsWith('/api/goals/') && request.url.endsWith('/missions')) {
+      if (!agentMissions) return send(response, 404, { ok: false, code: 'AGENT_MISSIONS_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try {
+        const goalId = decodeURIComponent(request.url.slice('/api/goals/'.length, -'/missions'.length));
+        return send(response, 201, { ok: true, mission: await agentMissions.create(goalId, await readJson(request)) });
+      } catch (error) {
+        if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'AGENT_MISSION_CREATE_FAILED' });
+      }
+    }
+    if (request.method === 'POST' && request.url === '/api/agent-missions/claim') {
+      if (!missionExecutor) return send(response, 404, { ok: false, code: 'AGENT_EXECUTOR_UNAVAILABLE' });
+      try {
+        const mission = await missionExecutor.claim('hermes');
+        return send(response, mission ? 200 : 204, mission ? { ok: true, mission } : undefined);
+      } catch { return send(response, 500, { ok: false, code: 'AGENT_MISSION_CLAIM_FAILED' }); }
+    }
+    if (request.method === 'POST' && request.url?.startsWith('/api/agent-missions/') && request.url.endsWith('/results')) {
+      if (!missionExecutor) return send(response, 404, { ok: false, code: 'AGENT_EXECUTOR_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try {
+        const missionId = decodeURIComponent(request.url.slice('/api/agent-missions/'.length, -'/results'.length));
+        const completed = await missionExecutor.complete(missionId, await readJson(request));
+        for (const finding of completed.findings) if (finding.caseId && obsidianProjector) await obsidianProjector.syncCase(finding.caseId);
+        return send(response, 202, { ok: true, ...completed });
+      } catch (error) {
+        if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'AGENT_RESULT_INGESTION_FAILED' });
+      }
+    }
+    if (request.method === 'POST' && request.url?.startsWith('/api/agent-missions/') && request.url.endsWith('/failures')) {
+      if (!missionExecutor) return send(response, 404, { ok: false, code: 'AGENT_EXECUTOR_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try {
+        const missionId = decodeURIComponent(request.url.slice('/api/agent-missions/'.length, -'/failures'.length));
+        return send(response, 202, { ok: true, mission: await missionExecutor.fail(missionId, await readJson(request)) });
+      } catch (error) {
+        if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'AGENT_FAILURE_REPORT_FAILED' });
+      }
+    }
     if (request.method === 'GET' && request.url === '/api/replay-lab/cases') {
       if (!replayLabQuery) return send(response, 404, { ok: false, code: 'REPLAY_LAB_UNAVAILABLE' });
       try {
@@ -188,10 +308,13 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       const intelligence = projection && evidenceSummarizer
         ? await evidenceSummarizer.summarize(projection.evidenceId)
         : undefined;
+      const opportunity = projection && opportunities
+        ? await opportunities.project(body, projection)
+        : undefined;
       const obsidianNotes = projection && obsidianProjector
         ? await obsidianProjector.syncCase(projection.caseId)
         : undefined;
-      return send(response, 202, { ok: true, ...receipt, ...projection, intelligence, obsidianNotes });
+      return send(response, 202, { ok: true, ...receipt, ...projection, intelligence, opportunity, obsidianNotes });
     } catch (error) {
       const known = error instanceof InboxError;
       return send(response, known ? error.status : 500, {
@@ -210,6 +333,12 @@ export const server = createLocalKernelServer(inbox, projector, obsidian, summar
   hermesRoute: hermes?.route,
   replayLabQuery: hermes?.replayLabQuery,
   hermesImportService: hermes?.importService,
+  opportunityProjector,
+  goalManager,
+  agentMissionManager,
+  preferenceLearner,
+  agentMissionExecutor,
+  modelForge,
 });
 
 if (isMain) {
@@ -280,7 +409,7 @@ function setCors(origin, response) {
     response.setHeader('access-control-allow-origin', origin);
     response.setHeader('vary', 'Origin');
   }
-  response.setHeader('access-control-allow-methods', 'POST, GET, OPTIONS');
+  response.setHeader('access-control-allow-methods', 'POST, GET, DELETE, OPTIONS');
   response.setHeader('access-control-allow-headers', 'content-type, x-hephaestus-token, x-ibos-idempotency-key, x-ibos-timestamp, x-ibos-signature');
   response.setHeader('x-content-type-options', 'nosniff');
   response.setHeader('cache-control', 'no-store');

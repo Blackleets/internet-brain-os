@@ -41,7 +41,19 @@ Status legend for the execution sections below:
 
 ## North star
 
-A reviewer should understand the product in five minutes and run a safe demo in ten minutes.
+A user should install Efesto, authorize a public site, and see useful opportunity Evidence reach their private local intelligence system without handling JSON or opening Replay Lab.
+
+The primary experience is now:
+
+```text
+user browses an authorized public site
+→ Efesto captures safely in the background
+→ local Kernel preserves Evidence and provenance
+→ local model classifies useful opportunities
+→ Hermes or another connected agent investigates promising findings
+→ Obsidian receives curated knowledge
+→ Replay Lab explains decisions only when advanced detail is needed
+```
 
 The ideal experience:
 
@@ -202,7 +214,22 @@ Hermes proposes. Kernel verifies. Contradiction checks. Admission decides. Memor
 
 Purpose: make external review safe.
 
-Status: **local and clean-clone release gates pass** with 56 test files / 275 tests plus the complete first-run smoke chain. The forensic UI is merged with green CI. A real Hermes proof remains required before a pre-alpha tag.
+Status: **local validation passes** with 58 test files / 290 tests plus typecheck and build. The forensic UI and authenticated real-capture importer are merged; the Efesto automatic browser radar is implemented locally and awaits review/CI. A real Hermes proof remains required before a pre-alpha tag.
+
+## Phase G — Efesto Opportunity Radar
+
+Purpose: restore the original product promise: navigate normally while Efesto finds and preserves useful public information in parallel.
+
+- [x] Redesign the extension as the primary Efesto surface.
+- [x] Require explicit authorization per public origin.
+- [x] Automatically block sensitive routes, query keys, selections, and rapid repeat captures.
+- [x] Keep every automatic capture inside the user's loopback Kernel and Obsidian destination.
+- [x] Show truthful readiness for Kernel, Hermes, local model, and Obsidian.
+- [ ] Classify opportunities and suppress ordinary low-value pages.
+- [ ] Add a simple Opportunity inbox and notifications.
+- [ ] Add one-click Agent Hub onboarding, beginning with Hermes.
+- [ ] Add guided Model Forge setup for audited local models.
+- [ ] Specify opt-in collective signals without transferring private browsing or vault content.
 
 Checklist:
 

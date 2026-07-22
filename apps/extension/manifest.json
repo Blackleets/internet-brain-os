@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Hephaestus Browser Copilot",
+  "name": "Efesto Opportunity Radar",
   "version": "0.1.0",
-  "description": "Capture structured public-page context for the local Hephaestus Kernel.",
-  "permissions": ["activeTab", "storage"],
+  "description": "Private, local-first opportunity intelligence while you browse.",
+  "permissions": ["activeTab", "storage", "alarms", "notifications"],
   "host_permissions": ["http://127.0.0.1/*", "http://localhost/*", "http://*/*", "https://*/*"],
   "background": {
     "service_worker": "src/background.js",

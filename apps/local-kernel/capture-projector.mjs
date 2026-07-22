@@ -25,11 +25,16 @@ export class LocalKnowledgeStore {
     try {
       const parsed = JSON.parse(await readFile(this.filePath, 'utf8'));
       return {
+        ...parsed,
         cases: Array.isArray(parsed.cases) ? parsed.cases : [],
         evidence: Array.isArray(parsed.evidence) ? parsed.evidence : [],
+        opportunities: Array.isArray(parsed.opportunities) ? parsed.opportunities : [],
+        goals: Array.isArray(parsed.goals) ? parsed.goals : [],
+        agentMissions: Array.isArray(parsed.agentMissions) ? parsed.agentMissions : [],
+        preferenceFeedback: Array.isArray(parsed.preferenceFeedback) ? parsed.preferenceFeedback : [],
       };
     } catch (error) {
-      if (error?.code === 'ENOENT') return { cases: [], evidence: [] };
+      if (error?.code === 'ENOENT') return { cases: [], evidence: [], opportunities: [], goals: [], agentMissions: [], preferenceFeedback: [] };
       if (error instanceof SyntaxError) throw new InboxError('CORRUPT_KNOWLEDGE_STORE', 'Local knowledge store contains invalid JSON', 500);
       throw error;
     }
@@ -105,6 +110,7 @@ export class CaptureCaseEvidenceProjector {
       return {
         changed: true,
         data: {
+          ...data,
           cases: context.targetCaseId ? data.cases : [...data.cases, caseRecord],
           evidence: [...data.evidence, evidenceRecord],
         },

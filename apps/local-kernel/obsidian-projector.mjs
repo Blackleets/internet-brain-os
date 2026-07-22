@@ -13,6 +13,7 @@ export class ObsidianKnowledgeProjector {
     const caseRecord = data.cases.find((item) => item.id === caseId);
     if (!caseRecord) throw new InboxError('CASE_NOT_FOUND', `Case not found: ${caseId}`, 404);
     const evidence = data.evidence.filter((item) => item.caseId === caseId);
+    const opportunities = (data.opportunities ?? []).filter((item) => item.caseId === caseId);
     const caseFile = `${safeId(caseId)}.md`;
 
     await Promise.all([
@@ -22,14 +23,76 @@ export class ObsidianKnowledgeProjector {
         join(this.vaultPath, 'Evidence', `${safeId(item.id)}.md`),
         renderEvidence(item, caseRecord),
       )),
+      ...opportunities.map((item) => atomicNote(
+        join(this.vaultPath, 'Opportunities', `${safeId(item.id)}.md`),
+        renderOpportunity(item, caseRecord),
+      )),
     ]);
 
     return {
       caseNote: `Cases/${caseFile}`,
       reportNote: `Reports/${caseFile}`,
       evidenceNotes: evidence.map((item) => `Evidence/${safeId(item.id)}.md`),
+      opportunityNotes: opportunities.map((item) => `Opportunities/${safeId(item.id)}.md`),
     };
   }
+
+  async syncGoals() {
+    const data = await this.store.read();
+    const goals = (data.goals ?? []).filter((item) => item?.status === 'active');
+    await Promise.all(goals.map((item) => atomicNote(
+      join(this.vaultPath, 'Goals', `${safeId(item.id)}.md`),
+      renderGoal(item),
+    )));
+    return { goalNotes: goals.map((item) => `Goals/${safeId(item.id)}.md`) };
+  }
+}
+
+function renderGoal(item) {
+  return [
+    '---', `id: ${yaml(item.id)}`, 'type: goal', `status: ${yaml(item.status)}`,
+    `priority: ${Number(item.priority)}`, `created_at: ${yaml(item.createdAt)}`, '---', '',
+    `# ${markdownText(item.title)}`, '',
+    `**Categories:** ${(item.categories ?? []).map(markdownText).join(', ') || 'Open discovery'}`,
+    `**Keywords:** ${(item.keywords ?? []).map(markdownText).join(', ') || 'None'}`,
+    item.location ? `**Location:** ${markdownText(item.location)}` : '**Location:** Anywhere', '',
+    '> This private Goal guides local prioritization. External agent research requires a separately enabled Agent Hub.', '',
+  ].join('\n');
+}
+
+function renderOpportunity(item, caseRecord) {
+  return [
+    '---',
+    `id: ${yaml(item.id)}`,
+    'type: opportunity',
+    `category: ${yaml(item.category)}`,
+    `benefit_type: ${yaml(item.benefitType)}`,
+    `relevance: ${Number(item.relevance ?? 0)}`,
+    `status: ${yaml(item.status)}`,
+    `detected_at: ${yaml(item.detectedAt)}`,
+    `evidence_id: ${yaml(item.evidenceId)}`,
+    '---',
+    '',
+    `# ${markdownText(item.title)}`,
+    '',
+    `**Category:** ${markdownText(item.categoryLabel ?? item.category)}`,
+    `**Benefit:** ${markdownText(item.benefitType ?? 'useful lead')}`,
+    `**Relevance:** ${Number(item.relevance ?? 0)} / 99`,
+    `**Source:** ${item.sourceUrl}`,
+    item.deadlineText ? `**Deadline found:** ${markdownText(item.deadlineText)}` : '**Deadline found:** Not detected',
+    `**Case:** [[Cases/${safeId(caseRecord.id)}|${linkLabel(caseRecord.title)}]]`,
+    '',
+    '## Why Efesto flagged it',
+    '',
+    ...((item.reasons ?? []).map((reason) => `- ${markdownText(reason)}`)),
+    '',
+    '## Next action',
+    '',
+    markdownText(item.nextAction),
+    '',
+    '> This is a deterministic lead, not a verified recommendation. Review the primary source before acting.',
+    '',
+  ].join('\n');
 }
 
 function renderCase(record, evidence) {
