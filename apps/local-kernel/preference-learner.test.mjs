@@ -30,4 +30,15 @@ describe('private preference learner', () => {
     await learner.reset();
     expect(await learner.profile()).toEqual({ categories: {}, benefitTypes: {}, sources: {}, eventCount: 0 });
   });
+
+  it('atomically removes explicitly dismissed opportunities from the Inbox', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'efesto-learning-dismiss-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    await store.write({ opportunities: [{ id: 'opportunity:gone', status: 'new', category: 'job', benefitType: 'income', sourceHost: 'jobs.example' }] });
+    const learner = new PreferenceLearner(store);
+    await learner.record('opportunity:gone', { signal: 'dismissed' });
+    const data = await store.read();
+    expect(data.opportunities[0].status).toBe('dismissed');
+    expect(data.preferenceFeedback).toHaveLength(1);
+  });
 });

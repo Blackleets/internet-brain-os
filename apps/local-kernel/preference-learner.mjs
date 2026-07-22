@@ -16,13 +16,21 @@ export class PreferenceLearner {
       const feedback = Array.isArray(data.preferenceFeedback) ? data.preferenceFeedback : [];
       const id = `${opportunityId}:${input.signal}`;
       const previous = feedback.find((item) => item.id === id);
-      if (previous) return { changed: false, data, result: previous };
+      const opportunities = input.signal === 'dismissed'
+        ? (data.opportunities ?? []).map((item) => item.id === opportunityId ? { ...item, status: 'dismissed' } : item)
+        : data.opportunities;
+      const statusChanged = input.signal === 'dismissed' && opportunity.status !== 'dismissed';
+      if (previous) return { changed: statusChanged, data: statusChanged ? { ...data, opportunities } : data, result: previous };
       const event = {
         id, opportunityId, signal: input.signal,
         category: opportunity.category, benefitType: opportunity.benefitType,
         sourceHost: opportunity.sourceHost, recordedAt: new Date().toISOString(),
       };
-      return { changed: true, data: { ...data, preferenceFeedback: [...feedback.slice(-(MAX_EVENTS - 1)), event] }, result: event };
+      return {
+        changed: true,
+        data: { ...data, opportunities, preferenceFeedback: [...feedback.slice(-(MAX_EVENTS - 1)), event] },
+        result: event,
+      };
     });
   }
 

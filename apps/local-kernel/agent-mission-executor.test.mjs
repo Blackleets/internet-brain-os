@@ -60,4 +60,32 @@ describe('external agent mission executor boundary', () => {
     }
     expect(await executor.claim()).toBeUndefined();
   });
+
+  it('counts only newly created Evidence when a result batch repeats a URL', async () => {
+    const store = new LocalKnowledgeStore(join(await mkdtemp(join(tmpdir(), 'efesto-executor-duplicates-')), 'store.json'));
+    const goal = await new GoalManager(store).create({ title: 'Find remote AI work', categories: ['job'] });
+    const mission = await new AgentMissionManager(store, { isAgentReady: () => true }).create(goal.id, { agent: 'hermes', confirmed: true });
+    const executor = new AgentMissionExecutor(store, new OpportunityProjector(store));
+    const claim = await executor.claim();
+    const finding = { url: 'https://jobs.example/repeated', title: 'Remote AI role', text: 'We are hiring for a full-time remote role with salary. Apply now.' };
+    const completed = await executor.complete(mission.id, { leaseId: claim.leaseId, findings: [finding, finding] });
+    expect(completed.mission.resultSummary).toMatchObject({ received: 2, evidenceCreated: 1 });
+    expect((await store.read()).evidence).toHaveLength(1);
+  });
+
+  it.each([
+    'http://[::1]/finding',
+    'http://[fd00::1]/finding',
+    'http://[fe80::1]/finding',
+    'http://[::ffff:127.0.0.1]/finding',
+    'http://[::ffff:192.168.1.2]/finding',
+  ])('rejects private IPv6 mission result URL %s', async (url) => {
+    const store = new LocalKnowledgeStore(join(await mkdtemp(join(tmpdir(), 'efesto-executor-ipv6-')), 'store.json'));
+    const goal = await new GoalManager(store).create({ title: 'Find grants', categories: ['grant'] });
+    const mission = await new AgentMissionManager(store, { isAgentReady: () => true }).create(goal.id, { agent: 'hermes', confirmed: true });
+    const executor = new AgentMissionExecutor(store, new OpportunityProjector(store));
+    const claim = await executor.claim();
+    await expect(executor.complete(mission.id, { leaseId: claim.leaseId, findings: [{ url, title: 'Private', text: 'Private result' }] }))
+      .rejects.toMatchObject({ code: 'INVALID_AGENT_RESULT' });
+  });
 });

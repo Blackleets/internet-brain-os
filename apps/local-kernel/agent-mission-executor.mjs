@@ -65,7 +65,11 @@ export class AgentMissionExecutor {
       requireActiveLease(current, leaseId, this.now());
       const completed = {
         ...current, status: 'completed', executionPhase: 'forged', completedAt, forgedAt: completedAt,
-        resultSummary: { received: findings.length, evidenceCreated: accepted.length, opportunitiesPromoted: promoted },
+        resultSummary: {
+          received: findings.length,
+          evidenceCreated: accepted.filter((item) => !item.duplicate).length,
+          opportunitiesPromoted: promoted,
+        },
       };
       delete completed.leaseId;
       delete completed.leaseExpiresAt;
@@ -214,10 +218,55 @@ function invalid(message) { return new InboxError('INVALID_AGENT_RESULT', messag
 function isPrivateHost(hostname) {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
   if (host === 'localhost' || host === '::1' || host.endsWith('.local')) return true;
+  const ipv6 = parseIpv6(host);
+  if (ipv6) {
+    if (ipv6.every((value) => value === 0)) return true;
+    if (ipv6.slice(0, 15).every((value) => value === 0) && ipv6[15] === 1) return true;
+    if ((ipv6[0] & 0xfe) === 0xfc) return true;
+    if (ipv6[0] === 0xfe && (ipv6[1] & 0xc0) === 0x80) return true;
+    if (ipv6.slice(0, 10).every((value) => value === 0) && ipv6[10] === 0xff && ipv6[11] === 0xff) {
+      return isPrivateIpv4(ipv6.slice(12));
+    }
+    return false;
+  }
   const match = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (!match) return false;
   const octets = match.slice(1).map(Number);
+  return isPrivateIpv4(octets);
+}
+
+function isPrivateIpv4(octets) {
   return octets.some((value) => value > 255) || octets[0] === 10 || octets[0] === 127
     || (octets[0] === 169 && octets[1] === 254) || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31)
     || (octets[0] === 192 && octets[1] === 168) || octets[0] === 0;
+}
+
+function parseIpv6(host) {
+  if (!host.includes(':')) return undefined;
+  const halves = host.split('::');
+  if (halves.length > 2) return undefined;
+  const left = parseIpv6Half(halves[0]);
+  const right = parseIpv6Half(halves[1] ?? '');
+  if (!left || !right) return undefined;
+  const missing = 8 - left.length - right.length;
+  if ((halves.length === 1 && missing !== 0) || (halves.length === 2 && missing < 1)) return undefined;
+  const words = [...left, ...Array(missing).fill(0), ...right];
+  if (words.length !== 8) return undefined;
+  return words.flatMap((word) => [word >> 8, word & 0xff]);
+}
+
+function parseIpv6Half(value) {
+  if (!value) return [];
+  const words = [];
+  for (const part of value.split(':')) {
+    if (/^[0-9a-f]{1,4}$/i.test(part)) words.push(Number.parseInt(part, 16));
+    else {
+      const ipv4 = part.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+      if (!ipv4) return undefined;
+      const octets = ipv4.slice(1).map(Number);
+      if (octets.some((octet) => octet > 255)) return undefined;
+      words.push((octets[0] << 8) | octets[1], (octets[2] << 8) | octets[3]);
+    }
+  }
+  return words;
 }
