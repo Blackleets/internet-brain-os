@@ -44,12 +44,14 @@ Then read, in order:
 - PR #87: truthful Ollama readiness contract merged and proven in CI.
 - PR #92: deterministic Causality Map, AI Autopsy, and read-only Prevention proposals merged and proven in CI.
 - PR #94: local API token validation and fail-closed POSIX permission handling merged and proven in CI.
+- PR #96: local validate-then-confirm import of authentic Hermes JSON/JSONL captures merged without exposing the Hermes boundary secret.
 - Issue #10: Internal Orchestrator v0 closed as completed with PR #73–#77 evidence.
-- Validation baseline: `pnpm verify:first-run` passes in CI and from a clean Git clone with 56 test files / 277 tests, covering typecheck, build, bounded JSON and native JSONL validation, signed ingestion, exact replay, altered-replay rejection, Replay Lab API, and fail-closed local token-file handling.
+- Issue #57: real Hermes runtime acceptance closed with evidence from a sanitized local Hermes session; signed ingestion, exact replay, altered-replay conflict rejection, authority-field rejection, and Replay Lab visibility were proven.
+- Verified real-runtime baseline: lint, typecheck, build, smoke, attack smoke, and 59 test files / 287 tests passed during Issue #57 acceptance.
 
 ## Current operating state
 
-- `main` is the sole source of truth and includes the deterministic forensic read path plus local token-file hardening through PR #94.
+- `main` is the sole source of truth and includes the real Hermes acceptance path, deterministic forensic read models, real-capture import UI, and local token-file hardening through PR #96.
 - There must be only one active implementation task at a time.
 - Do not work directly on `main`.
 - Do not merge, deploy, mutate secrets, delete data, or expand scope without the required human/founder gate.
@@ -57,22 +59,24 @@ Then read, in order:
 
 ## Next product priority
 
-External acceptance and product evidence — use Replay Lab's local import panel to validate and ingest one sanitized real Hermes capture for Issue #57, then capture screenshots of that real investigation. Do not replace either proof with synthetic evidence.
+Begin **Phase E — Kernel memory-safety expansion** with one bounded design task: define the memory quarantine and toxic-memory state machine before implementing persistence or mutation behavior.
 
-Issue #57 remains an external acceptance proof, not an implementation blocker: validate the secured Hermes ingestion path when one sanitized output from the user's real Hermes runtime is available.
+The design must specify:
 
-Required proof:
+1. States and transitions for proposed, quarantined, admitted, rejected, superseded, and revoked memory.
+2. Which persisted evidence and contradiction signals may trigger quarantine recommendations.
+3. The human/founder approval gates for release, revocation, or destructive actions.
+4. How every transition remains reversible and auditable.
+5. How Replay Lab explains why a memory is quarantined without presenting deterministic interpretation as observed fact.
+6. Compatibility with current admission records, prevention proposals, receipts, and Kernel authority boundaries.
 
-1. Validate the real output without weakening Kernel authority.
-2. Ingest it through the signed local boundary.
-3. Prove exact replay returns the same cognitive record.
-4. Prove altered replay is rejected.
-5. Prove Hermes cannot submit validation, contradiction, admission, candidate, claim, or durable-memory authority.
-6. Display the resulting investigation in Replay Lab.
+Do not implement automatic quarantine enforcement until the design is reviewed and represented as one active GitHub issue. Hermes must never gain authority to admit, release, revoke, or delete durable memory.
 
-## External blocker
+## External acceptance status
 
-The repository cannot manufacture a real Hermes execution. The user must provide a sanitized console, Telegram, JSON, or JSONL output. Never fabricate this evidence or mark Issue #57 complete using only the existing synthetic fixtures.
+Real Hermes runtime acceptance is complete for Issue #57. The sanitized proof came from a real local Hermes session store and did not persist raw prompts, responses, tool output, credentials, tokens, or secrets.
+
+Future product screenshots should use the real Replay Lab investigation or another sanitized authentic run. Generated mockups and synthetic fixtures remain unsuitable as external acceptance evidence.
 
 ## Recovery prompt
 
