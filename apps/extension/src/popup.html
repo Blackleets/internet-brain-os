@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Efesto</title>
     <link rel="stylesheet" href="popup.css">
+    <link rel="stylesheet" href="central-forge-power.css">
   </head>
   <body>
     <main>
@@ -31,6 +32,14 @@
           <p id="forge-activity-detail">Create a Goal or analyze a public page.</p>
         </div>
         <span class="live-badge"><i></i> LIVE</span>
+      </section>
+
+      <section class="forge-power-panel" data-simple="true" aria-live="polite">
+        <button id="forge-power" class="forge-power" type="button" data-enabled="false" aria-pressed="false" aria-label="Start Efesto"></button>
+        <div class="forge-power-copy">
+          <strong id="forge-power-label">START EFESTO</strong>
+          <small id="forge-power-detail">Press once to start forging.</small>
+        </div>
       </section>
 
       <section id="forge-guide" class="forge-guide" aria-live="polite">
@@ -160,5 +169,6 @@
     <script type="module" src="guide-action-fix.js"></script>
     <script type="module" src="one-click-mission-ui.js"></script>
     <script type="module" src="mission-live-progress.js"></script>
+    <script type="module" src="central-forge-power.js"></script>
   </body>
 </html>
