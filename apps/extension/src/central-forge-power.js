@@ -92,7 +92,8 @@ async function runCycle() {
 
     const nextGoal = selectNextGoal(goals, [...completed]);
     renderOrb(deriveEfestoOrbState({ enabled, kernel: 'ready', services, mission: undefined }), `Starting the forge for ${nextGoal.title}`);
-    await startGoalResearch(nextGoal.id, options);
+    const startedMission = await startGoalResearch(nextGoal.id, options);
+    renderOrb(deriveEfestoOrbState({ enabled, kernel: 'ready', services, mission: startedMission }));
     schedule(1000);
   } catch (error) {
     renderOrb({ state: 'failed', label: 'Forge needs attention', detail: error instanceof Error ? error.message : 'Unable to read Kernel state.', active: false, smithActive: false, action: 'Retry safely', enabled: true });
@@ -128,7 +129,7 @@ function renderOrb(view, overrideDetail) {
     setText('#forge-summary-opportunities', String(view.summary.opportunitiesForged));
     setText('#forge-summary-obsidian', String(view.summary.obsidianNotesWritten));
   }
-  renderObsidianReceipt(view.obsidianReceipt);
+  renderObsidianReceipt(view.state === 'completed' ? view.obsidianReceipt : undefined);
 }
 
 function renderObsidianReceipt(receipt) {
