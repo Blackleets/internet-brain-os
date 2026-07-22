@@ -1,8 +1,12 @@
 import { DEFAULT_KERNEL_BASE_URL, listAgentMissions, sendPageContext } from './local-transport.js';
 import { evaluateAutoCapture } from './auto-capture-policy.js';
 import { reconcileMissionWatchtower } from './mission-watchtower.js';
+import { AutoRadar, AUTO_RADAR_STATES } from './auto-radar.js';
 
 const WATCHTOWER_ALARM = 'efesto-mission-watchtower';
+
+// Instancia global del Auto Radar
+const autoRadar = new AutoRadar();
 
 chrome.runtime.onInstalled.addListener(() => void ensureWatchtower());
 chrome.runtime.onStartup.addListener(() => void ensureWatchtower());
@@ -17,11 +21,21 @@ chrome.notifications.onClicked.addListener((notificationId) => {
 });
 void ensureWatchtower();
 
+// Manejar mensajes de contenido y popup
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  // Mensaje del content script indicando que la página está lista
   if (message?.type === 'EFESTO_PUBLIC_PAGE_READY') {
+    // Si el Auto Radar está habilitado, usar el análisis automático
+    if (autoRadar.enabled && autoRadar.state !== AUTO_RADAR_STATES.PAUSED) {
+      void autoRadar.analyzePage(_sender.tab);
+      return false; // No necesitamos responder, el Auto Radar lo maneja
+    }
+    // Si no, usar el método manual existente (compatibilidad hacia atrás)
     void autoCapture(_sender.tab);
     return false;
   }
+  
+  // Mensaje del popup para enviar contexto de página (manual)
   if (message?.type !== 'HEPHAESTUS_SEND_PAGE_CONTEXT') return false;
 
   void (async () => {
@@ -43,6 +57,56 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   })();
 
   return true;
+});
+
+// Mensajes especiales para controlar el Auto Radar
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === 'EFESTO_AUTO_RADAR_TOGGLE') {
+    void (async () => {
+      const newState = !autoRadar.enabled;
+      await autoRadar.setEnabled(newState);
+      sendResponse({ ok: true, enabled: newState });
+    })();
+    return true;
+  }
+  
+  if (message?.type === 'EFESTO_AUTO_RADAR_GET_STATE') {
+    void (async () => {
+      sendResponse({
+        ok: true,
+        enabled: autoRadar.enabled,
+        state: autoRadar.state,
+        allowedOrigins: autoRadar.allowedOrigins,
+        kernelBaseUrl: autoRadar.kernelBaseUrl
+      });
+    })();
+    return true;
+  }
+  
+  if (message?.type === 'EFESTO_AUTO_RADAR_SET_STATE') {
+    void (async () => {
+      await autoRadar.setState(message.state);
+      sendResponse({ ok: true });
+    })();
+    return true;
+  }
+  
+  if (message?.type === 'EFESTO_AUTO_RADAR_UPDATE_CONFIG') {
+    void (async () => {
+      if (message.allowedOrigins !== undefined) {
+        autoRadar.allowedOrigins = message.allowedOrigins;
+      }
+      if (message.kernelBaseUrl !== undefined) {
+        autoRadar.kernelBaseUrl = message.kernelBaseUrl;
+      }
+      if (message.kernelApiToken !== undefined) {
+        autoRadar.kernelApiToken = message.kernelApiToken;
+      }
+      await autoRadar.saveState();
+      sendResponse({ ok: true });
+    })();
+    return true;
+  }
 });
 
 async function autoCapture(tab) {
@@ -70,6 +134,7 @@ async function autoCapture(tab) {
     await sendPageContext({ ...captured.context, url: decision.safeUrl, selection: undefined }, {
       baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL,
       apiToken: stored.kernelApiToken,
+      targetCaseId: message?.targetCaseId,
     });
     await chrome.storage.local.set({
       lastAutoCaptureByUrl: { ...previous, [captured.context.url]: Date.now() },
