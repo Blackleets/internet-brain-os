@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createGoal, getKernelStatus, inspectModelForge, listAgentMissions, listCases, listGoals, listOpportunities, LocalTransportError, pairKernel, sendOpportunityFeedback, sendPageContext, startGoalResearch } from './local-transport.js';
+import { createGoal, getEfestoBootstrapStatus, getKernelStatus, inspectModelForge, listAgentMissions, listCases, listGoals, listOpportunities, LocalTransportError, pairKernel, sendOpportunityFeedback, sendPageContext, startGoalResearch } from './local-transport.js';
 
 const context = {
   schemaVersion: 'hephaestus.page-context.v1',
@@ -148,6 +148,20 @@ describe('getKernelStatus', () => {
       kernel: 'ready', hermes: 'ready', replayLab: 'ready', ollama: 'configured', obsidian: 'configured',
     });
     expect(fetchImpl).toHaveBeenCalledWith('http://127.0.0.1:4000/status');
+  });
+});
+
+describe('getEfestoBootstrapStatus', () => {
+  it('loads the shared launcher/bootstrap contract without requiring credentials', async () => {
+    const bootstrap = {
+      schemaVersion: 'efesto.bootstrap-status.v1',
+      ok: true,
+      kernel: 'ready', hermes: 'ready', obsidian: 'ready', pairing: 'paired', overall: 'ready',
+      message: 'Efesto is ready.', diagnostics: {}, actions: [{ id: 'open_efesto', label: 'Open Efesto' }],
+    };
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => bootstrap }));
+    await expect(getEfestoBootstrapStatus({ fetchImpl })).resolves.toEqual(bootstrap);
+    expect(fetchImpl).toHaveBeenCalledWith('http://127.0.0.1:4000/bootstrap/status');
   });
 });
 

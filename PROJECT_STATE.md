@@ -52,6 +52,7 @@ Then read, in order:
 - Safe Action Workspace for each Find with a bounded category-aware manual-review checklist stored only in extension-local storage; progress never becomes Evidence, verification, authority, or an automatic action and is capped at 100 Find records.
 - Opportunity dismissal atomically updates the persisted Find status so dismissed leads leave the Inbox; mission summaries count only newly created Evidence, and the public-result boundary rejects IPv6 loopback, link-local, unique-local, and IPv4-mapped private sources.
 - Safe local `/status` readiness contract for Kernel, Hermes, Replay Lab, Ollama, and Obsidian; Ollama is reported configured only when an actual model is configured, without exposing model or endpoint details.
+- Shared `efesto.bootstrap-status.v1` readiness contract for Kernel, Hermes, Obsidian, extension pairing, safe user-facing setup messaging, technical diagnostics, and recoverable launcher actions; Windows launcher work starts the one-click Kernel without exposing tokens or killing unrelated processes.
 - Local API tokens reject whitespace/control characters; persisted POSIX token files fail closed when group or world permissions are present, and rotation remains explicit.
 - Internal Orchestrator phases A-C: task contracts/state, bounded Hermes/Codex prompts, report validation, and Git evidence decisions.
 - PR #76: approval invariants hardened.

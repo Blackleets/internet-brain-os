@@ -18,6 +18,7 @@ import { AgentMissionManager } from './agent-missions.mjs';
 import { PreferenceLearner } from './preference-learner.mjs';
 import { AgentMissionExecutor } from './agent-mission-executor.mjs';
 import { ModelForge } from './model-forge.mjs';
+import { deriveEfestoBootstrapStatus } from './efesto-bootstrap-status.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
@@ -78,6 +79,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const preferences = options.preferenceLearner;
   const missionExecutor = options.agentMissionExecutor;
   const models = options.modelForge;
+  const bootstrapStatus = options.bootstrapStatus;
   const hermesMaxBodyBytes = Number(options.hermesMaxBodyBytes ?? 256 * 1024);
   return createServer(async (request, response) => {
     if (!isLoopbackHost(request.headers.host)) {
@@ -102,6 +104,22 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         ollama: evidenceSummarizer?.isConfigured?.() === true ? 'configured' : 'not_configured',
         obsidian: obsidianProjector ? 'configured' : 'not_configured',
       });
+    }
+    if (request.method === 'GET' && request.url === '/bootstrap/status') {
+      try {
+        const body = bootstrapStatus
+          ? await bootstrapStatus()
+          : deriveEfestoBootstrapStatus({
+            kernelProbe: { reachable: true, ok: true, service: 'hephaestus-local-kernel' },
+            hermesProbe: { found: true, valid: Boolean(hermesWorkerReady || hermesRoute) },
+            obsidianProbe: { configured: Boolean(obsidianProjector), writable: Boolean(obsidianProjector) },
+            pairingProbe: { tokenPresent: Boolean(requiredToken), paired: activePairing ? false : identities?.hasAuthorizedIdentity ? await identities.hasAuthorizedIdentity() : false },
+            processProbe: { pidFilePresent: false },
+          });
+        return send(response, 200, body);
+      } catch {
+        return send(response, 500, { ok: false, code: 'BOOTSTRAP_STATUS_FAILED' });
+      }
     }
     if (request.method === 'GET' && request.url === '/replay-lab') {
       return sendHtml(response, 200, replayLabPageHtml);

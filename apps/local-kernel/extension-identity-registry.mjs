@@ -40,6 +40,11 @@ export class ExtensionIdentityRegistry {
     await this.writeQueue;
   }
 
+  async hasAuthorizedIdentity() {
+    await this.ready;
+    return this.identities.size > 0;
+  }
+
   async load() {
     try {
       const parsed = JSON.parse(await readFile(this.filePath, 'utf8'));
