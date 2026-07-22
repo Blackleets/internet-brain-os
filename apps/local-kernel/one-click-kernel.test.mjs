@@ -7,6 +7,7 @@ describe('one-click Hermes runtime entrypoints', () => {
   it.each([
     'apps/local-kernel/one-click-kernel.mjs',
     'apps/extension/src/one-click-mission-ui.js',
+    'apps/extension/src/central-forge-power.js',
   ])('parses %s without executing it', (path) => {
     const result = spawnSync(process.execPath, ['--check', resolve(path)], { encoding: 'utf8', windowsHide: true });
     expect(result.status, result.stderr).toBe(0);
@@ -18,5 +19,13 @@ describe('one-click Hermes runtime entrypoints', () => {
     expect(source).toContain("goalObserver.observe(goals, { childList: true })");
     expect(source).not.toContain('subtree: true');
     expect(source).toContain('if (button.textContent !== nextText)');
+  });
+
+  it('keeps the central power cycle bounded and user-controlled', () => {
+    const source = readFileSync(resolve('apps/extension/src/central-forge-power.js'), 'utf8');
+    expect(source).toContain("'efestoForgeEnabled'");
+    expect(source).toContain('ACTIVE_STATUSES');
+    expect(source).toContain('Forge cycle complete');
+    expect(source).toContain('Active work will finish safely');
   });
 });
