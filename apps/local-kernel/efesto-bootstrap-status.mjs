@@ -85,7 +85,7 @@ function availableActions({ overall, kernel, hermes, obsidian, pairing, processP
   const actions = [];
   if (overall === 'ready') actions.push(action('open_efesto', 'Open Efesto'));
   if (overall !== 'ready' || ['offline', 'stale', 'port_conflict'].includes(kernel) || hermes !== 'ready' || obsidian !== 'ready' || pairing !== 'paired') actions.push(action('repair', 'Repair'));
-  if (kernel === 'ready' && processProbe.owned === true && processProbe.pid) actions.push(action('shutdown', 'Shut down safely'));
+  if (kernel === 'ready' && processProbe.owned === true && processProbe.verified === true && processProbe.pid) actions.push(action('shutdown', 'Shut down safely'));
   if (pairing === 'required') actions.push(action('pair_extension', 'Pair extension'));
   return actions;
 }
@@ -103,7 +103,8 @@ function kernelDiagnostics(kernelProbe = {}, processProbe = {}) {
     pidFilePresent: Boolean(processProbe.pidFilePresent),
     alive: processProbe.alive,
     owned: processProbe.owned,
-    reason: kernelProbe.error,
+    verified: processProbe.verified,
+    reason: processProbe.reason ?? kernelProbe.error,
   });
 }
 

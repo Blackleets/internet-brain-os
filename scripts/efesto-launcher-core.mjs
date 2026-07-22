@@ -1,8 +1,9 @@
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { defaultEfestoPaths, inspectEfestoBootstrap } from './efesto-bootstrap.mjs';
+import { defaultEfestoPaths, inspectEfestoBootstrap, readLauncherConfig } from './efesto-bootstrap.mjs';
 
 export async function repairEfestoLauncher(options = {}) {
   const ops = launcherOps(options);
@@ -27,12 +28,12 @@ export async function shutdownEfestoLauncher(options = {}) {
   const ops = launcherOps(options);
   const status = await ops.inspect();
   const kernel = status.diagnostics?.kernel ?? {};
-  if (kernel.pid && kernel.owned !== false) {
+  if (kernel.pid && kernel.owned === true && kernel.verified === true) {
     await ops.stopOwnedProcess(kernel.pid);
     await ops.writeLog('Efesto Kernel shutdown requested for owned launcher process.');
     return { stopped: true, status };
   }
-  await ops.writeLog('Shutdown skipped: no owned Efesto Kernel process was found.');
+  await ops.writeLog(`Shutdown skipped: no safely verified Efesto Kernel process was found (${kernel.reason ?? 'not_verified'}).`);
   return { stopped: false, status };
 }
 
@@ -61,18 +62,30 @@ export function launcherOps(options = {}) {
   };
 }
 
+export function buildKernelChildEnv(env = process.env, config = {}) {
+  return {
+    ...env,
+    HEPHAESTUS_PAIRING: env.HEPHAESTUS_PAIRING ?? '1',
+    ...(config.obsidianDir && !env.HEPHAESTUS_OBSIDIAN_DIR ? { HEPHAESTUS_OBSIDIAN_DIR: config.obsidianDir } : {}),
+  };
+}
+
 async function startKernelProcess({ env, cwd, paths }) {
   await mkdir(dirname(paths.pidFile), { recursive: true });
-  const child = spawn(process.execPath, [resolve(cwd, 'apps/local-kernel/one-click-kernel.mjs')], {
+  const config = await readLauncherConfig({ paths, env, cwd });
+  const scriptPath = resolve(cwd, 'apps/local-kernel/one-click-kernel.mjs');
+  const nonce = randomUUID();
+  const commandFingerprint = 'apps/local-kernel/one-click-kernel.mjs';
+  const child = spawn(process.execPath, [scriptPath, '--efesto-launcher-nonce', nonce], {
     cwd,
     shell: false,
     detached: true,
     windowsHide: true,
     stdio: ['ignore', 'ignore', 'ignore'],
-    env: { ...env, HEPHAESTUS_PAIRING: env.HEPHAESTUS_PAIRING ?? '1' },
+    env: buildKernelChildEnv(env, config),
   });
   child.unref();
-  const record = { owner: 'efesto-launcher-v1', pid: child.pid, startedAt: new Date().toISOString(), command: 'apps/local-kernel/one-click-kernel.mjs' };
+  const record = { owner: 'efesto-launcher-v1', pid: child.pid, startedAt: new Date().toISOString(), command: scriptPath, commandFingerprint, nonce };
   await writeFile(paths.pidFile, `${JSON.stringify(record, null, 2)}\n`, 'utf8');
   return { pid: child.pid };
 }

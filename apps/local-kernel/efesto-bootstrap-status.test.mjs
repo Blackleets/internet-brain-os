@@ -8,7 +8,7 @@ const base = {
   hermesProbe: { found: true, valid: true, executable: 'C:/Tools/hermes.exe' },
   obsidianProbe: { configured: true, writable: true, vaultRelativePath: 'Efesto Vault' },
   pairingProbe: { tokenPresent: true, paired: true },
-  processProbe: { pidFilePresent: true, pid: 1234, alive: true, owned: true },
+  processProbe: { pidFilePresent: true, pid: 1234, alive: true, owned: true, verified: true },
 };
 
 describe('Efesto bootstrap/status contract', () => {

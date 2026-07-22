@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { repairEfestoLauncher, shutdownEfestoLauncher } from './efesto-launcher-core.mjs';
+import { buildKernelChildEnv, repairEfestoLauncher, shutdownEfestoLauncher } from './efesto-launcher-core.mjs';
 
 function harness(overrides = {}) {
   const calls = [];
@@ -18,7 +18,7 @@ function harness(overrides = {}) {
 
 const ready = {
   kernel: 'ready', hermes: 'ready', obsidian: 'ready', pairing: 'paired', overall: 'ready',
-  diagnostics: { kernel: { pid: 111, owned: true } }, actions: [], message: 'ready',
+  diagnostics: { kernel: { pid: 111, owned: true, verified: true } }, actions: [], message: 'ready',
 };
 
 describe('Efesto Windows launcher core', () => {
@@ -61,8 +61,42 @@ describe('Efesto Windows launcher core', () => {
     expect(calls).toContainEqual(['stopOwnedProcess', 111]);
   });
 
+  it('passes the configured Obsidian vault to the child Kernel process environment', () => {
+    expect(buildKernelChildEnv({}, { obsidianDir: 'C:/Vault' })).toMatchObject({
+      HEPHAESTUS_OBSIDIAN_DIR: 'C:/Vault',
+      HEPHAESTUS_PAIRING: '1',
+    });
+  });
+
+  it('does not override an explicitly provided Obsidian env path', () => {
+    expect(buildKernelChildEnv({ HEPHAESTUS_OBSIDIAN_DIR: 'D:/Already' }, { obsidianDir: 'C:/Vault' })).toMatchObject({
+      HEPHAESTUS_OBSIDIAN_DIR: 'D:/Already',
+    });
+  });
+
   it('refuses to stop an unowned process on port 4000', async () => {
     const { calls, ops } = harness({ status: { ...ready, diagnostics: { kernel: { pid: 222, owned: false } } } });
+    const result = await shutdownEfestoLauncher({ ops });
+    expect(result.stopped).toBe(false);
+    expect(calls.map((call) => call[0])).not.toContain('stopOwnedProcess');
+  });
+
+  it('refuses shutdown when the PID no longer exists', async () => {
+    const { calls, ops } = harness({ status: { ...ready, diagnostics: { kernel: { pid: 333, owned: true, verified: false, reason: 'not_alive' } } } });
+    const result = await shutdownEfestoLauncher({ ops });
+    expect(result.stopped).toBe(false);
+    expect(calls.map((call) => call[0])).not.toContain('stopOwnedProcess');
+  });
+
+  it('refuses shutdown when a PID was reused by another process', async () => {
+    const { calls, ops } = harness({ status: { ...ready, diagnostics: { kernel: { pid: 444, owned: true, verified: false, reason: 'fingerprint_mismatch' } } } });
+    const result = await shutdownEfestoLauncher({ ops });
+    expect(result.stopped).toBe(false);
+    expect(calls.map((call) => call[0])).not.toContain('stopOwnedProcess');
+  });
+
+  it('refuses shutdown when the owner marker was altered', async () => {
+    const { calls, ops } = harness({ status: { ...ready, diagnostics: { kernel: { pid: 555, owned: false, verified: false, reason: 'owner_mismatch' } } } });
     const result = await shutdownEfestoLauncher({ ops });
     expect(result.stopped).toBe(false);
     expect(calls.map((call) => call[0])).not.toContain('stopOwnedProcess');

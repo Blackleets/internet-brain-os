@@ -18,12 +18,14 @@ import { AgentMissionManager } from './agent-missions.mjs';
 import { PreferenceLearner } from './preference-learner.mjs';
 import { AgentMissionExecutor } from './agent-mission-executor.mjs';
 import { ModelForge } from './model-forge.mjs';
-import { deriveEfestoBootstrapStatus } from './efesto-bootstrap-status.mjs';
+import { defaultEfestoPaths, inspectEfestoBootstrap, readLauncherConfig } from '../../scripts/efesto-bootstrap.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
 const dataDir = resolve(process.env.HEPHAESTUS_DATA_DIR ?? '.hephaestus');
 const isMain = Boolean(process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href);
+const launcherPaths = defaultEfestoPaths(process.env, process.cwd());
+const launcherConfig = isMain ? await readLauncherConfig({ paths: launcherPaths, env: process.env, cwd: process.cwd() }) : {};
 const tokenRecord = isMain
   ? await loadOrCreateApiToken(resolve(dataDir, 'kernel-api-token'), {
     envToken: process.env.HEPHAESTUS_API_TOKEN,
@@ -44,7 +46,7 @@ const opportunityProjector = new OpportunityProjector(knowledgeStore);
 const goalManager = new GoalManager(knowledgeStore);
 const obsidian = new ObsidianKnowledgeProjector(
   knowledgeStore,
-  resolve(process.env.HEPHAESTUS_OBSIDIAN_DIR ?? '.hephaestus/obsidian-vault'),
+  resolve(process.env.HEPHAESTUS_OBSIDIAN_DIR ?? launcherConfig.obsidianDir ?? '.hephaestus/obsidian-vault'),
 );
 const summarizer = new OptionalEvidenceSummarizer(knowledgeStore, {
   model: process.env.HEPHAESTUS_OLLAMA_MODEL,
@@ -109,12 +111,10 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       try {
         const body = bootstrapStatus
           ? await bootstrapStatus()
-          : deriveEfestoBootstrapStatus({
-            kernelProbe: { reachable: true, ok: true, service: 'hephaestus-local-kernel' },
-            hermesProbe: { found: true, valid: Boolean(hermesWorkerReady || hermesRoute) },
-            obsidianProbe: { configured: Boolean(obsidianProjector), writable: Boolean(obsidianProjector) },
-            pairingProbe: { tokenPresent: Boolean(requiredToken), paired: activePairing ? false : identities?.hasAuthorizedIdentity ? await identities.hasAuthorizedIdentity() : false },
-            processProbe: { pidFilePresent: false },
+          : await inspectEfestoBootstrap({
+            ...(options.bootstrapProbeOptions ?? {}),
+            env: options.bootstrapProbeOptions?.env ?? process.env,
+            cwd: options.bootstrapProbeOptions?.cwd ?? process.cwd(),
           });
         return send(response, 200, body);
       } catch {

@@ -79,9 +79,12 @@ export async function probeObsidian({ env = process.env, config = {}, paths, opt
   const vaultPath = resolve(configuredPath);
   const probePath = join(vaultPath, '.efesto-write-test');
   try {
-    await mkdir(vaultPath, { recursive: true });
-    await writeFile(probePath, 'efesto write probe\n', { flag: 'w' });
-    await rm(probePath, { force: true });
+    if (options.writeObsidianProbe) await options.writeObsidianProbe({ vaultPath, probePath });
+    else {
+      await mkdir(vaultPath, { recursive: true });
+      await writeFile(probePath, 'efesto write probe\n', { flag: 'w' });
+      await rm(probePath, { force: true });
+    }
     return { configured: true, writable: true, path: vaultPath, vaultRelativePath: config.obsidianLabel ?? 'configured vault' };
   } catch (error) {
     return { configured: true, writable: false, path: vaultPath, error: error?.code ?? safeMessage(error) };
@@ -99,7 +102,9 @@ export async function probeLauncherProcess(paths, options = {}) {
   const record = await readJsonOptional(paths.pidFile);
   if (!record?.pid) return { pidFilePresent: false };
   const alive = options.isProcessAlive ? await options.isProcessAlive(record.pid) : isProcessAlive(record.pid);
-  return { pidFilePresent: true, pid: record.pid, alive, owned: record.owner === 'efesto-launcher-v1' };
+  const owned = record.owner === 'efesto-launcher-v1';
+  const identity = alive && owned ? await verifyProcessIdentity(record, options) : { verified: false, reason: alive ? 'owner_mismatch' : 'not_alive' };
+  return { pidFilePresent: true, pid: record.pid, alive, owned, verified: Boolean(identity.verified), reason: identity.reason, nonce: identity.verified ? record.nonce : undefined };
 }
 
 export async function writeLauncherConfig(config, options = {}) {
@@ -107,8 +112,13 @@ export async function writeLauncherConfig(config, options = {}) {
   const current = await readJsonOptional(paths.configFile) ?? {};
   const next = { ...current, ...config, updatedAt: new Date().toISOString() };
   await mkdir(dirname(paths.configFile), { recursive: true });
-  await writeFile(paths.configFile, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
+  await writeFile(paths.configFile, `${JSON.stringify(next, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
   return next;
+}
+
+export async function readLauncherConfig(options = {}) {
+  const paths = options.paths ?? defaultEfestoPaths(options.env ?? process.env, options.cwd ?? process.cwd());
+  return await readJsonOptional(paths.configFile) ?? {};
 }
 
 async function resolveDefaultHermes(env, options) {
@@ -161,13 +171,34 @@ async function isPortOpen(port, options = {}) {
 
 function runCommand(command, args, options = {}) {
   return new Promise((resolvePromise) => {
-    const child = spawn(command, args, { shell: false, windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
-    let stderr = '';
+    const child = spawn(command, args, { shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = ''; let stderr = '';
     const timer = setTimeout(() => { child.kill(); resolvePromise({ code: 124, stderr: 'timeout' }); }, options.timeoutMs ?? 5000);
+    child.stdout.on('data', (chunk) => { stdout += chunk; });
     child.stderr.on('data', (chunk) => { stderr += chunk; });
     child.on('error', (error) => { clearTimeout(timer); resolvePromise({ code: 127, stderr: safeMessage(error) }); });
-    child.on('close', (code) => { clearTimeout(timer); resolvePromise({ code: code ?? 1, stderr }); });
+    child.on('close', (code) => { clearTimeout(timer); resolvePromise({ code: code ?? 1, stdout, stderr }); });
   });
+}
+
+async function verifyProcessIdentity(record, options = {}) {
+  if (!record.nonce || !record.commandFingerprint || !record.startedAt) return { verified: false, reason: 'missing_fingerprint' };
+  const actual = options.readProcessIdentity
+    ? await options.readProcessIdentity(record.pid)
+    : await readProcessIdentity(record.pid);
+  if (!actual?.commandLine) return { verified: false, reason: 'identity_unavailable' };
+  const commandLine = String(actual.commandLine);
+  if (!commandLine.includes(record.nonce) || !commandLine.includes(record.commandFingerprint)) return { verified: false, reason: 'fingerprint_mismatch' };
+  return { verified: true };
+}
+
+async function readProcessIdentity(pid) {
+  if (process.platform !== 'win32') {
+    try { return { commandLine: await readFile(`/proc/${Number(pid)}/cmdline`, 'utf8') }; }
+    catch { return undefined; }
+  }
+  const result = await runCommand('wmic.exe', ['process', 'where', `ProcessId=${Number(pid)}`, 'get', 'CommandLine', '/format:list'], { timeoutMs: 3000 });
+  return result.code === 0 ? { commandLine: result.stdout || result.stderr || '' } : undefined;
 }
 
 function safeMessage(error) {

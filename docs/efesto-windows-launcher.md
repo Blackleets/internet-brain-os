@@ -48,6 +48,8 @@ pnpm install
 pnpm efesto:launcher repair --obsidian-dir "C:\\Users\\Usuario\\OneDrive\\Documentos\\Obsidian Vault"
 ```
 
+The vault path is stored in `.hephaestus/efesto-launcher-config.json` with restricted file mode where the platform supports it. On repair/start, the launcher propagates that exact path to the child Kernel as `HEPHAESTUS_OBSIDIAN_DIR`; `server.mjs` also reads the same launcher config as its fallback vault source. The path reported by bootstrap status and the path used for Evidence/Cases/receipts are therefore the same vault.
+
 Or double-click:
 
 ```text
@@ -77,7 +79,7 @@ pnpm efesto:launcher shutdown
 - `status`: prints the contract and diagnostics.
 - `repair`: creates local directories if needed, starts the one-click Kernel if safe, and refuses to start over a non-Efesto port conflict.
 - `open`: opens the browser extension surface target when ready. By default it opens `chrome://extensions/`; set `EFESTO_EXTENSION_URL` to a specific extension URL if needed.
-- `shutdown`: only sends shutdown to the process recorded as owned by the launcher. It does not kill unrelated processes on port `4000`.
+- `shutdown`: only sends shutdown to the process recorded as owned by the launcher after verifying the live PID still matches the original Efesto command fingerprint and launch nonce. It does not kill unrelated processes on port `4000`, reused PIDs, altered marker records, or unverifiable process identities.
 
 ## Recovery rules
 
