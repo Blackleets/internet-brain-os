@@ -59,7 +59,7 @@ Then read, in order:
 
 ## Next product priority
 
-Begin **Phase E — Kernel memory-safety expansion** with one bounded design task: define the memory quarantine and toxic-memory state machine before implementing persistence or mutation behavior.
+Begin **Phase E — Kernel memory-safety expansion** through Issue #98: define the memory quarantine and toxic-memory state machine before implementing persistence or mutation behavior.
 
 The design must specify:
 
@@ -70,7 +70,7 @@ The design must specify:
 5. How Replay Lab explains why a memory is quarantined without presenting deterministic interpretation as observed fact.
 6. Compatibility with current admission records, prevention proposals, receipts, and Kernel authority boundaries.
 
-Do not implement automatic quarantine enforcement until the design is reviewed and represented as one active GitHub issue. Hermes must never gain authority to admit, release, revoke, or delete durable memory.
+Do not implement automatic quarantine enforcement in Issue #98. Hermes must never gain authority to admit, quarantine, release, revoke, delete, or otherwise mutate durable memory.
 
 ## External acceptance status
 
