@@ -15,3 +15,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   return false;
 });
+
+const announceReady = () => chrome.runtime.sendMessage({ type: 'EFESTO_PUBLIC_PAGE_READY' }).catch(() => undefined);
+if (document.readyState === 'complete') announceReady();
+else globalThis.addEventListener('load', announceReady, { once: true });

@@ -3,28 +3,158 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Hephaestus</title>
+    <title>Efesto</title>
     <link rel="stylesheet" href="popup.css">
   </head>
   <body>
     <main>
-      <p class="eyebrow">HEPHAESTUS</p>
-      <h1>Forge this page</h1>
-      <p class="muted">Turn the current public page into traceable Evidence.</p>
-      <label for="pairing-code">Pair this extension</label>
-      <input id="pairing-code" type="text" inputmode="text" maxlength="12" autocomplete="one-time-code" placeholder="Eight-character startup code">
-      <button id="pair-kernel" type="button">Pair securely</button>
-      <details>
-        <summary>Manual recovery</summary>
-      <label for="kernel-token">Local Kernel token</label>
-      <input id="kernel-token" type="password" autocomplete="off" placeholder="Read token file only for recovery">
-      <button id="save-token" type="button">Save local token</button>
+      <header>
+        <div class="brand-mark" aria-hidden="true">E</div>
+        <div><p class="eyebrow">EFESTO</p><h1>Opportunity Radar</h1></div>
+        <span id="kernel-state" class="state">Offline</span>
+      </header>
+
+      <section id="living-forge" class="living-forge" data-activity="idle" aria-live="polite">
+        <div class="forge-scene" aria-hidden="true">
+          <span class="ember ember-one"></span><span class="ember ember-two"></span><span class="ember ember-three"></span>
+          <div class="pixel-smith">
+            <span class="smith-hair"></span><span class="smith-head"></span><span class="smith-beard"></span>
+            <span class="smith-body"></span><span class="smith-arm"></span><span class="smith-hammer"></span><span class="smith-leg"></span>
+          </div>
+          <div class="pixel-anvil"><span></span></div>
+          <div class="pixel-fire"><span></span><i></i></div>
+          <div class="forge-floor"></div>
+        </div>
+        <div class="forge-copy">
+          <p class="section-title">THE LIVING FORGE</p>
+          <h2 id="forge-activity-label">The forge is ready</h2>
+          <p id="forge-activity-detail">Create a Goal or analyze a public page.</p>
+        </div>
+        <span class="live-badge"><i></i> LIVE</span>
+      </section>
+
+      <section id="forge-guide" class="forge-guide" aria-live="polite">
+        <div class="guide-smith" aria-hidden="true">⚒</div>
+        <div><p class="section-title">SMITH'S GUIDE</p><strong id="guide-title">Connect the private Kernel</strong><p id="guide-progress">0 of 4 forge steps complete</p></div>
+        <button id="guide-action" type="button">Continue</button>
+      </section>
+
+      <nav class="forge-nav" aria-label="Efesto workspace">
+        <button type="button" data-view-target="forge" aria-current="page"><span>◆</span> Forge</button>
+        <button type="button" data-view-target="missions"><span>◇</span> Missions <i id="mission-nav-count">0</i></button>
+        <button type="button" data-view-target="finds"><span>✦</span> Finds <i id="find-nav-count">0</i></button>
+        <button type="button" data-view-target="models"><span>▣</span> Models</button>
+      </nav>
+
+      <section id="watchtower-result" class="watchtower-result" aria-live="polite" hidden>
+        <div><p class="section-title">WATCHTOWER</p><strong id="watchtower-copy">A new mission result is ready.</strong></div>
+        <span id="watchtower-count">0</span>
+        <button id="watchtower-open" type="button">Open ledger</button>
+      </section>
+
+      <div class="workspace-view active" data-workspace-view="forge">
+        <div class="view-intro"><p class="section-title">TODAY AT THE FORGE</p><h2>Turn the web into useful opportunities</h2><p>Choose where Efesto may work, then forge the current page into private Evidence.</p></div>
+
+      <section class="hero">
+        <div class="orb"><span></span></div>
+        <div>
+          <p class="hero-label">RADAR FOR THIS SITE</p>
+          <h2 id="site-name">Current page</h2>
+          <p id="radar-copy">Authorize this public site to let Efesto work quietly while you browse.</p>
+        </div>
+        <label class="switch" aria-label="Enable radar for this site">
+          <input id="site-radar" type="checkbox"><span></span>
+        </label>
+      </section>
+
+      <section class="grid" aria-label="Efesto services">
+        <article><span class="service-dot" id="model-dot"></span><div><b>Model Forge</b><small id="model-state">Local model not detected</small></div></article>
+        <article><span class="service-dot" id="memory-dot"></span><div><b>Obsidian memory</b><small id="memory-state">Waiting for Kernel</small></div></article>
+        <article><span class="service-dot" id="agent-dot"></span><div><b>Agent bridge</b><small id="agent-state">Hermes not detected</small></div></article>
+        <article><span class="shield">◆</span><div><b>Private instance</b><small>Data stays on this device</small></div></article>
+      </section>
+
+      <section id="setup" class="setup">
+        <p class="section-title">CONNECT YOUR PRIVATE KERNEL</p>
+        <div class="pair-row">
+          <input id="pairing-code" type="text" inputmode="text" maxlength="12" autocomplete="one-time-code" placeholder="8-character code">
+          <button id="pair-kernel" type="button">Connect</button>
+        </div>
+        <details><summary>Manual recovery</summary>
+          <input id="kernel-token" type="password" autocomplete="off" placeholder="Local Kernel token">
+          <button id="save-token" class="secondary" type="button">Save local token</button>
+        </details>
+      </section>
+
+      <section class="actions">
+        <label for="case-target">Save this page to</label>
+        <select id="case-target"><option value="">New opportunity case</option></select>
+        <button id="capture" class="primary" type="button"><span>✦</span> Analyze this page now</button>
+      </section>
+      </div>
+
+      <div class="workspace-view" data-workspace-view="missions" hidden>
+      <div class="view-intro"><p class="section-title">MISSION BOARD</p><h2>Tell Efesto what matters</h2><p>Goals guide the radar. Research starts only after your explicit approval.</p></div>
+      <section class="goals">
+        <div class="inbox-heading">
+          <div><p class="section-title">MY GOALS</p><h3>What should Efesto find?</h3></div>
+          <span id="goal-count">0</span>
+        </div>
+        <div id="goal-list"><p class="empty">Add a goal to personalize your radar.</p></div>
+        <details><summary>+ Add a Goal</summary>
+          <input id="goal-title" type="text" maxlength="120" placeholder="e.g. Find remote AI work">
+          <div class="goal-form-row">
+            <select id="goal-category"><option value="job">Work</option><option value="money">Extra income</option><option value="food">Food & dining</option><option value="aid">Public aid</option><option value="grant">Funding</option><option value="offer">Savings</option><option value="learning">Learning</option><option value="event">Events</option><option value="housing">Housing</option><option value="travel">Travel</option><option value="client">Clients</option></select>
+            <input id="goal-location" type="text" maxlength="80" placeholder="Location (optional)">
+          </div>
+          <input id="goal-keywords" type="text" maxlength="160" placeholder="Keywords, separated by commas">
+          <button id="add-goal" class="secondary" type="button">Forge Goal</button>
+        </details>
+      </section>
+
+      <section class="agent-hub" aria-live="polite">
+        <div><p class="section-title">AGENT HUB</p><h3>Hermes research</h3></div>
+        <strong id="mission-state" data-status="idle">No research mission yet</strong>
+      </section>
+      <ol id="mission-progress" class="mission-progress" aria-label="Latest mission progress"></ol>
+      <section class="mission-history" aria-labelledby="mission-history-title">
+        <div class="inbox-heading">
+          <div><p class="section-title">FORGE LEDGER</p><h3 id="mission-history-title">Mission activity</h3></div>
+          <span id="mission-history-count">0</span>
+        </div>
+        <div id="mission-history-list"><p class="empty">No authorized research activity yet.</p></div>
+      </section>
+      </div>
+
+      <div class="workspace-view" data-workspace-view="models" hidden>
+      <div class="view-intro"><p class="section-title">MODEL WORKBENCH</p><h2>Power the forge locally</h2><p>Inspect compatible private models. Nothing is installed or activated silently.</p></div>
+      <details class="model-forge">
+        <summary><span><span class="section-title">MODEL FORGE</span><strong id="forge-recommendation">Inspect local AI</strong></span><span>›</span></summary>
+        <p id="forge-hardware">Connect the Kernel to inspect this device safely.</p>
+        <code id="forge-command" hidden></code>
+        <small id="forge-note">No model or executable is installed silently.</small>
       </details>
-      <label for="case-target">Destination</label>
-      <select id="case-target">
-        <option value="">Start a new Case</option>
-      </select>
-      <button id="capture" type="button">Send to the forge</button>
+      </div>
+
+      <div class="workspace-view" data-workspace-view="finds" hidden>
+      <div class="view-intro"><p class="section-title">FORGED FINDS</p><h2>Decide with Evidence, not hype</h2><p>Inspect why a lead matters, what remains unverified, its related Goal, risks, provenance, and a cautious next step.</p></div>
+      <section id="command-center" class="command-center" aria-labelledby="command-center-title">
+        <div class="command-heading"><div><p class="section-title">OPPORTUNITY COMMAND CENTER</p><h3 id="command-center-title">Your next move</h3></div><span>LOCAL</span></div>
+        <div id="command-center-content"><p class="empty">Connect your private Kernel to build an explainable action queue.</p></div>
+      </section>
+      <section class="inbox">
+        <div class="inbox-heading">
+          <div><p class="section-title">OPPORTUNITY INBOX</p><h3>Strong leads found for you</h3></div>
+          <span id="opportunity-count">0</span>
+        </div>
+        <div id="opportunity-list"><p class="empty">Connect your private Kernel to load opportunities.</p></div>
+      </section>
+      </div>
+
+      <footer>
+        <span><i></i> Sensitive pages are blocked automatically</span>
+        <button id="advanced" type="button">Advanced</button>
+      </footer>
       <p id="status" role="status" aria-live="polite"></p>
     </main>
     <script type="module" src="popup.js"></script>

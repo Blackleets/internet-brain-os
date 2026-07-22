@@ -10,6 +10,12 @@ import { OptionalEvidenceSummarizer } from './optional-evidence-summarizer.mjs';
 import { PairingSession } from './pairing-session.mjs';
 import { createLocalKernelServer } from './server.mjs';
 import { ExtensionIdentityRegistry } from './extension-identity-registry.mjs';
+import { OpportunityProjector } from './opportunity-classifier.mjs';
+import { PreferenceLearner } from './preference-learner.mjs';
+import { GoalManager } from './goals.mjs';
+import { AgentMissionManager } from './agent-missions.mjs';
+import { AgentMissionExecutor } from './agent-mission-executor.mjs';
+import { ModelForge } from './model-forge.mjs';
 
 let server;
 const apiToken = 'test-token-that-is-at-least-32-characters';
@@ -81,6 +87,26 @@ describe('local Kernel HTTP receiver', () => {
     expect(withModelStatus.ollama).toBe('configured');
     expect(JSON.stringify(withModelStatus)).not.toContain('local-test-model');
     expect(JSON.stringify(withModelStatus)).not.toContain('11434');
+  });
+
+  it('keeps Model Forge hardware and runtime inspection behind local authentication', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    const modelForge = new ModelForge({
+      ramGiB: 8,
+      cpuCores: 4,
+      fetchImpl: async () => ({ ok: true, json: async () => ({ models: [{ name: 'qwen3:4b' }] }) }),
+    });
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, { modelForge });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+    const url = `http://127.0.0.1:${port}/api/model-forge`;
+
+    expect((await fetch(url)).status).toBe(401);
+    const response = await fetch(url, { headers: authHeaders });
+    const payload = await response.json();
+    expect(response.status).toBe(200);
+    expect(payload.forge).toMatchObject({ runtime: 'available', hardware: { ramGiB: 8, cpuCores: 4, tier: 'balanced' } });
+    expect(payload.forge.models.find((model) => model.id === 'qwen3:4b')).toMatchObject({ installed: true, compatible: true });
   });
 
   it('accepts extension context and returns an idempotent receipt', async () => {
@@ -169,6 +195,90 @@ describe('local Kernel HTTP receiver', () => {
       ok: true,
       cases: [{ id: 'case:active', title: 'Active Case', status: 'active' }],
     });
+  });
+
+  it('classifies captured pages and serves the private Opportunity inbox', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'efesto-inbox-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    const projector = new CaptureCaseEvidenceProjector(store);
+    const opportunities = new OpportunityProjector(store);
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), projector, new ObsidianKnowledgeProjector(store, join(dir, 'vault')), undefined, {
+      opportunityProjector: opportunities,
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+    const capture = await fetch(`http://127.0.0.1:${port}/api/browser/page-context`, {
+      method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        schemaVersion: 'hephaestus.page-context.v1', url: 'https://careers.example.com/role',
+        title: 'We are hiring a remote AI engineer',
+        visibleText: 'Open role with salary. Full-time remote position. Apply now. Deadline: August 14, 2026.',
+        capturedAt: '2026-07-22T18:00:00.000Z',
+      }),
+    });
+    const captured = await capture.json();
+    expect(captured).toMatchObject({
+      ok: true, opportunity: { status: 'opportunity', opportunity: { category: 'job' } },
+    });
+    const opportunityId = captured.opportunity.opportunity.id.replace(/[^A-Za-z0-9._-]/g, '-');
+    const note = await readFile(join(dir, 'vault', 'Opportunities', `${opportunityId}.md`), 'utf8');
+    expect(note).toContain('type: opportunity');
+    expect(note).toContain('This is a deterministic lead, not a verified recommendation.');
+
+    const inbox = await fetch(`http://127.0.0.1:${port}/api/opportunities`, { headers: authHeaders });
+    expect(inbox.status).toBe(200);
+    expect(await inbox.json()).toMatchObject({
+      ok: true, opportunities: [{ category: 'job', sourceHost: 'careers.example.com' }],
+    });
+  });
+
+  it('records authenticated feedback and exposes an erasable local preference profile', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'efesto-feedback-http-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    await store.write({ opportunities: [{ id: 'opportunity:abc', category: 'job', benefitType: 'income', sourceHost: 'jobs.example' }] });
+    const preferences = new PreferenceLearner(store);
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, { preferenceLearner: preferences });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+    const endpoint = `http://127.0.0.1:${port}`;
+    const unauthorized = await fetch(`${endpoint}/api/opportunities/${encodeURIComponent('opportunity:abc')}/feedback`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ signal: 'useful' }) });
+    expect(unauthorized.status).toBe(401);
+    const feedback = await fetch(`${endpoint}/api/opportunities/${encodeURIComponent('opportunity:abc')}/feedback`, { method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' }, body: JSON.stringify({ signal: 'useful' }) });
+    expect(feedback.status).toBe(201);
+    expect(await feedback.json()).toMatchObject({ ok: true, feedback: { signal: 'useful', category: 'job' } });
+    expect(await (await fetch(`${endpoint}/api/preferences`, { headers: authHeaders })).json()).toMatchObject({ ok: true, profile: { eventCount: 1, categories: { job: 6 } } });
+    expect(await (await fetch(`${endpoint}/api/preferences`, { method: 'DELETE', headers: authHeaders })).json()).toEqual({ ok: true, reset: true });
+  });
+
+  it('lets an authenticated Hermes worker claim a consented mission and return bounded public Evidence', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'efesto-agent-http-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    const goals = new GoalManager(store);
+    const goal = await goals.create({ title: 'Find remote AI work', categories: ['job'], keywords: ['remote'] });
+    const missions = new AgentMissionManager(store, { isAgentReady: () => true });
+    await missions.create(goal.id, { agent: 'hermes', confirmed: true });
+    const opportunities = new OpportunityProjector(store);
+    const executor = new AgentMissionExecutor(store, opportunities);
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, new ObsidianKnowledgeProjector(store, join(dir, 'vault')), undefined, {
+      agentMissionManager: missions, agentMissionExecutor: executor, opportunityProjector: opportunities,
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const endpoint = `http://127.0.0.1:${server.address().port}`;
+    expect((await fetch(`${endpoint}/api/agent-missions/claim`, { method: 'POST' })).status).toBe(401);
+    const claimResponse = await fetch(`${endpoint}/api/agent-missions/claim`, { method: 'POST', headers: authHeaders });
+    expect(claimResponse.status).toBe(200);
+    const { mission } = await claimResponse.json();
+    const completed = await fetch(`${endpoint}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, {
+      method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({ leaseId: mission.leaseId, findings: [{
+        url: 'https://jobs.example/remote-ai', title: 'Remote AI engineer role',
+        text: 'We are hiring. Open role with salary. Apply now for this full-time remote position.',
+      }] }),
+    });
+    expect(completed.status).toBe(202);
+    expect(await completed.json()).toMatchObject({ ok: true, mission: { status: 'completed' }, findings: [{ opportunity: { opportunity: { category: 'job' } } }] });
+    const evidenceId = (await store.read()).evidence[0].id.replace(/[^A-Za-z0-9._-]/g, '-');
+    expect(await readFile(join(dir, 'vault', 'Evidence', `${evidenceId}.md`), 'utf8')).toContain('hermes-public-research-v1');
   });
 
   it('lists Replay Lab cases through the authenticated local API', async () => {

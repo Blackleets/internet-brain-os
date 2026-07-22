@@ -1,6 +1,21 @@
-# Hephaestus browser extension
+# Efesto Opportunity Radar
 
-The extension captures visible public-page context and sends it only to the authenticated local Kernel.
+Efesto is the primary browser experience for Internet Brain OS. The user explicitly authorizes a public site, and the extension can then preserve pages from that site automatically in the user's private loopback Kernel while they browse.
+
+The Kernel separates ordinary Evidence from strong opportunities across work, funding, clients, savings, food, public aid, learning, events, housing, travel, collaboration, rewards, and useful tools. Promoted leads appear in the local Opportunity Inbox with their concrete benefit type, explainable relevance, source, a detected deadline when present, and a cautious next action. They are also written as separate Opportunity notes in the user's Obsidian-compatible vault. Classification is a local lead filter, not proof that an offer is safe or suitable.
+
+Users can add private Goals with a category, keywords, optional location, and priority. Goals stay in the local Kernel, synchronize to the user's own vault, and add an explainable personalization layer to Inbox ordering without replacing the original Evidence relevance score. They do not start external browsing until an Agent Hub adapter is explicitly connected and enabled.
+
+Mission Watchtower checks the authenticated loopback Agent Hub once per minute while the popup is closed. It notifies only on newly observed terminal transitions for already-known missions, uses generic lock-screen-safe copy, and keeps a bounded local unread result center. It never exposes Goal or finding content in notifications and cannot advance mission state.
+
+Privacy defaults:
+
+- authorization is per origin and revocable;
+- login, account, payment, wallet, messaging, and settings paths are blocked;
+- sensitive query keys and user selections are never auto-captured;
+- repeat capture is limited by a local cooldown;
+- Evidence and Obsidian notes stay in the user's local instance;
+- manual capture remains available as an explicit fallback.
 
 ## Secure local setup
 

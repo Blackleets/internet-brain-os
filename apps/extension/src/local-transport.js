@@ -49,6 +49,7 @@ export async function sendPageContext(context, options = {}) {
       evidenceId: payload.evidenceId,
       obsidianUpdated: Boolean(payload.obsidianNotes),
       intelligenceStatus: payload.intelligence?.status,
+      opportunity: payload.opportunity?.status === 'opportunity' ? payload.opportunity.opportunity : undefined,
     };
   } catch (error) {
     if (error instanceof LocalTransportError) throw error;
@@ -59,6 +60,114 @@ export async function sendPageContext(context, options = {}) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+export async function listOpportunities(options = {}) {
+  const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const apiToken = requireApiToken(options.apiToken);
+  let response;
+  try {
+    response = await fetchImpl(`${baseUrl}/api/opportunities`, { headers: { 'x-hephaestus-token': apiToken } });
+  } catch {
+    throw new LocalTransportError('TRANSPORT', 'Unable to reach the local Efesto Opportunity Inbox');
+  }
+  if (!response.ok) throw new LocalTransportError('KERNEL_REJECTED', `Local Kernel request failed with HTTP ${response.status}`);
+  const payload = await response.json();
+  if (!payload?.ok || !Array.isArray(payload.opportunities)) {
+    throw new LocalTransportError('INVALID_RESPONSE', 'Local Kernel returned an invalid Opportunity list');
+  }
+  return payload.opportunities;
+}
+
+export async function sendOpportunityFeedback(opportunityId, signal, options = {}) {
+  const allowed = ['useful', 'saved', 'dismissed', 'not_interested'];
+  if (typeof opportunityId !== 'string' || !allowed.includes(signal)) throw new LocalTransportError('INVALID_FEEDBACK', 'Opportunity feedback is invalid');
+  const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const apiToken = requireApiToken(options.apiToken);
+  let response;
+  try {
+    response = await fetchImpl(`${baseUrl}/api/opportunities/${encodeURIComponent(opportunityId)}/feedback`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-hephaestus-token': apiToken }, body: JSON.stringify({ signal }),
+    });
+  } catch { throw new LocalTransportError('TRANSPORT', 'Unable to save private learning feedback'); }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new LocalTransportError(payload.code ?? 'KERNEL_REJECTED', payload.error ?? `Local Kernel request failed with HTTP ${response.status}`);
+  return payload.feedback;
+}
+
+export async function listGoals(options = {}) {
+  return goalsRequest('GET', undefined, options);
+}
+
+export async function createGoal(goal, options = {}) {
+  return goalsRequest('POST', goal, options);
+}
+
+export async function startGoalResearch(goalId, options = {}) {
+  const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const apiToken = requireApiToken(options.apiToken);
+  let response;
+  try {
+    response = await fetchImpl(`${baseUrl}/api/goals/${encodeURIComponent(goalId)}/missions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-hephaestus-token': apiToken },
+      body: JSON.stringify({ agent: 'hermes', cadence: options.cadence ?? 'manual', confirmed: true }),
+    });
+  } catch { throw new LocalTransportError('TRANSPORT', 'Unable to reach Efesto Agent Hub'); }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new LocalTransportError(payload.code ?? 'KERNEL_REJECTED', payload.error ?? `Local Kernel request failed with HTTP ${response.status}`);
+  if (!payload.mission?.id) throw new LocalTransportError('INVALID_RESPONSE', 'Local Kernel returned an invalid mission');
+  return payload.mission;
+}
+
+export async function listAgentMissions(options = {}) {
+  const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const apiToken = requireApiToken(options.apiToken);
+  let response;
+  try {
+    response = await fetchImpl(`${baseUrl}/api/agent-missions`, { headers: { 'x-hephaestus-token': apiToken } });
+  } catch { throw new LocalTransportError('TRANSPORT', 'Unable to reach Efesto Agent Hub'); }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new LocalTransportError(payload.code ?? 'KERNEL_REJECTED', payload.error ?? `Local Kernel request failed with HTTP ${response.status}`);
+  if (!payload?.ok || !Array.isArray(payload.missions)) throw new LocalTransportError('INVALID_RESPONSE', 'Local Kernel returned an invalid mission list');
+  return payload.missions;
+}
+
+export async function inspectModelForge(options = {}) {
+  const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const apiToken = requireApiToken(options.apiToken);
+  let response;
+  try {
+    response = await fetchImpl(`${baseUrl}/api/model-forge`, { headers: { 'x-hephaestus-token': apiToken } });
+  } catch { throw new LocalTransportError('TRANSPORT', 'Unable to inspect the local Model Forge'); }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new LocalTransportError(payload.code ?? 'KERNEL_REJECTED', `Local Kernel request failed with HTTP ${response.status}`);
+  if (!payload?.forge || !Array.isArray(payload.forge.models)) throw new LocalTransportError('INVALID_RESPONSE', 'Local Kernel returned an invalid Model Forge status');
+  return payload.forge;
+}
+
+async function goalsRequest(method, goal, options) {
+  const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const apiToken = requireApiToken(options.apiToken);
+  let response;
+  try {
+    response = await fetchImpl(`${baseUrl}/api/goals`, {
+      method,
+      headers: { ...(method === 'POST' ? { 'content-type': 'application/json' } : {}), 'x-hephaestus-token': apiToken },
+      ...(method === 'POST' ? { body: JSON.stringify(goal) } : {}),
+    });
+  } catch { throw new LocalTransportError('TRANSPORT', 'Unable to reach private Efesto Goals'); }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new LocalTransportError(payload.code ?? 'KERNEL_REJECTED', payload.error ?? `Local Kernel request failed with HTTP ${response.status}`);
+  if (method === 'GET' && Array.isArray(payload.goals)) return payload.goals;
+  if (method === 'POST' && payload.goal?.id) return payload.goal;
+  throw new LocalTransportError('INVALID_RESPONSE', 'Local Kernel returned an invalid Goals response');
 }
 
 export async function listCases(options = {}) {
@@ -77,6 +186,29 @@ export async function listCases(options = {}) {
     throw new LocalTransportError('INVALID_RESPONSE', 'Local Kernel returned an invalid Case list');
   }
   return payload.cases;
+}
+
+export async function getKernelStatus(options = {}) {
+  const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  let response;
+  try {
+    response = await fetchImpl(`${baseUrl}/status`);
+  } catch {
+    throw new LocalTransportError('TRANSPORT', 'Unable to reach the local Hephaestus Kernel');
+  }
+  if (!response.ok) throw new LocalTransportError('KERNEL_REJECTED', `Local Kernel request failed with HTTP ${response.status}`);
+  const payload = await response.json();
+  if (!payload?.ok || payload.kernel !== 'ready') {
+    throw new LocalTransportError('INVALID_RESPONSE', 'Local Kernel returned an invalid status');
+  }
+  return {
+    kernel: payload.kernel,
+    hermes: payload.hermes,
+    replayLab: payload.replayLab,
+    ollama: payload.ollama,
+    obsidian: payload.obsidian,
+  };
 }
 
 export async function pairKernel(code, options = {}) {
