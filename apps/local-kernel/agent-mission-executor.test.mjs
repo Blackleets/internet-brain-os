@@ -16,7 +16,7 @@ describe('external agent mission executor boundary', () => {
     const mission = await manager.create(goal.id, { agent: 'hermes', confirmed: true });
     const executor = new AgentMissionExecutor(store, new OpportunityProjector(store), { now: () => new Date('2026-07-22T18:01:00.000Z') });
     const claim = await executor.claim();
-    expect(claim).toMatchObject({ id: mission.id, attempt: 1, scope: { categories: ['job'] } });
+    expect(claim).toMatchObject({ id: mission.id, attempt: 1, scope: { categories: ['job'] }, leaseExpiresAt: '2026-07-22T18:21:00.000Z' });
     expect((await store.read()).agentMissions[0]).toMatchObject({ status: 'running', executionPhase: 'investigating', investigatingAt: '2026-07-22T18:01:00.000Z' });
     const completed = await executor.complete(mission.id, { leaseId: claim.leaseId, findings: [{
       url: 'https://jobs.example/ai', title: 'Remote AI engineer role',
