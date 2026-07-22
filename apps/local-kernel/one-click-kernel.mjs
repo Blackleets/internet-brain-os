@@ -10,9 +10,14 @@ const internalPort = Number(process.env.HEPHAESTUS_INTERNAL_PORT ?? port + 1);
 const internalBaseUrl = `http://127.0.0.1:${internalPort}`;
 const MAX_PROXY_BODY_BYTES = 1024 * 1024;
 const activeRuns = new Map();
+let shuttingDown = false;
+let proxy;
 
 if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(String(host).toLowerCase())) {
   throw new Error('HEPHAESTUS_HOST must be a loopback address');
+}
+if (!Number.isInteger(port) || port < 1 || port > 65535 || !Number.isInteger(internalPort) || internalPort < 1 || internalPort > 65535 || port === internalPort) {
+  throw new Error('Kernel ports must be distinct valid TCP ports');
 }
 
 configureBundledHermes();
@@ -27,16 +32,15 @@ const kernel = spawn(process.execPath, [resolve('apps/local-kernel/server.mjs')]
 kernel.stdout.on('data', (chunk) => process.stdout.write(chunk));
 kernel.stderr.on('data', (chunk) => process.stderr.write(chunk));
 kernel.on('exit', (code, signal) => {
-  if (!shuttingDown) {
-    process.stderr.write(`Internal Kernel stopped unexpectedly (${signal ?? code ?? 'unknown'}).\n`);
-    process.exitCode = code || 1;
-    proxy.close();
-  }
+  if (shuttingDown) return;
+  process.stderr.write(`Internal Kernel stopped unexpectedly (${signal ?? code ?? 'unknown'}).\n`);
+  process.exitCode = code || 1;
+  proxy?.close();
 });
 
 await waitForKernel();
 
-const proxy = createServer(async (request, response) => {
+proxy = createServer(async (request, response) => {
   try {
     const body = await readBody(request);
     const headers = forwardHeaders(request.headers);
@@ -59,6 +63,7 @@ const proxy = createServer(async (request, response) => {
       if (token && parsed?.mission) startMissionRuntime(parsed.mission, token);
     }
   } catch (error) {
+    if (response.headersSent) return response.destroy(error instanceof Error ? error : undefined);
     response.statusCode = 502;
     response.setHeader('content-type', 'application/json; charset=utf-8');
     response.end(JSON.stringify({ ok: false, code: 'KERNEL_PROXY_FAILED', error: safeMessage(error) }));
@@ -70,12 +75,11 @@ proxy.listen(port, host, () => {
   console.log('Efesto Research now starts Hermes automatically; manual mission-worker commands are not required.');
 });
 
-let shuttingDown = false;
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
     if (shuttingDown) return;
     shuttingDown = true;
-    proxy.close(() => process.exit(0));
+    proxy?.close(() => process.exit(0));
     kernel.kill(signal);
     setTimeout(() => process.exit(0), 2_000).unref();
   });
