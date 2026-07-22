@@ -39,10 +39,20 @@ describe('one-click Hermes runtime entrypoints', () => {
     expect(source).toContain("status.classList.remove('error')");
   });
 
-  it('advertises the bundled one-click Hermes worker to the internal Kernel', () => {
+  it('advertises the bundled one-click Hermes worker without enabling built Kernel ingestion', () => {
     const source = readFileSync(resolve('apps/local-kernel/one-click-kernel.mjs'), 'utf8');
-    expect(source).toContain("randomBytes(32).toString('hex')");
-    expect(source).toContain('HEPHAESTUS_HERMES_SECRET: internalHermesSecret');
+    const serverSource = readFileSync(resolve('apps/local-kernel/server.mjs'), 'utf8');
+    expect(source).toContain("HEPHAESTUS_HERMES_READY: '1'");
+    expect(source).not.toContain('HEPHAESTUS_HERMES_SECRET:');
+    expect(serverSource).toContain("process.env.HEPHAESTUS_HERMES_READY === '1'");
+    expect(serverSource).toContain('hermesWorkerReady || Boolean(hermes)');
     expect(source).toContain('configureBundledHermes()');
+  });
+
+  it('keeps one-click Hermes execution bounded after observable worker failures', () => {
+    const source = readFileSync(resolve('apps/local-kernel/one-click-kernel.mjs'), 'utf8');
+    expect(source).toContain('MAX_AUTOMATIC_MISSION_ATTEMPTS');
+    expect(source).toContain('while (attempts < MAX_AUTOMATIC_MISSION_ATTEMPTS)');
+    expect(source).toContain("if (result.status !== 'failed') break");
   });
 });

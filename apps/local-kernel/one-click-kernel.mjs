@@ -1,5 +1,4 @@
 import { spawn } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -10,6 +9,7 @@ const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
 const internalPort = Number(process.env.HEPHAESTUS_INTERNAL_PORT ?? port + 1);
 const internalBaseUrl = `http://127.0.0.1:${internalPort}`;
 const MAX_PROXY_BODY_BYTES = 1024 * 1024;
+const MAX_AUTOMATIC_MISSION_ATTEMPTS = 3;
 const activeRuns = new Map();
 let shuttingDown = false;
 let proxy;
@@ -22,7 +22,6 @@ if (!Number.isInteger(port) || port < 1 || port > 65535 || !Number.isInteger(int
 }
 
 configureBundledHermes();
-const internalHermesSecret = process.env.HEPHAESTUS_HERMES_SECRET ?? randomBytes(32).toString('hex');
 
 const kernel = spawn(process.execPath, [resolve('apps/local-kernel/server.mjs')], {
   shell: false,
@@ -32,7 +31,7 @@ const kernel = spawn(process.execPath, [resolve('apps/local-kernel/server.mjs')]
     ...process.env,
     HEPHAESTUS_HOST: '127.0.0.1',
     HEPHAESTUS_PORT: String(internalPort),
-    HEPHAESTUS_HERMES_SECRET: internalHermesSecret,
+    HEPHAESTUS_HERMES_READY: '1',
   },
 });
 
@@ -94,16 +93,25 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
 
 function startMissionRuntime(mission, apiToken) {
   if (!mission?.id || !['queued', 'running'].includes(mission.status) || activeRuns.has(mission.id)) return;
-  const run = runHermesMissionWorker({
-    baseUrl: internalBaseUrl,
-    apiToken,
-    command: process.execPath,
-    args: [resolve('scripts/hermes-efesto-adapter.mjs')],
-  })
-    .then((result) => console.log(`Hermes mission ${mission.id}: ${result.status}`))
+  const run = runMissionUntilTerminal(mission.id, apiToken)
     .catch((error) => console.error(`Hermes mission ${mission.id} failed: ${safeMessage(error)}`))
     .finally(() => activeRuns.delete(mission.id));
   activeRuns.set(mission.id, run);
+}
+
+async function runMissionUntilTerminal(missionId, apiToken) {
+  let attempts = 0;
+  while (attempts < MAX_AUTOMATIC_MISSION_ATTEMPTS) {
+    attempts += 1;
+    const result = await runHermesMissionWorker({
+      baseUrl: internalBaseUrl,
+      apiToken,
+      command: process.execPath,
+      args: [resolve('scripts/hermes-efesto-adapter.mjs')],
+    });
+    console.log(`Hermes mission ${missionId}: ${result.status}`);
+    if (result.status !== 'failed') break;
+  }
 }
 
 function configureBundledHermes() {

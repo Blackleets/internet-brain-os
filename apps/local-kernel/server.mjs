@@ -56,7 +56,8 @@ const hermes = isMain
     secret: process.env.IBOS_HERMES_SECRET ?? process.env.HEPHAESTUS_HERMES_SECRET,
   })
   : undefined;
-const agentMissionManager = new AgentMissionManager(knowledgeStore, { isAgentReady: (agent) => agent === 'hermes' && Boolean(hermes) });
+const hermesWorkerReady = process.env.HEPHAESTUS_HERMES_READY === '1';
+const agentMissionManager = new AgentMissionManager(knowledgeStore, { isAgentReady: (agent) => agent === 'hermes' && (hermesWorkerReady || Boolean(hermes)) });
 const preferenceLearner = new PreferenceLearner(knowledgeStore);
 const agentMissionExecutor = new AgentMissionExecutor(knowledgeStore, opportunityProjector);
 const modelForge = new ModelForge({
