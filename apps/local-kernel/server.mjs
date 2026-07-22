@@ -240,8 +240,9 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       try {
         const missionId = decodeURIComponent(request.url.slice('/api/agent-missions/'.length, -'/results'.length));
         const completed = await missionExecutor.complete(missionId, await readJson(request));
-        for (const finding of completed.findings) if (finding.caseId && obsidianProjector) await obsidianProjector.syncCase(finding.caseId);
-        return send(response, 202, { ok: true, ...completed });
+        const obsidianReceipt = await syncMissionObsidian(completed, obsidianProjector);
+        const mission = await attachMissionObsidianReceipt(missionExecutor.store, missionId, obsidianReceipt);
+        return send(response, 202, { ok: true, ...completed, mission, obsidianReceipt });
       } catch (error) {
         if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
         return send(response, 500, { ok: false, code: 'AGENT_RESULT_INGESTION_FAILED' });
@@ -428,4 +429,40 @@ function sendHtml(response, status, html) {
   response.setHeader('content-type', 'text/html; charset=utf-8');
   response.setHeader('cache-control', 'no-store');
   response.end(html);
+}
+
+async function syncMissionObsidian(completed, obsidianProjector) {
+  if (!obsidianProjector) return { status: 'not_configured', notesWritten: 0, vaultRelativePath: null, lastSyncedAt: null };
+  const paths = new Set();
+  const syncedAt = new Date().toISOString();
+  try {
+    for (const finding of completed.findings) {
+      if (!finding.caseId) continue;
+      const notes = await obsidianProjector.syncCase(finding.caseId);
+      for (const value of Object.values(notes)) {
+        if (Array.isArray(value)) value.forEach((item) => paths.add(item));
+        else if (typeof value === 'string') paths.add(value);
+      }
+    }
+    return { status: 'synced', notesWritten: paths.size, vaultRelativePath: obsidianProjector.vaultPath, lastSyncedAt: syncedAt };
+  } catch {
+    return { status: paths.size ? 'partial' : 'failed', notesWritten: paths.size, vaultRelativePath: obsidianProjector.vaultPath, lastSyncedAt: syncedAt };
+  }
+}
+
+async function attachMissionObsidianReceipt(store, missionId, obsidianReceipt) {
+  return store.project(async (data) => {
+    const missions = data.agentMissions ?? [];
+    const index = missions.findIndex((item) => item.id === missionId);
+    if (index < 0) return { changed: false, data, result: undefined };
+    const current = missions[index];
+    const updatedMission = {
+      ...current,
+      obsidianReceipt,
+      resultSummary: { ...(current.resultSummary ?? {}), obsidianNotesWritten: obsidianReceipt.notesWritten },
+    };
+    const updated = [...missions];
+    updated[index] = updatedMission;
+    return { changed: true, data: { ...data, agentMissions: updated }, result: updatedMission };
+  });
 }

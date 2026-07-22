@@ -1,4 +1,5 @@
 import { mkdtemp, readFile, stat } from 'node:fs/promises';
+import { platform } from 'node:os';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -15,7 +16,7 @@ describe('ExtensionIdentityRegistry', () => {
     expect(await registry.authorize(first)).toEqual({ id: 'a'.repeat(32), added: true });
     expect(await registry.allows(first)).toBe(true);
     expect(await registry.allows(second)).toBe(false);
-    expect((await stat(file)).mode & 0o777).toBe(0o600);
+    if (platform() !== 'win32') expect((await stat(file)).mode & 0o777).toBe(0o600);
     expect(JSON.parse(await readFile(file, 'utf8')).extensionIds).toEqual(['a'.repeat(32)]);
     expect(await new ExtensionIdentityRegistry(file).allows(first)).toBe(true);
     await registry.clear();

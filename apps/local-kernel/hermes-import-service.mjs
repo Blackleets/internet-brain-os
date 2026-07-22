@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto';
-import { scanHermesSensitiveData } from '../../scripts/hermes-sensitive-data-scan.mjs';
+import { scanHermesSensitiveData } from '../../scripts/hermes-sensitive-data-scan-core.mjs';
 
 export class HermesImportError extends Error {
   constructor(code, message, status = 400, details) {

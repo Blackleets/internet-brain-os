@@ -1,23 +1,31 @@
 import './unsupported-page-guard.js';
-import { DEFAULT_KERNEL_BASE_URL, listAgentMissions, listGoals, startGoalResearch } from './local-transport.js';
+import { DEFAULT_KERNEL_BASE_URL, getKernelStatus, listAgentMissions, listGoals, startGoalResearch } from './local-transport.js';
+import { deriveEfestoOrbState, resolveForgePowerIntent, selectNextGoal, shouldCreateMission } from './efesto-orb-state.js';
 
-const ACTIVE_STATUSES = new Set(['waiting_for_agent', 'queued', 'running']);
+const ACTIVE_STATUSES = new Set(['queued', 'running']);
 const POLL_MS = 2000;
 const powerButton = document.querySelector('#forge-power');
 const powerLabel = document.querySelector('#forge-power-label');
 const powerDetail = document.querySelector('#forge-power-detail');
 const livingForge = document.querySelector('#living-forge');
+const orbMeta = document.querySelector('#forge-orb-meta');
+const orbSummary = document.querySelector('#forge-orb-summary');
+const obsidianReceipt = document.querySelector('#forge-obsidian-receipt');
 let timer;
 let cycleRunning = false;
+let currentOrbState = 'idle';
 
 void initializePower();
 
 powerButton?.addEventListener('click', async () => {
   const stored = await chrome.storage.local.get(['efestoForgeEnabled']);
-  const enabled = !Boolean(stored.efestoForgeEnabled);
-  await chrome.storage.local.set({ efestoForgeEnabled: enabled });
-  renderPower(enabled, enabled ? 'Starting the forge…' : 'Paused. Active work will finish safely.');
-  if (enabled) void runCycle();
+  const intent = resolveForgePowerIntent({ enabled: Boolean(stored.efestoForgeEnabled), state: currentOrbState });
+  await chrome.storage.local.set({ efestoForgeEnabled: intent.enabled });
+  renderOrb(
+    deriveEfestoOrbState({ enabled: intent.enabled, kernel: 'ready', services: {}, mission: undefined }),
+    intent.retry ? 'Retrying the failed mission safely.' : intent.enabled ? 'Starting the forge' : 'Active work will finish safely.',
+  );
+  if (intent.enabled) void runCycle();
 });
 
 document.addEventListener('visibilitychange', () => {
@@ -29,7 +37,7 @@ window.addEventListener('pagehide', () => clearTimeout(timer), { once: true });
 async function initializePower() {
   const stored = await chrome.storage.local.get(['efestoForgeEnabled']);
   const enabled = Boolean(stored.efestoForgeEnabled);
-  renderPower(enabled, enabled ? 'Efesto is watching your authorized Goals.' : 'Press once to start forging.');
+  renderOrb(deriveEfestoOrbState({ enabled, kernel: enabled ? 'ready' : 'offline', services: {} }), enabled ? 'Recovering forge state…' : 'Press once to start forging.');
   if (enabled) void runCycle();
 }
 
@@ -44,52 +52,50 @@ async function runCycle() {
       'kernelApiToken',
       'kernelBaseUrl',
     ]);
-    if (!stored.efestoForgeEnabled) {
-      renderPower(false, 'Paused. Press once to start forging.');
-      return;
-    }
-    if (!stored.kernelApiToken) {
-      renderPower(false, 'Connect the private Kernel before starting.');
-      await chrome.storage.local.set({ efestoForgeEnabled: false });
-      return;
-    }
-
     const options = {
       baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL,
       apiToken: stored.kernelApiToken,
     };
+    const enabled = Boolean(stored.efestoForgeEnabled);
+    if (!enabled) {
+      renderOrb(deriveEfestoOrbState({ enabled: false, kernel: 'ready', services: {} }), 'Paused. Press once to start forging.');
+      return;
+    }
+    if (!stored.kernelApiToken) {
+      renderOrb(deriveEfestoOrbState({ enabled: false, kernel: 'ready', services: {} }), 'Connect the private Kernel before starting.');
+      await chrome.storage.local.set({ efestoForgeEnabled: false });
+      return;
+    }
+
+    const readiness = await getKernelStatus({ baseUrl: options.baseUrl });
+    const services = { hermes: readiness.hermes, obsidian: readiness.obsidian };
     const [missions, goals] = await Promise.all([listAgentMissions(options), listGoals(options)]);
-    const latest = [...missions].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))[0];
+    const latest = newest(missions);
+    renderOrb(deriveEfestoOrbState({ enabled, kernel: 'ready', services, mission: latest }));
 
     if (latest && ACTIVE_STATUSES.has(latest.status)) {
-      const startedAt = Date.parse(latest.claimedAt ?? latest.createdAt);
-      const elapsed = Number.isFinite(startedAt) ? formatElapsed(Date.now() - startedAt) : 'starting';
-      renderPower(true, `Efesto is forging · ${elapsed}`);
-      livingForge?.setAttribute('data-activity', latest.executionPhase === 'verifying' ? 'verifying' : 'working');
       schedule();
       return;
     }
 
     const completed = new Set(Array.isArray(stored.efestoForgeCompletedGoals) ? stored.efestoForgeCompletedGoals : []);
     if (latest?.status === 'completed' && latest.goalId) completed.add(latest.goalId);
-    const orderedGoals = [...goals].sort((a, b) => Number(b.priority ?? 0) - Number(a.priority ?? 0));
-    const nextGoal = orderedGoals.find((goal) => !completed.has(goal.id));
+    await chrome.storage.local.set({ efestoForgeCompletedGoals: [...completed] });
 
-    if (!nextGoal) {
-      await chrome.storage.local.set({ efestoForgeEnabled: false, efestoForgeCompletedGoals: [] });
-      renderPower(false, goals.length ? 'Forge cycle complete. Results are in Finds and Obsidian.' : 'Create a Goal, then start the forge.');
-      livingForge?.setAttribute('data-activity', goals.length ? 'success' : 'idle');
+    if (!shouldCreateMission({ enabled, kernel: 'ready', goals, completedGoalIds: [...completed], mission: latest })) {
+      if (!selectNextGoal(goals, [...completed])) {
+        await chrome.storage.local.set({ efestoForgeEnabled: false, efestoForgeCompletedGoals: [] });
+        renderOrb(deriveEfestoOrbState({ enabled: false, kernel: 'ready', services, mission: latest }), goals.length ? 'Forge cycle complete. Results are in Finds and Obsidian receipts when confirmed.' : 'Create a Goal, then start the forge.');
+      }
       return;
     }
 
-    await chrome.storage.local.set({ efestoForgeCompletedGoals: [...completed] });
-    renderPower(true, `Starting: ${nextGoal.title}`);
-    livingForge?.setAttribute('data-activity', 'queued');
+    const nextGoal = selectNextGoal(goals, [...completed]);
+    renderOrb(deriveEfestoOrbState({ enabled, kernel: 'ready', services, mission: undefined }), `Starting the forge for ${nextGoal.title}`);
     await startGoalResearch(nextGoal.id, options);
     schedule(1000);
   } catch (error) {
-    renderPower(true, error instanceof Error ? error.message : 'The forge needs attention.');
-    livingForge?.setAttribute('data-activity', 'error');
+    renderOrb({ state: 'failed', label: 'Forge needs attention', detail: error instanceof Error ? error.message : 'Unable to read Kernel state.', active: false, smithActive: false, action: 'Retry safely', enabled: true });
     schedule(5000);
   } finally {
     cycleRunning = false;
@@ -101,17 +107,45 @@ function schedule(delay = POLL_MS) {
   timer = setTimeout(() => void runCycle(), delay);
 }
 
-function renderPower(enabled, detail) {
+function renderOrb(view, overrideDetail) {
   if (!powerButton || !powerLabel || !powerDetail) return;
+  currentOrbState = view.state;
+  const enabled = Boolean(view.enabled);
   powerButton.dataset.enabled = enabled ? 'true' : 'false';
+  powerButton.dataset.state = view.state;
   powerButton.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-  powerButton.setAttribute('aria-label', enabled ? 'Pause Efesto after current work' : 'Start Efesto');
-  powerLabel.textContent = enabled ? 'EFESTO ON' : 'START EFESTO';
-  powerDetail.textContent = detail;
+  powerButton.setAttribute('aria-label', enabled ? 'Pause Efesto after current work' : view.action ?? 'Start Efesto');
+  powerLabel.textContent = view.action && view.state === 'failed' ? view.action : view.label;
+  powerDetail.textContent = overrideDetail ?? view.detail;
+  livingForge?.setAttribute('data-activity', view.smithActive ? (view.state === 'verifying' ? 'verifying' : 'working') : view.state === 'completed' ? 'success' : view.state === 'failed' ? 'error' : 'idle');
+  setText('#forge-orb-elapsed', view.elapsedLabel ?? 'No active mission');
+  setText('#forge-orb-heartbeat', view.heartbeatLabel ?? 'No heartbeat yet');
+  if (orbMeta) orbMeta.hidden = !view.active;
+  if (orbSummary) orbSummary.hidden = view.state !== 'completed';
+  if (view.summary) {
+    setText('#forge-summary-findings', String(view.summary.findingsReceived));
+    setText('#forge-summary-evidence', String(view.summary.evidenceCreated));
+    setText('#forge-summary-opportunities', String(view.summary.opportunitiesForged));
+    setText('#forge-summary-obsidian', String(view.summary.obsidianNotesWritten));
+  }
+  renderObsidianReceipt(view.obsidianReceipt);
 }
 
-function formatElapsed(milliseconds) {
-  const seconds = Math.max(0, Math.floor(milliseconds / 1000));
-  const minutes = Math.floor(seconds / 60);
-  return minutes ? `${minutes}m ${seconds % 60}s` : `${seconds}s`;
+function renderObsidianReceipt(receipt) {
+  if (!obsidianReceipt) return;
+  obsidianReceipt.hidden = !receipt;
+  if (!receipt) return;
+  const status = receipt.status ?? 'not_confirmed';
+  const copy = {
+    synced: `synced · ${receipt.notesWritten ?? 0} notes`,
+    partial: `partial · ${receipt.notesWritten ?? 0} notes`,
+    failed: 'failed',
+    not_configured: 'not configured',
+    not_confirmed: 'not confirmed',
+  }[status] ?? status;
+  setText('#forge-obsidian-state', `Obsidian ${copy}`);
+  setText('#forge-obsidian-detail', receipt.lastSyncedAt ? `${receipt.vaultRelativePath ?? 'vault path unavailable'} · ${new Date(receipt.lastSyncedAt).toLocaleString()}` : 'The Kernel has not returned a sync receipt.');
 }
+
+function newest(missions = []) { return [...missions].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))[0]; }
+function setText(selector, value) { const node = document.querySelector(selector); if (node) node.textContent = value; }

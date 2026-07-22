@@ -4,7 +4,7 @@ import { forgeActivityForMission, temporaryForgeActivity } from './forge-activit
 describe('pixel forge activity contract', () => {
   it('maps observable mission states to honest animation tones', () => {
     expect(forgeActivityForMission().tone).toBe('idle');
-    expect(forgeActivityForMission({ status: 'waiting_for_agent' }).tone).toBe('queued');
+    expect(forgeActivityForMission({ status: 'waiting_for_agent' })).toMatchObject({ tone: 'error', label: 'Hermes not available' });
     expect(forgeActivityForMission({ status: 'queued' }).tone).toBe('queued');
     expect(forgeActivityForMission({ status: 'running' }).tone).toBe('working');
     expect(forgeActivityForMission({ status: 'running', executionPhase: 'verifying' }).tone).toBe('verifying');

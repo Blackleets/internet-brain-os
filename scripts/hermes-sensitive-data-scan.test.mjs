@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { scanHermesSensitiveData } from './hermes-sensitive-data-scan.mjs';
+import { scanHermesSensitiveData } from './hermes-sensitive-data-scan-core.mjs';
 
 describe('Hermes sensitive-data preflight', () => {
   it('accepts a sanitized bounded execution without changing it', () => {

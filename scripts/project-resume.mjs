@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { resolve } from 'node:path';

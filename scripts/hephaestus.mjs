@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { randomUUID } from 'node:crypto';
 import { lookup } from 'node:dns/promises';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
