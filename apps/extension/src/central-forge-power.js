@@ -1,5 +1,5 @@
 import './unsupported-page-guard.js';
-import { DEFAULT_KERNEL_BASE_URL, getKernelStatus, listAgentMissions, listGoals, startGoalResearch } from './local-transport.js';
+import { DEFAULT_KERNEL_BASE_URL, getEfestoBootstrapStatus, listAgentMissions, listGoals, startGoalResearch } from './local-transport.js';
 import { deriveEfestoOrbState, resolveForgePowerIntent, selectNextGoal, shouldCreateMission } from './efesto-orb-state.js';
 
 const ACTIVE_STATUSES = new Set(['queued', 'running']);
@@ -67,11 +67,25 @@ async function runCycle() {
       return;
     }
 
-    const readiness = await getKernelStatus({ baseUrl: options.baseUrl });
-    const services = { hermes: readiness.hermes, obsidian: readiness.obsidian };
-    const [missions, goals] = await Promise.all([listAgentMissions(options), listGoals(options)]);
+    const [bootstrap, missions, goals] = await Promise.all([
+      getEfestoBootstrapStatus({ baseUrl: options.baseUrl }),
+      listAgentMissions(options),
+      listGoals(options),
+    ]);
+    const kernel = bootstrap.kernel === 'ready' ? 'ready' : 'offline';
+    const services = {
+      hermes: bootstrap.hermes === 'ready' ? 'ready' : 'disabled',
+      obsidian: bootstrap.obsidian === 'ready' ? 'configured' : 'not_configured',
+    };
     const latest = newest(missions);
-    renderOrb(deriveEfestoOrbState({ enabled, kernel: 'ready', services, mission: latest }));
+    renderOrb(deriveEfestoOrbState({ enabled, kernel, services, mission: latest }));
+
+    if (latest?.status === 'waiting_for_agent' && services.hermes === 'ready') {
+      const restartedMission = await startGoalResearch(latest.goalId, options);
+      renderOrb(deriveEfestoOrbState({ enabled, kernel, services, mission: restartedMission }));
+      schedule(1000);
+      return;
+    }
 
     if (latest && ACTIVE_STATUSES.has(latest.status)) {
       schedule();
@@ -82,18 +96,18 @@ async function runCycle() {
     if (latest?.status === 'completed' && latest.goalId) completed.add(latest.goalId);
     await chrome.storage.local.set({ efestoForgeCompletedGoals: [...completed] });
 
-    if (!shouldCreateMission({ enabled, kernel: 'ready', goals, completedGoalIds: [...completed], mission: latest })) {
+    if (!shouldCreateMission({ enabled, kernel, goals, completedGoalIds: [...completed], mission: latest })) {
       if (!selectNextGoal(goals, [...completed])) {
         await chrome.storage.local.set({ efestoForgeEnabled: false, efestoForgeCompletedGoals: [] });
-        renderOrb(deriveEfestoOrbState({ enabled: false, kernel: 'ready', services, mission: latest }), goals.length ? 'Forge cycle complete. Results are in Finds and Obsidian receipts when confirmed.' : 'Create a Goal, then start the forge.');
+        renderOrb(deriveEfestoOrbState({ enabled: false, kernel, services, mission: latest }), goals.length ? 'Forge cycle complete. Results are in Finds and Obsidian receipts when confirmed.' : 'Create a Goal, then start the forge.');
       }
       return;
     }
 
     const nextGoal = selectNextGoal(goals, [...completed]);
-    renderOrb(deriveEfestoOrbState({ enabled, kernel: 'ready', services, mission: undefined }), `Starting the forge for ${nextGoal.title}`);
+    renderOrb(deriveEfestoOrbState({ enabled, kernel, services, mission: undefined }), `Starting the forge for ${nextGoal.title}`);
     const startedMission = await startGoalResearch(nextGoal.id, options);
-    renderOrb(deriveEfestoOrbState({ enabled, kernel: 'ready', services, mission: startedMission }));
+    renderOrb(deriveEfestoOrbState({ enabled, kernel, services, mission: startedMission }));
     schedule(1000);
   } catch (error) {
     renderOrb({ state: 'failed', label: 'Forge needs attention', detail: error instanceof Error ? error.message : 'Unable to read Kernel state.', active: false, smithActive: false, action: 'Retry safely', enabled: true });

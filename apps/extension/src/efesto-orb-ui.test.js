@@ -47,6 +47,14 @@ describe('Efesto orb UI static contract', () => {
     expect(source).toContain('mission: startedMission');
   });
 
+  it('uses the shared bootstrap contract and restarts waiting missions once Hermes is ready', () => {
+    const source = readFileSync(resolve('apps/extension/src/central-forge-power.js'), 'utf8');
+    expect(source).toContain('getEfestoBootstrapStatus');
+    expect(source).toContain("latest?.status === 'waiting_for_agent' && services.hermes === 'ready'");
+    expect(source).toContain('const restartedMission = await startGoalResearch(latest.goalId, options)');
+    expect(source).toContain('mission: restartedMission');
+  });
+
   it('never displays empty summaries or Obsidian receipts outside completed state', () => {
     const source = readFileSync(resolve('apps/extension/src/central-forge-power.js'), 'utf8');
     const css = readFileSync(resolve('apps/extension/src/central-forge-power.css'), 'utf8');
