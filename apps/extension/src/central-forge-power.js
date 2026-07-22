@@ -87,7 +87,7 @@ async function runCycle() {
 
     if (!nextGoal) {
       await chrome.storage.local.set({ efestoForgeEnabled: false, efestoForgeCompletedGoals: [] });
-      renderPower(false, goals.length ? 'Cycle complete. Results saved in Finds and Obsidian.' : 'Add a Goal once from Advanced, then start Efesto.');
+      renderPower(false, goals.length ? 'Forge cycle complete. Results saved in Finds and Obsidian.' : 'Add a Goal once from Advanced, then start Efesto.');
       livingForge?.setAttribute('data-activity', goals.length ? 'success' : 'idle');
       return;
     }
