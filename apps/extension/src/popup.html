@@ -34,12 +34,14 @@
         <span class="live-badge"><i></i> LIVE</span>
       </section>
 
-      <section class="forge-power-panel" data-simple="true" aria-live="polite">
-        <button id="forge-power" class="forge-power" type="button" data-enabled="false" aria-pressed="false" aria-label="Start Efesto"></button>
-        <div class="forge-power-copy">
+      <section class="forge-power-shell" data-simple="true" aria-live="polite">
+        <button id="forge-power" class="forge-power-panel" type="button" data-enabled="false" aria-pressed="false" aria-label="Start Efesto">
+          <span class="forge-power" aria-hidden="true"></span>
+          <span class="forge-power-copy">
           <strong id="forge-power-label">START EFESTO</strong>
           <small id="forge-power-detail">Press once to start forging.</small>
-        </div>
+          </span>
+        </button>
         <div id="forge-orb-meta" class="forge-orb-meta" hidden>
           <span id="forge-orb-elapsed">No active mission</span>
           <span id="forge-orb-heartbeat">No heartbeat yet</span>
