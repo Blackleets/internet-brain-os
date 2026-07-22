@@ -276,7 +276,18 @@ describe('local Kernel HTTP receiver', () => {
       }] }),
     });
     expect(completed.status).toBe(202);
-    expect(await completed.json()).toMatchObject({ ok: true, mission: { status: 'completed' }, findings: [{ opportunity: { opportunity: { category: 'job' } } }] });
+    const completedBody = await completed.json();
+    expect(completedBody).toMatchObject({
+      ok: true,
+      mission: { status: 'completed', obsidianReceipt: { status: 'synced' }, resultSummary: { obsidianNotesWritten: 4 } },
+      obsidianReceipt: { status: 'synced', notesWritten: 4 },
+      findings: [{ opportunity: { opportunity: { category: 'job' } } }],
+    });
+    expect((await store.read()).agentMissions[0]).toMatchObject({
+      status: 'completed',
+      obsidianReceipt: completedBody.obsidianReceipt,
+      resultSummary: { obsidianNotesWritten: completedBody.obsidianReceipt.notesWritten },
+    });
     const evidenceId = (await store.read()).evidence[0].id.replace(/[^A-Za-z0-9._-]/g, '-');
     expect(await readFile(join(dir, 'vault', 'Evidence', `${evidenceId}.md`), 'utf8')).toContain('hermes-public-research-v1');
   });
