@@ -4,7 +4,7 @@ import { classifyOpportunity } from './opportunity-classifier.mjs';
 
 const MAX_FINDINGS = 20;
 const MAX_ATTEMPTS = 3;
-const DEFAULT_LEASE_MS = 20 * 60_000;
+const DEFAULT_LEASE_MS = 30 * 60_000;
 
 export class AgentMissionExecutor {
   constructor(store, opportunityProjector, options = {}) {
