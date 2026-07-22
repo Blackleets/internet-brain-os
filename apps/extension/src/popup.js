@@ -17,9 +17,15 @@ const status = $('#status');
 const tokenInput = $('#kernel-token');
 const pairingCodeInput = $('#pairing-code');
 const siteRadar = $('#site-radar');
+const autoRadarToggle = $('#auto-radar-toggle');
+const autoRadarToggleIcon = $('#auto-radar-toggle-icon');
+const autoRadarToggleText = $('#auto-radar-toggle-text');
+const autoRadarStatusIndicator = $('#auto-radar-status-indicator');
+const autoRadarLastDomain = $('#auto-radar-last-domain');
+const autoRadarLastResult = $('#auto-radar-last-result');
 let currentOrigin;
 let agentHubRefresher;
-const productState = { connected: false, goalCount: 0, radarEnabled: false, findCount: 0 };
+const productState = { connected: false, goalCount: 0, radarEnabled: false, findCount: 0, autoRadarEnabled: false, autoRadarState: 'paused' };
 
 void initialize();
 captureButton.addEventListener('click', capture);
@@ -27,6 +33,7 @@ $('#save-token').addEventListener('click', saveToken);
 $('#pair-kernel').addEventListener('click', pair);
 $('#add-goal').addEventListener('click', addGoal);
 siteRadar.addEventListener('change', toggleRadar);
+autoRadarToggle.addEventListener('click', toggleAutoRadar);
 for (const button of document.querySelectorAll('[data-view-target]')) button.addEventListener('click', () => setWorkspaceView(button.dataset.viewTarget));
 $('#advanced').addEventListener('click', () => chrome.tabs.create({ url: `${DEFAULT_KERNEL_BASE_URL}/replay-lab` }));
 $('#guide-action').addEventListener('click', () => setWorkspaceView(onboardingJourney(productState).next?.view ?? 'finds'));
@@ -52,14 +59,17 @@ async function initialize() {
   currentOrigin = normalizePublicOrigin(tab?.url);
   $('#site-name').textContent = currentOrigin ? new URL(currentOrigin).hostname : 'Unsupported page';
   siteRadar.disabled = !currentOrigin;
-  const stored = await chrome.storage.local.get(['kernelBaseUrl', 'kernelApiToken', 'allowedOrigins', 'radarEnabled', 'missionWatchtower', 'pendingWorkspaceView']);
+  const stored = await chrome.storage.local.get(['kernelBaseUrl', 'kernelApiToken', 'allowedOrigins', 'radarEnabled', 'autoRadarEnabled', 'autoRadarState', 'lastRadarEvent', 'missionWatchtower', 'pendingWorkspaceView']);
   tokenInput.value = stored.kernelApiToken ?? '';
   const allowed = stored.allowedOrigins ?? [];
   siteRadar.checked = Boolean(stored.radarEnabled && currentOrigin && allowed.includes(currentOrigin));
   productState.connected = Boolean(stored.kernelApiToken);
   productState.radarEnabled = siteRadar.checked;
+  productState.autoRadarEnabled = stored.autoRadarEnabled ?? false;
+  productState.autoRadarState = stored.autoRadarState ?? 'paused';
   renderGuide();
   updateRadarCopy();
+  updateAutoRadarUI(productState.autoRadarState, stored.lastRadarEvent);
   renderWatchtower(stored.missionWatchtower);
   if (stored.pendingWorkspaceView) {
     setWorkspaceView(stored.pendingWorkspaceView);
@@ -399,13 +409,145 @@ async function toggleRadar() {
   setStatus(siteRadar.checked ? 'Radar active. Efesto will analyze public pages on this site.' : 'Radar paused for this site.');
 }
 
+async function toggleAutoRadar() {
+  try {
+    // Notificar al background script para que toggle el estado
+    const response = await chrome.runtime.sendMessage({
+      type: 'EFESTO_AUTO_RADAR_TOGGLE'
+    });
+    
+    if (!response || !response.ok) {
+      throw new Error('Failed to toggle Auto Radar');
+    }
+    
+    // Actualizar estado basado en la respuesta del background
+    productState.autoRadarEnabled = response.enabled;
+    
+    // Get latest state from storage to be safe
+    const stored = await chrome.storage.local.get(['autoRadarState', 'lastRadarEvent']);
+    updateAutoRadarUI(stored.autoRadarState ?? 'paused', stored.lastRadarEvent);
+    
+    setStatus(response.enabled 
+      ? 'Auto Radar activado. Efesto analizará automáticamente las páginas públicas.' 
+      : 'Auto Radar pausado.');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'Error al cambiar el estado del Auto Radar', true);
+  }
+}
+
 function updateRadarCopy() {
   $('#radar-copy').textContent = siteRadar.checked
     ? 'Working in the background. Sensitive paths and form selections stay private.'
     : 'Authorize this public site to let Efesto work quietly while you browse.';
 }
 
-function renderGuide() {
+function updateAutoRadarUI(state, lastEvent) {
+  // Update status indicator
+  let statusText = 'Desconocido';
+  let statusClass = 'unknown';
+  let icon = '❓';
+  
+  switch (state) {
+    case 'paused':
+      statusText = 'Pausado';
+      statusClass = 'paused';
+      icon = '⏸';
+      break;
+    case 'observing':
+      statusText = 'Observando';
+      statusClass = 'observing';
+      icon = '👁';
+      break;
+    case 'waiting':
+      statusText = 'Esperando estabilización';
+      statusClass = 'waiting';
+      icon = '⏳';
+      break;
+    case 'evaluating':
+      statusText = 'Evaluando';
+      statusClass = 'evaluating';
+      icon = '🔍';
+      break;
+    case 'irrelevant':
+      statusText = 'Irrelevante';
+      statusClass = 'irrelevant';
+      icon = '❌';
+      break;
+    case 'blocked':
+      statusText = 'Bloqueado';
+      statusClass = 'blocked';
+      icon = '🚫';
+      break;
+    case 'duplicate':
+      statusText = 'Duplicado';
+      statusClass = 'duplicate';
+      icon = '🔄';
+      break;
+    case 'submitting':
+      statusText = 'Enviando';
+      statusClass = 'submitting';
+      icon = '📤';
+      break;
+    case 'admitted':
+      statusText = 'Admitido';
+      statusClass = 'admitted';
+      icon = '✅';
+      break;
+    case 'rejected':
+      statusText = 'Rechazado';
+      statusClass = 'rejected';
+      icon = '❌';
+      break;
+    case 'needs_research':
+      statusText = 'Necesita investigación';
+      statusClass = 'needs-research';
+      icon = '🔬';
+      break;
+    case 'failed':
+      statusText = 'Falló';
+      statusClass = 'failed';
+      icon = '💥';
+      break;
+  }
+  
+  autoRadarStatusIndicator.textContent = `${icon} ${statusText}`;
+  autoRadarStatusIndicator.className = `status-indicator ${statusClass}`;
+  
+  // Update toggle button
+  if (state === 'paused') {
+    autoRadarToggleIcon.textContent = '▶️';
+    autoRadarToggleText.textContent = 'Activar Auto Radar';
+  } else {
+    autoRadarToggleIcon.textContent = '⏸';
+    autoRadarToggleText.textContent = 'Pausar Auto Radar';
+  }
+  
+  // Update last domain and result from last event
+  if (lastEvent && lastEvent.title) {
+    try {
+      const url = new URL(lastEvent.url || '');
+      autoRadarLastDomain.textContent = `Último dominio: ${url.hostname || 'desconocido'}`;
+    } catch {
+      autoRadarLastDomain.textContent = `Último dominio: desconocido`;
+    }
+    
+    let resultText = 'Desconocido';
+    switch (lastEvent.status) {
+      case 'admitted': resultText = 'Admitido ✅'; break;
+      case 'rejected': resultText = 'Rechazado ❌'; break;
+      case 'failed': resultText = 'Falló 💥'; break;
+      case 'duplicate': resultText = 'Duplicado 🔄'; break;
+      case 'blocked': resultText = 'Bloqueado 🚫'; break;
+      default: resultText = `${lastEvent.status} ${lastEvent.status === 'captured' ? '📡' : ''}`;
+    }
+    autoRadarLastResult.textContent = `Último resultado: ${resultText}`;
+  } else {
+    autoRadarLastDomain.textContent = 'Último dominio: — ';
+    autoRadarLastResult.textContent = 'Último resultado: — ';
+  }
+}
+
+async function renderGuide() {
   const journey = onboardingJourney(productState);
   $('#forge-guide').classList.toggle('complete', journey.complete);
   $('#guide-title').textContent = journey.complete ? 'Your forge is alive' : journey.next.label;
