@@ -38,4 +38,11 @@ describe('one-click Hermes runtime entrypoints', () => {
     expect(source).toContain('captureButton.disabled = true');
     expect(source).toContain("status.classList.remove('error')");
   });
+
+  it('advertises the bundled one-click Hermes worker to the internal Kernel', () => {
+    const source = readFileSync(resolve('apps/local-kernel/one-click-kernel.mjs'), 'utf8');
+    expect(source).toContain("randomBytes(32).toString('hex')");
+    expect(source).toContain('HEPHAESTUS_HERMES_SECRET: internalHermesSecret');
+    expect(source).toContain('configureBundledHermes()');
+  });
 });
