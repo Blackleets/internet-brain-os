@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deriveEfestoOrbState, selectNextGoal, shouldCreateMission } from './efesto-orb-state.js';
+import { deriveEfestoOrbState, resolveForgePowerIntent, selectNextGoal, shouldCreateMission } from './efesto-orb-state.js';
 
 const now = Date.parse('2026-07-22T18:10:00.000Z');
 const services = { hermes: 'ready', obsidian: 'configured' };
@@ -52,5 +52,11 @@ describe('Efesto orb deterministic UI state', () => {
 
   it('models Retry safely as a fresh attempt after terminal failure', () => {
     expect(shouldCreateMission({ enabled: true, kernel: 'ready', goals: [{ id: 'goal-1', priority: 2 }], mission: { status: 'failed', attempt: 3 } })).toBe(true);
+  });
+
+  it('keeps the forge enabled and retries on the first failed-state click', () => {
+    expect(resolveForgePowerIntent({ enabled: true, state: 'failed' })).toEqual({ enabled: true, retry: true });
+    expect(resolveForgePowerIntent({ enabled: false, state: 'failed' })).toEqual({ enabled: true, retry: true });
+    expect(resolveForgePowerIntent({ enabled: true, state: 'researching' })).toEqual({ enabled: false, retry: false });
   });
 });
