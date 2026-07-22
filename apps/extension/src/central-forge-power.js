@@ -1,3 +1,4 @@
+import './unsupported-page-guard.js';
 import { DEFAULT_KERNEL_BASE_URL, listAgentMissions, listGoals, startGoalResearch } from './local-transport.js';
 
 const ACTIVE_STATUSES = new Set(['waiting_for_agent', 'queued', 'running']);
