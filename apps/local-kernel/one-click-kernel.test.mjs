@@ -7,6 +7,7 @@ describe('one-click Hermes runtime entrypoints', () => {
   it.each([
     'apps/local-kernel/one-click-kernel.mjs',
     'apps/extension/src/one-click-mission-ui.js',
+    'apps/extension/src/central-forge-power-controller.js',
     'apps/extension/src/central-forge-power.js',
     'apps/extension/src/unsupported-page-guard.js',
   ])('parses %s without executing it', (path) => {
@@ -23,7 +24,7 @@ describe('one-click Hermes runtime entrypoints', () => {
   });
 
   it('keeps the central power cycle bounded and user-controlled', () => {
-    const source = readFileSync(resolve('apps/extension/src/central-forge-power.js'), 'utf8');
+    const source = readFileSync(resolve('apps/extension/src/central-forge-power-controller.js'), 'utf8');
     expect(source).toContain("'efestoForgeEnabled'");
     expect(source).toContain('ACTIVE_STATUSES');
     expect(source).toContain('Forge cycle complete');
