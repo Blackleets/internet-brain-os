@@ -3,7 +3,8 @@ import { pathToFileURL } from 'node:url';
 
 const MAX_INPUT_BYTES = 128 * 1024;
 const MAX_OUTPUT_BYTES = 512 * 1024;
-const DEFAULT_TIMEOUT_MS = 3 * 60_000;
+const DEFAULT_TIMEOUT_MS = 12 * 60_000;
+const MAX_TIMEOUT_MS = 20 * 60_000;
 
 export function buildHermesPrompt(payload) {
   if (!payload || payload.schemaVersion !== 'efesto.hermes-mission.v1' || !payload.mission) {
@@ -68,15 +69,25 @@ function bounded(value, max, label) {
   return result;
 }
 
+function configuredTimeout(value, fallback) {
+  if (value === undefined || value === '') return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 60_000 || parsed > MAX_TIMEOUT_MS) {
+    throw new Error('HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS must be between 60000 and 1200000');
+  }
+  return parsed;
+}
+
 export async function runHermesOneShot(payload, options = {}) {
   const executable = options.executable ?? process.env.HEPHAESTUS_HERMES_EXECUTABLE ?? 'hermes';
   const prompt = buildHermesPrompt(payload);
   const args = buildHermesArgs(prompt);
+  const timeoutMs = options.timeoutMs ?? configuredTimeout(process.env.HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
   return new Promise((resolve, reject) => {
     const child = spawn(executable, args, { shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = ''; let stderr = ''; let bytes = 0; let settled = false;
     const finish = (error, value) => { if (settled) return; settled = true; clearTimeout(timer); error ? reject(error) : resolve(value); };
-    const timer = setTimeout(() => { child.kill(); finish(new Error('Hermes one-shot timed out')); }, options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+    const timer = setTimeout(() => { child.kill(); finish(new Error('Hermes one-shot timed out')); }, timeoutMs);
     const collect = (chunk, target) => {
       bytes += chunk.length;
       if (bytes > MAX_OUTPUT_BYTES) { child.kill(); finish(new Error('Hermes output exceeded the limit')); return; }

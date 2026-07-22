@@ -2,6 +2,8 @@ import { spawn } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
 const MAX_OUTPUT_BYTES = 512 * 1024;
+const DEFAULT_TIMEOUT_MS = 15 * 60_000;
+const MAX_TIMEOUT_MS = 25 * 60_000;
 
 export async function runHermesMissionWorker(options = {}) {
   const baseUrl = normalizeLoopback(options.baseUrl ?? process.env.HEPHAESTUS_KERNEL_URL ?? 'http://127.0.0.1:4000');
@@ -14,7 +16,8 @@ export async function runHermesMissionWorker(options = {}) {
   if (!claimed) return { status: 'idle' };
   const mission = claimed.mission;
   try {
-    const result = await execute(command, args, mission, { timeoutMs: options.timeoutMs ?? 4 * 60_000 });
+    const timeoutMs = options.timeoutMs ?? configuredTimeout(process.env.HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
+    const result = await execute(command, args, mission, { timeoutMs });
     const findings = validateAdapterResult(result);
     const completed = await request(fetchImpl, `${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, apiToken, {
       method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, findings }),
@@ -67,6 +70,14 @@ function parseArgs(value) {
   if (!value) return [];
   const parsed = JSON.parse(value);
   if (!Array.isArray(parsed) || parsed.some((item) => typeof item !== 'string')) throw new Error('HEPHAESTUS_HERMES_ARGS_JSON must be a JSON string array');
+  return parsed;
+}
+function configuredTimeout(value, fallback) {
+  if (value === undefined || value === '') return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 60_000 || parsed > MAX_TIMEOUT_MS) {
+    throw new Error('HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS must be between 60000 and 1500000');
+  }
   return parsed;
 }
 function normalizeLoopback(value) {
