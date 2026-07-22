@@ -65,11 +65,12 @@ Then read, in order:
 - PR #94: local API token validation and fail-closed POSIX permission handling merged and proven in CI.
 - PR #96: authenticated real Hermes capture validation and explicit signed ingestion from Replay Lab merged and proven in CI.
 - Issue #10: Internal Orchestrator v0 closed as completed with PR #73–#77 evidence.
+- Issue #57: real Hermes runtime acceptance completed with a sanitized authentic local Hermes session; signed ingestion, exact replay, altered-replay conflict rejection, authority-field rejection, and Replay Lab visibility were proven without persisting raw prompts, responses, tool output, credentials, tokens, or secrets.
 - Local validation baseline: 74 test files / 367 tests plus typecheck and build, including the Safe Action Workspace, explainable Opportunity Command Center, persistent local Mission Watchtower and result center, bounded visible-popup Agent Hub live refresh, persisted investigating/verifying/forged mission phases, extension workspace navigation, state-derived onboarding, honest newest-mission progress and persisted Mission Forge Ledger activity, evidence-first unverified Find details, automatic-capture privacy policy, authenticated capture import, private Goal validation/personalization and dismissal, explicit erasable preference learning, consented Agent Hub mission execution/result transport, duplicate-accurate Evidence accounting, private IPv4/IPv6 result rejection, shell-free external-adapter worker, observable mission and pixel-forge activity states, authenticated Model Forge inspection, extensible deterministic Opportunity classification/inbox, signed ingestion, exact replay, altered-replay rejection, Replay Lab API, and fail-closed local token-file handling. CI must confirm this baseline before merge.
 
 ## Current operating state
 
-- `main` is the sole source of truth and includes the deterministic forensic read path, local token-file hardening, and the Replay Lab real-capture importer through PR #96.
+- `main` is the sole source of truth and includes the Efesto extension product surface, Opportunity and Goal workflows, Agent Hub transport, Model Forge, pixel-forge activity, deterministic forensic read path, real-capture importer, and local token-file hardening.
 - There must be only one active implementation task at a time.
 - Do not work directly on `main`.
 - Do not merge, deploy, mutate secrets, delete data, or expand scope without the required human/founder gate.
@@ -79,22 +80,13 @@ Then read, in order:
 
 Continue the user-facing Efesto product path: prove the implemented worker against an authentic Hermes runtime when its executable/configuration is available, then continue the broader extension information-architecture and onboarding rebuild around the implemented observable pixel-forge activity contract. The extension is the primary surface; Replay Lab remains advanced mode. Preserve local-first ownership and do not introduce central collection until a separate consent, minimization, and anonymization design is reviewed.
 
-The real Hermes acceptance proof for Issue #57 remains required in parallel when an authentic sanitized capture becomes available. Do not replace that proof with synthetic evidence.
+The Kernel memory-quarantine and toxic-memory lifecycle design remains a bounded backlog item under Issue #98. It must not displace the current Efesto product priority or introduce automatic enforcement before explicit review.
 
-Issue #57 remains an external acceptance proof, not an implementation blocker: validate the secured Hermes ingestion path when one sanitized output from the user's real Hermes runtime is available.
+## External acceptance status
 
-Required proof:
+Real Hermes capture acceptance for Issue #57 is complete. Future screenshots and public product evidence should use the sanitized authentic Replay Lab investigation or another sanitized real run. Generated mockups and synthetic fixtures remain unsuitable as external acceptance evidence.
 
-1. Validate the real output without weakening Kernel authority.
-2. Ingest it through the signed local boundary.
-3. Prove exact replay returns the same cognitive record.
-4. Prove altered replay is rejected.
-5. Prove Hermes cannot submit validation, contradiction, admission, candidate, claim, or durable-memory authority.
-6. Display the resulting investigation in Replay Lab.
-
-## External blocker
-
-The repository cannot manufacture a real Hermes execution. The user must provide a sanitized console, Telegram, JSON, or JSONL output. Never fabricate this evidence or mark Issue #57 complete using only the existing synthetic fixtures.
+A separate authentic runtime proof is still required for the newer Agent Hub external-adapter worker path. That proof must use the user's configured Hermes executable and must not be simulated or conflated with the completed Issue #57 ingestion acceptance.
 
 ## Recovery prompt
 
