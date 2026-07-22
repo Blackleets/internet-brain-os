@@ -2,8 +2,10 @@ const ACTIVE_MISSION_STATUSES = new Set(['waiting_for_agent', 'queued', 'running
 const missionState = document.querySelector('#mission-state');
 const goals = document.querySelector('#goal-list');
 
-export function applyResearchButtonState(button, active) {
-  const nextText = active ? 'Researching…' : 'Research';
+export function applyResearchButtonState(button, status) {
+  const active = ACTIVE_MISSION_STATUSES.has(status);
+  const failed = status === 'failed';
+  const nextText = active ? 'Researching…' : failed ? 'Retry safely' : 'Research';
   const nextBusy = active ? 'true' : 'false';
   if (button.disabled !== active) button.disabled = active;
   if (button.textContent !== nextText) button.textContent = nextText;
@@ -11,8 +13,8 @@ export function applyResearchButtonState(button, active) {
 }
 
 function syncResearchActions() {
-  const active = ACTIVE_MISSION_STATUSES.has(missionState?.dataset.status);
-  for (const button of document.querySelectorAll('.goal-research')) applyResearchButtonState(button, active);
+  const status = missionState?.dataset.status ?? 'idle';
+  for (const button of document.querySelectorAll('.goal-research')) applyResearchButtonState(button, status);
 }
 
 const stateObserver = new MutationObserver(syncResearchActions);
