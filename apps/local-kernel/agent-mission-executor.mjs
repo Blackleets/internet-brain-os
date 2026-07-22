@@ -4,13 +4,14 @@ import { classifyOpportunity } from './opportunity-classifier.mjs';
 
 const MAX_FINDINGS = 20;
 const MAX_ATTEMPTS = 3;
+const DEFAULT_LEASE_MS = 20 * 60_000;
 
 export class AgentMissionExecutor {
   constructor(store, opportunityProjector, options = {}) {
     this.store = store;
     this.opportunityProjector = opportunityProjector;
     this.now = options.now ?? (() => new Date());
-    this.leaseMs = options.leaseMs ?? 5 * 60_000;
+    this.leaseMs = options.leaseMs ?? DEFAULT_LEASE_MS;
   }
 
   async claim(agent = 'hermes') {
