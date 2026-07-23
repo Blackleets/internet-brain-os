@@ -586,7 +586,7 @@ function updateAutoRadarUI(state, lastEvent) {
         }
       }
       autoRadarLastDomain.textContent = `Último dominio: ${domainText}`;
-    
+   
       let resultText = 'Desconocido';
       switch (lastEvent.status) {
         case 'admitted': resultText = 'Admitido ✅'; break;

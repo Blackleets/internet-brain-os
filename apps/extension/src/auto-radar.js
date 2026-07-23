@@ -242,15 +242,13 @@ export class AutoRadar {
     // Generar claves para deduplicación
     try {
       const urlObj = new URL(context.url);
-      const urlKey = `url:${urlObj.origin}${urlObj.pathname}`;
-      const canonicalUrl = urlObj.origin + urlObj.pathname; // Sin query params ni hash
-      const canonicalKey = `canonical:${canonicalUrl}`;
+      const urlCanonicalKey = `url:${urlObj.origin}${urlObj.pathname}`; // URL canónica (sin query params ni hash)
       const contentHash = this.generateContentHash(context);
-      const hashKey = `hash:${contentHash}`;
+      const contentHashKey = `hash:${contentHash}`;
       const domainTitleKey = `domain-title:${urlObj.hostname}:${context.title || ''}`;
 
       // Verificar si alguna clave existe en el historial
-      const keys = [urlKey, canonicalUrl, hashKey, domainTitleKey];
+      const keys = [urlCanonicalKey, contentHashKey, domainTitleKey];
       for (const key of keys) {
         if (this.analysisHistory.has(key)) {
           return { duplicate: true, reason: key.split(':')[0] };
@@ -259,9 +257,8 @@ export class AutoRadar {
 
       // Agregar al historial
       const expiry = now + maxAge;
-      this.analysisHistory.set(urlKey, expiry);
-      this.analysisHistory.set(canonicalKey, expiry);
-      this.analysisHistory.set(hashKey, expiry);
+      this.analysisHistory.set(urlCanonicalKey, expiry);
+      this.analysisHistory.set(contentHashKey, expiry);
       this.analysisHistory.set(domainTitleKey, expiry);
 
       return { duplicate: false };
