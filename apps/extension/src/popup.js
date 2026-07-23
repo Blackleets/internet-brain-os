@@ -81,17 +81,37 @@ async function initialize() {
   if (stored.kernelApiToken) startAgentHubRefresh(stored, initialMissions);
   
   // Add storage change listener to keep UI in sync
+  let lastAutoRadarState = productState.autoRadarState;
+  let lastRadarEvent = null;
+  
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local') {
-      if (changes.autoRadarState || changes.lastRadarEvent) {
-        const autoRadarState = changes.autoRadarState?.newValue ?? productState.autoRadarState;
-        const lastRadarEvent = changes.lastRadarEvent?.newValue ?? null;
+      const stateChanged = changes.autoRadarState;
+      const eventChanged = changes.lastRadarEvent;
+      
+      if (stateChanged || eventChanged) {
+        const autoRadarState = stateChanged ? stateChanged.newValue ?? productState.autoRadarState : productState.autoRadarState;
+        const lastRadarEvent = eventChanged ? eventChanged.newValue ?? null : null;
+        
+        // Skip if state and event haven't actually changed
+        if (autoRadarState === lastAutoRadarState && 
+            ((lastRadarEvent === null && lastRadarEvent === null) || 
+             (lastRadarEvent !== null && lastRadarEvent !== null && 
+              lastRadarEvent.status === lastRadarEvent.status && 
+              lastRadarEvent.title === lastRadarEvent.title))) {
+          return;
+        }
+        
+        lastAutoRadarState = autoRadarState;
+        lastRadarEvent = lastRadarEvent;
+        
         // Debounce UI updates to prevent flickering
         clearTimeout(autoRadarUIUpdateTimeout);
         autoRadarUIUpdateTimeout = setTimeout(() => {
           updateAutoRadarUI(autoRadarState, lastRadarEvent);
-        }, 50);
+        }, 150); // Increased debounce time
       }
+      
       if (changes.autoRadarEnabled) {
         productState.autoRadarEnabled = changes.autoRadarEnabled?.newValue ?? false;
         // Update toggle button text/icon based on enabled state
