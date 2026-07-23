@@ -410,6 +410,8 @@ async function toggleRadar() {
 }
 
 async function toggleAutoRadar() {
+  // Disable the button to prevent multiple clicks
+  autoRadarToggle.disabled = true;
   try {
     // Notificar al background script para que toggle el estado
     const response = await chrome.runtime.sendMessage({
@@ -432,6 +434,9 @@ async function toggleAutoRadar() {
       : 'Auto Radar pausado.');
   } catch (error) {
     setStatus(error instanceof Error ? error.message : 'Error al cambiar el estado del Auto Radar', true);
+  } finally {
+    // Re-enable the button
+    autoRadarToggle.disabled = false;
   }
 }
 
@@ -523,28 +528,32 @@ function updateAutoRadarUI(state, lastEvent) {
   }
   
   // Update last domain and result from last event
-  if (lastEvent && lastEvent.title) {
-    try {
-      const url = new URL(lastEvent.url || '');
-      autoRadarLastDomain.textContent = `Último dominio: ${url.hostname || 'desconocido'}`;
-    } catch {
-      autoRadarLastDomain.textContent = `Último dominio: desconocido`;
-    }
+    if (lastEvent && lastEvent.title) {
+      let domainText = 'desconocido';
+      if (lastEvent.url && typeof lastEvent.url === 'string' && lastEvent.url.trim().length > 0) {
+        try {
+          const url = new URL(lastEvent.url);
+          domainText = url.hostname || 'desconocido';
+        } catch (e) {
+          // URL is invalid, keep default
+        }
+      }
+      autoRadarLastDomain.textContent = `Último dominio: ${domainText}`;
     
-    let resultText = 'Desconocido';
-    switch (lastEvent.status) {
-      case 'admitted': resultText = 'Admitido ✅'; break;
-      case 'rejected': resultText = 'Rechazado ❌'; break;
-      case 'failed': resultText = 'Falló 💥'; break;
-      case 'duplicate': resultText = 'Duplicado 🔄'; break;
-      case 'blocked': resultText = 'Bloqueado 🚫'; break;
-      default: resultText = `${lastEvent.status} ${lastEvent.status === 'captured' ? '📡' : ''}`;
+      let resultText = 'Desconocido';
+      switch (lastEvent.status) {
+        case 'admitted': resultText = 'Admitido ✅'; break;
+        case 'rejected': resultText = 'Rechazado ❌'; break;
+        case 'failed': resultText = 'Falló 💥'; break;
+        case 'duplicate': resultText = 'Duplicado 🔄'; break;
+        case 'blocked': resultText = 'Bloqueado 🚫'; break;
+        default: resultText = `${lastEvent.status} ${lastEvent.status === 'captured' ? '📡' : ''}`;
+      }
+      autoRadarLastResult.textContent = `Último resultado: ${resultText}`;
+    } else {
+      autoRadarLastDomain.textContent = 'Último dominio: — ';
+      autoRadarLastResult.textContent = 'Último resultado: — ';
     }
-    autoRadarLastResult.textContent = `Último resultado: ${resultText}`;
-  } else {
-    autoRadarLastDomain.textContent = 'Último dominio: — ';
-    autoRadarLastResult.textContent = 'Último resultado: — ';
-  }
 }
 
 async function renderGuide() {

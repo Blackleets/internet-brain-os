@@ -35,18 +35,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return false;
   }
 
-  // Mensaje del popup para enviar contexto de página (manual)
-  if (message?.type !== 'HEPHAESTUS_SEND_PAGE_CONTEXT') {
-    // Manejar el toggle del Auto Radar desde el popup
-    if (message?.type === 'EFESTO_AUTO_RADAR_TOGGLE') {
-      (async () => {
-        await autoRadar.toggleEnabled();
-        sendResponse({ enabled: autoRadar.enabled });
-      })();
-      return true; // Mantener el canal de mensaje abierto para la respuesta asincrónica
-    }
-    return false;
+  // Mensaje especial para controlar el Auto Radar
+  if (message?.type === 'EFESTO_AUTO_RADAR_TOGGLE') {
+    void (async () => {
+      const newState = !autoRadar.enabled;
+      await autoRadar.setEnabled(newState);
+      sendResponse({ ok: true, enabled: newState });
+    })();
+    return true; // Mantener el canal de mensaje abierto para la respuesta asincrónica
   }
+
+  // Mensaje del popup para enviar contexto de página (manual)
+  if (message?.type !== 'HEPHAESTUS_SEND_PAGE_CONTEXT') return false;
 
   void (async () => {
     try {
