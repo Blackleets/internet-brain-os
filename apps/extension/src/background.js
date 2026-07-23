@@ -10,8 +10,15 @@ const autoRadar = new AutoRadar();
 
 chrome.runtime.onInstalled.addListener(() => void ensureWatchtower());
 chrome.runtime.onStartup.addListener(() => void ensureWatchtower());
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === WATCHTOWER_ALARM) void inspectMissionTransitions();
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === WATCHTOWER_ALARM) {
+    try {
+      await inspectMissionTransitions();
+      await autoRadar.processQueue();
+    } catch (error) {
+      console.error('Error in watchtower alarm handler:', error);
+    }
+  }
 });
 chrome.notifications.onClicked.addListener((notificationId) => {
   if (!notificationId.startsWith('efesto-mission:')) return;
