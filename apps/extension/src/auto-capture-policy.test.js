@@ -16,10 +16,19 @@ describe('Efesto automatic capture policy', () => {
   });
 
   it.each([
-    ['https://example.com/login', 'sensitive_path'],
-    ['https://example.com/account/settings', 'sensitive_path'],
-    ['https://example.com/find?token=private', 'sensitive_query'],
-  ])('blocks sensitive page %s', (url, reason) => {
+      ['https://example.com/login', 'sensitive_path'],
+      ['https://example.com/account/settings', 'sensitive_path'],
+      ['https://example.com/health/patient', 'sensitive_path'],
+      ['https://example.com/medical/history', 'sensitive_path'],
+      ['https://example.com/gov/benefits', 'sensitive_path'],
+      ['https://example.com/mail/inbox', 'sensitive_path'],
+      ['https://example.com/social-security/claim', 'sensitive_path'],
+      ['https://example.com/find?token=private', 'sensitive_query'],
+      ['https://example.com/session?access_token=abc', 'sensitive_query'],
+      ['https://example.com/auth?authorization=xyz', 'sensitive_query'],
+      ['https://example.com/login?otp=12345', 'sensitive_query'],
+      ['https://example.com/verify?mfa=true', 'sensitive_query'],
+    ])('blocks sensitive page %s', (url, reason) => {
     expect(evaluateAutoCapture({ ...context, url }, { allowedOrigins: ['https://example.com'] }))
       .toMatchObject({ allowed: false, reason });
   });

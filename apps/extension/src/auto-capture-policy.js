@@ -1,7 +1,7 @@
 export const AUTO_CAPTURE_COOLDOWN_MS = 30 * 60 * 1000;
 
-const SENSITIVE_PATH = /\/(login|log-in|signin|sign-in|checkout|payment|billing|wallet|bank|account|settings|messages?|inbox)(\/|$)/i;
-const SENSITIVE_QUERY = /^(token|access_token|auth|authorization|code|password|secret|session|key)$/i;
+const SENSITIVE_PATH = /\/(login|log-in|signin|sign-in|checkout|payment|billing|wallet|bank|account|settings|messages?|inbox|health|medical|patient|hipaa|clinic|hospital|mail|email|gov|federal|state|tax|ssn|authentication|authorization|secure|private|confidential|socialsecurity|social-security|social_security)(\/|$)/i;
+const SENSITIVE_QUERY = /^(token|access_token|auth|authorization|code|password|secret|session|key|otp|mfa|totp|pin|ssn|creditcard|cvc|cvv|expiry|expire|signup|sign_up|register|login|signin|sign-in)$/i;
 
 export function normalizePublicOrigin(value) {
   try {
@@ -25,10 +25,12 @@ export function evaluateAutoCapture(context, options = {}) {
   if (!Array.isArray(options.allowedOrigins) || !options.allowedOrigins.includes(url.origin)) {
     return { allowed: false, reason: 'site_not_authorized' };
   }
-  if (SENSITIVE_PATH.test(url.pathname)) return { allowed: false, reason: 'sensitive_path' };
+  // Check query parameters first
   for (const key of url.searchParams.keys()) {
     if (SENSITIVE_QUERY.test(key)) return { allowed: false, reason: 'sensitive_query' };
   }
+  // Then check path
+  if (SENSITIVE_PATH.test(url.pathname)) return { allowed: false, reason: 'sensitive_path' };
   if (context?.selection) return { allowed: false, reason: 'selection_present' };
   if (!String(context?.visibleText ?? '').trim()) return { allowed: false, reason: 'empty_page' };
 
