@@ -79,6 +79,33 @@ async function initialize() {
   const results = await Promise.allSettled([loadReadiness(stored), loadCases(stored), loadGoals(stored), loadOpportunities(stored), loadAgentHub(stored), loadModelForge(stored)]);
   const initialMissions = results[4].status === 'fulfilled' && Array.isArray(results[4].value) ? results[4].value : [];
   if (stored.kernelApiToken) startAgentHubRefresh(stored, initialMissions);
+  
+  // Add storage change listener to keep UI in sync
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local') {
+      if (changes.autoRadarState || changes.lastRadarEvent) {
+        const autoRadarState = changes.autoRadarState?.newValue ?? productState.autoRadarState;
+        const lastRadarEvent = changes.lastRadarEvent?.newValue ?? null;
+        // Debounce UI updates to prevent flickering
+        clearTimeout(autoRadarUIUpdateTimeout);
+        autoRadarUIUpdateTimeout = setTimeout(() => {
+          updateAutoRadarUI(autoRadarState, lastRadarEvent);
+        }, 50);
+      }
+      if (changes.autoRadarEnabled) {
+        productState.autoRadarEnabled = changes.autoRadarEnabled?.newValue ?? false;
+        // Update toggle button text/icon based on enabled state
+        const state = productState.autoRadarState ?? 'paused';
+        if (state === 'paused') {
+          autoRadarToggleIcon.textContent = '▶️';
+          autoRadarToggleText.textContent = 'Activar Auto Radar';
+        } else {
+          autoRadarToggleIcon.textContent = '⏸';
+          autoRadarToggleText.textContent = 'Pausar Auto Radar';
+        }
+      }
+    }
+  });
 }
 
 function renderWatchtower(watchtower) {
