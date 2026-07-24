@@ -6,3 +6,8 @@ coverage/
 *.log
 .DS_Store
 **/tsconfig.tsbuildinfo
+
+# Extension build artifacts
+apps/extension/dist/
+efesto-extension.zip
+

@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "build": "tsc -b",
+    "build:extension": "node scripts/build-extension.mjs",
     "clean": "tsc -b --clean",
     "hermes:attack-smoke": "node scripts/hermes-idempotency-attack-test.mjs",
     "hermes:efesto-adapter": "node scripts/hermes-efesto-adapter.mjs",

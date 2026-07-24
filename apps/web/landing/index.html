@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Efesto Opportunity Radar — Inteligencia de oportunidades privada, en tu navegador</title>
+  <meta name="description" content="Efesto Opportunity Radar: la extensión Chrome local-first que detecta oportunidades mientras navegas. Sin nube, sin vigilancia, tu memoria en Obsidian." />
+  <link rel="icon" href="efesto-icon.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="ember-field" aria-hidden="true"></div>
+
+  <header class="nav">
+    <a class="brand" href="#top">
+      <img src="efesto-icon.png" alt="Efesto" width="34" height="34" />
+      <span>Efesto<strong>Radar</strong></span>
+    </a>
+    <nav>
+      <a href="#features">Qué hace</a>
+      <a href="#how">Cómo funciona</a>
+      <a href="#privacy">Privacidad</a>
+      <a class="cta-small" href="#get">Descargar</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="orb" aria-hidden="true">
+        <div class="orb-core"></div>
+        <div class="orb-ring"></div>
+      </div>
+      <h1>Tu navegador, convertido en <span class="accent">radar de oportunidades</span>.</h1>
+      <p class="lead">
+        Efesto Opportunity Radar analiza lo que lees <strong>en local</strong>, lo cruza con tus
+        Goals y guarda lo útil en tu vault de Obsidian. Sin nube. Sin vigilancia. Sin ruido.
+      </p>
+      <div class="hero-actions">
+        <a class="btn-primary" href="#get">⬇ Descargar extensión</a>
+        <a class="btn-ghost" href="#waitlist">Unirme a la lista</a>
+      </div>
+      <p class="micro">Chrome MV3 · Local-first · Gratis por defecto</p>
+    </section>
+
+    <section id="features" class="features">
+      <article class="card">
+        <div class="card-icon">◎</div>
+        <h3>Auto Radar</h3>
+        <p>Detecta oportunidades mientras navegas. El service worker analiza la página y la puntúa contra tus Goals activos, en silencio.</p>
+      </article>
+      <article class="card">
+        <div class="card-icon">⚡</div>
+        <h3>Goal matching</h3>
+        <p>Solo lo relevante llega al Kernel. Si la página no encaja con tus objetivos, se descarta. Cero spam a tu memoria.</p>
+      </article>
+      <article class="card">
+        <div class="card-icon">▣</div>
+        <h3>Dedupe inteligente</h3>
+        <p>Reconoce reposts y contenido casi idéntico (similitud Jaccard). Una oportunidad, una nota, no diez.</p>
+      </article>
+      <article class="card">
+        <div class="card-icon">⛨</div>
+        <h3>Tu vault, tu memoria</h3>
+        <p>Cada captura se escribe como nota en Obsidian (Cases / Evidence / Opportunities). Buscable, portable, tuyo.</p>
+      </article>
+    </section>
+
+    <section id="how" class="how">
+      <h2>Cómo funciona</h2>
+      <ol class="steps">
+        <li><span>1</span> Instalas la extensión (Load unpacked, un clic).</li>
+        <li><span>2</span> Arrancas el Kernel local en <code>localhost:4000</code>.</li>
+        <li><span>3</span> Navegas. El Radar marca lo que importa y lo manda a Obsidian.</li>
+        <li><span>4</span> Abres Obsidian y encuentras tus oportunidades clasificadas.</li>
+      </ol>
+    </section>
+
+    <section id="privacy" class="privacy">
+      <h2>Privacidad por diseño</h2>
+      <ul>
+        <li>✓ Todo corre en tu máquina. Nada sale sin tu permiso.</li>
+        <li>✓ Sin cuentas, sin telemetría, sin tracking.</li>
+        <li>✓ El Kernel es la única autoridad: datos solo por endpoints autenticados.</li>
+        <li>✓ Filtros estrictos: nunca captura passwords, cookies ni localStorage.</li>
+      </ul>
+    </section>
+
+    <section id="get" class="get">
+      <h2>Descárgalo</h2>
+      <p class="lead">Empaquetado listo para <strong>Load unpacked</strong> en Chrome.</p>
+      <a class="btn-primary big" href="efesto-extension.zip" download>⬇ efesto-extension.zip</a>
+      <p class="micro">
+        ¿Primera vez? Sigue la
+        <a href="https://github.com/Blackleets/internet-brain-os#efesto-opportunity-radar" target="_blank" rel="noopener">guía de instalación</a>
+        en el repo.
+      </p>
+    </section>
+
+    <section id="waitlist" class="waitlist">
+      <h2>Lista de espera</h2>
+      <p class="lead">Te avisamos cuando llegue la versión de la Chrome Web Store (un clic, sin fricción).</p>
+      <form id="waitlist-form" action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
+        <input type="email" name="email" placeholder="tu@email.com" required aria-label="email" />
+        <button type="submit">Avisarme</button>
+      </form>
+      <p id="waitlist-msg" class="micro"></p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Efesto Opportunity Radar · parte de <a href="https://github.com/Blackleets/internet-brain-os" target="_blank" rel="noopener">internet-brain-os</a></span>
+    <span class="dim">Local-first intelligence · Forjado, no generado.</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

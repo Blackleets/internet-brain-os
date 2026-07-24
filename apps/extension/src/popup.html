@@ -10,7 +10,12 @@
   <body>
     <main>
       <header>
-        <div class="brand-mark" aria-hidden="true">E</div>
+        <div class="brand-mark" aria-hidden="true">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L2 22h4l4-8 4 8h4L12 2z" fill="#FF7A31"/>
+                    <path d="M8 14h8v2H8v-2z" fill="#FFFFFF"/>
+                  </svg>
+                </div>
         <div><p class="eyebrow">EFESTO</p><h1>Opportunity Radar</h1></div>
         <span id="kernel-state" class="state">Offline</span>
       </header>
@@ -38,8 +43,8 @@
         <button id="forge-power" class="forge-power-panel" type="button" data-enabled="false" aria-pressed="false" aria-label="Start Efesto">
           <span class="forge-power" aria-hidden="true"></span>
           <span class="forge-power-copy">
-          <strong id="forge-power-label">START EFESTO</strong>
-          <small id="forge-power-detail">Press once to start forging.</small>
+            <strong id="forge-power-label">START EFESTO</strong>
+            <small id="forge-power-detail">Press once to start forging.</small>
           </span>
         </button>
         <div id="forge-orb-meta" class="forge-orb-meta" hidden>
@@ -80,24 +85,40 @@
       <div class="workspace-view active" data-workspace-view="forge">
         <div class="view-intro"><p class="section-title">TODAY AT THE FORGE</p><h2>Turn the web into useful opportunities</h2><p>Choose where Efesto may work, then forge the current page into private Evidence.</p></div>
 
-      <section class="hero">
-        <div class="orb"><span></span></div>
-        <div>
-          <p class="hero-label">RADAR FOR THIS SITE</p>
-          <h2 id="site-name">Current page</h2>
-          <p id="radar-copy">Authorize this public site to let Efesto work quietly while you browse.</p>
-        </div>
-        <label class="switch" aria-label="Enable radar for this site">
-          <input id="site-radar" type="checkbox"><span></span>
-        </label>
-      </section>
+        <section class="hero">
+          <div class="orb"><span></span></div>
+          <div>
+            <p class="hero-label">RADAR FOR THIS SITE</p>
+            <h2 id="site-name">Current page</h2>
+            <p id="radar-copy">Authorize this public site to let Efesto work quietly while you browse.</p>
+          </div>
+          <label class="switch" aria-label="Enable radar for this site">
+            <input id="site-radar" type="checkbox"><span></span>
+          </label>
+        </section>
 
-      <section class="grid" aria-label="Efesto services">
-        <article><span class="service-dot" id="model-dot"></span><div><b>Model Forge</b><small id="model-state">Local model not detected</small></div></article>
-        <article><span class="service-dot" id="memory-dot"></span><div><b>Obsidian memory</b><small id="memory-state">Waiting for Kernel</small></div></article>
-        <article><span class="service-dot" id="agent-dot"></span><div><b>Agent bridge</b><small id="agent-state">Hermes not detected</small></div></article>
-        <article><span class="shield">◆</span><div><b>Private instance</b><small>Data stays on this device</small></div></article>
-      </section>
+        <!-- AUTO RADAR CONTROLS -->
+        <section class="auto-radar-controls">
+          <div class="auto-radar-status">
+            <span class="auto-radar-label">Auto Radar:</span>
+            <span id="auto-radar-status-indicator" class="status-indicator paused">⏸ Pausado</span>
+          </div>
+          <button id="auto-radar-toggle" class="primary" type="button">
+            <span id="auto-radar-toggle-icon">⏸</span>
+            <span id="auto-radar-toggle-text">Activar Auto Radar</span>
+          </button>
+          <div class="auto-radar-details">
+            <span id="auto-radar-last-domain" class="detail-item">Último dominio: — </span>
+            <span id="auto-radar-last-result" class="detail-item">Último resultado: — </span>
+          </div>
+        </section>
+
+        <section class="grid" aria-label="Efesto services">
+          <article><span class="service-dot" id="model-dot"></span><div><b>Model Forge</b><small id="model-state">Local model not detected</small></div></article>
+          <article><span class="service-dot" id="memory-dot"></span><div><b>Obsidian memory</b><small id="memory-state">Waiting for Kernel</small></div></article>
+          <article><span class="service-dot" id="agent-dot"></span><div><b>Agent bridge</b><small id="agent-state">Hermes not detected</small></div></article>
+          <article><span class="shield">◆</span><div><b>Private instance</b><small>Data stays on this device</small></div></article>
+        </section>
 
       <section id="setup" class="setup">
         <p class="section-title">CONNECT YOUR PRIVATE KERNEL</p>
@@ -135,19 +156,6 @@
           <input id="goal-keywords" type="text" maxlength="160" placeholder="Keywords, separated by commas">
           <button id="add-goal" class="secondary" type="button">Forge Goal</button>
         </details>
-      </section>
-
-      <section class="agent-hub" aria-live="polite">
-        <div><p class="section-title">AGENT HUB</p><h3>Hermes research</h3></div>
-        <strong id="mission-state" data-status="idle">No research mission yet</strong>
-      </section>
-      <ol id="mission-progress" class="mission-progress" aria-label="Latest mission progress"></ol>
-      <section class="mission-history" aria-labelledby="mission-history-title">
-        <div class="inbox-heading">
-          <div><p class="section-title">FORGE LEDGER</p><h3 id="mission-history-title">Mission activity</h3></div>
-          <span id="mission-history-count">0</span>
-        </div>
-        <div id="mission-history-list"><p class="empty">No authorized research activity yet.</p></div>
       </section>
       </div>
 
