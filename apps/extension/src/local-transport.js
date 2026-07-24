@@ -267,3 +267,30 @@ function normalizeBaseUrl(value) {
   }
   return url.href.replace(/\/$/, '');
 }
+
+// Devuelve el veredicto de admisión de un caso capturado: por qué el Kernel
+// lo admitió (y su evidencia), para que el usuario lo vea en el popup.
+export async function getCaseVerdict(caseId, options = {}) {
+  if (typeof caseId !== 'string' || !caseId.startsWith('case:')) {
+    throw new LocalTransportError('INVALID_CASE_ID', 'A valid case id is required');
+  }
+  const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const apiToken = requireApiToken(options.apiToken);
+  let response;
+  try {
+    response = await fetchImpl(`${baseUrl}/api/browser/case/${encodeURIComponent(caseId)}`, {
+      headers: { 'x-hephaestus-token': apiToken },
+    });
+  } catch {
+    throw new LocalTransportError('TRANSPORT', 'Unable to reach the local Efesto Kernel');
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new LocalTransportError(payload.code ?? 'KERNEL_REJECTED', payload.error ?? `Local Kernel request failed with HTTP ${response.status}`);
+  }
+  if (!payload?.ok || !payload.case) {
+    throw new LocalTransportError('INVALID_RESPONSE', 'Local Kernel returned an invalid case verdict');
+  }
+  return { case: payload.case, evidence: Array.isArray(payload.evidence) ? payload.evidence : [] };
+}

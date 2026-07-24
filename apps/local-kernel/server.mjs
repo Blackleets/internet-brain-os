@@ -177,6 +177,16 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         return send(response, 500, { ok: false, code: 'INTERNAL_ERROR' });
       }
     }
+    if (request.method === 'GET' && request.url?.startsWith('/api/browser/case/') && captureProjector) {
+      const caseId = decodeURIComponent(request.url.slice('/api/browser/case/'.length));
+      try {
+        const result = await captureProjector.getCaseById(caseId);
+        return send(response, 200, { ok: true, ...result });
+      } catch (error) {
+        if (error instanceof InboxError) return send(response, error.status ?? 400, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'INTERNAL_ERROR' });
+      }
+    }
     if (request.method === 'GET' && request.url === '/api/model-forge') {
       if (!models) return send(response, 404, { ok: false, code: 'MODEL_FORGE_UNAVAILABLE' });
       try { return send(response, 200, { ok: true, forge: await models.inspect() }); }

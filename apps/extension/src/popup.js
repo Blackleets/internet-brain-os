@@ -1,4 +1,4 @@
-import { createGoal, DEFAULT_KERNEL_BASE_URL, getKernelStatus, inspectModelForge, listAgentMissions, listCases, listGoals, listOpportunities, pairKernel, sendOpportunityFeedback, startGoalResearch } from './local-transport.js';
+import { createGoal, DEFAULT_KERNEL_BASE_URL, getCaseVerdict, getKernelStatus, inspectModelForge, listAgentMissions, listCases, listGoals, listOpportunities, pairKernel, sendOpportunityFeedback, startGoalResearch } from './local-transport.js';
 import { presentFind } from './find-presentation.js';
 import { buildOpportunityCommandCenter } from './opportunity-command-center.js';
 import { buildOpportunityActionPlan, normalizeOpportunityReviewState, updateOpportunityReviewState } from './opportunity-action-workspace.js';
@@ -586,7 +586,7 @@ function updateAutoRadarUI(state, lastEvent) {
         }
       }
       autoRadarLastDomain.textContent = `Último dominio: ${domainText}`;
-   
+  
       let resultText = 'Desconocido';
       switch (lastEvent.status) {
         case 'admitted': resultText = 'Admitido ✅'; break;
@@ -601,6 +601,45 @@ function updateAutoRadarUI(state, lastEvent) {
       autoRadarLastDomain.textContent = 'Último dominio: — ';
       autoRadarLastResult.textContent = 'Último resultado: — ';
     }
+
+    // Fase 2: panel de veredicto de admisión (forensics visible para el usuario)
+    updateVerdictPanel(lastEvent);
+}
+
+const verdictPanel = document.getElementById('verdict-panel');
+const verdictOpenBtn = document.getElementById('verdict-open');
+const verdictContent = document.getElementById('verdict-content');
+let verdictCaseId = null;
+
+function updateVerdictPanel(lastEvent) {
+  if (!verdictPanel) return;
+  verdictCaseId = lastEvent?.caseId && typeof lastEvent.caseId === 'string' ? lastEvent.caseId : null;
+  if (!verdictCaseId) {
+    verdictPanel.hidden = true;
+    verdictContent.textContent = '';
+    return;
+  }
+  verdictPanel.hidden = false;
+  verdictContent.textContent = 'Pulsa para ver por qué el Kernel admitió esta captura.';
+}
+
+if (verdictOpenBtn) {
+  verdictOpenBtn.addEventListener('click', async () => {
+    if (!verdictCaseId) return;
+    verdictContent.textContent = 'Consultando el Kernel…';
+    try {
+      const stored = await chrome.storage.local.get(['kernelBaseUrl', 'kernelApiToken']);
+      const verdict = await getCaseVerdict(verdictCaseId, {
+        baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL,
+        apiToken: stored.kernelApiToken ?? '',
+      });
+      const evidenceCount = Array.isArray(verdict.evidence) ? verdict.evidence.length : 0;
+      const status = verdict.case?.status ?? 'desconocido';
+      verdictContent.textContent = `Admitido y guardado como Case. ${evidenceCount} evidencia(s) respaldan esta decisión. Estado: ${status}.`;
+    } catch (error) {
+      verdictContent.textContent = error instanceof Error ? `No se pudo cargar el veredicto: ${error.message}` : 'No se pudo cargar el veredicto.';
+    }
+  });
 }
 
 async function renderGuide() {

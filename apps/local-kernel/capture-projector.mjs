@@ -125,4 +125,13 @@ export class CaptureCaseEvidenceProjector {
       .filter((item) => item?.status !== 'archived' && typeof item?.id === 'string')
       .map((item) => ({ id: item.id, title: item.title ?? item.objective ?? item.id, status: item.status ?? 'draft' }));
   }
+
+  async getCaseById(id) {
+    if (typeof id !== 'string' || !id) throw new InboxError('INVALID_CASE_ID', 'Case id is required', 400);
+    const data = await this.store.read();
+    const caseRecord = data.cases.find((item) => item?.id === id);
+    if (!caseRecord) throw new InboxError('CASE_NOT_FOUND', `Case not found: ${id}`, 404);
+    const evidence = data.evidence.filter((item) => item?.caseId === id);
+    return { case: caseRecord, evidence };
+  }
 }

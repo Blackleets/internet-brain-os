@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createGoal, getEfestoBootstrapStatus, getKernelStatus, inspectModelForge, listAgentMissions, listCases, listGoals, listOpportunities, LocalTransportError, pairKernel, sendOpportunityFeedback, sendPageContext, startGoalResearch } from './local-transport.js';
+import { createGoal, getCaseVerdict, getEfestoBootstrapStatus, getKernelStatus, inspectModelForge, listAgentMissions, listCases, listGoals, listOpportunities, LocalTransportError, pairKernel, sendOpportunityFeedback, sendPageContext, startGoalResearch } from './local-transport.js';
 
 const context = {
   schemaVersion: 'hephaestus.page-context.v1',
@@ -189,5 +189,28 @@ describe('pairKernel', () => {
     const fetchImpl = vi.fn();
     await expect(pairKernel('123', { fetchImpl })).rejects.toMatchObject({ code: 'INVALID_PAIRING_CODE' });
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe('getCaseVerdict', () => {
+  it('returns the admission verdict for a captured Case', async () => {
+    const caseRecord = { id: 'case:abc', title: 'Remote AI jobs', status: 'draft' };
+    const evidence = [{ id: 'evidence:abc', caseId: 'case:abc', sourceUrl: 'https://example.com/x' }];
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, case: caseRecord, evidence }) }));
+    await expect(getCaseVerdict('case:abc', { fetchImpl, apiToken })).resolves.toEqual({ case: caseRecord, evidence });
+    expect(fetchImpl).toHaveBeenCalledWith('http://127.0.0.1:4000/api/browser/case/case%3Aabc', {
+      headers: { 'x-hephaestus-token': apiToken },
+    });
+  });
+
+  it('rejects non-case ids before network access', async () => {
+    const fetchImpl = vi.fn();
+    await expect(getCaseVerdict('not-a-case', { fetchImpl, apiToken })).rejects.toMatchObject({ code: 'INVALID_CASE_ID' });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('surfaces Kernel rejections as transport errors', async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 404, json: async () => ({ ok: false, code: 'CASE_NOT_FOUND', error: 'Case not found: case:missing' }) }));
+    await expect(getCaseVerdict('case:missing', { fetchImpl, apiToken })).rejects.toMatchObject({ code: 'CASE_NOT_FOUND' });
   });
 });
