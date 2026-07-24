@@ -1,7 +1,9 @@
 // Auto Radar - Automatic browsing analysis for Efesto Opportunity Radar
 // Implements automatic page analysis based on navigation events
 
-const DEFAULT_KERNEL_BASE_URL = 'http://127.0.0.1:3737';
+import { listGoals } from './local-transport.js';
+
+const DEFAULT_KERNEL_BASE_URL = 'http://127.0.0.1:4000';
 
 // Estados del Auto Radar
 export const AUTO_RADAR_STATES = {
@@ -23,6 +25,16 @@ export const AUTO_RADAR_STATES = {
 const DEFAULT_DEBOUNCE_MS = 1500;
 const DEFAULT_MAX_AGE_MS = 5 * 60 * 1000; // 5 horas
 const DEFAULT_CONTENT_HASH_LENGTH = 12;
+// Goal matching: puntuación mínima (0-100) para considerar una página relevante a un Goal
+const DEFAULT_GOAL_MATCH_THRESHOLD = 25;
+// Pesos de señales para el score de relevancia
+const WEIGHTS = {
+  titleKeyword: 35,    // una keyword/title de Goal aparece en el título de la página
+  bodyKeyword: 20,     // aparece en el texto visible
+  originLocation: 25,  // el origin de la página coincide con la location del Goal
+  categoryMatch: 15,   // la categoría del Goal se infiere del contenido/origin
+  exactTitle: 5        // el título del Goal es subtitulo del título de página
+};
 // Queue persistence key
 const AUTO_RADAR_QUEUE_STORAGE_KEY = 'autoRadarQueue';
 // Maximum retry attempts for a queued URL
@@ -197,7 +209,7 @@ export class AutoRadar {
       }
 
       // Bloquear esquemas sensibles
-      if ['chrome:', 'chrome-extension:', 'file:'].includes(urlObj.protocol)) {
+      if (['chrome:', 'chrome-extension:', 'file:'].includes(urlObj.protocol)) {
         return { allowed: false, reason: 'blocked_scheme' };
       }
 
@@ -267,6 +279,65 @@ export class AutoRadar {
     }
   }
 
+  /**
+   * Calcula la relevancia de una página capturada respecto a los Goals activos.
+   * Devuelve { relevant: boolean, score: number (0-100), matchedGoalId?: string, reason: string }.
+   * Es local y determinista: no envía datos fuera del dispositivo.
+   */
+  scoreRelevance(context, goals) {
+    const title = (context.title || '').toLowerCase();
+    const visible = (context.visibleText || '').toLowerCase();
+    const url = context.url || '';
+    let pageHost = '';
+    try { pageHost = new URL(url).hostname.toLowerCase(); } catch { /* ignore */ }
+
+    if (!Array.isArray(goals) || goals.length === 0) {
+      // Sin Goals activos: el Auto Radar no tiene criterio de relevancia propio.
+      // Por privacidad y para evitar ruido, se considera irrelevante hasta que el usuario defina Goals.
+      return { relevant: false, score: 0, reason: 'no_goals' };
+    }
+
+    let best = { score: 0, goalId: null, reason: 'below_threshold' };
+    for (const goal of goals) {
+      const keywords = [
+        ...(goal.keywords ? String(goal.keywords).split(',').map((k) => k.trim().toLowerCase()).filter(Boolean) : []),
+        ...(Array.isArray(goal.title) ? goal.title : [goal.title]).filter(Boolean).map((t) => String(t).toLowerCase())
+      ];
+      const location = (goal.location || '').toLowerCase();
+      const categories = Array.isArray(goal.categories) ? goal.categories : (goal.categories ? [goal.categories] : []);
+      let score = 0;
+      let hit = '';
+
+      for (const kw of keywords) {
+        if (!kw) continue;
+        if (title.includes(kw)) { score += WEIGHTS.titleKeyword; hit = hit || `title+${kw}`; }
+        else if (visible.includes(kw)) { score += WEIGHTS.bodyKeyword; hit = hit || `body+${kw}`; }
+      }
+      if (location && pageHost.includes(location.replace(/^https?:\/\//, ''))) {
+        score += WEIGHTS.originLocation; hit = hit || `origin+${location}`;
+      }
+      // Coincidencia de categoría por inferencia simple del hostname/origin
+      for (const cat of categories) {
+        if (typeof cat === 'string' && (pageHost.includes(cat.toLowerCase()) || title.includes(cat.toLowerCase()))) {
+          score += WEIGHTS.categoryMatch; hit = hit || `cat+${cat}`; break;
+        }
+      }
+      // Bonus si el título del Goal está contenido en el título de la página
+      const goalTitle = String(goal.title || '').toLowerCase();
+      if (goalTitle && title.includes(goalTitle)) { score += WEIGHTS.exactTitle; hit = hit || `exact+${goalTitle}`; }
+
+      if (score > best.score) best = { score, goalId: goal.id, reason: hit || 'matched' };
+    }
+
+    best.score = Math.min(100, best.score);
+    return {
+      relevant: best.score >= DEFAULT_GOAL_MATCH_THRESHOLD,
+      score: best.score,
+      matchedGoalId: best.goalId ?? undefined,
+      reason: best.reason
+    };
+  }
+
   async analyzePage(tab) {
     if (!this.enabled || this.state === AUTO_RADAR_STATES.PAUSED) {
       return;
@@ -332,9 +403,27 @@ export class AutoRadar {
         return;
       }
 
-      // TODO: Implementar Goal matching obteniendo Goals activos del Kernel
-      // Por ahora, asumimos que siempre es relevante para probar el flujo
-      // En el futuro, aquí llamaremos al endpoint del Kernel para obtener Goals y puntuar relevancia
+      // Goal matching: obtener Goals activos del Kernel y puntuar relevancia localmente.
+      // Solo se envía al Kernel si la página supera el umbral de relevancia de algún Goal.
+      let goals = [];
+      try {
+        goals = await listGoals({ baseUrl: this.kernelBaseUrl, apiToken: this.kernelApiToken });
+      } catch {
+        // Si no podemos leer Goals (Kernel dormido), no enviamos para evitar ruido.
+        await this.setState(AUTO_RADAR_STATES.IRRELEVANT);
+        setTimeout(() => this.setState(AUTO_RADAR_STATES.OBSERVING), 2000);
+        return;
+      }
+
+      const relevance = this.scoreRelevance(context, goals);
+      if (!relevance.relevant) {
+        await this.setState(AUTO_RADAR_STATES.IRRELEVANT);
+        await chrome.storage.local.set({
+          lastRadarEvent: { status: 'irrelevant', title: context.title, score: relevance.score, at: Date.now() }
+        });
+        setTimeout(() => this.setState(AUTO_RADAR_STATES.OBSERVING), 2000);
+        return;
+      }
 
       // Estado a enviando
       await this.setState(AUTO_RADAR_STATES.SUBMITTING);
