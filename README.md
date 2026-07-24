@@ -197,6 +197,32 @@ Every human or AI contributor must run `pnpm resume` and read these files before
 
 ## Institutional memory
 
+## Efesto Opportunity Radar
+
+A private, local-first **opportunity intelligence** browser extension (Chrome MV3). It watches what you
+read, scores it against your active Goals via the local Hephaestus Kernel, and writes the useful
+captures into your Obsidian vault as Cases / Evidence / Opportunities. Nothing leaves your machine.
+
+### Try it
+- Landing page: `apps/web/landing/index.html` (open locally, or deploy via GitHub Pages).
+- Download the packaged extension: `efesto-extension.zip` (built with `npm run build:extension`).
+
+### Install (Load unpacked)
+1. Run the local Kernel: `npm run kernel:serve` (listens on `http://127.0.0.1:4000`).
+2. In Chrome, open `chrome://extensions`, enable **Developer mode**.
+3. Click **Load unpacked** and select `apps/extension/dist` (or unzip `efesto-extension.zip`).
+4. Reload the extension after any code change.
+
+### How it works
+- **Auto Radar**: a service worker observes navigation (URL changes, SPA, tab activation) and
+  extracts minimal context (canonical URL, title, visible text).
+- **Goal matching**: `scoreRelevance()` scores the page against active Goals from the Kernel
+  locally; only pages above the threshold are submitted. Irrelevant pages are discarded (`IRRELEVANT`).
+- **Fuzzy dedupe**: `fuzzyDuplicate()` (Jaccard similarity, threshold 0.5) detects reposts / near-identical
+  content so the same opportunity is not stored twice.
+- **Privacy**: no passwords, cookies, or localStorage are captured. Data is sent only via authenticated
+  Kernel endpoints (`POST /api/browser/page-context`).
+
 This repository is not only a code repository.
 
 It is the institutional memory and operating doctrine of the company.
