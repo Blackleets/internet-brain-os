@@ -6,6 +6,8 @@ function makeRadar() {
   const radar = Object.create(AutoRadar.prototype);
   radar.kernelBaseUrl = 'http://127.0.0.1:4000';
   radar.kernelApiToken = 'test-token';
+  radar.analysisHistory = new Map();
+  radar.fuzzyHistory = new Map();
   return radar;
 }
 
@@ -76,5 +78,53 @@ describe('AutoRadar.scoreRelevance', () => {
 describe('AUTO_RADAR_STATES has IRRELEVANT', () => {
   it('defines the irrelevant terminal state used by goal matching', () => {
     expect(AUTO_RADAR_STATES.IRRELEVANT).toBe('irrelevant');
+  });
+});
+
+describe('AutoRadar fuzzy deduplication', () => {
+  const page = (overrides) => ({
+    url: 'https://news.example.com/article-1',
+    title: 'Remote AI jobs surge across Europe',
+    visibleText: 'Companies are hiring remote AI engineers. Salaries rise as demand grows for machine learning talent in Madrid and Berlin.',
+    ...overrides
+  });
+
+  it('is not a duplicate on the first capture', () => {
+    const radar = makeRadar();
+    const r = radar.isDuplicate(page());
+    expect(r.duplicate).toBe(false);
+  });
+
+  it('flags a near-identical page (fuzzy) as duplicate on second capture', () => {
+    const radar = makeRadar();
+    expect(radar.isDuplicate(page()).duplicate).toBe(false);
+    // Mismo cuerpo sustancial pero publicado en otro host con título distinto:
+    // el hash exacto y domain-title no coinciden, pero la similitud de contenido
+    // (Jaccard sobre título+texto) debe disparar la rama fuzzy.
+    const similar = page({
+      url: 'https://mirror.other-site.net/p/123',
+      title: 'AI hiring update',
+      visibleText: 'Companies are hiring remote AI engineers. Salaries rise as demand grows for machine learning talent in Madrid and Berlin.'
+    });
+    const r = radar.isDuplicate(similar);
+    expect(r.duplicate).toBe(true);
+    expect(r.reason).toBe('fuzzy');
+  });
+
+  it('does not flag an unrelated page as duplicate', () => {
+    const radar = makeRadar();
+    expect(radar.isDuplicate(page()).duplicate).toBe(false);
+    const unrelated = page({
+      url: 'https://recipes.example.com/soup',
+      title: 'Best potato soup recipe',
+      visibleText: 'Peel the potatoes and boil them with onion and carrot for a warm winter soup.'
+    });
+    expect(radar.isDuplicate(unrelated).duplicate).toBe(false);
+  });
+
+  it('stores a fuzzy fingerprint after a non-duplicate capture', () => {
+    const radar = makeRadar();
+    radar.isDuplicate(page());
+    expect(radar.fuzzyHistory.size).toBe(1);
   });
 });

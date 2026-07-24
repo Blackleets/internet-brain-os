@@ -25,6 +25,8 @@ export const AUTO_RADAR_STATES = {
 const DEFAULT_DEBOUNCE_MS = 1500;
 const DEFAULT_MAX_AGE_MS = 5 * 60 * 1000; // 5 horas
 const DEFAULT_CONTENT_HASH_LENGTH = 12;
+// Deduplicación difusa: umbral de similitud Jaccard (0-1) para considerar dos páginas como el mismo contenido
+const DEFAULT_FUZZY_THRESHOLD = 0.5;
 // Goal matching: puntuación mínima (0-100) para considerar una página relevante a un Goal
 const DEFAULT_GOAL_MATCH_THRESHOLD = 25;
 // Pesos de señales para el score de relevancia
@@ -47,7 +49,8 @@ export class AutoRadar {
     this.lastAnalysisTime = 0;
     this.debounceTimer = null;
     this.pendingAnalysis = null;
-    this.analysisHistory = new Map(); // Para deduplicación
+    this.analysisHistory = new Map(); // Para deduplicación exacta (key -> expiry)
+    this.fuzzyHistory = new Map();    // Para deduplicación difusa (fingerprint -> {expiry, tokens})
     this.enabled = false;
     this.allowedOrigins = [];
     this.kernelBaseUrl = DEFAULT_KERNEL_BASE_URL;
@@ -68,7 +71,8 @@ export class AutoRadar {
         'kernelApiToken',
         'debounceMs',
         'maxAgeMs',
-        AUTO_RADAR_QUEUE_STORAGE_KEY
+        AUTO_RADAR_QUEUE_STORAGE_KEY,
+        'fuzzyHistory'
       ]);
 
       this.enabled = stored.autoRadarEnabled ?? false;
@@ -80,6 +84,11 @@ export class AutoRadar {
       // Restaurar historial de análisis (limitado)
       if (stored.analysisHistory) {
         this.analysisHistory = new Map(Object.entries(stored.analysisHistory));
+      }
+
+      // Restaurar historial difuso (fingerprint -> {expiry, tokens})
+      if (stored.fuzzyHistory) {
+        this.fuzzyHistory = new Map(Object.entries(stored.fuzzyHistory));
       }
 
       // Restaurar cola
@@ -102,6 +111,7 @@ export class AutoRadar {
         debounceMs: DEFAULT_DEBOUNCE_MS,
         maxAgeMs: DEFAULT_MAX_AGE_MS,
         analysisHistory: Object.fromEntries(this.analysisHistory),
+        fuzzyHistory: Object.fromEntries(this.fuzzyHistory),
         [AUTO_RADAR_QUEUE_STORAGE_KEY]: this.queue
       });
     } catch (error) {
@@ -240,6 +250,61 @@ export class AutoRadar {
     return Math.abs(hash).toString(36).substring(0, DEFAULT_CONTENT_HASH_LENGTH);
   }
 
+  /**
+   * Normaliza el texto visible a un set de tokens (palabras) para comparación difusa.
+   * Filtra stopwords y tokens cortos. Determinista y local (no sale del dispositivo).
+   */
+  normalizeTokens(text) {
+    const STOPWORDS = new Set([
+      'the', 'and', 'for', 'with', 'that', 'this', 'from', 'your', 'have', 'are',
+      'was', 'you', 'will', 'can', 'all', 'our', 'but', 'not', 'they', 'his', 'her',
+      'com', 'http', 'https', 'www', 'una', 'los', 'las', 'por', 'con', 'que', 'del',
+      'para', 'una', 'más', 'sus', 'tan', 'eso', 'este', 'esta', 'como', 'pero'
+    ]);
+    const raw = (text || '').toLowerCase().replace(/[^a-z0-9áéíóúñü\s]/gi, ' ').split(/\s+/);
+    const tokens = new Set();
+    for (const word of raw) {
+      if (word.length < 4) continue;
+      if (STOPWORDS.has(word)) continue;
+      tokens.add(word);
+    }
+    return tokens;
+  }
+
+  /**
+   * Huella difusa: conjunto de tokens del contenido de la página.
+   * Usamos el título + texto visible para captar similitud aunque cambie el hash exacto.
+   */
+  fuzzyFingerprint(context) {
+    const titleTokens = this.normalizeTokens(context.title || '');
+    const bodyTokens = this.normalizeTokens(context.visibleText || '');
+    return new Set([...titleTokens, ...bodyTokens]);
+  }
+
+  /**
+   * Deduplicación difusa: compara la página actual contra huellas recientes
+   * usando similitud de Jaccard. Si supera el umbral, se considera duplicado.
+   * @returns {boolean}
+   */
+  fuzzyDuplicate(context, threshold = DEFAULT_FUZZY_THRESHOLD) {
+    const fp = this.fuzzyFingerprint(context);
+    if (fp.size === 0) return false;
+    const now = Date.now();
+    // Limpiar huellas expiradas
+    for (const [key, entry] of this.fuzzyHistory.entries()) {
+      if (now - entry.expiry > 0) this.fuzzyHistory.delete(key);
+    }
+    for (const [, entry] of this.fuzzyHistory.entries()) {
+      const prev = entry.tokens;
+      if (!prev || prev.size === 0) continue;
+      const intersection = [...fp].filter((t) => prev.has(t)).length;
+      const union = new Set([...fp, ...prev]).size;
+      const jaccard = union === 0 ? 0 : intersection / union;
+      if (jaccard >= threshold) return true;
+    }
+    return false;
+  }
+
   isDuplicate(context) {
     const now = Date.now();
     const maxAge = DEFAULT_MAX_AGE_MS;
@@ -267,11 +332,18 @@ export class AutoRadar {
         }
       }
 
+      // Deduplicación difusa: contenido similar aunque el hash exacto cambie
+      if (this.fuzzyDuplicate(context)) {
+        return { duplicate: true, reason: 'fuzzy' };
+      }
+
       // Agregar al historial
       const expiry = now + maxAge;
       this.analysisHistory.set(urlCanonicalKey, expiry);
       this.analysisHistory.set(contentHashKey, expiry);
       this.analysisHistory.set(domainTitleKey, expiry);
+      // Guardar huella difusa para futuras comparaciones
+      this.fuzzyHistory.set(`fp:${contentHash}`, { expiry, tokens: this.fuzzyFingerprint(context) });
 
       return { duplicate: false };
     } catch (error) {
