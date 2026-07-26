@@ -35,3 +35,13 @@
 The reference contains more modules and color variance. Graph, Investigations, scheduling and synthetic telemetry remain intentionally absent until their Kernel contracts exist. This is a truthful Phase 1 boundary, not a visual omission to fake.
 
 final result: passed
+
+## Production dependency security (P0) — closed
+
+The P0 blocker from the handoff was production dependency security. Closed without weakening supply-chain policy (`minimumReleaseAge`, frozen lockfile, loopback-only, token memory-only, normalized `/api/*` paths intact):
+
+- Baseline `pnpm audit --prod`: **7 high / 6 moderate** (13 total). Roots: `next@16.2.10` (<16.2.11, 5 high + 4 moderate), `postcss@8.4.31` via `next` (2 high + 1 moderate), `sharp@0.34.5` via `next` (1 high, libvips CVE-2026-33327/33328/35590/35591).
+- Fix: `apps/dashboard/package.json` `next` `16.2.10` → `^16.2.11`; `pnpm-workspace.yaml` `overrides` `postcss >=8.5.18`, `sharp >=0.35.0`. (pnpm v11 ignores `pnpm.overrides` in root `package.json`; the first attempt there was ignored and left the vulnerable postcss/sharp in the graph — the workspace form is correct.)
+- Resolved graph: `next@16.2.11`, `postcss@8.5.23`, `sharp@0.35.3`.
+- `pnpm audit --prod`: **No known vulnerabilities found** (0 high / 0 moderate).
+- Full gate green: `git diff --check` clean, `pnpm typecheck` exit 0, `pnpm test` 94 files / 547 tests, `pnpm dashboard:test` 77/77, `pnpm --filter @internet-brain-os/dashboard build` clean, `pnpm --filter @internet-brain-os/dashboard e2e` 3/3, `pnpm verify:first-run` exit 0.

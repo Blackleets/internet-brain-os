@@ -9,13 +9,16 @@
 - Local isolated worktree: `C:\Users\Usuario\OneDrive\Documentos\Internet Brain Os\.worktrees\dashboard-control-center`
 - Do not implement this work directly on `main` and do not remove the worktree until the PR is merged.
 
-The dashboard foundation, secure loopback Kernel connection, truthful live Overview, original Forge artwork, responsive shell and normalized visual QA are implemented. Before the final review wave, these commands passed:
+The dashboard foundation, secure loopback Kernel connection, truthful live Overview, original Forge artwork, responsive shell and normalized visual QA are implemented. The P0 production-dependency security blocker is now closed. These commands pass on the current HEAD:
 
+- `git diff --check` — clean
+- `pnpm audit --prod` — **No known vulnerabilities found** (0 high / 0 moderate)
 - `pnpm typecheck`
-- `pnpm test` — 94 files / 543 tests
-- `pnpm dashboard:test` — 73/73
-- `pnpm verify:first-run`
+- `pnpm test` — 94 files / 547 tests
+- `pnpm dashboard:test` — 77/77
+- `pnpm --filter @internet-brain-os/dashboard build` — clean (Next 16.2.11)
 - `pnpm --filter @internet-brain-os/dashboard e2e` — 3/3
+- `pnpm verify:first-run` — exit 0
 
 Design evidence and comparison history are in `design-qa.md`; the implementation plan and contract are under `docs/superpowers/`.
 
@@ -47,7 +50,7 @@ Work in this order and use TDD for every fix:
    - Run `git diff --check`, `pnpm typecheck`, `pnpm test`, `pnpm dashboard:test`, `pnpm verify:first-run`, `pnpm audit --prod` and `pnpm --filter @internet-brain-os/dashboard e2e`.
    - Restore generated `apps/dashboard/next-env.d.ts` to `import "./.next/types/routes.d.ts";` and remove Playwright `test-results` before committing.
 
-The branch and draft PR were pushed through `f620559`. The only unresolved P0 is dependency security, followed by combined-tree verification and a fresh independent review.
+The branch and draft PR were pushed through `f620559`. The P0 dependency-security blocker is now **closed** (see `task-12-report.md`); combined-tree verification and a fresh independent review remain.
 
 5. **Independent review and integration**
    - Request a fresh whole-branch review from the merge base `5904569d9ddbbe02a7d32cfe1b4bee461859bb5e` to the final HEAD.
