@@ -73,6 +73,18 @@ const snapshot: OverviewSnapshot = {
 afterEach(cleanup);
 
 describe('OverviewScreen', () => {
+  it('renders the decorative Forge Core artwork without competing with Kernel status copy', () => {
+    render(<OverviewScreen snapshot={snapshot} reload={vi.fn()} disconnect={vi.fn()} />);
+
+    const artwork = document.querySelector('img.forge-core-artwork');
+    expect(artwork).toBeTruthy();
+    expect(artwork?.getAttribute('src')).toContain('forge-core.webp');
+    expect(artwork?.getAttribute('alt')).toBe('');
+    expect(artwork?.getAttribute('width')).toBe('1672');
+    expect(artwork?.getAttribute('height')).toBe('941');
+    expect(screen.getByText('Kernel conectado')).toBeTruthy();
+  });
+
   it('renders exact live counts and explicitly unavailable projections', () => {
     render(<OverviewScreen snapshot={snapshot} reload={vi.fn()} disconnect={vi.fn()} />);
 

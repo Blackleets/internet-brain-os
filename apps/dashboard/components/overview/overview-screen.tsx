@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 import { ActivityFeed } from './activity-feed';
 import { MetricGrid } from './metric-grid';
@@ -48,7 +49,17 @@ export function OverviewScreen({ snapshot, reload, disconnect }: OverviewScreenP
         {stale ? <p className="stale-state" role="status" aria-live="polite">Datos sin actualizar desde <time dateTime={snapshot.loadedAt}>{formatLoadedAt(snapshot.loadedAt)}</time></p> : null}
         {refreshError ? <p className="overview-error" role="alert">{refreshError}</p> : null}
       </div>
-      <div className="forge-core-slot" data-forge-core-slot="pending" aria-label="Forge Core: recurso visual pendiente de integración" />
+      <div className="forge-core-slot">
+        <Image
+          src="/forge-core.webp"
+          alt=""
+          width={1672}
+          height={941}
+          priority
+          sizes="(max-width: 760px) calc(100vw - 4rem), (max-width: 1100px) 38vw, 42vw"
+          className="forge-core-artwork"
+        />
+      </div>
     </section>
     <MetricGrid metrics={snapshot.metrics} issues={snapshot.issues} />
     <MissionPanel missions={snapshot.missions} unavailable={hasIssue(snapshot.issues, 'missions')} />
