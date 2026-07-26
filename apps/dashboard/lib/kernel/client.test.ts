@@ -72,6 +72,15 @@ describe('KernelClient', () => {
     await expect(client.get('/api/cases', (value) => value)).rejects.not.toThrow(token);
   });
 
+  it('maps a 500 response to HTTP_ERROR', async () => {
+    const client = clientWith(async () => new Response('kernel failure', { status: 500 }));
+
+    await expect(client.get('/api/cases', (value) => value)).rejects.toMatchObject({
+      name: 'KernelClientError',
+      code: 'HTTP_ERROR',
+    } satisfies Pick<KernelClientError, 'name' | 'code'>);
+  });
+
   it('maps a rejected fetch to OFFLINE without exposing the token', async () => {
     const client = clientWith(async () => {
       throw new Error(`connection refused for ${token}`);
@@ -107,5 +116,32 @@ describe('KernelClient', () => {
       name: 'KernelClientError',
       code: 'TIMEOUT',
     } satisfies Pick<KernelClientError, 'name' | 'code'>);
+  });
+
+  it.each(['/health', '/status', '/bootstrap/status'])('removes a caller-provided token from the public %s route', async (path) => {
+    let headers: Headers | undefined;
+    const client = clientWith(async (_input, init) => {
+      headers = new Headers(init?.headers);
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+
+    await client.request(path, { headers: { 'x-hephaestus-token': 'caller-supplied-token' } }, (value) => value);
+
+    expect(headers?.get('x-hephaestus-token')).toBeNull();
+  });
+
+  it('uses the normalized path before deciding whether to send the token', async () => {
+    let receivedUrl: string | undefined;
+    let headers: Headers | undefined;
+    const client = clientWith(async (input, init) => {
+      receivedUrl = String(input);
+      headers = new Headers(init?.headers);
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+
+    await client.request('/api/../health', { headers: { 'x-hephaestus-token': 'caller-supplied-token' } }, (value) => value);
+
+    expect(receivedUrl).toBe('http://localhost:4310/health');
+    expect(headers?.get('x-hephaestus-token')).toBeNull();
   });
 });

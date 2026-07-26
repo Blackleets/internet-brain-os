@@ -36,12 +36,13 @@ export class KernelClient {
 
   async request<T>(path: string, init: RequestInit, parse: (value: unknown) => T, signal?: AbortSignal): Promise<T> {
     const request = withTimeout(signal, this.timeoutMs);
+    const url = this.url(path);
 
     try {
-      const response = await this.fetcher(this.url(path), {
+      const response = await this.fetcher(url, {
         ...init,
         cache: 'no-store',
-        headers: this.headersFor(path, init),
+        headers: this.headersFor(url, init),
         signal: request.signal,
       });
 
@@ -65,15 +66,16 @@ export class KernelClient {
     }
   }
 
-  private url(path: string): string {
-    return `${this.baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
+  private url(path: string): URL {
+    return new URL(`${this.baseUrl}${path.startsWith('/') ? path : `/${path}`}`);
   }
 
-  private headersFor(path: string, init: RequestInit): Headers {
+  private headersFor(url: URL, init: RequestInit): Headers {
     const headers = new Headers(init.headers);
     headers.set('accept', 'application/json');
     if (init.body !== undefined && init.body !== null && !headers.has('content-type')) headers.set('content-type', 'application/json');
-    if (path === '/api' || path.startsWith('/api/')) headers.set('x-hephaestus-token', this.options.token);
+    headers.delete('x-hephaestus-token');
+    if (url.pathname === '/api' || url.pathname.startsWith('/api/')) headers.set('x-hephaestus-token', this.options.token);
     return headers;
   }
 }
