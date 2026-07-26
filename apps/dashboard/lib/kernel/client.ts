@@ -26,7 +26,7 @@ export class KernelClient {
 
   constructor(private readonly options: KernelClientOptions) {
     this.baseUrl = normalizeKernelBaseUrl(options.baseUrl);
-    this.fetcher = options.fetcher ?? fetch;
+    this.fetcher = options.fetcher ?? ((input, init) => globalThis.fetch(input, init));
     this.timeoutMs = boundedTimeout(options.timeoutMs);
   }
 

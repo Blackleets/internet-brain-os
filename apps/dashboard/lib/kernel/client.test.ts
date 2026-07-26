@@ -13,6 +13,30 @@ function clientWith(fetcher: typeof fetch, timeoutMs?: number): KernelClient {
 }
 
 describe('KernelClient', () => {
+  it('calls the default browser fetch with the global receiver', async () => {
+    const originalFetch = Object.getOwnPropertyDescriptor(globalThis, 'fetch');
+    let receiver: unknown;
+
+    Object.defineProperty(globalThis, 'fetch', {
+      configurable: true,
+      writable: true,
+      value: function defaultFetch(this: unknown): Promise<Response> {
+        receiver = this;
+        return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      },
+    });
+
+    try {
+      const client = new KernelClient({ baseUrl: 'http://localhost:4310/', token });
+      await client.get('/health', (value) => value);
+
+      expect(receiver).toBe(globalThis);
+    } finally {
+      if (originalFetch) Object.defineProperty(globalThis, 'fetch', originalFetch);
+      else Reflect.deleteProperty(globalThis, 'fetch');
+    }
+  });
+
   it('adds the token only to authenticated API paths while retaining JSON no-store defaults', async () => {
     const calls: Array<[RequestInfo | URL, RequestInit | undefined]> = [];
     const fetcher: typeof fetch = async (input, init) => {
