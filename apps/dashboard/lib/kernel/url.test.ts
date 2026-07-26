@@ -10,13 +10,17 @@ describe('normalizeKernelBaseUrl', () => {
     expect(normalizeKernelBaseUrl('http://127.0.0.1:4000')).toBe('http://127.0.0.1:4000');
   });
 
+  it('keeps an accepted IPv6 loopback address as its origin', () => {
+    expect(normalizeKernelBaseUrl('http://[::1]:4000/')).toBe('http://[::1]:4000');
+  });
+
   it('rejects credentials so a Kernel secret cannot be embedded in its address', () => {
     expect(() => normalizeKernelBaseUrl('http://user:pass@localhost:4000')).toThrowError('INVALID_KERNEL_URL');
     try {
       normalizeKernelBaseUrl('http://user:pass@localhost:4000');
     } catch (error) {
       expect(error).toMatchObject({
-      code: 'INVALID_KERNEL_URL',
+        code: 'INVALID_KERNEL_URL',
       } satisfies Pick<KernelUrlError, 'code'>);
     }
   });
