@@ -5,6 +5,7 @@ import { KernelClient, KernelClientError } from '../lib/kernel/client';
 import { type OverviewSnapshot, loadOverview } from '../lib/kernel/overview';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { connectionStore } from '../lib/session/connection-store';
+import { OverviewScreen } from './overview/overview-screen';
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:4000';
 
@@ -67,7 +68,44 @@ export function ConnectionGate() {
     }
   }
 
-  if (connection && snapshot) return <OverviewScreen snapshot={snapshot} disconnect={() => connectionStore.clear()} />;
+  async function reload(): Promise<void> {
+    const currentConnection = connectionStore.get();
+    if (!currentConnection) return;
+
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    const isCurrentRequest = () => mountedRef.current && requestId === requestIdRef.current;
+
+    try {
+      const client = new KernelClient(currentConnection);
+      const nextSnapshot = await loadOverview(client, controller.signal);
+      if (!isCurrentRequest()) return;
+      setSnapshot(nextSnapshot);
+    } catch (reason) {
+      if (!isCurrentRequest()) return;
+      if (reason instanceof KernelClientError && reason.code === 'UNAUTHORIZED') {
+        connectionStore.clear();
+        setSnapshot(undefined);
+        setError(connectionMessage(reason));
+        return;
+      }
+      throw reason;
+    } finally {
+      if (controllerRef.current === controller) controllerRef.current = undefined;
+    }
+  }
+
+  function disconnect(): void {
+    controllerRef.current?.abort();
+    requestIdRef.current += 1;
+    connectionStore.clear();
+    setSnapshot(undefined);
+  }
+
+  if (connection && snapshot) return <OverviewScreen snapshot={snapshot} reload={reload} disconnect={disconnect} />;
 
   return (
     <section aria-labelledby="connection-title">
@@ -93,15 +131,4 @@ function connectionMessage(reason: unknown): string {
     return 'El token no es válido. Vuelve a conectarte al Kernel.';
   }
   return 'No se pudo conectar al Kernel. Revisa la URL y vuelve a intentarlo.';
-}
-
-// Task 8 replaces this bounded connected-state placeholder with the live Overview composition.
-function OverviewScreen({ snapshot, disconnect }: { snapshot: OverviewSnapshot; disconnect: () => void }) {
-  return (
-    <section aria-label="Resumen del Kernel">
-      <h1>Kernel conectado</h1>
-      <p>{snapshot.readiness.kernel === 'online' ? 'El Kernel está disponible.' : 'El Kernel requiere atención.'}</p>
-      <button type="button" onClick={disconnect}>Desconectar</button>
-    </section>
-  );
 }
