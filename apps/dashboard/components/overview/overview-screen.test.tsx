@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OverviewScreen } from './overview-screen';
-import type { OverviewSnapshot } from '../../lib/kernel/overview';
+import { isActiveMission, type OverviewSnapshot } from '../../lib/kernel/overview';
 
 const snapshot: OverviewSnapshot = {
   readiness: {
@@ -121,9 +121,98 @@ describe('OverviewScreen', () => {
       />,
     );
 
-    expect(screen.getByText('No hay misiones persistidas todavía.')).toBeTruthy();
+    expect(screen.getByText('No hay misiones activas.')).toBeTruthy();
     expect(screen.getByText('No hay oportunidades priorizadas todavía.')).toBeTruthy();
     expect(screen.getByText('No hay actividad persistida para mostrar.')).toBeTruthy();
+  });
+
+  it.each([
+    ['cases', 'Casos'],
+    ['goals', 'Metas'],
+    ['missions', 'Misiones'],
+    ['opportunities', 'Oportunidades'],
+  ] as const)('does not render failed %s reads as factual empty data', (endpoint, metricLabel) => {
+    render(
+      <OverviewScreen
+        snapshot={{
+          ...snapshot,
+          metrics: { cases: 0, goals: 0, missions: 0, activeMissions: 0, opportunities: 0 },
+          missions: [],
+          opportunities: [],
+          activity: [],
+          issues: [{ endpoint, code: 'OFFLINE' }],
+        }}
+        reload={vi.fn()}
+        disconnect={vi.fn()}
+      />,
+    );
+
+    const metric = screen.getByRole('heading', { name: metricLabel }).closest('article')!;
+    expect(metric.textContent).toContain('Datos temporalmente no disponibles');
+    if (endpoint === 'missions') {
+      expect(screen.getByRole('region', { name: 'Misiones activas' }).textContent).toContain('Datos temporalmente no disponibles');
+    }
+    if (endpoint === 'opportunities') {
+      expect(screen.getByRole('region', { name: 'Prioridad de oportunidades' }).textContent).toContain('Datos temporalmente no disponibles');
+    }
+  });
+
+  it('distinguishes unavailable readiness reads from an unconfigured subsystem', () => {
+    render(
+      <OverviewScreen
+        snapshot={{
+          ...snapshot,
+          readiness: { ...snapshot.readiness, status: undefined, bootstrap: undefined },
+          issues: [{ endpoint: 'status', code: 'OFFLINE' }, { endpoint: 'bootstrap', code: 'OFFLINE' }],
+        }}
+        reload={vi.fn()}
+        disconnect={vi.fn()}
+      />,
+    );
+
+    const readiness = screen.getByRole('region', { name: 'Estado de subsistemas' });
+    expect(within(readiness).getAllByText('Estado temporalmente no disponible')).toHaveLength(5);
+    expect(within(readiness).queryByText('No configurado')).toBeNull();
+    expect(within(readiness).queryByText('Requiere emparejamiento')).toBeNull();
+  });
+
+  it('renders only currently active persisted mission phases', () => {
+    const missions = [
+      { ...snapshot.missions[0], id: 'queued', status: 'queued' as const, executionPhase: 'queued' as const },
+      { ...snapshot.missions[0], id: 'investigating', status: 'running' as const, executionPhase: 'investigating' as const },
+      { ...snapshot.missions[0], id: 'verifying', status: 'running' as const, executionPhase: 'verifying' as const },
+      { ...snapshot.missions[0], id: 'forged', status: 'completed' as const, executionPhase: 'forged' as const },
+      { ...snapshot.missions[0], id: 'completed', status: 'completed' as const, executionPhase: undefined },
+      { ...snapshot.missions[0], id: 'failed', status: 'failed' as const, executionPhase: 'failed' as const },
+      { ...snapshot.missions[0], id: 'failed-phase', status: 'running' as const, executionPhase: 'failed' as const },
+    ];
+    const activeMissions = missions.filter(isActiveMission).length;
+    render(<OverviewScreen snapshot={{ ...snapshot, missions, metrics: { ...snapshot.metrics, missions: missions.length, activeMissions } }} reload={vi.fn()} disconnect={vi.fn()} />);
+
+    const panel = screen.getByRole('region', { name: 'Misiones activas' });
+    expect(panel.textContent).toContain('Mision queued');
+    expect(panel.textContent).toContain('Mision verifying');
+    expect(panel.textContent).not.toContain('Mision forged');
+    expect(panel.textContent).not.toContain('Mision completed');
+    expect(panel.textContent).not.toContain('Mision failed');
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(activeMissions);
+  });
+
+  it('marks a failed refresh stale until a later refresh succeeds', async () => {
+    const reload = vi.fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(undefined);
+    render(<OverviewScreen snapshot={snapshot} reload={reload} disconnect={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Actualizar resumen' }));
+    const stale = await screen.findByRole('status');
+    expect(stale.textContent).toContain('Datos sin actualizar desde');
+    expect(stale.querySelector(`time[datetime="${snapshot.loadedAt}"]`)).toBeTruthy();
+    expect(screen.getByRole('alert')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Actualizar resumen' }));
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull());
+    expect(reload).toHaveBeenCalledTimes(2);
   });
 
   it('offers labelled refresh and disconnect controls that work', async () => {
