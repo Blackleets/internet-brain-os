@@ -1,12 +1,15 @@
-# Task 12 visual fix pass 1
+# Task 12 — final visual QA and responsive hardening
 
-Implemented the bounded visual correction set from the pass-0 comparison:
+The source-normalized pass closed every P0/P1/P2 visual finding without changing Kernel contracts or inventing Phase 2 data:
 
-- live Shell readiness follows `connectionStore` for both persistent badges;
-- ready paired bootstrap copy is concise Spanish rather than raw service text;
-- desktop density is tightened for the 1536 × 1024 reference viewport, including a 208 px sidebar;
-- the desktop grid E2E assertion now preserves that intentional 208 px visual contract.
+- persistent shell readiness follows the live connection store;
+- ready/paired copy is concise Spanish;
+- desktop density fits the 1536 × 1024 reference viewport;
+- the malformed tablet grid declaration is repaired so the mobile breakpoint executes;
+- mobile metrics collapse to one readable column with no horizontal overflow;
+- decorative Forge artwork is hidden at the 390 × 844 breakpoint as intended;
+- Turbopack is pinned to the isolated repository root, removing machine-dependent workspace inference.
 
-TDD evidence: the new behavior/copy tests failed before implementation and then passed (17 focused tests). Dashboard tests passed (9 files, 72 tests); root tests passed (93 files, 542 tests); root typecheck and dashboard production build passed. The canonical E2E command is pending because the main task owner’s pass-1 fixture intentionally occupies port 4100 and the test configuration rejects reuse; no process or E2E configuration was changed. The existing unrelated `apps/dashboard/next-env.d.ts` worktree modification is preserved and excluded from this task.
+TDD evidence: mobile overflow failed at 422 px against a 390 px viewport before the CSS parser fix; the Forge slot then failed the new hidden assertion before the specificity fix. Final focused and canonical checks passed: dashboard 73/73, E2E 3/3, typecheck and production build.
 
-Visual acceptance remains blocked until the main task owner captures and compares pass-1 browser evidence at the normalized connected fixture state. See `design-qa.md` for exact pass-0 evidence, findings, and required recapture checklist.
+Visual evidence and the truthful Phase 1 residual boundary are recorded in `design-qa.md`, which ends with `final result: passed`.
