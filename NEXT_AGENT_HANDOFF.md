@@ -24,8 +24,11 @@ Design evidence and comparison history are in `design-qa.md`; the implementation
 Work in this order and use TDD for every fix:
 
 1. **Production dependency security (P0)**
-   - Upgrade `next@16.2.10` to the planned safe patch (`16.2.12` or newer compatible patch allowed by the repository supply-chain policy).
-   - Regenerate `pnpm-lock.yaml` and remove high-severity production advisories from Next, PostCSS and Sharp where compatible releases exist.
+   - Baseline `pnpm audit --prod`: **7 high / 6 moderate**.
+   - A trial upgrade to `next@16.2.12` removed the direct Next advisories but still left **3 high / 1 moderate** because it resolved `postcss@8.4.31` and `sharp@0.34.5`.
+   - Finish with a compatible Next patch and/or reviewed workspace overrides that resolve PostCSS to `>=8.5.18` and Sharp to `>=0.35.0`; do not stop merely because the direct Next advisories disappear.
+   - The trial install hit Windows `EPERM` while renaming Next in `node_modules`; ensure no dev/build process owns that directory before retrying.
+   - Regenerate `pnpm-lock.yaml` without weakening the repository minimum-release-age policy.
    - Gate: `pnpm audit --prod`, dashboard tests, typecheck and production build.
 
 2. **Truthful Overview data (P1/P2)**
