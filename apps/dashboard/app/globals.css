@@ -1,0 +1,18 @@
+:root {
+  color-scheme: dark;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: minmax(12rem, 16rem) 1fr;
+  min-height: 100vh;
+}
+
+.app-workspace {
+  padding: 1.5rem;
+}
