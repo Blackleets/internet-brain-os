@@ -3,7 +3,7 @@ import { normalizeKernelBaseUrl } from './url';
 export type KernelClientErrorCode = 'UNAUTHORIZED' | 'OFFLINE' | 'TIMEOUT' | 'HTTP_ERROR' | 'INVALID_RESPONSE';
 
 export class KernelClientError extends Error {
-  constructor(readonly code: KernelClientErrorCode) {
+  constructor(readonly code: KernelClientErrorCode, readonly status?: number) {
     super(code);
     this.name = 'KernelClientError';
   }
@@ -46,8 +46,8 @@ export class KernelClient {
         signal: request.signal,
       });
 
-      if (response.status === 401) throw new KernelClientError('UNAUTHORIZED');
-      if (!response.ok) throw new KernelClientError('HTTP_ERROR');
+      if (response.status === 401) throw new KernelClientError('UNAUTHORIZED', response.status);
+      if (!response.ok) throw new KernelClientError('HTTP_ERROR', response.status);
 
       let body: unknown;
       try {

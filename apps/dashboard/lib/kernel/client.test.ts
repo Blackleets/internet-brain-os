@@ -72,13 +72,25 @@ describe('KernelClient', () => {
     await expect(client.get('/api/cases', (value) => value)).rejects.not.toThrow(token);
   });
 
-  it('maps a 500 response to HTTP_ERROR', async () => {
+  it('preserves a non-sensitive HTTP status for HTTP errors', async () => {
     const client = clientWith(async () => new Response('kernel failure', { status: 500 }));
 
     await expect(client.get('/api/cases', (value) => value)).rejects.toMatchObject({
       name: 'KernelClientError',
       code: 'HTTP_ERROR',
-    } satisfies Pick<KernelClientError, 'name' | 'code'>);
+      status: 500,
+    } satisfies Pick<KernelClientError, 'name' | 'code' | 'status'>);
+  });
+
+  it('preserves a 404 status without exposing the response body or token', async () => {
+    const client = clientWith(async () => new Response(`not found: ${token}`, { status: 404 }));
+
+    await expect(client.get('/api/model-forge', (value) => value)).rejects.toMatchObject({
+      name: 'KernelClientError',
+      code: 'HTTP_ERROR',
+      status: 404,
+    } satisfies Pick<KernelClientError, 'name' | 'code' | 'status'>);
+    await expect(client.get('/api/model-forge', (value) => value)).rejects.not.toThrow(token);
   });
 
   it('maps a rejected fetch to OFFLINE without exposing the token', async () => {

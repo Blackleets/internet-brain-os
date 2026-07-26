@@ -59,44 +59,58 @@ export type OverviewSnapshot = {
 };
 
 export async function loadOverview(client: KernelClient, signal?: AbortSignal): Promise<OverviewSnapshot> {
-  const [health, status, bootstrap, cases, goals, missions, opportunities, modelForge] = await Promise.allSettled([
+  const [health, status, bootstrap] = await Promise.allSettled([
     client.get('/health', parseHealth, signal),
     client.get('/status', parseStatus, signal),
     client.get('/bootstrap/status', parseBootstrap, signal),
+  ]);
+
+  const readinessResults = [
+    ['health', health],
+    ['status', status],
+    ['bootstrap', bootstrap],
+  ] as const;
+  throwUnauthorized(readinessResults);
+
+  const offline = health.status === 'rejected' && health.reason instanceof KernelClientError && health.reason.code === 'OFFLINE';
+  const issues = issuesFrom(readinessResults);
+  let caseRecords: CaseSummary[] = [];
+  let goalRecords: GoalSummary[] = [];
+  let missionRecords: MissionSummary[] = [];
+  let opportunityRecords: OpportunitySummary[] = [];
+  let modelForge: ModelForgeSummary | undefined;
+
+  if (!offline) {
+    const [cases, goals, missions, opportunities, modelForgeResult] = await Promise.allSettled([
     client.get('/api/cases', parseCases, signal),
     client.get('/api/goals', parseGoals, signal),
     client.get('/api/agent-missions', parseMissions, signal),
     client.get('/api/opportunities', parseOpportunities, signal),
     client.get('/api/model-forge', parseModelForge, signal),
-  ]);
-
-  const results = [
-    ['health', health],
-    ['status', status],
-    ['bootstrap', bootstrap],
-    ['cases', cases],
-    ['goals', goals],
-    ['missions', missions],
-    ['opportunities', opportunities],
-    ['modelForge', modelForge],
-  ] as const;
-
-  const unauthorized = results.find(([, result]) => result.status === 'rejected' && isUnauthorized(result.reason));
-  if (unauthorized?.[1].status === 'rejected') throw unauthorized[1].reason;
-
-  const issues = results.flatMap(([endpoint, result]) => result.status === 'rejected' ? [toIssue(endpoint, result.reason)] : []);
-  const caseRecords = fulfilledValue(cases, [] as CaseSummary[]);
-  const goalRecords = fulfilledValue(goals, [] as GoalSummary[]);
-  const missionRecords = fulfilledValue(missions, [] as MissionSummary[]);
-  const opportunityRecords = fulfilledValue(opportunities, [] as OpportunitySummary[]);
+    ]);
+    const protectedResults = [
+      ['cases', cases],
+      ['goals', goals],
+      ['missions', missions],
+      ['opportunities', opportunities],
+      ['modelForge', modelForgeResult],
+    ] as const;
+    throwUnauthorized(protectedResults);
+    issues.push(...issuesFrom(protectedResults));
+    caseRecords = fulfilledValue(cases, [] as CaseSummary[]);
+    goalRecords = fulfilledValue(goals, [] as GoalSummary[]);
+    missionRecords = fulfilledValue(missions, [] as MissionSummary[]);
+    opportunityRecords = fulfilledValue(opportunities, [] as OpportunitySummary[]);
+    modelForge = fulfilledValue(modelForgeResult, undefined);
+  }
 
   return {
     readiness: {
-      kernel: health.status === 'fulfilled' ? 'online' : 'offline',
+      kernel: offline ? 'offline' : 'online',
       ...(health.status === 'fulfilled' ? { health: health.value } : {}),
       ...(status.status === 'fulfilled' ? { status: status.value } : {}),
       ...(bootstrap.status === 'fulfilled' ? { bootstrap: bootstrap.value } : {}),
-      ...(modelForge.status === 'fulfilled' ? { modelForge: modelForge.value } : {}),
+      ...(modelForge === undefined ? {} : { modelForge }),
     },
     metrics: {
       cases: caseRecords.length,
@@ -125,8 +139,17 @@ function isUnauthorized(reason: unknown): reason is KernelClientError {
   return reason instanceof KernelClientError && reason.code === 'UNAUTHORIZED';
 }
 
+function throwUnauthorized(results: ReadonlyArray<readonly [OverviewEndpoint, PromiseSettledResult<unknown>]>): void {
+  const unauthorized = results.find(([, result]) => result.status === 'rejected' && isUnauthorized(result.reason));
+  if (unauthorized?.[1].status === 'rejected') throw unauthorized[1].reason;
+}
+
+function issuesFrom(results: ReadonlyArray<readonly [OverviewEndpoint, PromiseSettledResult<unknown>]>): OverviewIssue[] {
+  return results.flatMap(([endpoint, result]) => result.status === 'rejected' ? [toIssue(endpoint, result.reason)] : []);
+}
+
 function toIssue(endpoint: OverviewEndpoint, reason: unknown): OverviewIssue {
-  if (endpoint === 'modelForge' && reason instanceof KernelClientError && reason.code === 'HTTP_ERROR') {
+  if (endpoint === 'modelForge' && reason instanceof KernelClientError && reason.code === 'HTTP_ERROR' && reason.status === 404) {
     return { endpoint, code: 'UNAVAILABLE' };
   }
   return { endpoint, code: reason instanceof KernelClientError ? reason.code : 'UNKNOWN' };
@@ -139,7 +162,11 @@ function activityFrom(goals: GoalSummary[], missions: MissionSummary[], opportun
     ...opportunities.map((opportunity) => activity('opportunity', opportunity.id, opportunity.detectedAt, opportunity.status)),
   ].filter((entry): entry is OverviewActivity => entry !== undefined);
 
-  return entries.sort((left, right) => timestamp(right.timestamp) - timestamp(left.timestamp) || left.id.localeCompare(right.id));
+  return entries.sort((left, right) => timestamp(right.timestamp) - timestamp(left.timestamp) || compareCodeUnits(left.id, right.id));
+}
+
+function compareCodeUnits(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function activity(kind: OverviewActivity['kind'], recordId: string, timestampValue: string, state: string): OverviewActivity | undefined {

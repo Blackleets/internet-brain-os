@@ -69,6 +69,62 @@ describe('loadOverview', () => {
     expect(snapshot.issues).toContainEqual({ endpoint: 'modelForge', code: 'UNAVAILABLE' });
   });
 
+  it('retains a Model Forge server failure as HTTP_ERROR instead of optional unavailability', async () => {
+    const snapshot = await loadOverview(clientWith({
+      '/api/model-forge': new Response(null, { status: 500 }),
+    }));
+
+    expect(snapshot.metrics).toEqual({ cases: 1, goals: 1, missions: 1, activeMissions: 1, opportunities: 1 });
+    expect(snapshot.issues).toContainEqual({ endpoint: 'modelForge', code: 'HTTP_ERROR' });
+    expect(snapshot.issues).not.toContainEqual({ endpoint: 'modelForge', code: 'UNAVAILABLE' });
+  });
+
+  it('does not initiate protected reads when health proves the Kernel is offline', async () => {
+    const invoked: string[] = [];
+    const client = new KernelClient({
+      baseUrl: 'http://localhost:4000',
+      token: 'local-token',
+      fetcher: async (input) => {
+        const path = new URL(input.toString()).pathname;
+        invoked.push(path);
+        if (path === '/health') throw new Error('connection refused');
+        return Response.json(responses[path as keyof typeof responses]);
+      },
+    });
+
+    const snapshot = await loadOverview(client);
+
+    expect(snapshot.readiness.kernel).toBe('offline');
+    expect(snapshot.issues).toContainEqual({ endpoint: 'health', code: 'OFFLINE' });
+    expect(invoked).toEqual(expect.arrayContaining(['/health', '/status', '/bootstrap/status']));
+    expect(invoked.filter((path) => path.startsWith('/api/'))).toEqual([]);
+  });
+
+  it('keeps protected reads parallel when health failure is ambiguous', async () => {
+    const invoked: string[] = [];
+    const client = new KernelClient({
+      baseUrl: 'http://localhost:4000',
+      token: 'local-token',
+      fetcher: async (input) => {
+        const path = new URL(input.toString()).pathname;
+        invoked.push(path);
+        if (path === '/health') return new Response(null, { status: 500 });
+        return Response.json(responses[path as keyof typeof responses]);
+      },
+    });
+
+    const snapshot = await loadOverview(client);
+
+    expect(snapshot.issues).toContainEqual({ endpoint: 'health', code: 'HTTP_ERROR' });
+    expect(invoked.filter((path) => path.startsWith('/api/'))).toEqual([
+      '/api/cases',
+      '/api/goals',
+      '/api/agent-missions',
+      '/api/opportunities',
+      '/api/model-forge',
+    ]);
+  });
+
   it('orders equal persisted timestamps by stable derived activity ID', async () => {
     const first = await loadOverview(clientWith());
     const second = await loadOverview(clientWith());
@@ -79,5 +135,21 @@ describe('loadOverview', () => {
       'mission:mission-1',
       'opportunity:opportunity-1',
     ]);
+  });
+
+  it('uses code-unit ordering for equal activity timestamps', async () => {
+    const snapshot = await loadOverview(clientWith({
+      '/api/goals': Response.json({
+        ok: true,
+        goals: [
+          { id: 'é', title: 'Accent', priority: 1, status: 'active', createdAt: '2026-07-26T10:00:00.000Z' },
+          { id: 'z', title: 'ASCII', priority: 1, status: 'active', createdAt: '2026-07-26T10:00:00.000Z' },
+        ],
+      }),
+      '/api/agent-missions': Response.json({ ok: true, missions: [] }),
+      '/api/opportunities': Response.json({ ok: true, opportunities: [] }),
+    }));
+
+    expect(snapshot.activity.map((entry) => entry.id)).toEqual(['goal:z', 'goal:é']);
   });
 });
