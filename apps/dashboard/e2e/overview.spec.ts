@@ -76,5 +76,29 @@ test.describe('mobile control center', () => {
       ]);
       return [refreshBox, disconnectBox].every((box) => box !== null && box.x >= 0 && box.x + box.width <= viewportWidth);
     }).toBe(true);
+
+    const mobileLayout = await page.evaluate(() => {
+      const viewportWidth = window.innerWidth;
+      const trackedElements = Array.from(document.querySelectorAll<HTMLElement>('.app-shell, .app-shell *'));
+      const clippedElements = trackedElements.flatMap((element) => {
+        const bounds = element.getBoundingClientRect();
+        return bounds.left < 0 || bounds.right > viewportWidth
+          ? [`${element.parentElement?.className ?? 'no-parent'} > ${element.tagName.toLowerCase()}.${element.className}: ${bounds.left}-${bounds.right}`]
+          : [];
+      });
+      const metricBounds = Array.from(document.querySelectorAll<HTMLElement>('.metric-card'), (element) => element.getBoundingClientRect());
+      return {
+        viewportWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        clippedElements,
+        metricColumns: new Set(metricBounds.map((bounds) => Math.round(bounds.left))).size,
+        narrowestMetric: Math.min(...metricBounds.map((bounds) => bounds.width)),
+      };
+    });
+
+    expect(mobileLayout.clippedElements).toEqual([]);
+    expect(mobileLayout.documentWidth).toBe(mobileLayout.viewportWidth);
+    expect(mobileLayout.metricColumns).toBe(1);
+    expect(mobileLayout.narrowestMetric).toBeGreaterThanOrEqual(300);
   });
 });
