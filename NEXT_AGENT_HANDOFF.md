@@ -31,23 +31,23 @@ Work in this order and use TDD for every fix:
    - Regenerate `pnpm-lock.yaml` without weakening the repository minimum-release-age policy.
    - Gate: `pnpm audit --prod`, dashboard tests, typecheck and production build.
 
-2. **Truthful Overview data (P1/P2)**
-   - Treat `waiting_for_agent` as an active mission in counters and the mission panel.
-   - Preserve valid activity entries when only one source endpoint fails; show partial state instead of hiding all activity.
-   - Gate: focused red/green tests plus `pnpm dashboard:test`.
+2. **Truthful Overview data (P1/P2) — completed in `9c64741`**
+   - `waiting_for_agent` now counts and renders as active with `Esperando agente`.
+   - Valid activity remains visible during partial source failure.
+   - Verified: focused 24/24 and dashboard 77/77.
 
-3. **Connection and shell truthfulness (P1)**
-   - An initial offline `/health` snapshot must not persist the URL/token or enter the connected shell.
-   - Remove or explicitly disable Phase 2 hash links that currently imply unavailable modules.
-   - Prevent command-bar Enter from reloading the page and losing the in-memory token; remove the fictitious `Ctrl K` affordance unless it is genuinely implemented.
-   - Preserve keyboard accessibility and the existing refresh/stale behavior.
-   - Gate: focused tests, dashboard tests and canonical E2E.
+3. **Connection and shell truthfulness (P1) — completed in `f620559`**
+   - Initial offline snapshots remain gated and do not persist the token/session.
+   - Phase 2 navigation is explicitly disabled; commands show `Próximamente` without fictitious submit or shortcut behavior.
+   - Verified: focused 10/10, dashboard 77/77, dashboard typecheck and E2E 3/3.
 
 4. **Reconcile and verify the combined tree**
    - Inspect `git status`, review every new commit and resolve only real overlaps.
    - Update `design-qa.md`, `task-12-report.md` and the SDD ledger with the security/review closure.
    - Run `git diff --check`, `pnpm typecheck`, `pnpm test`, `pnpm dashboard:test`, `pnpm verify:first-run`, `pnpm audit --prod` and `pnpm --filter @internet-brain-os/dashboard e2e`.
    - Restore generated `apps/dashboard/next-env.d.ts` to `import "./.next/types/routes.d.ts";` and remove Playwright `test-results` before committing.
+
+The branch and draft PR were pushed through `f620559`. The only unresolved P0 is dependency security, followed by combined-tree verification and a fresh independent review.
 
 5. **Independent review and integration**
    - Request a fresh whole-branch review from the merge base `5904569d9ddbbe02a7d32cfe1b4bee461859bb5e` to the final HEAD.
