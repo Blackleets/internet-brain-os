@@ -5,7 +5,7 @@
 - Added `loadOverview(client, signal?)`, which reads the eight Phase 1 Kernel routes with `Promise.allSettled` and preserves every successfully parsed collection when another route fails.
 - Added a typed snapshot containing truthful readiness, count metrics, persisted missions and opportunities, deterministic activity, a load timestamp, and typed endpoint issues.
 - Activity is created only from persisted Goal, Mission, and Opportunity record IDs, timestamps, and states; invalid timestamps are omitted rather than invented. Equal timestamps sort by the stable derived activity ID.
-- A failed health probe marks the Kernel offline. Any `UNAUTHORIZED` response is rethrown to the caller. Model Forge HTTP failures become the typed optional `UNAVAILABLE` issue while the rest of the snapshot remains available.
+- A failed health probe marks the Kernel offline. Any `UNAUTHORIZED` response is rethrown to the caller. Only a Model Forge `404` becomes the typed optional `UNAVAILABLE` issue; other HTTP failures remain visible as `HTTP_ERROR` while successful records remain available.
 
 ## Files
 
@@ -77,6 +77,39 @@ GREEN and final verification:
 ```text
 pnpm dashboard:test -- lib/kernel/client.test.ts lib/kernel/overview.test.ts
 # PASS: 2 files / 20 tests
+
+pnpm --filter @internet-brain-os/dashboard typecheck
+# PASS
+
+pnpm dashboard:test
+# PASS: 5 files / 43 tests
+
+pnpm dashboard:build
+# PASS: optimized production build
+
+git diff --check
+# PASS
+```
+
+## Fix round 2/5
+
+`healthFailed` now controls the truthful readiness projection independently from `connectionImpossible`, which alone gates protected reads. Therefore every rejected health probe reports `readiness.kernel` as `offline`, while only a confirmed `OFFLINE` transport failure suppresses `/api/*` requests.
+
+### TDD evidence
+
+RED:
+
+```text
+pnpm dashboard:test -- lib/kernel/overview.test.ts
+```
+
+Result: exit 1; the ambiguous health `500` regression observed `readiness.kernel === 'online'` instead of `offline`.
+
+GREEN and verification:
+
+```text
+pnpm dashboard:test -- lib/kernel/overview.test.ts
+# PASS: 1 file / 7 tests
 
 pnpm --filter @internet-brain-os/dashboard typecheck
 # PASS

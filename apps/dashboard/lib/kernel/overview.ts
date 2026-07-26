@@ -72,7 +72,8 @@ export async function loadOverview(client: KernelClient, signal?: AbortSignal): 
   ] as const;
   throwUnauthorized(readinessResults);
 
-  const offline = health.status === 'rejected' && health.reason instanceof KernelClientError && health.reason.code === 'OFFLINE';
+  const healthFailed = health.status === 'rejected';
+  const connectionImpossible = healthFailed && health.reason instanceof KernelClientError && health.reason.code === 'OFFLINE';
   const issues = issuesFrom(readinessResults);
   let caseRecords: CaseSummary[] = [];
   let goalRecords: GoalSummary[] = [];
@@ -80,7 +81,7 @@ export async function loadOverview(client: KernelClient, signal?: AbortSignal): 
   let opportunityRecords: OpportunitySummary[] = [];
   let modelForge: ModelForgeSummary | undefined;
 
-  if (!offline) {
+  if (!connectionImpossible) {
     const [cases, goals, missions, opportunities, modelForgeResult] = await Promise.allSettled([
     client.get('/api/cases', parseCases, signal),
     client.get('/api/goals', parseGoals, signal),
@@ -106,7 +107,7 @@ export async function loadOverview(client: KernelClient, signal?: AbortSignal): 
 
   return {
     readiness: {
-      kernel: offline ? 'offline' : 'online',
+      kernel: healthFailed ? 'offline' : 'online',
       ...(health.status === 'fulfilled' ? { health: health.value } : {}),
       ...(status.status === 'fulfilled' ? { status: status.value } : {}),
       ...(bootstrap.status === 'fulfilled' ? { bootstrap: bootstrap.value } : {}),

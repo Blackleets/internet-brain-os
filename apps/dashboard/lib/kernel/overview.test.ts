@@ -115,6 +115,7 @@ describe('loadOverview', () => {
 
     const snapshot = await loadOverview(client);
 
+    expect(snapshot.readiness.kernel).toBe('offline');
     expect(snapshot.issues).toContainEqual({ endpoint: 'health', code: 'HTTP_ERROR' });
     expect(invoked.filter((path) => path.startsWith('/api/'))).toEqual([
       '/api/cases',
