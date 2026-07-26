@@ -31,3 +31,13 @@ The only unresolved P0 from the handoff was production dependency security. Clos
 - Windows EPERM mitigation: confirmed no Next/Vite/Playwright build process owned `node_modules` in this worktree before install (only unrelated global `playwright-mcp` from the npm cache was running; left untouched).
 
 Gate evidence: `git diff --check` clean, `pnpm audit --prod` clean, `pnpm typecheck` exit 0, `pnpm test` 94 files / 547 tests, `pnpm dashboard:test` 77/77, `pnpm --filter @internet-brain-os/dashboard build` clean (Next 16.2.11), `pnpm --filter @internet-brain-os/dashboard e2e` 3/3, `pnpm verify:first-run` exit 0.
+
+## CI `pnpm test` failure — closed
+
+CI run #374 failed at the `pnpm test` step (build and verify:first-run were skipped). Root cause was not dependency security but a non-portable vitest exclude glob:
+
+- `package.json` `test` script used `--exclude apps/dashboard/e2e/**`. On Windows/MSYS the glob excluded `apps/dashboard/e2e/overview.spec.ts`, so `pnpm test` passed locally; on Linux CI the glob did not exclude the file, so vitest collected the Playwright spec and failed with `Playwright Test did not expect test.beforeEach() to be called here.`
+- First fix attempt (`exclude: ['**/e2e/**']` in `vitest.config.ts` plus `--exclude '**/e2e/**'` in the script) over-collected `node_modules` and `dist` test files (Next.js embedded specs, `packages/kernel/dist/*.test.js`) because an explicit `exclude` replaces vitest's default excludes instead of merging.
+- Final fix: `vitest.config.ts` now uses `exclude: [...configDefaults.exclude, '**/e2e/**']` (merges vitest defaults with the e2e exclusion) and the `test` script is back to `vitest run --passWithNoTests` (no CLI `--exclude`, so the config is the single source of truth and behaves identically on Linux and Windows).
+
+Verified locally after fix: `pnpm test` 94 files / 547 tests passed (no `node_modules`/`dist`/`e2e` collection); `pnpm build`, `dashboard build`, `dashboard e2e` 3/3, and `verify:first-run` all green. CI rerun expected to pass the `pnpm test`, `build` and `verify:first-run` steps.

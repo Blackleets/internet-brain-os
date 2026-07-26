@@ -20,6 +20,8 @@ The dashboard foundation, secure loopback Kernel connection, truthful live Overv
 - `pnpm --filter @internet-brain-os/dashboard e2e` — 3/3
 - `pnpm verify:first-run` — exit 0
 
+The `test` script previously used `--exclude apps/dashboard/e2e/**`, which excluded the Playwright e2e spec only on Windows; on Linux CI it failed with `Playwright Test did not expect test.beforeEach()`. Fixed by moving the exclusion to `vitest.config.ts` as `exclude: [...configDefaults.exclude, '**/e2e/**']` (merges vitest defaults with the e2e dir) and simplifying the script to `vitest run --passWithNoTests`. CI `pnpm test` now passes on both platforms.
+
 Design evidence and comparison history are in `design-qa.md`; the implementation plan and contract are under `docs/superpowers/`.
 
 ## Final review findings still being closed
