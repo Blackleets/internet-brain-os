@@ -27,7 +27,7 @@ async function connect(page: Page): Promise<void> {
 test('connects to a local Kernel and renders truthful Overview data', async ({ page }) => {
   await page.goto('/');
   expect(page.viewportSize()).toEqual({ width: 1536, height: 1024 });
-  await expect(page.locator('.app-shell')).toHaveCSS('grid-template-columns', /256px/);
+  await expect(page.locator('.app-shell')).toHaveCSS('grid-template-columns', /208px/);
 
   await page.getByLabel('URL del Kernel').focus();
   await page.keyboard.press('Tab');

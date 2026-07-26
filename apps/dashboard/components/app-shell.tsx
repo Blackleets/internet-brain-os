@@ -1,5 +1,8 @@
+'use client';
+
 import { Activity, Bot, Boxes, BrainCircuit, Command, FolderSearch, Gauge, Sparkles } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useSyncExternalStore, type ReactNode } from 'react';
+import { connectionStore } from '../lib/session/connection-store';
 import { StatusBadge } from './ui/status-badge';
 
 const navigation = [
@@ -13,6 +16,15 @@ const navigation = [
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const connection = useSyncExternalStore(
+    (listener) => connectionStore.subscribe(listener),
+    () => connectionStore.get(),
+    () => undefined,
+  );
+  const readiness = connection
+    ? { state: 'healthy' as const, label: 'Kernel conectado' }
+    : { state: 'unavailable' as const, label: 'Kernel sin conexión' };
+
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
@@ -35,10 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="sidebar-readiness">
           <p>Estado local</p>
           <div className="command-readiness">
-            <StatusBadge state="unavailable" label="Kernel sin conexión" />
-          </div>
-          <div className="mobile-readiness" data-testid="mobile-readiness">
-            <StatusBadge state="unavailable" label="Kernel sin conexión" />
+            <StatusBadge state={readiness.state} label={readiness.label} />
           </div>
         </div>
       </aside>
@@ -52,7 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <kbd aria-hidden="true">Ctrl K</kbd>
             </div>
           </form>
-          <StatusBadge state="unavailable" label="Kernel sin conexión" />
+          <StatusBadge state={readiness.state} label={readiness.label} />
         </header>
         <main>{children}</main>
       </div>

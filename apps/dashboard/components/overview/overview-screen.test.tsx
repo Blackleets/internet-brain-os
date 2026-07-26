@@ -85,6 +85,13 @@ describe('OverviewScreen', () => {
     expect(screen.getByText('Kernel conectado')).toBeTruthy();
   });
 
+  it('summarizes ready paired bootstrap state in concise Spanish instead of raw service copy', () => {
+    render(<OverviewScreen snapshot={snapshot} reload={vi.fn()} disconnect={vi.fn()} />);
+
+    expect(screen.getByText('Kernel local listo. Efesto está emparejado.')).toBeTruthy();
+    expect(screen.queryByText('Kernel listo para operar.')).toBeNull();
+  });
+
   it('renders exact live counts and explicitly unavailable projections', () => {
     render(<OverviewScreen snapshot={snapshot} reload={vi.fn()} disconnect={vi.fn()} />);
 
