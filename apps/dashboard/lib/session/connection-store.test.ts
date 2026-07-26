@@ -25,4 +25,16 @@ describe('ConnectionStore', () => {
     expect(listener).toHaveBeenCalledTimes(2);
     unsubscribe();
   });
+
+  it('does not notify a listener removed during notification', () => {
+    const store = new ConnectionStore();
+    const removed = vi.fn();
+    let remove: () => void;
+    store.subscribe(() => remove());
+    remove = store.subscribe(removed);
+
+    store.set({ baseUrl: 'http://127.0.0.1:4000', token: 'private-token' });
+
+    expect(removed).not.toHaveBeenCalled();
+  });
 });

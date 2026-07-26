@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useSyncExternalStore, type FormEvent } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
 import { KernelClient, KernelClientError } from '../lib/kernel/client';
 import { type OverviewSnapshot, loadOverview } from '../lib/kernel/overview';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
@@ -17,6 +17,20 @@ export function ConnectionGate() {
   const [snapshot, setSnapshot] = useState<OverviewSnapshot>();
   const [error, setError] = useState<string>();
   const [connecting, setConnecting] = useState(false);
+  const mountedRef = useRef(true);
+  const requestIdRef = useRef(0);
+  const controllerRef = useRef<AbortController | undefined>(undefined);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      requestIdRef.current += 1;
+      controllerRef.current?.abort();
+      controllerRef.current = undefined;
+      connectionStore.clear();
+    };
+  }, []);
 
   async function connect(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -27,20 +41,29 @@ export function ConnectionGate() {
     const tokenInput = form.elements.namedItem('token');
     if (tokenInput instanceof HTMLInputElement) tokenInput.value = '';
 
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    const isCurrentRequest = () => mountedRef.current && requestId === requestIdRef.current;
     setConnecting(true);
     setError(undefined);
     try {
       const normalizedBaseUrl = normalizeKernelBaseUrl(baseUrl);
       const client = new KernelClient({ baseUrl: normalizedBaseUrl, token });
-      const nextSnapshot = await loadOverview(client);
+      const nextSnapshot = await loadOverview(client, controller.signal);
+      if (!isCurrentRequest()) return;
       connectionStore.set({ baseUrl: normalizedBaseUrl, token });
       setSnapshot(nextSnapshot);
     } catch (reason) {
+      if (!isCurrentRequest()) return;
       connectionStore.clear();
       setSnapshot(undefined);
       setError(connectionMessage(reason));
     } finally {
-      setConnecting(false);
+      if (isCurrentRequest()) setConnecting(false);
+      if (controllerRef.current === controller) controllerRef.current = undefined;
     }
   }
 

@@ -29,7 +29,9 @@ export class ConnectionStore {
   }
 
   private notify(): void {
-    this.#listeners.forEach((listener) => listener());
+    for (const listener of [...this.#listeners]) {
+      if (this.#listeners.has(listener)) listener();
+    }
   }
 }
 
