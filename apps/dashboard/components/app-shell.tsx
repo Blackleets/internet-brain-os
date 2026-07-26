@@ -7,12 +7,12 @@ import { StatusBadge } from './ui/status-badge';
 
 const navigation = [
   { href: '/', label: 'Resumen', icon: Gauge, active: true },
-  { href: '#investigaciones', label: 'Investigaciones', icon: FolderSearch },
-  { href: '#conocimiento', label: 'Conocimiento', icon: BrainCircuit },
-  { href: '#agentes', label: 'Agent Hub', icon: Bot },
-  { href: '#oportunidades', label: 'Oportunidades', icon: Sparkles },
-  { href: '#automatizaciones', label: 'Automatizaciones', icon: Activity },
-  { href: '#sistema', label: 'Sistema', icon: Boxes },
+  { label: 'Investigaciones', icon: FolderSearch },
+  { label: 'Conocimiento', icon: BrainCircuit },
+  { label: 'Agent Hub', icon: Bot },
+  { label: 'Oportunidades', icon: Sparkles },
+  { label: 'Automatizaciones', icon: Activity },
+  { label: 'Sistema', icon: Boxes },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -38,7 +38,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         <nav className="primary-navigation" aria-label="Primary">
           <p className="navigation-label">Espacios</p>
           {navigation.map(({ href, label, icon: Icon, active }) => (
-            <a key={label} href={href} aria-label={label} aria-current={active ? 'page' : undefined}>
+            <a
+              key={label}
+              href={href}
+              role="link"
+              aria-label={label}
+              aria-current={active ? 'page' : undefined}
+              aria-disabled={href ? undefined : true}
+              title={href ? undefined : 'Próximamente'}
+            >
               <Icon aria-hidden="true" size={18} strokeWidth={1.8} />
               <span>{label}</span>
             </a>
@@ -53,12 +61,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
       <div className="app-workspace">
         <header className="command-bar">
-          <form role="search" aria-label="Command center">
+          <form role="search" aria-label="Command center" onSubmit={(event) => event.preventDefault()}>
             <label htmlFor="command">Comandos</label>
             <div className="command-input-wrap">
               <Command aria-hidden="true" size={18} />
-              <input id="command" type="search" placeholder="Buscar o ejecutar…" />
-              <kbd aria-hidden="true">Ctrl K</kbd>
+              <input id="command" type="search" placeholder="Próximamente" disabled />
             </div>
           </form>
           <StatusBadge state={readiness.state} label={readiness.label} />

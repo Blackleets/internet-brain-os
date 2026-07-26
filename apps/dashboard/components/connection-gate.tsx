@@ -54,6 +54,7 @@ export function ConnectionGate() {
       const normalizedBaseUrl = normalizeKernelBaseUrl(baseUrl);
       const client = new KernelClient({ baseUrl: normalizedBaseUrl, token });
       const nextSnapshot = await loadOverview(client, controller.signal);
+      if (nextSnapshot.readiness.kernel === 'offline') throw new KernelClientError('OFFLINE');
       if (!isCurrentRequest()) return;
       connectionStore.set({ baseUrl: normalizedBaseUrl, token });
       setSnapshot(nextSnapshot);

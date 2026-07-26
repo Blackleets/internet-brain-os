@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AppShell } from './app-shell';
 import { connectionStore } from '../lib/session/connection-store';
@@ -10,17 +10,32 @@ afterEach(() => {
 });
 
 describe('AppShell', () => {
-  it('exposes navigation, command entry, and main content landmarks', () => {
+  it('exposes only Phase 1 navigation and marks future spaces as unavailable', () => {
     render(<AppShell><h1>Overview</h1></AppShell>);
     expect(screen.getByRole('navigation', { name: 'Primary' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Resumen' }).getAttribute('aria-current')).toBe('page');
-    for (const name of ['Resumen', 'Investigaciones', 'Conocimiento', 'Agent Hub', 'Oportunidades', 'Automatizaciones', 'Sistema']) {
-      expect(screen.getByRole('link', { name }).getAttribute('aria-label')).toBe(name);
+    const overview = screen.getByRole('link', { name: 'Resumen' });
+    expect(overview.getAttribute('href')).toBe('/');
+    expect(overview.getAttribute('aria-current')).toBe('page');
+    for (const name of ['Investigaciones', 'Conocimiento', 'Agent Hub', 'Oportunidades', 'Automatizaciones', 'Sistema']) {
+      const unavailable = screen.getByRole('link', { name });
+      expect(unavailable.hasAttribute('href')).toBe(false);
+      expect(unavailable.getAttribute('aria-disabled')).toBe('true');
     }
     expect(screen.getByRole('search', { name: 'Command center' })).toBeTruthy();
-    expect(screen.getByLabelText('Comandos')).toBeTruthy();
+    const command = screen.getByLabelText('Comandos') as HTMLInputElement;
+    expect(command.disabled).toBe(true);
+    expect(command.placeholder).toBe('Próximamente');
+    expect(screen.queryByText('Ctrl K')).toBeNull();
     expect(screen.getAllByText('Kernel sin conexión')).toHaveLength(2);
     expect(screen.getByRole('main').textContent).toContain('Overview');
+  });
+
+  it('prevents command submission from reloading or clearing the live session', () => {
+    connectionStore.set({ baseUrl: 'http://127.0.0.1:4000', token: 'token-local' });
+    render(<AppShell><h1>Overview</h1></AppShell>);
+
+    expect(fireEvent.submit(screen.getByRole('search', { name: 'Command center' }))).toBe(false);
+    expect(connectionStore.get()?.token).toBe('token-local');
   });
 
   it('updates persistent readiness badges when the local connection changes', () => {

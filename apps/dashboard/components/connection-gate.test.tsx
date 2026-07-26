@@ -140,6 +140,23 @@ describe('ConnectionGate', () => {
     expect(connectionStore.get()).toBeUndefined();
   });
 
+  it('keeps the connection gate open when the initial snapshot reports the Kernel offline', async () => {
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const path = new URL(input.toString()).pathname;
+      if (path === '/health') return Promise.reject(new TypeError('Kernel offline'));
+      return Promise.resolve(responseFor(path));
+    }));
+
+    render(<ConnectionGate />);
+    fireEvent.change(screen.getByLabelText('Token local'), { target: { value: token } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Conectar al Kernel' }).closest('form')!);
+
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('No se pudo conectar al Kernel'));
+    expect(screen.getByRole('heading', { name: 'Conectar al Kernel' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Centro de control' })).toBeNull();
+    expect(connectionStore.get()).toBeUndefined();
+  });
+
   it('shows a Spanish reconnection message for a 401 without rendering the token', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const path = new URL(input.toString()).pathname;
