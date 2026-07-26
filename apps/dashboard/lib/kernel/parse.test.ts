@@ -47,6 +47,15 @@ describe('Kernel response parsers', () => {
     });
   });
 
+  it('rejects a fourth mission attempt at the persisted attempt path', () => {
+    try {
+      parseMissions({ ok: true, missions: [{ ...missionsResponse.missions[0], attempt: 4 }] });
+      throw new Error('expected parseMissions to reject attempt 4');
+    } catch (error) {
+      expect(error).toMatchObject({ name: 'KernelContractError', path: 'missions.missions[0].attempt' });
+    }
+  });
+
   it.each([
     ['health envelope', () => parseHealth({ ok: false })],
     ['cases array', () => parseCases({ ok: true, cases: {} })],

@@ -97,7 +97,7 @@ export function parseMissions(value: unknown): MissionSummary[] {
     const path = `missions.missions[${index}]`;
     const recordItem = record(item, path);
     const executionPhase = optionalEnum(recordItem.executionPhase, `${path}.executionPhase`, MISSION_PHASES);
-    const attempt = optionalInteger(recordItem.attempt, `${path}.attempt`);
+    const attempt = optionalBoundedInteger(recordItem.attempt, `${path}.attempt`, 3);
     return {
       ...recordItem,
       id: string(recordItem.id, `${path}.id`),
@@ -232,6 +232,12 @@ function integer(value: unknown, path: string): number {
 
 function optionalInteger(value: unknown, path: string): number | undefined {
   return value === undefined ? undefined : integer(value, path);
+}
+
+function optionalBoundedInteger(value: unknown, path: string, maximum: number): number | undefined {
+  const result = optionalInteger(value, path);
+  if (result !== undefined && result > maximum) throw new KernelContractError(path, `expected integer from 0 to ${maximum}`);
+  return result;
 }
 
 function literal<T extends string>(value: unknown, path: string, expected: T): T {

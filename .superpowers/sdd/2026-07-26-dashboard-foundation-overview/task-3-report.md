@@ -64,3 +64,24 @@ Result: passed.
 
 - The dashboard test command still emits the pre-existing Vite CJS Node API deprecation warning; it did not affect test results.
 - The contracts intentionally cover only Phase 1 rendered data. Future Kernel response additions should remain optional until the dashboard renders them.
+
+## Fix round 1/5 — bounded mission attempts
+
+Covering test: `apps/dashboard/lib/kernel/parse.test.ts`.
+
+RED command:
+
+```text
+pnpm dashboard:test -- lib/kernel/parse.test.ts
+```
+
+Result: failed as expected, 1 file / 13 tests with `rejects a fourth mission attempt at the persisted attempt path` failing because `attempt: 4` was accepted.
+
+GREEN commands:
+
+```text
+pnpm dashboard:test -- lib/kernel/parse.test.ts
+pnpm --filter @internet-brain-os/dashboard typecheck
+```
+
+Result: passed, 1 file / 13 tests; typecheck passed. `parseMissions` now rejects values above the Kernel's maximum of three attempts at `missions.missions[0].attempt`.
