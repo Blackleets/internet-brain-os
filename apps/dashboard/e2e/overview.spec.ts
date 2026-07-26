@@ -1,9 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const KERNEL_URL = 'http://127.0.0.1:4100';
-const KERNEL_TOKEN = 'test-token-that-is-long-enough-for-kernel-validation';
-const captureDir = 'e2e-captures';
-
 const browserProblems = new WeakMap<Page, string[]>();
 
 test.beforeEach(async ({ page }) => {
@@ -22,59 +18,23 @@ test.afterEach(async ({ page }) => {
 });
 
 async function connect(page: Page): Promise<void> {
-  await page.getByLabel('URL del Kernel').fill(KERNEL_URL);
-  await page.getByLabel('Token local').fill(KERNEL_TOKEN);
+  await page.getByLabel('URL del Kernel').fill('http://127.0.0.1:4100');
+  await page.getByLabel('Token local').fill('test-token-that-is-long-enough-for-kernel-validation');
   await page.getByRole('button', { name: 'Conectar al Kernel' }).click();
   await expect(page.getByRole('heading', { name: 'Centro de control' })).toBeVisible();
 }
 
-test('disconnected desktop: onboarding card, no dead controls, safe token help', async ({ page }) => {
+test('connects to a local Kernel and renders truthful Overview data', async ({ page }) => {
   await page.goto('/');
   expect(page.viewportSize()).toEqual({ width: 1536, height: 1024 });
-  await expect(page.locator('.connection-panel')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Conectar al Kernel' })).toBeVisible();
-  await expect(page.getByText('Hephaestus Control Center')).toBeVisible();
+  await expect(page.locator('.app-shell')).toHaveCSS('grid-template-columns', /208px/);
 
-  // No dead command bar.
-  await expect(page.getByRole('search', { name: 'Command center' })).toHaveCount(0);
-  // CTA is visible and functional.
-  await expect(page.getByRole('button', { name: 'Conectar al Kernel' })).toBeVisible();
-  // Token help is present and does not render a token value.
-  await expect(page.getByText('¿Cómo obtengo el token local sin exponerlo?')).toBeVisible();
-  await expect(page.locator('.roadmap-item')).toHaveCount(6);
+  await page.getByLabel('URL del Kernel').focus();
+  await page.keyboard.press('Tab');
+  await expect(page.getByLabel('Token local')).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Conectar al Kernel' })).toBeFocused();
 
-  await page.screenshot({ path: `${captureDir}/disconnected-desktop.png`, fullPage: true });
-});
-
-test.describe('mobile disconnected', () => {
-  test.use({ viewport: { width: 390, height: 844 } });
-
-  test('disconnected mobile: onboarding card fits without horizontal overflow', async ({ page }) => {
-    await page.goto('/');
-    expect(page.viewportSize()).toEqual({ width: 390, height: 844 });
-    await expect(page.locator('.connection-panel')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Conectar al Kernel' })).toBeVisible();
-
-    const layout = await page.evaluate(() => {
-      const viewportWidth = window.innerWidth;
-      const tracked = Array.from(document.querySelectorAll<HTMLElement>('.connection-panel, .connection-panel *'));
-      const clipped = tracked.flatMap((element) => {
-        const bounds = element.getBoundingClientRect();
-        return bounds.left < -1 || bounds.right > viewportWidth + 1
-          ? [`${element.tagName.toLowerCase()}.${element.className}`]
-          : [];
-      });
-      return { documentWidth: document.documentElement.scrollWidth, viewportWidth, clipped };
-    });
-    expect(layout.clipped).toEqual([]);
-    expect(layout.documentWidth).toBe(layout.viewportWidth);
-
-    await page.screenshot({ path: `${captureDir}/disconnected-mobile.png`, fullPage: true });
-  });
-});
-
-test('connected desktop: truthful Overview renders after connection', async ({ page }) => {
-  await page.goto('/');
   await connect(page);
   await expect(page.getByText('Find AI clients')).toBeVisible();
   await expect(page.getByText('AI automation project')).toBeVisible();
@@ -85,40 +45,61 @@ test('connected desktop: truthful Overview renders after connection', async ({ p
   await page.getByRole('button', { name: 'Actualizar resumen' }).focus();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Desconectar del Kernel' })).toBeFocused();
-
-  await page.screenshot({ path: `${captureDir}/connected-desktop.png`, fullPage: true });
 });
 
-test.describe('connected mobile', () => {
-  test.use({ viewport: { width: 390, height: 844 } });
-
-  test('connected mobile: Overview renders without horizontal overflow', async ({ page }) => {
-    await page.goto('/');
-    await connect(page);
-    await expect(page.getByText('Find AI clients')).toBeVisible();
-
-    const layout = await page.evaluate(() => {
-      const viewportWidth = window.innerWidth;
-      const tracked = Array.from(document.querySelectorAll<HTMLElement>('.app-shell, .app-shell *'));
-      const clipped = tracked.flatMap((element) => {
-        const bounds = element.getBoundingClientRect();
-        return bounds.left < -1 || bounds.right > viewportWidth + 1
-          ? [`${element.tagName.toLowerCase()}.${element.className}`]
-          : [];
-      });
-      return { documentWidth: document.documentElement.scrollWidth, viewportWidth, clipped };
-    });
-    expect(layout.clipped).toEqual([]);
-    expect(layout.documentWidth).toBe(layout.viewportWidth);
-
-    await page.screenshot({ path: `${captureDir}/connected-mobile.png`, fullPage: true });
-  });
-});
-
-test('disconnect clears the local session and returns to the onboarding card', async ({ page }) => {
+test('disconnect clears the local session and returns to the connection gate', async ({ page }) => {
   await page.goto('/');
   await connect(page);
+
   await page.getByRole('button', { name: 'Desconectar del Kernel' }).click();
   await expect(page.getByRole('heading', { name: 'Conectar al Kernel' })).toBeVisible();
   await expect(page.getByLabel('Token local')).toHaveValue('');
+});
+
+test.describe('mobile control center', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('collapses navigation without hiding persistent controls behind horizontal overflow', async ({ page }) => {
+    await page.goto('/');
+    expect(page.viewportSize()).toEqual({ width: 390, height: 844 });
+    await expect(page.getByRole('banner').getByText('Kernel sin conexión')).toBeVisible();
+    await expect(page.locator('.primary-navigation a span').first()).toBeHidden();
+
+    await connect(page);
+    const refresh = page.getByRole('button', { name: 'Actualizar resumen' });
+    const disconnect = page.getByRole('button', { name: 'Desconectar del Kernel' });
+    await expect(page.locator('.forge-core-slot')).toBeHidden();
+    await expect(refresh).toBeVisible();
+    await expect(disconnect).toBeVisible();
+    await expect.poll(async () => {
+      const [refreshBox, disconnectBox, viewportWidth] = await Promise.all([
+        refresh.boundingBox(), disconnect.boundingBox(), page.evaluate(() => window.innerWidth),
+      ]);
+      return [refreshBox, disconnectBox].every((box) => box !== null && box.x >= 0 && box.x + box.width <= viewportWidth);
+    }).toBe(true);
+
+    const mobileLayout = await page.evaluate(() => {
+      const viewportWidth = window.innerWidth;
+      const trackedElements = Array.from(document.querySelectorAll<HTMLElement>('.app-shell, .app-shell *'));
+      const clippedElements = trackedElements.flatMap((element) => {
+        const bounds = element.getBoundingClientRect();
+        return bounds.left < 0 || bounds.right > viewportWidth
+          ? [`${element.parentElement?.className ?? 'no-parent'} > ${element.tagName.toLowerCase()}.${element.className}: ${bounds.left}-${bounds.right}`]
+          : [];
+      });
+      const metricBounds = Array.from(document.querySelectorAll<HTMLElement>('.metric-card'), (element) => element.getBoundingClientRect());
+      return {
+        viewportWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        clippedElements,
+        metricColumns: new Set(metricBounds.map((bounds) => Math.round(bounds.left))).size,
+        narrowestMetric: Math.min(...metricBounds.map((bounds) => bounds.width)),
+      };
+    });
+
+    expect(mobileLayout.clippedElements).toEqual([]);
+    expect(mobileLayout.documentWidth).toBe(mobileLayout.viewportWidth);
+    expect(mobileLayout.metricColumns).toBe(1);
+    expect(mobileLayout.narrowestMetric).toBeGreaterThanOrEqual(300);
+  });
 });

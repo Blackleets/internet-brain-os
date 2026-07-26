@@ -151,7 +151,7 @@ describe('ConnectionGate', () => {
     fireEvent.change(screen.getByLabelText('Token local'), { target: { value: token } });
     fireEvent.submit(screen.getByRole('button', { name: 'Conectar al Kernel' }).closest('form')!);
 
-    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('El Kernel no responde. Confirma que está arrancado en la URL indicada.'));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('No se pudo conectar al Kernel'));
     expect(screen.getByRole('heading', { name: 'Conectar al Kernel' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Centro de control' })).toBeNull();
     expect(connectionStore.get()).toBeUndefined();

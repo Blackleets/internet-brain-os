@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AppShell } from './app-shell';
 import { connectionStore } from '../lib/session/connection-store';
@@ -10,25 +10,32 @@ afterEach(() => {
 });
 
 describe('AppShell', () => {
-  it('exposes Phase 1 navigation and shows future spaces as an honest roadmap', () => {
+  it('exposes only Phase 1 navigation and marks future spaces as unavailable', () => {
     render(<AppShell><h1>Overview</h1></AppShell>);
     expect(screen.getByRole('navigation', { name: 'Primary' })).toBeTruthy();
     const overview = screen.getByRole('link', { name: 'Resumen' });
     expect(overview.getAttribute('href')).toBe('/');
     expect(overview.getAttribute('aria-current')).toBe('page');
-
-    // Phase 2 spaces are communicated as a roadmap, not as fake links.
     for (const name of ['Investigaciones', 'Conocimiento', 'Agent Hub', 'Oportunidades', 'Automatizaciones', 'Sistema']) {
-      const item = screen.getByText(name);
-      expect(item.tagName).toBe('SPAN');
-      expect(item.closest('li')?.className).toContain('roadmap-item');
+      const unavailable = screen.getByRole('link', { name });
+      expect(unavailable.hasAttribute('href')).toBe(false);
+      expect(unavailable.getAttribute('aria-disabled')).toBe('true');
     }
-    // There is no dead "Próximamente" command bar.
-    expect(screen.queryByRole('search', { name: 'Command center' })).toBeNull();
-    expect(screen.queryByLabelText('Comandos')).toBeNull();
-
+    expect(screen.getByRole('search', { name: 'Command center' })).toBeTruthy();
+    const command = screen.getByLabelText('Comandos') as HTMLInputElement;
+    expect(command.disabled).toBe(true);
+    expect(command.placeholder).toBe('Próximamente');
+    expect(screen.queryByText('Ctrl K')).toBeNull();
     expect(screen.getAllByText('Kernel sin conexión')).toHaveLength(2);
     expect(screen.getByRole('main').textContent).toContain('Overview');
+  });
+
+  it('prevents command submission from reloading or clearing the live session', () => {
+    connectionStore.set({ baseUrl: 'http://127.0.0.1:4000', token: 'token-local' });
+    render(<AppShell><h1>Overview</h1></AppShell>);
+
+    expect(fireEvent.submit(screen.getByRole('search', { name: 'Command center' }))).toBe(false);
+    expect(connectionStore.get()?.token).toBe('token-local');
   });
 
   it('updates persistent readiness badges when the local connection changes', () => {
