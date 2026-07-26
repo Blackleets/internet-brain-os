@@ -26,7 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <nav className="primary-navigation" aria-label="Primary">
           <p className="navigation-label">Espacios</p>
           {navigation.map(({ href, label, icon: Icon, active }) => (
-            <a key={label} href={href} aria-current={active ? 'page' : undefined}>
+            <a key={label} href={href} aria-label={label} aria-current={active ? 'page' : undefined}>
               <Icon aria-hidden="true" size={18} strokeWidth={1.8} />
               <span>{label}</span>
             </a>
@@ -34,7 +34,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="sidebar-readiness">
           <p>Estado local</p>
-          <StatusBadge state="unavailable" label="Kernel sin conexión" />
+          <div className="command-readiness">
+            <StatusBadge state="unavailable" label="Kernel sin conexión" />
+          </div>
+          <div className="mobile-readiness" data-testid="mobile-readiness">
+            <StatusBadge state="unavailable" label="Kernel sin conexión" />
+          </div>
         </div>
       </aside>
       <div className="app-workspace">

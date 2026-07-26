@@ -65,6 +65,7 @@ button, input { font: inherit; }
 
 .app-workspace { min-width: 0; padding: 1.25rem clamp(1.25rem, 3vw, 3rem) 3rem; }
 .command-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 3.5rem; margin-bottom: 1.75rem; }
+.mobile-readiness { display: none; }
 .command-bar form { flex: 1; max-width: 42rem; }
 .command-bar label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .command-input-wrap { display: flex; align-items: center; gap: 0.7rem; padding: 0 0.85rem; border: 1px solid var(--line-subtle); border-radius: 0.7rem; background: var(--bg-surface); color: var(--text-secondary); }
@@ -104,7 +105,8 @@ main > * { grid-column: span 12; }
   .primary-navigation { display: flex; justify-content: flex-end; width: 100%; overflow-x: auto; }
   .app-workspace { padding: 1rem; }
   .command-bar { align-items: stretch; }
-  .command-bar > .status-badge { display: none; }
+  .command-readiness { display: none; }
+  .mobile-readiness { display: inline-flex; align-items: center; }
   main { grid-template-columns: 1fr; }
   main > * { grid-column: 1; }
 }

@@ -57,3 +57,50 @@ git diff --check
 ```
 
 The existing Vite CJS API deprecation warning and Next workspace-root inference warning were emitted without test, typecheck, or build failures.
+
+## Fix round 1/5
+
+### Corrections
+
+- Primary navigation links now carry an explicit `aria-label`, so their accessible names do not depend on visual spans that collapse at compact breakpoints.
+- Added a compact, text-bearing mobile readiness indicator in the command header. Below `760px`, it replaces the desktop header indicator and retains the visible `Kernel sin conexión` status instead of communicating state by color alone.
+- `Panel` now uses React `useId`, preventing duplicate `aria-labelledby`/heading IDs when same-title panels appear together.
+
+### TDD evidence
+
+RED:
+
+```text
+pnpm dashboard:test -- components/ui/ui.test.tsx components/app-shell.test.tsx
+```
+
+Result: exit 1 as expected. Same-title panels produced the identical `Estado del sistema-heading` ID, and navigation links had no explicit `aria-label`.
+
+GREEN:
+
+```text
+pnpm dashboard:test -- components/ui/ui.test.tsx components/app-shell.test.tsx
+# PASS: 2 files / 4 tests
+```
+
+### Final verification
+
+```text
+pnpm dashboard:test
+# PASS: 8 files / 55 tests
+
+pnpm typecheck
+# PASS
+
+pnpm dashboard:build
+# PASS
+
+pnpm test
+# PASS: 92 files / 525 tests
+
+pnpm build
+# PASS
+
+git diff --check
+# PASS
+```

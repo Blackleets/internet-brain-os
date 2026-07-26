@@ -8,9 +8,13 @@ describe('AppShell', () => {
     render(<AppShell><h1>Overview</h1></AppShell>);
     expect(screen.getByRole('navigation', { name: 'Primary' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Resumen' }).getAttribute('aria-current')).toBe('page');
-    expect(screen.getByRole('link', { name: 'Investigaciones' })).toBeTruthy();
+    for (const name of ['Resumen', 'Investigaciones', 'Conocimiento', 'Agent Hub', 'Oportunidades', 'Automatizaciones', 'Sistema']) {
+      expect(screen.getByRole('link', { name }).getAttribute('aria-label')).toBe(name);
+    }
     expect(screen.getByRole('search', { name: 'Command center' })).toBeTruthy();
     expect(screen.getByLabelText('Comandos')).toBeTruthy();
+    expect(screen.getByTestId('mobile-readiness').className).toContain('mobile-readiness');
+    expect(screen.getByTestId('mobile-readiness').textContent).toContain('Kernel sin conexión');
     expect(screen.getByRole('main').textContent).toContain('Overview');
   });
 });
