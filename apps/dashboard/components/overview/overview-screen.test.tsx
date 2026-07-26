@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OverviewScreen } from './overview-screen';
-import { isActiveMission, type OverviewSnapshot } from '../../lib/kernel/overview';
+import type { OverviewSnapshot } from '../../lib/kernel/overview';
 
 const snapshot: OverviewSnapshot = {
   readiness: {
@@ -125,6 +125,21 @@ describe('OverviewScreen', () => {
     expect(screen.getByText(/Model Forge no está disponible/i)).toBeTruthy();
   });
 
+  it('keeps reliable activity visible when one activity source fails', () => {
+    render(
+      <OverviewScreen
+        snapshot={{ ...snapshot, issues: [{ endpoint: 'goals', code: 'OFFLINE' }] }}
+        reload={vi.fn()}
+        disconnect={vi.fn()}
+      />,
+    );
+
+    const activity = screen.getByRole('region', { name: 'Actividad reciente' });
+    expect(activity.textContent).toContain('Verificando');
+    expect(activity.textContent).toContain('Actividad parcial');
+    expect(activity.textContent).not.toContain('Datos temporalmente no disponibles');
+  });
+
   it('renders intentional empty collection states', () => {
     render(
       <OverviewScreen
@@ -238,6 +253,7 @@ describe('OverviewScreen', () => {
 
   it('renders only currently active persisted mission phases', () => {
     const missions = [
+      { ...snapshot.missions[0], id: 'waiting', status: 'waiting_for_agent' as const, executionPhase: undefined },
       { ...snapshot.missions[0], id: 'queued', status: 'queued' as const, executionPhase: 'queued' as const },
       { ...snapshot.missions[0], id: 'investigating', status: 'running' as const, executionPhase: 'investigating' as const },
       { ...snapshot.missions[0], id: 'verifying', status: 'running' as const, executionPhase: 'verifying' as const },
@@ -246,16 +262,17 @@ describe('OverviewScreen', () => {
       { ...snapshot.missions[0], id: 'failed', status: 'failed' as const, executionPhase: 'failed' as const },
       { ...snapshot.missions[0], id: 'failed-phase', status: 'running' as const, executionPhase: 'failed' as const },
     ];
-    const activeMissions = missions.filter(isActiveMission).length;
-    render(<OverviewScreen snapshot={{ ...snapshot, missions, metrics: { ...snapshot.metrics, missions: missions.length, activeMissions } }} reload={vi.fn()} disconnect={vi.fn()} />);
+    render(<OverviewScreen snapshot={{ ...snapshot, missions, metrics: { ...snapshot.metrics, missions: missions.length, activeMissions: 4 } }} reload={vi.fn()} disconnect={vi.fn()} />);
 
     const panel = screen.getByRole('region', { name: 'Misiones activas' });
+    expect(panel.textContent).toContain('Mision waiting');
+    expect(panel.textContent).toContain('Esperando agente');
     expect(panel.textContent).toContain('Mision queued');
     expect(panel.textContent).toContain('Mision verifying');
     expect(panel.textContent).not.toContain('Mision forged');
     expect(panel.textContent).not.toContain('Mision completed');
     expect(panel.textContent).not.toContain('Mision failed');
-    expect(within(panel).getAllByRole('listitem')).toHaveLength(activeMissions);
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(4);
   });
 
   it('marks a failed refresh stale until a later refresh succeeds', async () => {

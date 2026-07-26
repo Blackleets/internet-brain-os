@@ -133,7 +133,7 @@ export async function loadOverview(client: KernelClient, signal?: AbortSignal): 
 export function isActiveMission(mission: MissionSummary): boolean {
   if (mission.executionPhase === 'forged' || mission.executionPhase === 'failed') return false;
   if (mission.executionPhase === 'queued' || mission.executionPhase === 'investigating' || mission.executionPhase === 'verifying') return true;
-  return mission.status === 'queued' || mission.status === 'running';
+  return mission.status === 'waiting_for_agent' || mission.status === 'queued' || mission.status === 'running';
 }
 
 function fulfilledValue<T>(result: PromiseSettledResult<T>, fallback: T): T {

@@ -19,6 +19,8 @@ export function OverviewScreen({ snapshot, reload, disconnect }: OverviewScreenP
   const [stale, setStale] = useState(false);
   const bootstrapMessage = readinessSummary(snapshot);
   const kernelLabel = snapshot.readiness.kernel === 'online' ? 'Kernel conectado' : 'Kernel sin conexión';
+  const failedActivitySources = (['goals', 'missions', 'opportunities'] as const).filter((endpoint) => hasIssue(snapshot.issues, endpoint));
+  const activityUnavailable = hasIssue(snapshot.issues, 'activity') || failedActivitySources.length === 3;
 
   async function handleRefresh(): Promise<void> {
     setRefreshing(true);
@@ -64,7 +66,7 @@ export function OverviewScreen({ snapshot, reload, disconnect }: OverviewScreenP
     <MetricGrid metrics={snapshot.metrics} issues={snapshot.issues} />
     <MissionPanel missions={snapshot.missions} unavailable={hasIssue(snapshot.issues, 'missions')} />
     <OpportunityPanel opportunities={snapshot.opportunities} unavailable={hasIssue(snapshot.issues, 'opportunities')} />
-    <ActivityFeed activity={snapshot.activity} unavailable={hasIssue(snapshot.issues, 'activity') || hasIssue(snapshot.issues, 'goals') || hasIssue(snapshot.issues, 'missions') || hasIssue(snapshot.issues, 'opportunities')} />
+    <ActivityFeed activity={snapshot.activity} unavailable={activityUnavailable} partial={!activityUnavailable && failedActivitySources.length > 0} />
     <SystemReadiness snapshot={snapshot} />
   </>;
 }

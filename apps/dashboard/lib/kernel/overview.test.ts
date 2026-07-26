@@ -69,6 +69,30 @@ describe('loadOverview', () => {
     expect(snapshot.issues).toContainEqual({ endpoint: 'modelForge', code: 'UNAVAILABLE' });
   });
 
+  it('counts a persisted mission waiting for an agent as active', async () => {
+    const snapshot = await loadOverview(clientWith({
+      '/api/agent-missions': Response.json({
+        ok: true,
+        missions: [{
+          id: 'mission-waiting',
+          goalId: 'goal-1',
+          status: 'waiting_for_agent',
+          attempt: 0,
+          createdAt: '2026-07-26T10:03:00.000Z',
+        }],
+      }),
+    }));
+
+    expect(snapshot.metrics.activeMissions).toBe(1);
+    expect(snapshot.activity).toContainEqual({
+      id: 'mission:mission-waiting',
+      recordId: 'mission-waiting',
+      kind: 'mission',
+      timestamp: '2026-07-26T10:03:00.000Z',
+      state: 'waiting_for_agent',
+    });
+  });
+
   it('retains a Model Forge server failure as HTTP_ERROR instead of optional unavailability', async () => {
     const snapshot = await loadOverview(clientWith({
       '/api/model-forge': new Response(null, { status: 500 }),
