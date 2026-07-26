@@ -176,6 +176,47 @@ describe('OverviewScreen', () => {
     expect(within(readiness).queryByText('Requiere emparejamiento')).toBeNull();
   });
 
+  it('renders a health-offline snapshot as unavailable instead of factual empty data', () => {
+    render(
+      <OverviewScreen
+        snapshot={{
+          ...snapshot,
+          readiness: { kernel: 'offline' },
+          metrics: { cases: 0, goals: 0, missions: 0, activeMissions: 0, opportunities: 0 },
+          missions: [],
+          opportunities: [],
+          activity: [],
+          issues: [
+            { endpoint: 'health', code: 'OFFLINE' },
+            { endpoint: 'status', code: 'OFFLINE' },
+            { endpoint: 'bootstrap', code: 'OFFLINE' },
+            { endpoint: 'cases', code: 'UNAVAILABLE' },
+            { endpoint: 'goals', code: 'UNAVAILABLE' },
+            { endpoint: 'missions', code: 'UNAVAILABLE' },
+            { endpoint: 'opportunities', code: 'UNAVAILABLE' },
+            { endpoint: 'activity', code: 'UNAVAILABLE' },
+            { endpoint: 'modelForge', code: 'UNAVAILABLE' },
+          ],
+        }}
+        reload={vi.fn()}
+        disconnect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText('Kernel sin conexión')).toHaveLength(2);
+    expect(screen.queryByText('Kernel conectado')).toBeNull();
+    const readiness = screen.getByRole('region', { name: 'Estado de subsistemas' });
+    expect(within(readiness).getByText('Kernel sin conexión')).toBeTruthy();
+    expect(within(readiness).queryByText('Conexión local activa')).toBeNull();
+    for (const label of ['Casos', 'Metas', 'Misiones', 'Misiones activas', 'Oportunidades']) {
+      const metric = screen.getAllByRole('heading', { name: label }).map((heading) => heading.closest('article')).find(Boolean);
+      expect(metric?.textContent).toContain('Datos temporalmente no disponibles');
+    }
+    expect(screen.getByRole('region', { name: 'Misiones activas' }).textContent).toContain('Datos temporalmente no disponibles');
+    expect(screen.getByRole('region', { name: 'Prioridad de oportunidades' }).textContent).toContain('Datos temporalmente no disponibles');
+    expect(screen.getByRole('region', { name: 'Actividad reciente' }).textContent).toContain('Datos temporalmente no disponibles');
+  });
+
   it('renders only currently active persisted mission phases', () => {
     const missions = [
       { ...snapshot.missions[0], id: 'queued', status: 'queued' as const, executionPhase: 'queued' as const },

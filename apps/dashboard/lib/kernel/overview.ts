@@ -20,7 +20,7 @@ import {
   parseStatus,
 } from './parse';
 
-type OverviewEndpoint = 'health' | 'status' | 'bootstrap' | 'cases' | 'goals' | 'missions' | 'opportunities' | 'modelForge';
+type OverviewEndpoint = 'health' | 'status' | 'bootstrap' | 'cases' | 'goals' | 'missions' | 'opportunities' | 'activity' | 'modelForge';
 type OverviewIssueCode = KernelClientErrorCode | 'UNAVAILABLE' | 'UNKNOWN';
 
 export type OverviewIssue = {
@@ -103,6 +103,8 @@ export async function loadOverview(client: KernelClient, signal?: AbortSignal): 
     missionRecords = fulfilledValue(missions, [] as MissionSummary[]);
     opportunityRecords = fulfilledValue(opportunities, [] as OpportunitySummary[]);
     modelForge = fulfilledValue(modelForgeResult, undefined);
+  } else {
+    issues.push(...unavailableIssues(['cases', 'goals', 'missions', 'opportunities', 'activity', 'modelForge']));
   }
 
   return {
@@ -156,6 +158,10 @@ function toIssue(endpoint: OverviewEndpoint, reason: unknown): OverviewIssue {
     return { endpoint, code: 'UNAVAILABLE' };
   }
   return { endpoint, code: reason instanceof KernelClientError ? reason.code : 'UNKNOWN' };
+}
+
+function unavailableIssues(endpoints: OverviewEndpoint[]): OverviewIssue[] {
+  return endpoints.map((endpoint) => ({ endpoint, code: 'UNAVAILABLE' }));
 }
 
 function activityFrom(goals: GoalSummary[], missions: MissionSummary[], opportunities: OpportunitySummary[]): OverviewActivity[] {

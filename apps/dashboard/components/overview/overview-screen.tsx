@@ -17,6 +17,7 @@ export function OverviewScreen({ snapshot, reload, disconnect }: OverviewScreenP
   const [refreshing, setRefreshing] = useState(false);
   const [stale, setStale] = useState(false);
   const bootstrapMessage = snapshot.readiness.bootstrap?.message ?? (snapshot.readiness.kernel === 'online' ? 'El Kernel está disponible para lectura local.' : 'El Kernel requiere atención antes de continuar.');
+  const kernelLabel = snapshot.readiness.kernel === 'online' ? 'Kernel conectado' : 'Kernel sin conexión';
 
   async function handleRefresh(): Promise<void> {
     setRefreshing(true);
@@ -37,7 +38,7 @@ export function OverviewScreen({ snapshot, reload, disconnect }: OverviewScreenP
     <ReadinessStrip readiness={snapshot.readiness} issues={snapshot.issues} />
     <section className="overview-hero panel" aria-labelledby="overview-title">
       <div>
-        <p className="panel-eyebrow">Kernel conectado</p>
+        <p className="panel-eyebrow">{kernelLabel}</p>
         <h1 id="overview-title">Centro de control</h1>
         <p>{bootstrapMessage}</p>
         <div className="overview-actions">
@@ -52,7 +53,7 @@ export function OverviewScreen({ snapshot, reload, disconnect }: OverviewScreenP
     <MetricGrid metrics={snapshot.metrics} issues={snapshot.issues} />
     <MissionPanel missions={snapshot.missions} unavailable={hasIssue(snapshot.issues, 'missions')} />
     <OpportunityPanel opportunities={snapshot.opportunities} unavailable={hasIssue(snapshot.issues, 'opportunities')} />
-    <ActivityFeed activity={snapshot.activity} unavailable={hasIssue(snapshot.issues, 'goals') || hasIssue(snapshot.issues, 'missions') || hasIssue(snapshot.issues, 'opportunities')} />
+    <ActivityFeed activity={snapshot.activity} unavailable={hasIssue(snapshot.issues, 'activity') || hasIssue(snapshot.issues, 'goals') || hasIssue(snapshot.issues, 'missions') || hasIssue(snapshot.issues, 'opportunities')} />
     <SystemReadiness snapshot={snapshot} />
   </>;
 }

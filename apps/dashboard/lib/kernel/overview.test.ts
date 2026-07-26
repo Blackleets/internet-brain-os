@@ -96,6 +96,13 @@ describe('loadOverview', () => {
 
     expect(snapshot.readiness.kernel).toBe('offline');
     expect(snapshot.issues).toContainEqual({ endpoint: 'health', code: 'OFFLINE' });
+    expect(snapshot.issues).toEqual(expect.arrayContaining([
+      { endpoint: 'cases', code: 'UNAVAILABLE' },
+      { endpoint: 'goals', code: 'UNAVAILABLE' },
+      { endpoint: 'missions', code: 'UNAVAILABLE' },
+      { endpoint: 'opportunities', code: 'UNAVAILABLE' },
+      { endpoint: 'activity', code: 'UNAVAILABLE' },
+    ]));
     expect(invoked).toEqual(expect.arrayContaining(['/health', '/status', '/bootstrap/status']));
     expect(invoked.filter((path) => path.startsWith('/api/'))).toEqual([]);
   });

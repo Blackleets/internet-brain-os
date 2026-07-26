@@ -8,7 +8,7 @@ export function ReadinessStrip({ readiness, issues }: ReadinessStripProps) {
   const status = readiness.status;
   const bootstrap = readiness.bootstrap;
   const items: ReadinessItem[] = [
-    { label: 'Kernel', state: readiness.kernel === 'online' ? 'healthy' : 'failed', detail: readiness.kernel === 'online' ? 'Conexion local activa' : 'Sin conexion local' },
+    { label: 'Kernel', state: readiness.kernel === 'online' ? 'healthy' : 'failed', detail: readiness.kernel === 'online' ? 'Conexión local activa' : 'Kernel sin conexión' },
     statusItem('Hermes', issues, status?.hermes === 'ready' ? 'healthy' : 'unavailable', status?.hermes === 'ready' ? 'Preparado' : 'No configurado'),
     statusItem('Efesto', issues, bootstrap?.pairing === 'paired' ? 'healthy' : 'attention', bootstrap?.pairing === 'paired' ? 'Emparejado' : 'Requiere emparejamiento', 'bootstrap'),
     statusItem('Replay Lab', issues, status?.replayLab === 'ready' ? 'healthy' : 'unavailable', status?.replayLab === 'ready' ? 'Disponible' : 'No disponible'),
