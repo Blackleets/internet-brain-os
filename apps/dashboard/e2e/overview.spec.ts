@@ -68,6 +68,7 @@ test.describe('mobile control center', () => {
     await connect(page);
     const refresh = page.getByRole('button', { name: 'Actualizar resumen' });
     const disconnect = page.getByRole('button', { name: 'Desconectar del Kernel' });
+    await expect(page.locator('.forge-core-slot')).toBeHidden();
     await expect(refresh).toBeVisible();
     await expect(disconnect).toBeVisible();
     await expect.poll(async () => {
