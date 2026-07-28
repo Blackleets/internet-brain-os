@@ -12,6 +12,7 @@ import type { OverviewIssue, OverviewSnapshot } from '../../lib/kernel/overview'
 import { Panel } from '../ui/panel';
 import { StatusBadge } from '../ui/status-badge';
 import { KernelWorkspaces } from '../workspaces/kernel-workspaces';
+import { ChatDock } from '../chat/chat-dock';
 
 export type DashboardActions = {
   createGoal: (input: { title: string; keywords: string[]; priority: 1 | 2 | 3 }) => Promise<void>;
@@ -98,11 +99,7 @@ export function OverviewScreen({ snapshot, reload, disconnect, actions }: Overvi
     <div><SystemReadiness snapshot={snapshot} /></div>
     <KernelWorkspaces snapshot={snapshot} actions={actions} />
 
-    <section className="command-dock panel">
-      <Sparkles aria-hidden="true" size={20} />
-      <p><strong>HEPHAESTUS</strong> está listo. Usa la barra superior para navegar por tus datos reales.</p>
-      <a href="#overview">Volver al inicio <span aria-hidden="true">→</span></a>
-    </section>
+    <ChatDock />
   </>;
 }
 

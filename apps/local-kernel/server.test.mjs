@@ -16,6 +16,8 @@ import { GoalManager } from './goals.mjs';
 import { AgentMissionManager } from './agent-missions.mjs';
 import { AgentMissionExecutor } from './agent-mission-executor.mjs';
 import { ModelForge } from './model-forge.mjs';
+import { ModelProviderRegistry } from './model-provider-registry.mjs';
+import { KernelChatService } from './chat-service.mjs';
 
 let server;
 const apiToken = 'test-token-that-is-at-least-32-characters';
@@ -125,6 +127,57 @@ describe('local Kernel HTTP receiver', () => {
     expect(response.status).toBe(200);
     expect(payload.forge).toMatchObject({ runtime: 'available', hardware: { ramGiB: 8, cpuCores: 4, tier: 'balanced' } });
     expect(payload.forge.models.find((model) => model.id === 'qwen3:4b')).toMatchObject({ installed: true, compatible: true });
+  });
+
+  it('keeps provider credentials behind the Kernel and returns chat without memory authority', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-chat-'));
+    const providers = new ModelProviderRegistry(join(dir, 'providers.json'));
+    const chat = new KernelChatService(providers, {
+      fetchImpl: async (_url, init) => {
+        expect(new Headers(init.headers).get('authorization')).toBe('Bearer private-test-key');
+        return Response.json({ model: 'test-model', choices: [{ message: { content: 'Respuesta segura' } }] });
+      },
+    });
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, {
+      modelProviderRegistry: providers,
+      chatService: chat,
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    expect((await fetch(`${base}/api/chat/providers`)).status).toBe(401);
+
+    const created = await fetch(`${base}/api/chat/providers`, {
+      method: 'POST',
+      headers: { ...authHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        id: 'user-provider',
+        type: 'openai-compatible',
+        label: 'User provider',
+        baseUrl: 'https://api.example.com',
+        models: ['test-model'],
+        apiKey: 'private-test-key',
+      }),
+    });
+    expect(created.status).toBe(201);
+    expect(JSON.stringify(await created.json())).not.toContain('private-test-key');
+
+    const completion = await fetch(`${base}/api/chat/completions`, {
+      method: 'POST',
+      headers: { ...authHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        providerId: 'user-provider',
+        model: 'test-model',
+        messages: [{ role: 'user', content: 'Hola' }],
+      }),
+    });
+    expect(await completion.json()).toMatchObject({
+      ok: true,
+      response: {
+        content: 'Respuesta segura',
+        evidenceStatus: 'unverified_model_output',
+        memoryStatus: 'not_admitted',
+      },
+    });
   });
 
   it('accepts extension context and returns an idempotent receipt', async () => {

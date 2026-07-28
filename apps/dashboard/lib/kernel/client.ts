@@ -17,7 +17,7 @@ export type KernelClientOptions = {
 };
 
 const DEFAULT_TIMEOUT_MS = 5_000;
-const MAX_TIMEOUT_MS = 30_000;
+const MAX_TIMEOUT_MS = 120_000;
 
 export class KernelClient {
   private readonly baseUrl: string;

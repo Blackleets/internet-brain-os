@@ -18,6 +18,8 @@ import { AgentMissionManager } from './agent-missions.mjs';
 import { PreferenceLearner } from './preference-learner.mjs';
 import { AgentMissionExecutor } from './agent-mission-executor.mjs';
 import { ModelForge } from './model-forge.mjs';
+import { ModelProviderError, ModelProviderRegistry } from './model-provider-registry.mjs';
+import { ChatServiceError, KernelChatService } from './chat-service.mjs';
 import { defaultEfestoPaths, inspectEfestoBootstrap, readLauncherConfig } from '../../scripts/efesto-bootstrap.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
@@ -67,6 +69,35 @@ const modelForge = new ModelForge({
   baseUrl: process.env.HEPHAESTUS_OLLAMA_URL,
   activeModel: process.env.HEPHAESTUS_OLLAMA_MODEL,
 });
+const modelProviders = new ModelProviderRegistry(resolve(dataDir, 'model-providers.json'), {
+  defaults: environmentModelProviders(process.env),
+});
+const chatService = new KernelChatService(modelProviders);
+
+function environmentModelProviders(env) {
+  const providers = [];
+  const ollamaModel = env.HEPHAESTUS_OLLAMA_MODEL?.trim();
+  if (ollamaModel) providers.push({
+    id: 'ollama-local',
+    type: 'ollama',
+    label: 'Ollama local',
+    baseUrl: env.HEPHAESTUS_OLLAMA_URL ?? 'http://127.0.0.1:11434',
+    models: [ollamaModel],
+    managedBy: 'environment',
+  });
+  const openAiKey = env.OPENAI_API_KEY?.trim();
+  const openAiModel = env.HEPHAESTUS_OPENAI_MODEL?.trim();
+  if (openAiKey && openAiModel) providers.push({
+    id: 'openai',
+    type: 'openai-compatible',
+    label: 'OpenAI',
+    baseUrl: env.HEPHAESTUS_OPENAI_BASE_URL ?? 'https://api.openai.com',
+    models: [openAiModel],
+    apiKey: openAiKey,
+    managedBy: 'environment',
+  });
+  return providers;
+}
 
 export function createLocalKernelServer(captureInbox, captureProjector, obsidianProjector, evidenceSummarizer, options = {}) {
   const requiredToken = options.apiToken === undefined ? undefined : validateApiToken(options.apiToken);
@@ -81,6 +112,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const preferences = options.preferenceLearner;
   const missionExecutor = options.agentMissionExecutor;
   const models = options.modelForge;
+  const providers = options.modelProviderRegistry;
+  const chat = options.chatService;
   const bootstrapStatus = options.bootstrapStatus;
   const hermesMaxBodyBytes = Number(options.hermesMaxBodyBytes ?? 256 * 1024);
   return createServer(async (request, response) => {
@@ -191,6 +224,40 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       if (!models) return send(response, 404, { ok: false, code: 'MODEL_FORGE_UNAVAILABLE' });
       try { return send(response, 200, { ok: true, forge: await models.inspect() }); }
       catch { return send(response, 500, { ok: false, code: 'MODEL_FORGE_INSPECTION_FAILED' }); }
+    }
+    if (request.method === 'GET' && request.url === '/api/chat/providers') {
+      if (!providers) return send(response, 404, { ok: false, code: 'MODEL_PROVIDERS_UNAVAILABLE' });
+      try { return send(response, 200, { ok: true, providers: await providers.list() }); }
+      catch { return send(response, 500, { ok: false, code: 'MODEL_PROVIDERS_FAILED' }); }
+    }
+    if (request.method === 'POST' && request.url === '/api/chat/providers') {
+      if (!providers) return send(response, 404, { ok: false, code: 'MODEL_PROVIDERS_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try { return send(response, 201, { ok: true, provider: await providers.save(await readJson(request)) }); }
+      catch (error) {
+        if (error instanceof ModelProviderError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'MODEL_PROVIDER_SAVE_FAILED' });
+      }
+    }
+    if (request.method === 'DELETE' && request.url?.startsWith('/api/chat/providers/')) {
+      if (!providers) return send(response, 404, { ok: false, code: 'MODEL_PROVIDERS_UNAVAILABLE' });
+      try {
+        const providerId = decodeURIComponent(request.url.slice('/api/chat/providers/'.length));
+        await providers.remove(providerId);
+        return send(response, 200, { ok: true });
+      } catch (error) {
+        if (error instanceof ModelProviderError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'MODEL_PROVIDER_DELETE_FAILED' });
+      }
+    }
+    if (request.method === 'POST' && request.url === '/api/chat/completions') {
+      if (!chat) return send(response, 404, { ok: false, code: 'CHAT_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try { return send(response, 200, { ok: true, response: await chat.complete(await readJson(request, hermesMaxBodyBytes)) }); }
+      catch (error) {
+        if (error instanceof ChatServiceError || error instanceof ModelProviderError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'CHAT_FAILED' });
+      }
     }
     if (request.method === 'GET' && request.url === '/api/opportunities') {
       if (!opportunities) return send(response, 404, { ok: false, code: 'OPPORTUNITY_INBOX_UNAVAILABLE' });
@@ -369,6 +436,8 @@ export const server = createLocalKernelServer(inbox, projector, obsidian, summar
   preferenceLearner,
   agentMissionExecutor,
   modelForge,
+  modelProviderRegistry: modelProviders,
+  chatService,
 });
 
 if (isMain) {

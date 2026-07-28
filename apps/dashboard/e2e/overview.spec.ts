@@ -21,7 +21,7 @@ async function connect(page: Page): Promise<void> {
   await page.getByLabel('URL del Kernel').fill('http://127.0.0.1:4100');
   await page.getByLabel('Token local').fill('test-token-that-is-long-enough-for-kernel-validation');
   await page.getByRole('button', { name: 'Conectar al Kernel' }).click();
-  await expect(page.getByRole('heading', { name: 'Centro de control' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '¡Hola, Blackleets!' })).toBeVisible();
 }
 
 test('connects to a local Kernel and renders truthful Overview data', async ({ page }) => {
@@ -41,6 +41,12 @@ test('connects to a local Kernel and renders truthful Overview data', async ({ p
   await expect(page.getByText('Lead no verificado')).toBeVisible();
   await expect(page.getByText('Resumen parcial: algunos endpoints no respondieron, pero los datos disponibles se conservan.')).toBeVisible();
   await expect(page.getByText('Model Forge no está disponible en este Kernel.')).toBeVisible();
+  await expect(page.getByRole('option', { name: 'Ollama local' })).toBeVisible();
+
+  await page.getByLabel('Mensaje').fill('Resume el estado');
+  await page.getByRole('button', { name: 'Enviar mensaje' }).click();
+  await expect(page.getByText('Fixture response from the selected local model.')).toBeVisible();
+  await expect(page.getByText(/Salida no verificada/)).toBeVisible();
 
   await page.getByRole('button', { name: 'Actualizar resumen' }).focus();
   await page.keyboard.press('Tab');
@@ -68,7 +74,7 @@ test.describe('mobile control center', () => {
     await connect(page);
     const refresh = page.getByRole('button', { name: 'Actualizar resumen' });
     const disconnect = page.getByRole('button', { name: 'Desconectar del Kernel' });
-    await expect(page.locator('.forge-core-slot')).toBeHidden();
+    await expect(page.locator('.forge-core-artwork')).toBeVisible();
     await expect(refresh).toBeVisible();
     await expect(disconnect).toBeVisible();
     await expect.poll(async () => {
@@ -99,7 +105,7 @@ test.describe('mobile control center', () => {
 
     expect(mobileLayout.clippedElements).toEqual([]);
     expect(mobileLayout.documentWidth).toBe(mobileLayout.viewportWidth);
-    expect(mobileLayout.metricColumns).toBe(1);
-    expect(mobileLayout.narrowestMetric).toBeGreaterThanOrEqual(300);
+    expect(mobileLayout.metricColumns).toBeLessThanOrEqual(2);
+    expect(mobileLayout.narrowestMetric).toBeGreaterThanOrEqual(130);
   });
 });

@@ -74,6 +74,16 @@ remain explicitly unavailable until their Kernel contracts and implementations
 exist; the dashboard must not invent graph records, schedules, progress, or
 future executions.
 
+The persistent bottom composer is a provider-neutral conversation surface.
+Authenticated users may register loopback Ollama or HTTPS OpenAI-compatible
+providers; credentials are accepted only by the loopback Kernel, persisted in
+an owner-private local file, omitted from every read response, and cleared from
+the browser form after submission. Environment-managed providers remain
+read-only in the dashboard. Chat output is always marked unverified and not
+admitted to memory. A model response cannot become Evidence, a Claim, or durable
+memory without the existing explicit Kernel gates, and Hermes remains the
+separate research/tool execution boundary.
+
 Accepted public-page Evidence passes through an extensible deterministic Opportunity classifier in the local Kernel. It promotes only sufficiently strong, explainable signals across work, grants, clients, savings, food, public aid, learning, events, housing, travel, collaboration, rewards, and useful tools. A promoted record retains its Case and Evidence identifiers, canonical public source, category, concrete benefit type, bounded relevance score, matching signals, raw deadline text when present, and a cautious next action. Ordinary captures remain Evidence and do not pollute the Opportunity Inbox. The authenticated local Inbox is rendered by the extension and synchronized as separate Opportunity notes into the user's vault. This classifier is a lead filter, not a verification, financial-advice, or recommendation engine; Hermes investigation and human review remain separate stages.
 
 Users may define private Goals with a title, bounded categories and keywords, optional location, and explicit priority. Goals remain in the local Kernel and are synchronized into the user's own Obsidian-compatible vault. Opportunity detection keeps its original evidence relevance score; a separate explainable personalization score links Inbox records to matching Goals and changes ordering without rewriting provenance. Explicit dismissal atomically marks the persisted Opportunity so it leaves the Inbox while retaining its feedback history. Goals never trigger external browsing merely by being created. The extension can request a separately confirmed, idempotent Hermes research mission containing only the Goal's authorized scope. A disconnected adapter leaves that mission visibly waiting; queued status is used only when the real local Hermes boundary is configured. An authenticated local worker boundary now leases queued Hermes missions, accepts at most 20 validated public HTTP(S) findings, rejects sensitive/private IPv4 and IPv6 URLs, preserves returned material as unverified Evidence, re-runs Kernel-owned classification, removes out-of-scope promotions, synchronizes accepted records to the private vault, counts only newly created Evidence in the Forge Ledger, and records bounded failures across at most three observable attempts. This is the transport contract for a real Hermes runtime; it does not fabricate external discovery when no Hermes worker is connected.

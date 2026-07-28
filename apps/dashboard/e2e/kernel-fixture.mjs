@@ -20,6 +20,7 @@ const fixtures = {
     ok: true,
     opportunities: [{ id: 'opportunity-1', category: 'client', categoryLabel: 'Potential client', benefitType: 'income', title: 'AI automation project', sourceHost: 'clients.example', relevance: 72, nextAction: 'Qualify the need before contacting', status: 'new', detectedAt: '2026-07-26T10:00:00.000Z' }],
   },
+  providers: { ok: true, providers: [{ id: 'fixture-local', type: 'ollama', label: 'Ollama local', baseUrl: 'http://127.0.0.1:11434', models: ['qwen3:4b'], hasCredential: true, managedBy: 'environment' }] },
 };
 
 const routes = new Map([
@@ -30,14 +31,15 @@ const routes = new Map([
   ['/api/goals', fixtures.goals],
   ['/api/agent-missions', fixtures.missions],
   ['/api/opportunities', fixtures.opportunities],
+  ['/api/chat/providers', fixtures.providers],
 ]);
 
 const server = createServer((request, response) => {
   const path = new URL(request.url ?? '/', `http://${host}:${port}`).pathname;
   const headers = {
     'access-control-allow-origin': 'http://127.0.0.1:3000',
-    'access-control-allow-methods': 'GET, OPTIONS',
-    'access-control-allow-headers': 'accept, x-hephaestus-token',
+    'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
+    'access-control-allow-headers': 'accept, content-type, x-hephaestus-token',
     'content-type': 'application/json; charset=utf-8',
     'cache-control': 'no-store',
   };
@@ -47,13 +49,17 @@ const server = createServer((request, response) => {
     return;
   }
 
-  if (request.method !== 'GET') {
-    response.writeHead(405, headers).end();
+  if (path.startsWith('/api/') && request.headers['x-hephaestus-token'] !== token) {
+    response.writeHead(401, headers).end(JSON.stringify({ ok: false }));
     return;
   }
 
-  if (path.startsWith('/api/') && request.headers['x-hephaestus-token'] !== token) {
-    response.writeHead(401, headers).end(JSON.stringify({ ok: false }));
+  if (request.method === 'POST' && path === '/api/chat/completions') {
+    response.writeHead(200, headers).end(JSON.stringify({ ok: true, response: { content: 'Fixture response from the selected local model.', model: 'qwen3:4b', evidenceStatus: 'unverified_model_output', memoryStatus: 'not_admitted' } }));
+    return;
+  }
+  if (request.method !== 'GET') {
+    response.writeHead(405, headers).end();
     return;
   }
 
