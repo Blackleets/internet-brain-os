@@ -19,6 +19,12 @@ Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The dashboard connects
 only to a loopback Kernel and sends the token as `x-hephaestus-token` for
 authenticated `/api/*` requests.
 
+The owner-only hosted dashboard can also connect to the loopback Kernel. The
+Kernel permits the official Sites origin by default and continues to require
+the private API token for every `/api/*` request. Custom deployments must set a
+comma-separated `HEPHAESTUS_DASHBOARD_ORIGINS` allowlist; arbitrary web origins
+remain forbidden.
+
 ## Token handling
 
 Enter the local Kernel token in the connection screen. By default it stays only
