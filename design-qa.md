@@ -46,3 +46,17 @@
 The cloud browser refused permission to open `http://terminal.local:4173/`. The current corrected build therefore has no post-fix browser screenshot, interaction replay, or console inspection. Per the design-QA contract, the code cannot be declared visually identical until that browser-rendered comparison is available.
 
 final result: blocked
+
+## Streaming and local history pass — 2026-07-28
+
+- Added compact new-chat and history controls beside the provider/model selectors.
+- The send control changes to an explicit stop control only while generation is active.
+- Streamed assistant text renders incrementally inside the existing fixed composer.
+- Completed conversations can be reopened from the bounded local-history panel.
+- Cancelled partial output remains visible for operator context but is not committed to Kernel history.
+- Component/browser-contract coverage: dashboard 11 files / 82 tests; full repository 98 files / 561 tests.
+- TypeScript and production build passed.
+- Source visual remains `/workspace/scratch/263f39061984/upload/01-1000032245.png` at 1536 × 1024.
+- Post-change browser capture, interaction replay, and console inspection remain blocked because the saved browser permission denies `http://terminal.local:4173/`.
+
+final result: blocked
