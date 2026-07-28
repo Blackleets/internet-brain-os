@@ -16,7 +16,7 @@ describe('AppShell', () => {
     const overview = screen.getByRole('link', { name: 'Home' });
     expect(overview.getAttribute('href')).toBe('#overview');
     expect(overview.getAttribute('aria-current')).toBe('page');
-    for (const name of ['Cerebro IA', 'Investigación', 'Conocimiento', 'Agentes', 'Automatizaciones', 'Relaciones', 'Sistema']) {
+    for (const name of ['Cerebro IA', 'Investigación', 'Conocimiento', 'Agentes', 'Oportunidades', 'Automatizaciones', 'Relaciones', 'Sistema']) {
       const link = screen.getByRole('link', { name });
       expect(link.getAttribute('href')?.startsWith('#')).toBe(true);
       expect(link.getAttribute('aria-disabled')).toBeNull();
