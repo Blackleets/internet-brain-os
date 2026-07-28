@@ -8,11 +8,17 @@ Every AI must update this file before ending a work session.
 
 ## Current project state
 
-Status: Foundation runtime, Replay Lab forensics, Internal Orchestrator v0, deterministic Hermes preflight, and local API token hardening are stable on `main`.
+Status (verified 2026-07-28 from `main` = `4f81239`):
+- Foundation runtime, Replay Lab forensics, Internal Orchestrator v0, deterministic Hermes preflight, and local API token hardening are stable on `main`.
+- PR #103: authentic Efesto mission adapter merged (2026-07-22) — translates bounded Hermes output into Kernel execution events; it does NOT by itself prove a live external Hermes runtime.
+- PR #129: fully wired Kernel Control Center merged (2026-07-28) — `apps/local-kernel` chat service, model-provider registry, authenticated `/api/*` wiring, and dashboard Kernel workspaces UI. Dashboard is presentation-only and connects to the loopback Kernel.
+- PR #130: `.hephaestus/` and `.hermes/` added to `.gitignore` (2026-07-28).
+- Knowledge Graph projection and a general scheduler are NOT implemented; the dashboard shows them as explicitly unavailable.
+- Open work: PR #125 (design only — memory quarantine), Issues #98 (design memory quarantine) and #101 (prove Agent Hub worker with an authentic Hermes runtime).
 
-Current phase: Product Star Phase A is blocked on a sanitized real Hermes runtime capture; Phases B and C are complete for their current read-only/local scopes.
+Current phase: Product Star Phase A is blocked on a real external Hermes runtime capture for the Agent Hub worker (Issue #101). The Issue #57 ingestion acceptance is complete and must not be conflated with worker proof. Phases B and C are complete for their current read-only/local scopes.
 
-Primary objective: close Issue #57 with real-runtime evidence, capture sanitized real Replay Lab screenshots, then proceed to the bounded memory-safety expansion without weakening Kernel authority.
+Primary objective: close Issue #101 with real-runtime Agent Hub worker evidence (a live external Hermes connection), then proceed to the bounded memory-safety expansion without weakening Kernel authority.
 
 ## Mandatory reading order
 

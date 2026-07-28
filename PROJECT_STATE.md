@@ -69,14 +69,18 @@ Then read, in order:
 - PR #96: authenticated real Hermes capture validation and explicit signed ingestion from Replay Lab merged and proven in CI.
 - PR #100: canonical Hermes acceptance state corrected on the current Efesto baseline.
 - PR #102: authentic-worker readiness doctor, safe environment template, and adapter contract merged.
+- PR #103: authentic Efesto mission adapter merged (2026-07-22). The adapter translates bounded Hermes Agent output into Kernel execution events through the already-secured signed ingestion path; it does not bundle a Hermes executable and does not by itself prove a live external Hermes runtime.
 - Issue #10: Internal Orchestrator v0 closed as completed with PR #73–#77 evidence.
 - Issue #57: real Hermes runtime acceptance completed with a sanitized authentic local Hermes session; signed ingestion, exact replay, altered-replay conflict rejection, authority-field rejection, and Replay Lab visibility were proven without persisting raw prompts, responses, tool output, credentials, tokens, or secrets.
+- PR #129: fully wired Kernel Control Center merged (2026-07-28). Adds `apps/local-kernel` chat service, model-provider registry, authenticated `/api/*` wiring, and the dashboard Kernel workspaces UI (Investigation, Knowledge, Agent Hub, Opportunity, Automation, System). The dashboard is presentation-only and connects to the loopback Kernel; Knowledge Graph projection and a general scheduler are NOT implemented and remain explicitly unavailable in the UI.
+- PR #130: `.hephaestus/` and `.hermes/` added to `.gitignore` so local runtime state, tokens, config, logs, and artifacts never enter the repository (merged 2026-07-28).
 - Fresh local validation on 2026-07-26: `pnpm typecheck`, `pnpm test`, `pnpm build`, and `pnpm verify:first-run` passed. The unit suite reported 93 test files / 540 tests; the dashboard E2E suite reported 3 passing Chromium tests. The root build includes the dashboard production build, while Vitest explicitly excludes Playwright E2E specifications. The observed Next workspace-root warning is deferred and does not change the loopback-only dashboard boundary.
 
 ## Current operating state
 
-- `main` is the sole source of truth and includes the Efesto extension product surface, Opportunity and Goal workflows, Agent Hub transport, Model Forge, pixel-forge activity, deterministic forensic read path, real-capture importer, and local token-file hardening.
-- PR #103 is the sole active implementation task: add the bundled authentic Hermes one-shot adapter and its focused tests.
+- `main` is the sole source of truth and includes the Efesto extension product surface, Opportunity and Goal workflows, Agent Hub transport, Model Forge, pixel-forge activity, deterministic forensic read path, real-capture importer, local token-file hardening, the Hephaestus Control Center dashboard, and the local Kernel chat/conversation wiring from PR #129.
+- Open implementation/design tasks: PR #125 (design only — memory quarantine and toxic-memory lifecycle; no runtime enforcement). There is no active code-change task in this checkpoint.
+- Open issues: #98 (design memory quarantine) and #101 (prove Agent Hub worker with an authentic Hermes runtime).
 - There must be only one active implementation task at a time.
 - Do not work directly on `main`.
 - Do not merge, deploy, mutate secrets, delete data, or expand scope without the required human/founder gate.
@@ -84,17 +88,17 @@ Then read, in order:
 
 ## Next product priority
 
-Complete PR #103, then execute one explicitly consented Goal mission through the user's installed Hermes CLI and collect sanitized Issue #101 acceptance evidence. Do not mark the worker path complete from tests alone.
+Execute one explicitly consented Goal mission through the user's installed Hermes CLI and collect sanitized Issue #101 acceptance evidence (authentic Agent Hub worker proof). Do not mark the worker path complete from adapter code or tests alone; the proof must connect a real external Hermes runtime, not a simulation, and must not be conflated with the completed Issue #57 ingestion acceptance.
 
-After authentic runtime proof, continue the broader extension information-architecture and onboarding rebuild around the observable pixel-forge activity contract. The extension is the primary surface; Replay Lab remains advanced mode. Preserve local-first ownership and do not introduce central collection until a separate consent, minimization, and anonymization design is reviewed.
+After authentic runtime proof, continue the broader extension information-architecture and onboarding rebuild around the observable pixel-forge activity contract. The extension remains the primary capture/consent surface; Replay Lab remains advanced forensic mode; the Control Center dashboard is a secondary authenticated local client. Preserve local-first ownership and do not introduce central collection until a separate consent, minimization, and anonymization design is reviewed.
 
-The Kernel memory-quarantine and toxic-memory lifecycle design remains a bounded backlog item under Issue #98. It must not displace the current Efesto product priority or introduce automatic enforcement before explicit review.
+The Kernel memory-quarantine and toxic-memory lifecycle design remains a bounded backlog item under Issue #98 / PR #125. It must not displace the current Efesto product priority or introduce automatic enforcement before explicit review.
 
 ## External acceptance status
 
 Real Hermes capture acceptance for Issue #57 is complete. Future screenshots and public product evidence should use the sanitized authentic Replay Lab investigation or another sanitized real run. Generated mockups and synthetic fixtures remain unsuitable as external acceptance evidence.
 
-A separate authentic runtime proof is still required for the newer Agent Hub external-adapter worker path. The user's Hermes CLI, Kernel, token, and worker doctor are now locally available; PR #103 supplies the translation adapter. The proof must not be simulated or conflated with the completed Issue #57 ingestion acceptance.
+A separate authentic runtime proof is still required for the Agent Hub external-adapter worker path (Issue #101). The adapter from PR #103 exists, but the live external Hermes connection is not yet proven through a real run. The earlier Replay Lab acceptance (Issue #57) covers ingestion only and must not be presented as worker proof.
 
 ## Recovery prompt
 
