@@ -42,6 +42,19 @@ test('connects to a local Kernel and renders truthful Overview data', async ({ p
   await expect(page.getByText('Resumen parcial: algunos endpoints no respondieron, pero los datos disponibles se conservan.')).toBeVisible();
   await expect(page.getByText('Model Forge no está disponible en este Kernel.')).toBeVisible();
   await expect(page.getByRole('option', { name: 'Ollama local' })).toBeVisible();
+  await expect(page.locator('#intelligence')).toHaveCSS('grid-column-start', '10');
+  await expect(page.locator('.chat-console')).toHaveCSS('position', 'fixed');
+  await expect.poll(async () => {
+    const composer = await page.locator('.chat-console').boundingBox();
+    const viewport = page.viewportSize();
+    return composer && viewport
+      ? {
+          leftOfSidebar: Math.round(composer.x),
+          rightGap: Math.round(viewport.width - composer.x - composer.width),
+          bottomGap: Math.round(viewport.height - composer.y - composer.height),
+        }
+      : null;
+  }).toEqual({ leftOfSidebar: 202, rightGap: 10, bottomGap: 9 });
 
   await page.getByLabel('Mensaje').fill('Resume el estado');
   await page.getByRole('button', { name: 'Enviar mensaje' }).click();
