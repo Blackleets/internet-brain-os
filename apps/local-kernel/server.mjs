@@ -75,6 +75,7 @@ const modelProviders = new ModelProviderRegistry(resolve(dataDir, 'model-provide
 });
 const chatService = new KernelChatService(modelProviders);
 const chatConversations = new ChatConversationStore(resolve(dataDir, 'chat-conversations.json'));
+const dashboardOrigins = dashboardOriginsFrom(process.env.HEPHAESTUS_DASHBOARD_ORIGINS);
 
 function environmentModelProviders(env) {
   const providers = [];
@@ -118,16 +119,17 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const chat = options.chatService;
   const conversations = options.chatConversationStore;
   const bootstrapStatus = options.bootstrapStatus;
+  const allowedDashboardOrigins = new Set(options.allowedDashboardOrigins ?? []);
   const hermesMaxBodyBytes = Number(options.hermesMaxBodyBytes ?? 256 * 1024);
   return createServer(async (request, response) => {
     if (!isLoopbackHost(request.headers.host)) {
       return send(response, 403, { ok: false, code: 'HOST_FORBIDDEN' });
     }
     const origin = request.headers.origin;
-    if (typeof origin === 'string' && !isAllowedOrigin(origin)) {
+    if (typeof origin === 'string' && !isAllowedOrigin(origin, allowedDashboardOrigins)) {
       return send(response, 403, { ok: false, code: 'ORIGIN_FORBIDDEN' });
     }
-    setCors(origin, response);
+    setCors(origin, response, allowedDashboardOrigins);
     if (request.method === 'OPTIONS') return send(response, 204);
     if (request.method === 'GET' && request.url === '/health') {
       return send(response, 200, { ok: true, service: 'hephaestus-local-kernel', hermes: Boolean(hermesRoute), replayLab: Boolean(replayLabQuery) });
@@ -525,6 +527,7 @@ export const server = createLocalKernelServer(inbox, projector, obsidian, summar
   modelProviderRegistry: modelProviders,
   chatService,
   chatConversationStore: chatConversations,
+  allowedDashboardOrigins: dashboardOrigins,
 });
 
 if (isMain) {
@@ -564,9 +567,10 @@ async function readRaw(request, maxBodyBytes) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-function isAllowedOrigin(origin) {
+function isAllowedOrigin(origin, allowedDashboardOrigins = new Set()) {
   return isExtensionOrigin(origin)
-    || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+    || allowedDashboardOrigins.has(origin);
 }
 
 function isExtensionOrigin(origin) {
@@ -590,8 +594,8 @@ function hasValidToken(value, requiredToken) {
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
 
-function setCors(origin, response) {
-  if (typeof origin === 'string' && isAllowedOrigin(origin)) {
+function setCors(origin, response, allowedDashboardOrigins = new Set()) {
+  if (typeof origin === 'string' && isAllowedOrigin(origin, allowedDashboardOrigins)) {
     response.setHeader('access-control-allow-origin', origin);
     response.setHeader('vary', 'Origin');
   }
@@ -599,6 +603,16 @@ function setCors(origin, response) {
   response.setHeader('access-control-allow-headers', 'content-type, x-hephaestus-token, x-ibos-idempotency-key, x-ibos-timestamp, x-ibos-signature');
   response.setHeader('x-content-type-options', 'nosniff');
   response.setHeader('cache-control', 'no-store');
+}
+
+function dashboardOriginsFrom(value) {
+  const configured = String(value ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  return configured.length
+    ? configured
+    : ['https://internet-brain-os.leerenmos.chatgpt.site'];
 }
 
 function send(response, status, body) {
