@@ -42,6 +42,8 @@ test('connects to a local Kernel and renders truthful Overview data', async ({ p
   await expect(page.getByText('Resumen parcial: algunos endpoints no respondieron, pero los datos disponibles se conservan.')).toBeVisible();
   await expect(page.getByText('Model Forge no está disponible en este Kernel.')).toBeVisible();
   await expect(page.getByRole('option', { name: 'Ollama local' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Nueva conversación' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Historial de conversaciones' })).toBeVisible();
   await expect(page.locator('#intelligence')).toHaveCSS('grid-column-start', '10');
   await expect(page.locator('.chat-console')).toHaveCSS('position', 'fixed');
   await expect.poll(async () => {
