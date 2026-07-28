@@ -1,7 +1,7 @@
 'use client';
 
-import { Bot, Plus, Send, Settings2, ShieldCheck, Trash2, X } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Bot, History, MessageSquarePlus, Plus, Send, Settings2, ShieldCheck, Square, Trash2, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { KernelClient } from '../../lib/kernel/client';
 import { connectionStore } from '../../lib/session/connection-store';
 
@@ -14,7 +14,14 @@ type Provider = {
   hasCredential: boolean;
   managedBy: 'environment' | 'user';
 };
-type Message = { role: 'user' | 'assistant'; content: string; model?: string };
+type Message = { id?: string; role: 'user' | 'assistant'; content: string; model?: string };
+type ConversationSummary = { id: string; title: string; providerId: string; model: string; messageCount: number; updatedAt: string };
+type Conversation = ConversationSummary & { messages: Message[] };
+type StreamEvent =
+  | { type: 'conversation'; conversationId: string }
+  | { type: 'delta'; delta: string }
+  | { type: 'done'; conversationId: string; response: { model: string } }
+  | { type: 'error'; code: string; error: string };
 
 export function ChatDock() {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -22,14 +29,18 @@ export function ChatDock() {
   const [model, setModel] = useState('');
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [conversationId, setConversationId] = useState('');
+  const [history, setHistory] = useState(false);
   const [settings, setSettings] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
+  const abortRef = useRef<AbortController | undefined>(undefined);
   const selected = providers.find((item) => item.id === providerId);
   const configured = providers.length > 0;
   const conversation = useMemo(() => messages.map(({ role, content }) => ({ role, content })), [messages]);
 
-  useEffect(() => { void loadProviders(); }, []);
+  useEffect(() => { void Promise.all([loadProviders(), loadConversations()]); }, []);
   useEffect(() => {
     if (!selected) {
       const first = providers[0];
@@ -48,25 +59,89 @@ export function ChatDock() {
     }
   }
 
+  async function loadConversations() {
+    try {
+      const body = await kernel().get('/api/chat/conversations', parseConversations);
+      setConversations(body);
+    } catch {
+      setConversations([]);
+    }
+  }
+
   async function send(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const content = prompt.trim();
     if (!content || !providerId || !model || pending) return;
     const nextMessages: Message[] = [...messages, { role: 'user', content }];
-    setMessages(nextMessages);
+    setMessages([...nextMessages, { role: 'assistant', content: '', model }]);
     setPrompt('');
     setPending(true);
     setError(undefined);
+    const abort = new AbortController();
+    abortRef.current = abort;
     try {
-      const response = await kernel(120_000).request('/api/chat/completions', {
+      await kernel(120_000).streamNdjson<StreamEvent>('/api/chat/stream', {
         method: 'POST',
-        body: JSON.stringify({ providerId, model, messages: [...conversation, { role: 'user', content }] }),
-      }, parseCompletion);
-      setMessages((current) => [...current, { role: 'assistant', content: response.content, model: response.model }]);
+        body: JSON.stringify({
+          providerId,
+          model,
+          ...(conversationId ? { conversationId } : {}),
+          messages: [...conversation, { role: 'user', content }],
+        }),
+      }, async (event) => {
+        if (event.type === 'conversation') setConversationId(event.conversationId);
+        if (event.type === 'delta') {
+          setMessages((current) => current.map((message, index) => index === current.length - 1
+            ? { ...message, content: `${message.content}${event.delta}` }
+            : message));
+        }
+        if (event.type === 'done') {
+          setConversationId(event.conversationId);
+          setMessages((current) => current.map((message, index) => index === current.length - 1
+            ? { ...message, model: event.response.model }
+            : message));
+        }
+        if (event.type === 'error') throw new Error(event.code);
+      }, abort.signal);
+      await loadConversations();
     } catch {
-      setError('El proveedor no respondió. No se guardó ninguna respuesta ni memoria.');
+      if (abort.signal.aborted) setError('Generación detenida. La respuesta parcial no se guardó en el historial.');
+      else setError('El proveedor no respondió. No se guardó ninguna respuesta ni memoria.');
     } finally {
       setPending(false);
+      abortRef.current = undefined;
+    }
+  }
+
+  async function openConversation(id: string) {
+    try {
+      const conversation = await kernel().get(`/api/chat/conversations/${encodeURIComponent(id)}`, parseConversation);
+      setConversationId(conversation.id);
+      setProviderId(conversation.providerId);
+      setModel(conversation.model);
+      setMessages(conversation.messages);
+      setHistory(false);
+      setError(undefined);
+    } catch {
+      setError('No se pudo abrir la conversación local.');
+    }
+  }
+
+  function newConversation() {
+    abortRef.current?.abort();
+    setConversationId('');
+    setMessages([]);
+    setHistory(false);
+    setError(undefined);
+  }
+
+  async function removeConversation(id: string) {
+    try {
+      await kernel().request(`/api/chat/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' }, parseOk);
+      if (conversationId === id) newConversation();
+      await loadConversations();
+    } catch {
+      setError('No se pudo eliminar la conversación local.');
     }
   }
 
@@ -131,6 +206,14 @@ export function ChatDock() {
         </form>
       </div> : null}
 
+      {history ? <div className="chat-history">
+        <header><div><strong>Conversaciones locales</strong><span>Separadas de Evidence y memoria controlada.</span></div><button type="button" onClick={() => setHistory(false)} aria-label="Cerrar historial"><X size={16} /></button></header>
+        {conversations.length ? <ul>{conversations.map((item) => <li key={item.id}>
+          <button type="button" onClick={() => openConversation(item.id)} aria-label={`Abrir ${item.title}`}><strong>{item.title}</strong><span>{item.model} · {item.messageCount} mensajes</span></button>
+          <button type="button" onClick={() => removeConversation(item.id)} aria-label={`Eliminar conversación ${item.title}`}><Trash2 size={14} /></button>
+        </li>)}</ul> : <p>No hay conversaciones guardadas todavía.</p>}
+      </div> : null}
+
       <form className="chat-composer" onSubmit={send}>
         <div className="chat-model">
           <Bot size={15} />
@@ -141,9 +224,13 @@ export function ChatDock() {
             {(selected?.models ?? []).map((item) => <option key={item}>{item}</option>)}
           </select>
         </div>
+        <button className="chat-new-button" type="button" onClick={newConversation} aria-label="Nueva conversación"><MessageSquarePlus size={18} /></button>
+        <button className="chat-history-button" type="button" onClick={() => { setHistory((value) => !value); setSettings(false); }} aria-label="Historial de conversaciones"><History size={18} /></button>
         <textarea aria-label="Mensaje" value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder={configured ? 'Pregunta, analiza o prepara una investigación…' : 'Añade un modelo o proveedor para comenzar…'} rows={1} disabled={!configured || pending} />
-        <button className="chat-settings-button" type="button" onClick={() => setSettings((value) => !value)} aria-label="Configurar modelos"><Settings2 size={18} /></button>
-        <button className="chat-send-button" type="submit" disabled={!prompt.trim() || !configured || pending} aria-label="Enviar mensaje"><Send size={18} /></button>
+        <button className="chat-settings-button" type="button" onClick={() => { setSettings((value) => !value); setHistory(false); }} aria-label="Configurar modelos"><Settings2 size={18} /></button>
+        {pending
+          ? <button className="chat-stop-button" type="button" onClick={() => abortRef.current?.abort()} aria-label="Detener generación"><Square size={16} fill="currentColor" /></button>
+          : <button className="chat-send-button" type="submit" disabled={!prompt.trim() || !configured} aria-label="Enviar mensaje"><Send size={18} /></button>}
       </form>
       <p className="chat-boundary"><ShieldCheck size={12} /> Los modelos conversan; Hephaestus conserva la autoridad sobre Evidence y memoria.</p>
       {error ? <p className="chat-error" aria-live="polite">{error}</p> : null}
@@ -169,11 +256,16 @@ function parseProviders(value: unknown): Provider[] {
     return item as Provider;
   });
 }
-function parseCompletion(value: unknown): { content: string; model: string } {
+function parseConversations(value: unknown): ConversationSummary[] {
   const body = object(value);
-  const response = object(body.response);
-  if (body.ok !== true || typeof response.content !== 'string' || typeof response.model !== 'string') throw new Error('Invalid completion');
-  return { content: response.content, model: response.model };
+  if (body.ok !== true || !Array.isArray(body.conversations)) throw new Error('Invalid conversations');
+  return body.conversations as ConversationSummary[];
+}
+function parseConversation(value: unknown): Conversation {
+  const body = object(value);
+  const conversation = object(body.conversation);
+  if (body.ok !== true || typeof conversation.id !== 'string' || !Array.isArray(conversation.messages)) throw new Error('Invalid conversation');
+  return conversation as Conversation;
 }
 function parseProviderMutation(value: unknown) { const body = object(value); if (body.ok !== true) throw new Error('Invalid provider'); return body; }
 function parseOk(value: unknown) { const body = object(value); if (body.ok !== true) throw new Error('Invalid response'); return body; }
