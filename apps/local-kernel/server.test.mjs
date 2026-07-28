@@ -615,6 +615,25 @@ describe('local Kernel HTTP receiver', () => {
     expect(response.status).toBe(403);
     expect(JSON.parse(response.body)).toEqual({ ok: false, code: 'HOST_FORBIDDEN' });
   });
+
+  it('allows only explicitly trusted hosted dashboard origins', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    const trustedOrigin = 'https://internet-brain-os.example.test';
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, {
+      allowedDashboardOrigins: [trustedOrigin],
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+    const url = `http://127.0.0.1:${port}/health`;
+
+    const trusted = await fetch(url, { headers: { origin: trustedOrigin } });
+    expect(trusted.status).toBe(200);
+    expect(trusted.headers.get('access-control-allow-origin')).toBe(trustedOrigin);
+
+    const attacker = await fetch(url, { headers: { origin: 'https://attacker.example' } });
+    expect(attacker.status).toBe(403);
+    expect(await attacker.json()).toEqual({ ok: false, code: 'ORIGIN_FORBIDDEN' });
+  });
 });
 
 function rawRequest(port, host) {
