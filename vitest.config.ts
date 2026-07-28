@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vitest/config';
+import { defineConfig, configDefaults } from 'vitest/config';
 
 export default defineConfig({
   resolve: {
@@ -14,5 +14,8 @@ export default defineConfig({
   },
   test: {
     passWithNoTests: true,
+    // Keep vitest's default excludes (node_modules, dist, etc.) and add the
+    // dashboard e2e specs, which are Playwright files that must not run under vitest.
+    exclude: [...configDefaults.exclude, '**/e2e/**'],
   },
 });
