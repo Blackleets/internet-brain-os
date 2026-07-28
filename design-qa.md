@@ -36,6 +36,18 @@ The reference contains more modules and color variance. Graph, Investigations, s
 
 final result: passed
 
+## Internet Brain OS reference rebuild — 2026-07-28
+
+- Source target: founder-provided `Internet Brain OS` dashboard image at 1536 × 1024.
+- Rebuilt the dashboard composition around the same hierarchy: global brand header, command search, left navigation, luminous cognitive-core hero, truthful Kernel metrics, module launchers, activity, missions, opportunities, readiness, system projection, and command dock.
+- Replaced the previous static Forge artwork with an original Internet Brain cognitive-core asset.
+- Navigation and command search now move to real dashboard sections; unsupported synthetic analytics, scheduler state, and graph data were not invented.
+- Unit/component validation: 77/77 passed.
+- TypeScript and production build: passed.
+- Browser comparison is blocked in this environment because the Playwright Chromium binary is unavailable and its download endpoint returned an empty archive.
+
+final result: blocked
+
 ## Production dependency security (P0) — closed
 
 The P0 blocker from the handoff was production dependency security. Closed without weakening supply-chain policy (`minimumReleaseAge`, frozen lockfile, loopback-only, token memory-only, normalized `/api/*` paths intact):

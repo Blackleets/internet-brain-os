@@ -109,9 +109,13 @@ export function ConnectionGate() {
   if (connection && snapshot) return <OverviewScreen snapshot={snapshot} reload={reload} disconnect={disconnect} />;
 
   return (
-    <section aria-labelledby="connection-title">
-      <h1 id="connection-title">Conectar al Kernel</h1>
-      <form onSubmit={connect}>
+    <section className="connection-gate panel" aria-labelledby="connection-title">
+      <div className="connection-intro">
+        <span aria-hidden="true">HEPHAESTUS</span>
+        <h1 id="connection-title">Conecta tu cerebro digital</h1>
+        <p>Acceso local y privado al Kernel de Internet Brain OS.</p>
+      </div>
+      <form className="connection-form" onSubmit={connect}>
         <label>
           URL del Kernel
           <input name="baseUrl" type="url" defaultValue={DEFAULT_BASE_URL} required />

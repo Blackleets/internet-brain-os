@@ -73,22 +73,20 @@ const snapshot: OverviewSnapshot = {
 afterEach(cleanup);
 
 describe('OverviewScreen', () => {
-  it('renders the decorative Forge Core artwork without competing with Kernel status copy', () => {
+  it('renders the Internet Brain hero artwork without competing with Kernel status copy', () => {
     render(<OverviewScreen snapshot={snapshot} reload={vi.fn()} disconnect={vi.fn()} />);
 
     const artwork = document.querySelector('img.forge-core-artwork');
     expect(artwork).toBeTruthy();
-    expect(artwork?.getAttribute('src')).toContain('forge-core.webp');
+    expect(artwork?.getAttribute('src')).toContain('internet-brain-core.webp');
     expect(artwork?.getAttribute('alt')).toBe('');
-    expect(artwork?.getAttribute('width')).toBe('1672');
-    expect(artwork?.getAttribute('height')).toBe('941');
     expect(screen.getByText('Kernel conectado')).toBeTruthy();
   });
 
   it('summarizes ready paired bootstrap state in concise Spanish instead of raw service copy', () => {
     render(<OverviewScreen snapshot={snapshot} reload={vi.fn()} disconnect={vi.fn()} />);
 
-    expect(screen.getByText('Kernel local listo. Efesto está emparejado.')).toBeTruthy();
+    expect(screen.getByText('Tu cerebro digital está activo. Efesto está emparejado.')).toBeTruthy();
     expect(screen.queryByText('Kernel listo para operar.')).toBeNull();
   });
 

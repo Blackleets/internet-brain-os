@@ -48,19 +48,9 @@ describe('ConnectionGate', () => {
   it('opens the overview after public health and protected Kernel reads succeed', async () => {
     const requests: Request[] = [];
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const request = new Request(input, init);
+      const request = new Request(input, { ...init, signal: undefined });
       requests.push(request);
-      const bodies: Record<string, unknown> = {
-        '/health': healthResponse,
-        '/status': statusResponse,
-        '/bootstrap/status': bootstrapResponse,
-        '/api/cases': casesResponse,
-        '/api/goals': goalsResponse,
-        '/api/agent-missions': missionsResponse,
-        '/api/opportunities': opportunitiesResponse,
-        '/api/model-forge': modelForgeResponse,
-      };
-      return Response.json(bodies[new URL(request.url).pathname]);
+      return responseFor(new URL(request.url).pathname);
     }));
 
     render(<ConnectionGate />);
@@ -152,7 +142,7 @@ describe('ConnectionGate', () => {
     fireEvent.submit(screen.getByRole('button', { name: 'Conectar al Kernel' }).closest('form')!);
 
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('No se pudo conectar al Kernel'));
-    expect(screen.getByRole('heading', { name: 'Conectar al Kernel' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Conecta tu cerebro digital' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Centro de control' })).toBeNull();
     expect(connectionStore.get()).toBeUndefined();
   });

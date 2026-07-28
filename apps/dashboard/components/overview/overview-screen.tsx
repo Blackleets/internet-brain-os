@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { Bot, BrainCircuit, Network, Search, Sparkles, Workflow } from 'lucide-react';
 import { useState } from 'react';
 import { ActivityFeed } from './activity-feed';
 import { MetricGrid } from './metric-grid';
@@ -12,6 +13,14 @@ import { Panel } from '../ui/panel';
 import { StatusBadge } from '../ui/status-badge';
 
 type OverviewScreenProps = { snapshot: OverviewSnapshot; reload: () => Promise<void>; disconnect: () => void };
+
+const modules = [
+  { id: 'investigations', title: 'Investigación', copy: 'Explora casos y ejecuciones verificadas.', action: 'Ver investigaciones', icon: Search },
+  { id: 'knowledge', title: 'Conocimiento', copy: 'Consulta evidencia y memoria controlada.', action: 'Explorar conocimiento', icon: BrainCircuit },
+  { id: 'graph', title: 'Relaciones', copy: 'Visualiza conexiones con procedencia.', action: 'Ver relaciones', icon: Network },
+  { id: 'agents', title: 'Agentes IA', copy: 'Supervisa misiones reales de Hermes.', action: 'Gestionar agentes', icon: Bot },
+  { id: 'automations', title: 'Automatizaciones', copy: 'Observa procesos existentes y acotados.', action: 'Ver automatizaciones', icon: Workflow },
+];
 
 export function OverviewScreen({ snapshot, reload, disconnect }: OverviewScreenProps) {
   const [refreshError, setRefreshError] = useState<string>();
@@ -38,36 +47,54 @@ export function OverviewScreen({ snapshot, reload, disconnect }: OverviewScreenP
 
   return <>
     <style>{overviewStyles}</style>
-    <ReadinessStrip readiness={snapshot.readiness} issues={snapshot.issues} />
-    <section className="overview-hero panel" aria-labelledby="overview-title">
-      <div>
-        <p className="panel-eyebrow">{kernelLabel}</p>
-        <h1 id="overview-title">Centro de control</h1>
+    <section className="brain-hero panel" id="overview" aria-labelledby="overview-title">
+      <Image
+        src="/internet-brain-core.webp"
+        alt=""
+        fill
+        priority
+        sizes="(max-width: 760px) 100vw, 70vw"
+        className="forge-core-artwork"
+      />
+      <div className="brain-hero-content">
+        <p className="panel-eyebrow">Resumen general</p>
+        <h1 id="overview-title">¡Hola, Blackleets!</h1>
         <p>{bootstrapMessage}</p>
-        <div className="overview-actions">
-          <button type="button" onClick={handleRefresh} disabled={refreshing} aria-label="Actualizar resumen">{refreshing ? 'Actualizando…' : 'Actualizar resumen'}</button>
+        <div className="hero-status"><StatusBadge state={snapshot.readiness.kernel === 'online' ? 'healthy' : 'failed'} label={kernelLabel} /></div>
+        <div className="hero-actions">
+          <button type="button" onClick={handleRefresh} disabled={refreshing} aria-label="Actualizar resumen">
+            {refreshing ? 'Actualizando…' : 'Actualizar resumen'}
+          </button>
           <button type="button" className="quiet-button" onClick={disconnect} aria-label="Desconectar del Kernel">Desconectar</button>
         </div>
         {stale ? <p className="stale-state" role="status" aria-live="polite">Datos sin actualizar desde <time dateTime={snapshot.loadedAt}>{formatLoadedAt(snapshot.loadedAt)}</time></p> : null}
         {refreshError ? <p className="overview-error" role="alert">{refreshError}</p> : null}
       </div>
-      <div className="forge-core-slot">
-        <Image
-          src="/forge-core.webp"
-          alt=""
-          width={1672}
-          height={941}
-          priority
-          sizes="(max-width: 760px) calc(100vw - 4rem), (max-width: 1100px) 38vw, 42vw"
-          className="forge-core-artwork"
-        />
-      </div>
+      <div className="hero-metrics"><MetricGrid metrics={snapshot.metrics} issues={snapshot.issues} /></div>
     </section>
-    <MetricGrid metrics={snapshot.metrics} issues={snapshot.issues} />
-    <MissionPanel missions={snapshot.missions} unavailable={hasIssue(snapshot.issues, 'missions')} />
-    <OpportunityPanel opportunities={snapshot.opportunities} unavailable={hasIssue(snapshot.issues, 'opportunities')} />
-    <ActivityFeed activity={snapshot.activity} unavailable={activityUnavailable} partial={!activityUnavailable && failedActivitySources.length > 0} />
-    <SystemReadiness snapshot={snapshot} />
+
+    <section className="module-grid" aria-label="Áreas de Internet Brain OS">
+      {modules.map(({ id, title, copy, action, icon: Icon }) => (
+        <a className="module-card panel" href={`#${id}`} key={id}>
+          <span className="module-icon"><Icon size={18} /></span>
+          <h2>{title}</h2>
+          <p>{copy}</p>
+          <strong>{action}<span aria-hidden="true">→</span></strong>
+        </a>
+      ))}
+    </section>
+
+    <div id="intelligence"><ReadinessStrip readiness={snapshot.readiness} issues={snapshot.issues} /></div>
+    <div id="agents"><MissionPanel missions={snapshot.missions} unavailable={hasIssue(snapshot.issues, 'missions')} /></div>
+    <div id="knowledge"><OpportunityPanel opportunities={snapshot.opportunities} unavailable={hasIssue(snapshot.issues, 'opportunities')} /></div>
+    <div id="investigations"><ActivityFeed activity={snapshot.activity} unavailable={activityUnavailable} partial={!activityUnavailable && failedActivitySources.length > 0} /></div>
+    <div id="system"><SystemReadiness snapshot={snapshot} /></div>
+
+    <section className="command-dock panel" id="automations">
+      <Sparkles aria-hidden="true" size={20} />
+      <p><strong>HEPHAESTUS</strong> está listo. Usa la barra superior para navegar por tus datos reales.</p>
+      <a href="#overview">Volver al inicio <span aria-hidden="true">→</span></a>
+    </section>
   </>;
 }
 
@@ -83,7 +110,7 @@ function hasIssue(issues: OverviewIssue[], endpoint: OverviewIssue['endpoint']):
 function readinessSummary(snapshot: OverviewSnapshot): string {
   const bootstrap = snapshot.readiness.bootstrap;
   if (snapshot.readiness.kernel === 'online' && bootstrap?.overall === 'ready') {
-    return bootstrap.pairing === 'paired' ? 'Kernel local listo. Efesto está emparejado.' : 'Kernel local listo para operar.';
+    return bootstrap.pairing === 'paired' ? 'Tu cerebro digital está activo. Efesto está emparejado.' : 'Tu cerebro digital está listo para operar.';
   }
   return bootstrap?.message ?? (snapshot.readiness.kernel === 'online' ? 'El Kernel está disponible para lectura local.' : 'El Kernel requiere atención antes de continuar.');
 }
@@ -93,5 +120,11 @@ function formatLoadedAt(value: string): string {
 }
 
 const overviewStyles = `
-.readiness-strip,.metric-grid{grid-column:span 12;display:grid;gap:.6rem}.readiness-strip{grid-template-columns:repeat(6,minmax(0,1fr))}.readiness-item,.metric-card{min-width:0;padding:.7rem .85rem;border:1px solid var(--line-subtle);border-radius:.75rem;background:var(--bg-surface)}.readiness-item>span,.metric-card h2{display:block;margin:0 0 .35rem;color:var(--text-secondary);font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}.overview-hero{grid-column:span 12;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(12rem,.95fr);align-items:stretch;gap:1rem;min-height:11.75rem}.overview-hero h1{margin:0 0 .4rem;font-size:clamp(1.6rem,2.5vw,2.35rem);letter-spacing:-.04em}.overview-hero p:not(.panel-eyebrow){max-width:38rem;margin:0;color:var(--text-secondary);line-height:1.45}.forge-core-slot{min-height:8rem;border-left:1px solid var(--line-subtle)}.overview-actions{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.85rem}.overview-actions button{min-height:2.5rem;padding:0 .9rem;color:#081118;border:1px solid var(--accent-data);border-radius:.55rem;background:var(--accent-data);font-weight:750;cursor:pointer}.overview-actions .quiet-button{color:var(--text-primary);border-color:var(--line-subtle);background:transparent}.overview-actions button:disabled{cursor:wait;opacity:.7}.overview-error,.partial-state,.stale-state{margin:.75rem 0 0;color:var(--accent-forge);font-size:.85rem}.metric-grid{grid-template-columns:repeat(7,minmax(0,1fr))}.metric-value{margin:0;color:var(--text-primary);font-variant-numeric:tabular-nums;font-size:clamp(1.35rem,2vw,2rem);font-weight:750;letter-spacing:-.04em}.metric-unavailable{margin:0;color:var(--text-secondary);font-size:.78rem;line-height:1.35}.overview-missions{grid-column:span 7}.overview-opportunities{grid-column:span 5}.overview-activity{grid-column:span 7}.overview-system{grid-column:span 5}.empty-state{margin:0;color:var(--text-secondary)}.mission-list,.opportunity-list,.activity-list{display:grid;gap:.5rem;padding:0;margin:0;list-style:none}.mission-list li,.opportunity-list li,.activity-list li{display:flex;align-items:center;justify-content:space-between;gap:.85rem;padding:.55rem 0;border-bottom:1px solid var(--line-subtle)}.mission-list li:last-child,.opportunity-list li:last-child,.activity-list li:last-child{padding-bottom:0;border-bottom:0}.mission-list strong,.opportunity-title strong,.activity-list strong{display:block;color:var(--text-primary);font-size:.9rem}.mission-list span,.opportunity-list p,.activity-list span,.activity-list time{margin:.2rem 0 0;color:var(--text-secondary);font-size:.8rem}.opportunity-list li{display:block}.opportunity-title{display:flex;align-items:center;justify-content:space-between;gap:.75rem}.unverified-lead{flex:0 0 auto;color:var(--accent-forge);font-size:.74rem;font-weight:700}.opportunity-next-action{line-height:1.4}.activity-list li{display:grid;grid-template-columns:7rem 1fr auto}.system-readiness{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}.system-readiness h3{margin:0 0 .4rem;color:var(--text-primary);font-size:.9rem}.system-readiness p{margin:0;color:var(--text-secondary);line-height:1.4}@media(max-width:1100px){.readiness-strip{grid-template-columns:repeat(3,minmax(0,1fr))}.metric-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:760px){.readiness-strip,.metric-grid,.overview-hero,.overview-missions,.overview-opportunities,.overview-activity,.overview-system{grid-column:1}.readiness-strip,.metric-grid,.overview-hero,.system-readiness{grid-template-columns:1fr}.overview-hero .forge-core-slot{display:none}.activity-list li{grid-template-columns:1fr;gap:.25rem}}
+.brain-hero{position:relative;grid-column:span 9;min-height:19rem;padding:1rem;isolation:isolate}.brain-hero::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#06101e 0%,rgb(5 11 20/.88) 32%,transparent 68%)}.forge-core-artwork{z-index:-2;object-fit:cover;object-position:center}.brain-hero-content{position:relative;z-index:1;max-width:26rem}.brain-hero h1{margin:0 0 .3rem;font-size:1.55rem}.brain-hero-content>p:not(.panel-eyebrow,.stale-state,.overview-error){margin:0;color:#aeb8c8;font-size:.86rem}.hero-status{margin-top:.7rem}.hero-actions{display:flex;gap:.45rem;margin-top:.85rem}.hero-actions button{min-height:2.25rem;padding:0 .75rem;cursor:pointer;color:#eaf6ff;border:1px solid #2254a7;border-radius:.45rem;background:linear-gradient(90deg,#152d7b,#442195);font-size:.72rem}.hero-actions .quiet-button{border-color:#233044;background:rgb(4 10 18/.76)}.hero-metrics{position:absolute;left:1rem;right:1rem;bottom:1rem;z-index:1}.metric-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:.45rem}.metric-card{min-height:4.7rem;padding:.55rem;border:1px solid rgb(32 54 84/.8);border-radius:.45rem;background:rgb(5 13 24/.84);backdrop-filter:blur(10px)}.metric-card h2{margin:0 0 .35rem;color:#aab4c5;font-size:.58rem;font-weight:600;text-transform:none}.metric-value{margin:0;font-size:1.3rem;font-weight:750}.metric-unavailable{margin:0;color:#64738a;font-size:.6rem;line-height:1.25}.overview-error,.partial-state,.stale-state{margin:.55rem 0 0;color:#ffb44f;font-size:.7rem}
+.module-grid{grid-column:span 9;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.6rem}.module-card{display:flex;min-height:10.5rem;flex-direction:column;padding:.75rem;transition:.2s ease}.module-card:hover{border-color:#304d8b;transform:translateY(-2px);box-shadow:0 12px 30px rgb(37 62 159/.15)}.module-icon{display:grid;width:1.8rem;height:1.8rem;place-items:center;color:#9b66ff;border-radius:.4rem;background:rgb(111 54 219/.15)}.module-card:nth-child(2) .module-icon{color:#4be69a;background:rgb(47 184 117/.14)}.module-card:nth-child(3) .module-icon{color:#3dcaff;background:rgb(39 157 224/.13)}.module-card:nth-child(5) .module-icon{color:#ffc13c;background:rgb(234 156 28/.13)}.module-card h2{margin:.6rem 0 .3rem;font-size:.75rem}.module-card p{margin:0;color:#8c98aa;font-size:.66rem;line-height:1.45}.module-card strong{display:flex;justify-content:space-between;margin-top:auto;padding:.55rem;color:#dce8ff;border-radius:.35rem;background:linear-gradient(90deg,rgb(29 49 117/.8),rgb(45 25 105/.8));font-size:.65rem}
+#intelligence{grid-column:span 3;grid-row:1 / span 2}#intelligence .readiness-strip{display:grid;gap:.45rem}.readiness-item{padding:.55rem;border-bottom:1px solid var(--line-subtle)}.readiness-item>span{display:block;margin-bottom:.25rem;color:#7f8da1;font-size:.6rem;text-transform:uppercase}
+#agents{grid-column:span 5}#knowledge{grid-column:span 4}#investigations{grid-column:span 6}#system{grid-column:span 3}.overview-missions,.overview-opportunities,.overview-activity,.overview-system{height:100%}.empty-state{margin:0;color:#7d899c;font-size:.72rem}.mission-list,.opportunity-list,.activity-list{display:grid;gap:.45rem;padding:0;margin:0;list-style:none}.mission-list li,.opportunity-list li,.activity-list li{padding:.45rem 0;border-bottom:1px solid var(--line-subtle)}.mission-list li{display:flex;justify-content:space-between;gap:.6rem}.mission-list strong,.opportunity-title strong,.activity-list strong{font-size:.7rem}.mission-list span,.opportunity-list p,.activity-list span,.activity-list time{color:#7f8da0;font-size:.62rem}.opportunity-title{display:flex;justify-content:space-between;gap:.5rem}.opportunity-list p{margin:.2rem 0}.unverified-lead{color:#b36fff;font-size:.58rem}.activity-list li{display:grid;grid-template-columns:4.5rem 1fr auto;align-items:center}.system-readiness{display:grid;gap:.75rem}.system-readiness h3{margin:0 0 .25rem;font-size:.7rem}.system-readiness p{margin:0;color:#8190a4;font-size:.65rem}
+.command-dock{display:flex;align-items:center;gap:.7rem;margin-top:.15rem;padding:.75rem 1rem;border-color:#342c91;box-shadow:inset 0 0 0 1px rgb(17 161 255/.16),0 0 25px rgb(90 36 224/.08)}.command-dock svg{color:#a05dff}.command-dock p{margin:0;color:#aeb8c8;font-size:.72rem}.command-dock strong{color:#d7e1f4}.command-dock a{margin-left:auto;padding:.55rem .85rem;border-radius:.4rem;background:linear-gradient(90deg,#742bd5,#1a65be);font-size:.68rem;white-space:nowrap}
+@media(max-width:1200px){.brain-hero,.module-grid{grid-column:span 12}#intelligence{grid-column:span 12;grid-row:auto}#intelligence .readiness-strip{grid-template-columns:repeat(3,1fr)}#agents,#knowledge,#investigations,#system{grid-column:span 6}.module-grid{grid-template-columns:repeat(5,minmax(8rem,1fr));overflow-x:auto}}
+@media(max-width:760px){.brain-hero{min-height:29rem}.brain-hero::after{background:linear-gradient(180deg,rgb(5 11 20/.8),rgb(5 11 20/.45))}.forge-core-artwork{opacity:.45}.hero-metrics{position:absolute}.metric-grid{grid-template-columns:repeat(2,1fr)}.metric-card:nth-child(n+5){display:none}.module-grid{grid-template-columns:repeat(5,10rem)}#intelligence .readiness-strip{grid-template-columns:repeat(2,1fr)}#agents,#knowledge,#investigations,#system{grid-column:1}.command-dock{align-items:flex-start;flex-wrap:wrap}.command-dock a{margin-left:0}}
 `;
