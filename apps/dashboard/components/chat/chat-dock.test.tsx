@@ -28,12 +28,19 @@ describe('ChatDock', () => {
       const path = new URL(input.toString()).pathname;
       expect(new Headers(init?.headers).get('x-hephaestus-token')).toBe(token);
       if (path === '/api/chat/providers') return Response.json({ ok: true, providers: [provider] });
+      if (path === '/api/chat/conversations') return Response.json({ ok: true, conversations: [] });
       expect(JSON.parse(String(init?.body))).toMatchObject({
         providerId: 'local',
         model: 'qwen3:4b',
         messages: [{ role: 'user', content: 'Explícame este caso' }],
       });
-      return Response.json({ ok: true, response: { content: 'Respuesta trazable.', model: 'qwen3:4b' } });
+      return new Response([
+        JSON.stringify({ type: 'conversation', conversationId: 'conversation-1' }),
+        JSON.stringify({ type: 'delta', delta: 'Respuesta ' }),
+        JSON.stringify({ type: 'delta', delta: 'trazable.' }),
+        JSON.stringify({ type: 'done', conversationId: 'conversation-1', response: { model: 'qwen3:4b' } }),
+        '',
+      ].join('\n'), { headers: { 'content-type': 'application/x-ndjson' } });
     });
     vi.stubGlobal('fetch', fetcher);
     render(<ChatDock />);
@@ -46,13 +53,45 @@ describe('ChatDock', () => {
     expect(screen.getByText(/Salida no verificada/)).toBeTruthy();
   });
 
-  it('clears a typed provider credential immediately after submission', async () => {
+  it('opens persisted local history and starts a clean conversation', async () => {
     connectionStore.set({ baseUrl: 'http://127.0.0.1:4000', token });
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const path = new URL(input.toString()).pathname;
-      return path === '/api/chat/providers'
-        ? Response.json({ ok: true, providers: [] })
-        : Response.json({ ok: true });
+      if (path === '/api/chat/providers') return Response.json({ ok: true, providers: [provider] });
+      if (path === '/api/chat/conversations') return Response.json({
+        ok: true,
+        conversations: [{ id: 'conversation-1', title: 'Caso local', providerId: 'local', model: 'qwen3:4b', messageCount: 2, updatedAt: '2026-07-28T12:00:00.000Z' }],
+      });
+      return Response.json({
+        ok: true,
+        conversation: {
+          id: 'conversation-1',
+          title: 'Caso local',
+          providerId: 'local',
+          model: 'qwen3:4b',
+          messageCount: 2,
+          updatedAt: '2026-07-28T12:00:00.000Z',
+          messages: [{ role: 'user', content: 'Pregunta guardada' }, { role: 'assistant', content: 'Respuesta guardada', model: 'qwen3:4b' }],
+        },
+      });
+    }));
+    render(<ChatDock />);
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Ollama local' })).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Historial de conversaciones' }));
+    await waitFor(() => expect(screen.getByText('Caso local')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir Caso local' }));
+    await waitFor(() => expect(screen.getByText('Respuesta guardada')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva conversación' }));
+    expect(screen.queryByText('Respuesta guardada')).toBeNull();
+  });
+
+  it('clears a typed provider credential immediately after submission', async () => {
+    connectionStore.set({ baseUrl: 'http://127.0.0.1:4000', token });
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = new URL(input.toString()).pathname;
+      if (path === '/api/chat/providers' && init?.method === 'POST') return Response.json({ ok: true });
+      if (path === '/api/chat/providers') return Response.json({ ok: true, providers: [] });
+      return Response.json({ ok: true, conversations: [] });
     }));
     render(<ChatDock />);
     fireEvent.click(screen.getByRole('button', { name: 'Configurar modelos' }));
