@@ -51,6 +51,8 @@ export type OverviewSnapshot = {
     activeMissions: number;
     opportunities: number;
   };
+  cases: CaseSummary[];
+  goals: GoalSummary[];
   missions: MissionSummary[];
   opportunities: OpportunitySummary[];
   activity: OverviewActivity[];
@@ -122,6 +124,8 @@ export async function loadOverview(client: KernelClient, signal?: AbortSignal): 
       activeMissions: missionRecords.filter(isActiveMission).length,
       opportunities: opportunityRecords.length,
     },
+    cases: caseRecords,
+    goals: goalRecords,
     missions: missionRecords,
     opportunities: opportunityRecords,
     activity: activityFrom(goalRecords, missionRecords, opportunityRecords),

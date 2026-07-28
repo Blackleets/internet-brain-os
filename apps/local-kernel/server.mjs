@@ -18,6 +18,9 @@ import { AgentMissionManager } from './agent-missions.mjs';
 import { PreferenceLearner } from './preference-learner.mjs';
 import { AgentMissionExecutor } from './agent-mission-executor.mjs';
 import { ModelForge } from './model-forge.mjs';
+import { ModelProviderError, ModelProviderRegistry } from './model-provider-registry.mjs';
+import { ChatServiceError, KernelChatService } from './chat-service.mjs';
+import { ChatConversationError, ChatConversationStore } from './chat-conversation-store.mjs';
 import { defaultEfestoPaths, inspectEfestoBootstrap, readLauncherConfig } from '../../scripts/efesto-bootstrap.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
@@ -67,6 +70,37 @@ const modelForge = new ModelForge({
   baseUrl: process.env.HEPHAESTUS_OLLAMA_URL,
   activeModel: process.env.HEPHAESTUS_OLLAMA_MODEL,
 });
+const modelProviders = new ModelProviderRegistry(resolve(dataDir, 'model-providers.json'), {
+  defaults: environmentModelProviders(process.env),
+});
+const chatService = new KernelChatService(modelProviders);
+const chatConversations = new ChatConversationStore(resolve(dataDir, 'chat-conversations.json'));
+const dashboardOrigins = dashboardOriginsFrom(process.env.HEPHAESTUS_DASHBOARD_ORIGINS);
+
+function environmentModelProviders(env) {
+  const providers = [];
+  const ollamaModel = env.HEPHAESTUS_OLLAMA_MODEL?.trim();
+  if (ollamaModel) providers.push({
+    id: 'ollama-local',
+    type: 'ollama',
+    label: 'Ollama local',
+    baseUrl: env.HEPHAESTUS_OLLAMA_URL ?? 'http://127.0.0.1:11434',
+    models: [ollamaModel],
+    managedBy: 'environment',
+  });
+  const openAiKey = env.OPENAI_API_KEY?.trim();
+  const openAiModel = env.HEPHAESTUS_OPENAI_MODEL?.trim();
+  if (openAiKey && openAiModel) providers.push({
+    id: 'openai',
+    type: 'openai-compatible',
+    label: 'OpenAI',
+    baseUrl: env.HEPHAESTUS_OPENAI_BASE_URL ?? 'https://api.openai.com',
+    models: [openAiModel],
+    apiKey: openAiKey,
+    managedBy: 'environment',
+  });
+  return providers;
+}
 
 export function createLocalKernelServer(captureInbox, captureProjector, obsidianProjector, evidenceSummarizer, options = {}) {
   const requiredToken = options.apiToken === undefined ? undefined : validateApiToken(options.apiToken);
@@ -81,17 +115,21 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const preferences = options.preferenceLearner;
   const missionExecutor = options.agentMissionExecutor;
   const models = options.modelForge;
+  const providers = options.modelProviderRegistry;
+  const chat = options.chatService;
+  const conversations = options.chatConversationStore;
   const bootstrapStatus = options.bootstrapStatus;
+  const allowedDashboardOrigins = new Set(options.allowedDashboardOrigins ?? []);
   const hermesMaxBodyBytes = Number(options.hermesMaxBodyBytes ?? 256 * 1024);
   return createServer(async (request, response) => {
     if (!isLoopbackHost(request.headers.host)) {
       return send(response, 403, { ok: false, code: 'HOST_FORBIDDEN' });
     }
     const origin = request.headers.origin;
-    if (typeof origin === 'string' && !isAllowedOrigin(origin)) {
+    if (typeof origin === 'string' && !isAllowedOrigin(origin, allowedDashboardOrigins)) {
       return send(response, 403, { ok: false, code: 'ORIGIN_FORBIDDEN' });
     }
-    setCors(origin, response);
+    setCors(origin, response, allowedDashboardOrigins);
     if (request.method === 'OPTIONS') return send(response, 204);
     if (request.method === 'GET' && request.url === '/health') {
       return send(response, 200, { ok: true, service: 'hephaestus-local-kernel', hermes: Boolean(hermesRoute), replayLab: Boolean(replayLabQuery) });
@@ -191,6 +229,123 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       if (!models) return send(response, 404, { ok: false, code: 'MODEL_FORGE_UNAVAILABLE' });
       try { return send(response, 200, { ok: true, forge: await models.inspect() }); }
       catch { return send(response, 500, { ok: false, code: 'MODEL_FORGE_INSPECTION_FAILED' }); }
+    }
+    if (request.method === 'GET' && request.url === '/api/chat/providers') {
+      if (!providers) return send(response, 404, { ok: false, code: 'MODEL_PROVIDERS_UNAVAILABLE' });
+      try { return send(response, 200, { ok: true, providers: await providers.list() }); }
+      catch { return send(response, 500, { ok: false, code: 'MODEL_PROVIDERS_FAILED' }); }
+    }
+    if (request.method === 'POST' && request.url === '/api/chat/providers') {
+      if (!providers) return send(response, 404, { ok: false, code: 'MODEL_PROVIDERS_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try { return send(response, 201, { ok: true, provider: await providers.save(await readJson(request)) }); }
+      catch (error) {
+        if (error instanceof ModelProviderError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'MODEL_PROVIDER_SAVE_FAILED' });
+      }
+    }
+    if (request.method === 'DELETE' && request.url?.startsWith('/api/chat/providers/')) {
+      if (!providers) return send(response, 404, { ok: false, code: 'MODEL_PROVIDERS_UNAVAILABLE' });
+      try {
+        const providerId = decodeURIComponent(request.url.slice('/api/chat/providers/'.length));
+        await providers.remove(providerId);
+        return send(response, 200, { ok: true });
+      } catch (error) {
+        if (error instanceof ModelProviderError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'MODEL_PROVIDER_DELETE_FAILED' });
+      }
+    }
+    if (request.method === 'POST' && request.url === '/api/chat/completions') {
+      if (!chat) return send(response, 404, { ok: false, code: 'CHAT_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try { return send(response, 200, { ok: true, response: await chat.complete(await readJson(request, hermesMaxBodyBytes)) }); }
+      catch (error) {
+        if (error instanceof ChatServiceError || error instanceof ModelProviderError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'CHAT_FAILED' });
+      }
+    }
+    if (request.method === 'GET' && request.url === '/api/chat/conversations') {
+      if (!conversations) return send(response, 404, { ok: false, code: 'CHAT_HISTORY_UNAVAILABLE' });
+      try { return send(response, 200, { ok: true, conversations: await conversations.list() }); }
+      catch { return send(response, 500, { ok: false, code: 'CHAT_HISTORY_FAILED' }); }
+    }
+    if (request.method === 'POST' && request.url === '/api/chat/conversations') {
+      if (!conversations) return send(response, 404, { ok: false, code: 'CHAT_HISTORY_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try { return send(response, 201, { ok: true, conversation: await conversations.create(await readJson(request)) }); }
+      catch (error) {
+        if (error instanceof ChatConversationError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'CHAT_HISTORY_FAILED' });
+      }
+    }
+    if (request.method === 'POST' && request.url === '/api/chat/stream') {
+      if (!chat || !conversations) return send(response, 404, { ok: false, code: 'CHAT_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      let input;
+      try { input = await readJson(request, hermesMaxBodyBytes); }
+      catch { return send(response, 400, { ok: false, code: 'INVALID_JSON' }); }
+      const abort = new AbortController();
+      response.once('close', () => {
+        if (!response.writableEnded) abort.abort();
+      });
+      try {
+        const lastUserMessage = [...(Array.isArray(input?.messages) ? input.messages : [])]
+          .reverse()
+          .find((item) => item?.role === 'user')?.content;
+        let conversation = input?.conversationId
+          ? await conversations.get(input.conversationId)
+          : undefined;
+        response.writeHead(200, {
+          'content-type': 'application/x-ndjson; charset=utf-8',
+          'cache-control': 'no-store, no-transform',
+          connection: 'keep-alive',
+          'x-content-type-options': 'nosniff',
+        });
+        if (conversation) await writeStreamEvent(response, { type: 'conversation', conversationId: conversation.id });
+        const completion = await chat.stream(input, {
+          signal: abort.signal,
+          onDelta: async (delta) => {
+            if (!conversation) {
+              conversation = await conversations.create({ providerId: input?.providerId, model: input?.model, title: lastUserMessage });
+              await writeStreamEvent(response, { type: 'conversation', conversationId: conversation.id });
+            }
+            await writeStreamEvent(response, { type: 'delta', delta });
+          },
+        });
+        if (!conversation) throw new ChatServiceError('CHAT_INVALID_RESPONSE', 'The model returned an invalid response.', 502);
+        await conversations.appendExchange(conversation.id, {
+          providerId: completion.providerId,
+          model: completion.model,
+          user: lastUserMessage,
+          assistant: completion.content,
+        });
+        await writeStreamEvent(response, { type: 'done', response: completion, conversationId: conversation.id });
+        return response.end();
+      } catch (error) {
+        const known = error instanceof ChatServiceError || error instanceof ModelProviderError || error instanceof ChatConversationError;
+        const status = known ? error.status : 500;
+        const payload = { type: 'error', code: known ? error.code : 'CHAT_FAILED', error: known ? error.message : 'Chat failed.' };
+        if (!response.headersSent) return send(response, status === 499 ? 400 : status, { ok: false, ...payload });
+        if (!response.writableEnded && !response.destroyed) {
+          await writeStreamEvent(response, payload);
+          response.end();
+        }
+        return undefined;
+      }
+    }
+    if ((request.method === 'GET' || request.method === 'DELETE') && request.url?.startsWith('/api/chat/conversations/')) {
+      if (!conversations) return send(response, 404, { ok: false, code: 'CHAT_HISTORY_UNAVAILABLE' });
+      const conversationId = decodeURIComponent(request.url.slice('/api/chat/conversations/'.length));
+      try {
+        if (request.method === 'DELETE') {
+          await conversations.remove(conversationId);
+          return send(response, 200, { ok: true });
+        }
+        return send(response, 200, { ok: true, conversation: await conversations.get(conversationId) });
+      } catch (error) {
+        if (error instanceof ChatConversationError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'CHAT_HISTORY_FAILED' });
+      }
     }
     if (request.method === 'GET' && request.url === '/api/opportunities') {
       if (!opportunities) return send(response, 404, { ok: false, code: 'OPPORTUNITY_INBOX_UNAVAILABLE' });
@@ -369,6 +524,10 @@ export const server = createLocalKernelServer(inbox, projector, obsidian, summar
   preferenceLearner,
   agentMissionExecutor,
   modelForge,
+  modelProviderRegistry: modelProviders,
+  chatService,
+  chatConversationStore: chatConversations,
+  allowedDashboardOrigins: dashboardOrigins,
 });
 
 if (isMain) {
@@ -408,9 +567,10 @@ async function readRaw(request, maxBodyBytes) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-function isAllowedOrigin(origin) {
+function isAllowedOrigin(origin, allowedDashboardOrigins = new Set()) {
   return isExtensionOrigin(origin)
-    || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+    || allowedDashboardOrigins.has(origin);
 }
 
 function isExtensionOrigin(origin) {
@@ -434,8 +594,8 @@ function hasValidToken(value, requiredToken) {
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
 
-function setCors(origin, response) {
-  if (typeof origin === 'string' && isAllowedOrigin(origin)) {
+function setCors(origin, response, allowedDashboardOrigins = new Set()) {
+  if (typeof origin === 'string' && isAllowedOrigin(origin, allowedDashboardOrigins)) {
     response.setHeader('access-control-allow-origin', origin);
     response.setHeader('vary', 'Origin');
   }
@@ -445,11 +605,27 @@ function setCors(origin, response) {
   response.setHeader('cache-control', 'no-store');
 }
 
+function dashboardOriginsFrom(value) {
+  const configured = String(value ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  return configured.length
+    ? configured
+    : ['https://internet-brain-os.leerenmos.chatgpt.site'];
+}
+
 function send(response, status, body) {
   response.statusCode = status;
   if (body === undefined) return response.end();
   response.setHeader('content-type', 'application/json; charset=utf-8');
   response.end(JSON.stringify(body));
+}
+
+async function writeStreamEvent(response, event) {
+  if (response.destroyed || response.writableEnded) return;
+  if (response.write(`${JSON.stringify(event)}\n`)) return;
+  await new Promise((resolve) => response.once('drain', resolve));
 }
 
 function sendHtml(response, status, html) {

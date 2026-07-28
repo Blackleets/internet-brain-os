@@ -39,6 +39,8 @@ const snapshot: OverviewSnapshot = {
     },
   },
   metrics: { cases: 3, goals: 2, missions: 4, activeMissions: 1, opportunities: 5 },
+  cases: [{ id: 'case-1', title: 'Investigación de clientes', status: 'active' }],
+  goals: [{ id: 'goal-1', title: 'Encontrar clientes IA', priority: 3, status: 'active', createdAt: '2026-07-26T09:00:00.000Z' }],
   missions: [{
     id: 'mission-1',
     goalId: 'goal-1',
@@ -73,6 +75,32 @@ const snapshot: OverviewSnapshot = {
 afterEach(cleanup);
 
 describe('OverviewScreen', () => {
+  it('wires goal, mission, and opportunity actions to the Kernel action boundary', async () => {
+    const actions = {
+      createGoal: vi.fn().mockResolvedValue(undefined),
+      createMission: vi.fn().mockResolvedValue(undefined),
+      recordOpportunityFeedback: vi.fn().mockResolvedValue(undefined),
+    };
+    render(<OverviewScreen snapshot={snapshot} reload={vi.fn()} disconnect={vi.fn()} actions={actions} />);
+
+    fireEvent.change(screen.getByLabelText('Nueva meta'), { target: { value: 'Prospectar estudios locales' } });
+    fireEvent.change(screen.getByLabelText('Palabras clave'), { target: { value: 'IA, Madrid' } });
+    fireEvent.change(screen.getByLabelText('Prioridad'), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Crear meta privada' }));
+    await waitFor(() => expect(actions.createGoal).toHaveBeenCalledWith({
+      title: 'Prospectar estudios locales',
+      keywords: ['IA', 'Madrid'],
+      priority: 3,
+    }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Encontrar clientes IA' }));
+    await waitFor(() => expect(actions.createMission).toHaveBeenCalledWith('goal-1'));
+
+    const opportunities = screen.getByRole('region', { name: 'Oportunidades' });
+    fireEvent.click(within(opportunities).getByRole('button', { name: 'Útil' }));
+    await waitFor(() => expect(actions.recordOpportunityFeedback).toHaveBeenCalledWith('opportunity-1', 'useful'));
+  });
+
   it('renders the Internet Brain hero artwork without competing with Kernel status copy', () => {
     render(<OverviewScreen snapshot={snapshot} reload={vi.fn()} disconnect={vi.fn()} />);
 
@@ -119,7 +147,7 @@ describe('OverviewScreen', () => {
       />,
     );
 
-    expect(screen.getByText('Cliente potencial de automatización')).toBeTruthy();
+    expect(screen.getAllByText('Cliente potencial de automatización').length).toBeGreaterThan(0);
     expect(screen.getByText(/Model Forge no está disponible/i)).toBeTruthy();
   });
 
@@ -154,7 +182,7 @@ describe('OverviewScreen', () => {
     );
 
     expect(screen.getByText('No hay misiones activas.')).toBeTruthy();
-    expect(screen.getByText('No hay oportunidades priorizadas todavía.')).toBeTruthy();
+    expect(screen.getAllByText('No hay oportunidades priorizadas todavía.').length).toBeGreaterThan(0);
     expect(screen.getByText('No hay actividad persistida para mostrar.')).toBeTruthy();
   });
 
@@ -179,7 +207,9 @@ describe('OverviewScreen', () => {
       />,
     );
 
-    const metric = screen.getByRole('heading', { name: metricLabel }).closest('article')!;
+    const metric = screen.getAllByRole('heading', { name: metricLabel })
+      .map((heading) => heading.closest('article'))
+      .find((article) => article?.classList.contains('metric-card'))!;
     expect(metric.textContent).toContain('Datos temporalmente no disponibles');
     if (endpoint === 'missions') {
       expect(screen.getByRole('region', { name: 'Misiones activas' }).textContent).toContain('Datos temporalmente no disponibles');

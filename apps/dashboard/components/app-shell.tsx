@@ -13,6 +13,7 @@ const navigation = [
   { href: '#intelligence', label: 'Cerebro IA', icon: BrainCircuit },
   { href: '#investigations', label: 'Investigación', icon: FolderSearch },
   { href: '#knowledge', label: 'Conocimiento', icon: Boxes },
+  { href: '#opportunities', label: 'Oportunidades', icon: Search },
   { href: '#agents', label: 'Agentes', icon: Bot },
   { href: '#automations', label: 'Automatizaciones', icon: Workflow },
   { href: '#graph', label: 'Relaciones', icon: Network },
@@ -33,7 +34,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   function runCommand(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     const value = command.trim().toLocaleLowerCase('es');
-    const target = value.includes('agente') ? 'agents'
+    const target = value.includes('oportun') || value.includes('oferta') ? 'opportunities'
+      : value.includes('agente') ? 'agents'
       : value.includes('automat') ? 'automations'
       : value.includes('relac') || value.includes('grafo') ? 'graph'
       : value.includes('conoc') || value.includes('entidad') ? 'knowledge'

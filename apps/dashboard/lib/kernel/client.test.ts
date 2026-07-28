@@ -180,4 +180,26 @@ describe('KernelClient', () => {
     expect(receivedUrl).toBe('http://localhost:4310/health');
     expect(headers?.get('x-hephaestus-token')).toBeNull();
   });
+
+  it('decodes authenticated NDJSON incrementally', async () => {
+    let headers: Headers | undefined;
+    const client = clientWith(async (_input, init) => {
+      headers = new Headers(init?.headers);
+      return new Response('{"type":"delta","delta":"Hola "}\n{"type":"delta","delta":"mundo"}\n', {
+        headers: { 'content-type': 'application/x-ndjson' },
+      });
+    });
+    const events: Array<{ type: string; delta: string }> = [];
+    await client.streamNdjson('/api/chat/stream', {
+      method: 'POST',
+      body: JSON.stringify({ prompt: 'Hola' }),
+    }, (event: { type: string; delta: string }) => { events.push(event); });
+
+    expect(headers?.get('x-hephaestus-token')).toBe(token);
+    expect(headers?.get('accept')).toBe('application/x-ndjson');
+    expect(events).toEqual([
+      { type: 'delta', delta: 'Hola ' },
+      { type: 'delta', delta: 'mundo' },
+    ]);
+  });
 });

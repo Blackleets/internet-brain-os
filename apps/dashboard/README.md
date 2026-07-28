@@ -19,6 +19,12 @@ Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The dashboard connects
 only to a loopback Kernel and sends the token as `x-hephaestus-token` for
 authenticated `/api/*` requests.
 
+The owner-only hosted dashboard can also connect to the loopback Kernel. The
+Kernel permits the official Sites origin by default and continues to require
+the private API token for every `/api/*` request. Custom deployments must set a
+comma-separated `HEPHAESTUS_DASHBOARD_ORIGINS` allowlist; arbitrary web origins
+remain forbidden.
+
 ## Token handling
 
 Enter the local Kernel token in the connection screen. By default it stays only
@@ -33,10 +39,33 @@ With the default Kernel data directory, the persistent token is stored at
 `<HEPHAESTUS_DATA_DIR>/kernel-api-token`. Read it locally only when needed;
 never commit or paste its contents into documentation, issues, or logs.
 
-## Phase 1 boundary
+## Multi-model conversation
 
-Phase 1 provides an authenticated loopback connection and a truthful Overview
-of currently available Kernel read models. It is not a Knowledge Graph
-implementation, a full Investigations workflow, or a scheduler. Efesto remains
-the primary capture and per-origin-consent surface, and Replay Lab remains the
-advanced forensic surface.
+The bottom composer reads providers from the authenticated local Kernel. Users
+may register loopback Ollama or an HTTPS OpenAI-compatible provider, choose only
+models explicitly configured for that provider, and remove user-managed
+providers later. Provider credentials are submitted to the loopback Kernel,
+written only to its owner-private provider store, cleared from the form, and
+never returned by list or chat responses.
+
+An installation may also define environment-managed providers. Those appear in
+the selector but cannot be deleted from the dashboard. No provider or model is
+shown unless it is actually configured.
+
+Conversation output streams incrementally and can be stopped by the user.
+Completed exchanges are retained in a bounded owner-private Kernel conversation
+store so they can be reopened after restarting the dashboard. Cancelled partial
+responses are not committed. This history remains explicitly separate from
+Evidence, Claims, Cases, and durable memory; every model response stays
+`unverified_model_output` and `not_admitted`. Hermes remains the separately
+confirmed research/tool execution layer.
+
+## Current boundary
+
+The Control Center provides an authenticated loopback connection, truthful
+Kernel workspaces, and provider-neutral conversation. It is not yet a Knowledge
+Graph projection or general scheduler. Conversation history may carry an
+optional Case reference for navigation, but that reference does not admit the
+conversation into Case Evidence or memory. Efesto remains the primary capture
+and per-origin-consent surface, and Replay Lab remains the advanced forensic
+surface.

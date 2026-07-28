@@ -6,6 +6,7 @@ import { type OverviewSnapshot, loadOverview } from '../lib/kernel/overview';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { connectionStore } from '../lib/session/connection-store';
 import { OverviewScreen } from './overview/overview-screen';
+import type { DashboardActions } from './overview/overview-screen';
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:4000';
 
@@ -106,7 +107,21 @@ export function ConnectionGate() {
     setSnapshot(undefined);
   }
 
-  if (connection && snapshot) return <OverviewScreen snapshot={snapshot} reload={reload} disconnect={disconnect} />;
+  async function mutate(path: string, body: unknown): Promise<void> {
+    const currentConnection = connectionStore.get();
+    if (!currentConnection) throw new KernelClientError('UNAUTHORIZED');
+    const client = new KernelClient(currentConnection);
+    await client.request(path, { method: 'POST', body: JSON.stringify(body) }, parseOk);
+    await reload();
+  }
+
+  const actions: DashboardActions = {
+    createGoal: (input) => mutate('/api/goals', input),
+    createMission: (goalId) => mutate(`/api/goals/${encodeURIComponent(goalId)}/missions`, { confirmed: true, agent: 'hermes', cadence: 'manual' }),
+    recordOpportunityFeedback: (opportunityId, signal) => mutate(`/api/opportunities/${encodeURIComponent(opportunityId)}/feedback`, { signal }),
+  };
+
+  if (connection && snapshot) return <OverviewScreen snapshot={snapshot} reload={reload} disconnect={disconnect} actions={actions} />;
 
   return (
     <section className="connection-gate panel" aria-labelledby="connection-title">
@@ -129,6 +144,13 @@ export function ConnectionGate() {
       {error ? <p role="alert">{error}</p> : null}
     </section>
   );
+}
+
+function parseOk(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || (value as Record<string, unknown>).ok !== true) {
+    throw new Error('Invalid Kernel mutation response');
+  }
+  return value as Record<string, unknown>;
 }
 
 function connectionMessage(reason: unknown): string {

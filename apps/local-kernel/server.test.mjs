@@ -16,6 +16,9 @@ import { GoalManager } from './goals.mjs';
 import { AgentMissionManager } from './agent-missions.mjs';
 import { AgentMissionExecutor } from './agent-mission-executor.mjs';
 import { ModelForge } from './model-forge.mjs';
+import { ModelProviderRegistry } from './model-provider-registry.mjs';
+import { KernelChatService } from './chat-service.mjs';
+import { ChatConversationStore } from './chat-conversation-store.mjs';
 
 let server;
 const apiToken = 'test-token-that-is-at-least-32-characters';
@@ -125,6 +128,118 @@ describe('local Kernel HTTP receiver', () => {
     expect(response.status).toBe(200);
     expect(payload.forge).toMatchObject({ runtime: 'available', hardware: { ramGiB: 8, cpuCores: 4, tier: 'balanced' } });
     expect(payload.forge.models.find((model) => model.id === 'qwen3:4b')).toMatchObject({ installed: true, compatible: true });
+  });
+
+  it('keeps provider credentials behind the Kernel and returns chat without memory authority', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-chat-'));
+    const providers = new ModelProviderRegistry(join(dir, 'providers.json'));
+    const chat = new KernelChatService(providers, {
+      fetchImpl: async (_url, init) => {
+        expect(new Headers(init.headers).get('authorization')).toBe('Bearer private-test-key');
+        return Response.json({ model: 'test-model', choices: [{ message: { content: 'Respuesta segura' } }] });
+      },
+    });
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, {
+      modelProviderRegistry: providers,
+      chatService: chat,
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    expect((await fetch(`${base}/api/chat/providers`)).status).toBe(401);
+
+    const created = await fetch(`${base}/api/chat/providers`, {
+      method: 'POST',
+      headers: { ...authHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        id: 'user-provider',
+        type: 'openai-compatible',
+        label: 'User provider',
+        baseUrl: 'https://api.example.com',
+        models: ['test-model'],
+        apiKey: 'private-test-key',
+      }),
+    });
+    expect(created.status).toBe(201);
+    expect(JSON.stringify(await created.json())).not.toContain('private-test-key');
+
+    const completion = await fetch(`${base}/api/chat/completions`, {
+      method: 'POST',
+      headers: { ...authHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        providerId: 'user-provider',
+        model: 'test-model',
+        messages: [{ role: 'user', content: 'Hola' }],
+      }),
+    });
+    expect(await completion.json()).toMatchObject({
+      ok: true,
+      response: {
+        content: 'Respuesta segura',
+        evidenceStatus: 'unverified_model_output',
+        memoryStatus: 'not_admitted',
+      },
+    });
+  });
+
+  it('streams local model output and persists completed conversation history separately', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-chat-stream-'));
+    const providers = new ModelProviderRegistry(join(dir, 'providers.json'), {
+      defaults: [{
+        id: 'ollama-local',
+        type: 'ollama',
+        label: 'Ollama local',
+        baseUrl: 'http://127.0.0.1:11434',
+        models: ['qwen3:4b'],
+        managedBy: 'environment',
+      }],
+    });
+    const encoder = new TextEncoder();
+    const chat = new KernelChatService(providers, {
+      fetchImpl: async () => new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('{"model":"qwen3:4b","message":{"content":"Respuesta "},"done":false}\n'));
+          controller.enqueue(encoder.encode('{"model":"qwen3:4b","message":{"content":"local"},"done":false}\n'));
+          controller.enqueue(encoder.encode('{"model":"qwen3:4b","message":{"content":""},"done":true}\n'));
+          controller.close();
+        },
+      })),
+    });
+    const conversations = new ChatConversationStore(join(dir, 'chat-conversations.json'));
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, {
+      modelProviderRegistry: providers,
+      chatService: chat,
+      chatConversationStore: conversations,
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const response = await fetch(`${base}/api/chat/stream`, {
+      method: 'POST',
+      headers: { ...authHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        providerId: 'ollama-local',
+        model: 'qwen3:4b',
+        messages: [{ role: 'user', content: 'Hola' }],
+      }),
+    });
+    const events = (await response.text()).trim().split('\n').map((line) => JSON.parse(line));
+    expect(events).toEqual([
+      expect.objectContaining({ type: 'conversation', conversationId: expect.stringMatching(/^conversation-/) }),
+      { type: 'delta', delta: 'Respuesta ' },
+      { type: 'delta', delta: 'local' },
+      expect.objectContaining({
+        type: 'done',
+        response: expect.objectContaining({
+          content: 'Respuesta local',
+          evidenceStatus: 'unverified_model_output',
+          memoryStatus: 'not_admitted',
+        }),
+      }),
+    ]);
+    const history = await fetch(`${base}/api/chat/conversations`, { headers: authHeaders });
+    expect(await history.json()).toMatchObject({
+      ok: true,
+      conversations: [expect.objectContaining({ title: 'Hola', messageCount: 2, memoryStatus: 'not_admitted' })],
+    });
   });
 
   it('accepts extension context and returns an idempotent receipt', async () => {
@@ -499,6 +614,25 @@ describe('local Kernel HTTP receiver', () => {
     const response = await rawRequest(port, 'attacker.example');
     expect(response.status).toBe(403);
     expect(JSON.parse(response.body)).toEqual({ ok: false, code: 'HOST_FORBIDDEN' });
+  });
+
+  it('allows only explicitly trusted hosted dashboard origins', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
+    const trustedOrigin = 'https://internet-brain-os.example.test';
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, {
+      allowedDashboardOrigins: [trustedOrigin],
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+    const url = `http://127.0.0.1:${port}/health`;
+
+    const trusted = await fetch(url, { headers: { origin: trustedOrigin } });
+    expect(trusted.status).toBe(200);
+    expect(trusted.headers.get('access-control-allow-origin')).toBe(trustedOrigin);
+
+    const attacker = await fetch(url, { headers: { origin: 'https://attacker.example' } });
+    expect(attacker.status).toBe(403);
+    expect(await attacker.json()).toEqual({ ok: false, code: 'ORIGIN_FORBIDDEN' });
   });
 });
 

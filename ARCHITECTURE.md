@@ -63,11 +63,34 @@ cloud proxy, analytics transport, duplicate store, or authority to write around
 Kernel contracts. The token remains in the browser tab's memory by default and
 is never embedded in URLs or build output.
 
-Phase 1 is limited to the connection flow and truthful Overview of available
-Kernel read models. It preserves Efesto as the primary capture/consent surface
-and Replay Lab as the advanced forensic surface. Knowledge Graph projections,
-full Investigations workflows, and a scheduler are not complete and must remain
-explicitly unavailable until their Kernel contracts and implementations exist.
+The dashboard exposes the connection flow, truthful Overview, persisted Cases
+and Goals, Hermes mission state, Opportunity Inbox, existing bounded automation
+processes, and subsystem readiness. It may create Goals, launch an explicitly
+confirmed manual Hermes mission, and record private Opportunity feedback only
+through existing authenticated Kernel contracts. It preserves Efesto as the
+primary capture/consent surface and Replay Lab as the advanced forensic surface.
+Knowledge Graph projections and a general scheduler are not complete and must
+remain explicitly unavailable until their Kernel contracts and implementations
+exist; the dashboard must not invent graph records, schedules, progress, or
+future executions.
+
+The persistent bottom composer is a provider-neutral conversation surface.
+Authenticated users may register loopback Ollama or HTTPS OpenAI-compatible
+providers; credentials are accepted only by the loopback Kernel, persisted in
+an owner-private local file, omitted from every read response, and cleared from
+the browser form after submission. Environment-managed providers remain
+read-only in the dashboard. Chat output is always marked unverified and not
+admitted to memory. A model response cannot become Evidence, a Claim, or durable
+memory without the existing explicit Kernel gates, and Hermes remains the
+separate research/tool execution boundary.
+
+Conversation transport supports incremental NDJSON streaming with caller
+cancellation. Ollama NDJSON and OpenAI-compatible SSE are translated behind the
+same local adapter boundary. Completed exchanges are stored in a bounded,
+owner-private `chat-conversations.json` file and may optionally retain a Case
+reference for navigation. This store is conversation history, not Hephaestus
+memory: partial cancelled output is not committed, and no stored message gains
+Evidence, Claim, admission, or memory authority.
 
 Accepted public-page Evidence passes through an extensible deterministic Opportunity classifier in the local Kernel. It promotes only sufficiently strong, explainable signals across work, grants, clients, savings, food, public aid, learning, events, housing, travel, collaboration, rewards, and useful tools. A promoted record retains its Case and Evidence identifiers, canonical public source, category, concrete benefit type, bounded relevance score, matching signals, raw deadline text when present, and a cautious next action. Ordinary captures remain Evidence and do not pollute the Opportunity Inbox. The authenticated local Inbox is rendered by the extension and synchronized as separate Opportunity notes into the user's vault. This classifier is a lead filter, not a verification, financial-advice, or recommendation engine; Hermes investigation and human review remain separate stages.
 
