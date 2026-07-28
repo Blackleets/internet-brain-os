@@ -10,23 +10,23 @@ afterEach(() => {
 });
 
 describe('AppShell', () => {
-  it('exposes only Phase 1 navigation and marks future spaces as unavailable', () => {
+  it('exposes working in-page navigation and command search', () => {
     render(<AppShell><h1>Overview</h1></AppShell>);
     expect(screen.getByRole('navigation', { name: 'Primary' })).toBeTruthy();
-    const overview = screen.getByRole('link', { name: 'Resumen' });
-    expect(overview.getAttribute('href')).toBe('/');
+    const overview = screen.getByRole('link', { name: 'Home' });
+    expect(overview.getAttribute('href')).toBe('#overview');
     expect(overview.getAttribute('aria-current')).toBe('page');
-    for (const name of ['Investigaciones', 'Conocimiento', 'Agent Hub', 'Oportunidades', 'Automatizaciones', 'Sistema']) {
-      const unavailable = screen.getByRole('link', { name });
-      expect(unavailable.hasAttribute('href')).toBe(false);
-      expect(unavailable.getAttribute('aria-disabled')).toBe('true');
+    for (const name of ['Cerebro IA', 'Investigación', 'Conocimiento', 'Agentes', 'Automatizaciones', 'Relaciones', 'Sistema']) {
+      const link = screen.getByRole('link', { name });
+      expect(link.getAttribute('href')?.startsWith('#')).toBe(true);
+      expect(link.getAttribute('aria-disabled')).toBeNull();
     }
     expect(screen.getByRole('search', { name: 'Command center' })).toBeTruthy();
     const command = screen.getByLabelText('Comandos') as HTMLInputElement;
-    expect(command.disabled).toBe(true);
-    expect(command.placeholder).toBe('Próximamente');
-    expect(screen.queryByText('Ctrl K')).toBeNull();
-    expect(screen.getAllByText('Kernel sin conexión')).toHaveLength(2);
+    expect(command.disabled).toBe(false);
+    expect(command.placeholder).toContain('Pregunta');
+    expect(screen.getByText('Ctrl + K')).toBeTruthy();
+    expect(screen.getByText('Kernel sin conexión')).toBeTruthy();
     expect(screen.getByRole('main').textContent).toContain('Overview');
   });
 
@@ -42,9 +42,9 @@ describe('AppShell', () => {
     render(<AppShell><h1>Overview</h1></AppShell>);
 
     act(() => connectionStore.set({ baseUrl: 'http://127.0.0.1:4000', token: 'token-local' }));
-    expect(screen.getAllByText('Kernel conectado')).toHaveLength(2);
+    expect(screen.getByText('Kernel conectado')).toBeTruthy();
 
     act(() => connectionStore.clear());
-    expect(screen.getAllByText('Kernel sin conexión')).toHaveLength(2);
+    expect(screen.getByText('Kernel sin conexión')).toBeTruthy();
   });
 });
