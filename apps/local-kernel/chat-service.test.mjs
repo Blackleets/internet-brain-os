@@ -47,4 +47,41 @@ describe('KernelChatService', () => {
     })).rejects.toMatchObject({ code: 'INVALID_CHAT_INPUT' });
     expect(fetchImpl).not.toHaveBeenCalled();
   });
+
+  it('streams Ollama deltas and supports caller cancellation', async () => {
+    const ollama = { ...provider, id: 'ollama-local', type: 'ollama', baseUrl: 'http://127.0.0.1:11434', models: ['qwen3:4b'] };
+    const encoder = new TextEncoder();
+    const fetchImpl = vi.fn(async (_url, init) => {
+      expect(JSON.parse(init.body)).toMatchObject({ model: 'qwen3:4b', stream: true });
+      return new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('{"model":"qwen3:4b","message":{"content":"Hola "},"done":false}\n'));
+          controller.enqueue(encoder.encode('{"model":"qwen3:4b","message":{"content":"mundo"},"done":false}\n'));
+          controller.enqueue(encoder.encode('{"model":"qwen3:4b","message":{"content":""},"done":true,"prompt_eval_count":2,"eval_count":3}\n'));
+          controller.close();
+        },
+      }));
+    });
+    const deltas = [];
+    const service = new KernelChatService({ get: vi.fn(async () => ollama) }, { fetchImpl });
+    await expect(service.stream({
+      providerId: 'ollama-local',
+      model: 'qwen3:4b',
+      messages: [{ role: 'user', content: 'Hola' }],
+    }, { onDelta: (delta) => deltas.push(delta) })).resolves.toMatchObject({
+      content: 'Hola mundo',
+      usage: { promptTokens: 2, completionTokens: 3, totalTokens: 5 },
+      evidenceStatus: 'unverified_model_output',
+      memoryStatus: 'not_admitted',
+    });
+    expect(deltas).toEqual(['Hola ', 'mundo']);
+
+    const abort = new AbortController();
+    abort.abort();
+    await expect(service.stream({
+      providerId: 'ollama-local',
+      model: 'qwen3:4b',
+      messages: [{ role: 'user', content: 'Hola' }],
+    }, { signal: abort.signal })).rejects.toMatchObject({ code: 'CHAT_CANCELLED' });
+  });
 });
