@@ -11,3 +11,7 @@ coverage/
 apps/extension/dist/
 efesto-extension.zip
 
+# Runtime state + secrets (never commit)
+.hephaestus/
+.hermes/
+
