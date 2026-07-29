@@ -40,14 +40,15 @@ describe('one-click Hermes runtime entrypoints', () => {
     expect(source).toContain("status.classList.remove('error')");
   });
 
-  it('advertises the bundled one-click Hermes worker without enabling built Kernel ingestion', () => {
+  it('advertises the one-click Hermes worker only when a real runtime is detected', () => {
     const source = readFileSync(resolve('apps/local-kernel/one-click-kernel.mjs'), 'utf8');
     const serverSource = readFileSync(resolve('apps/local-kernel/server.mjs'), 'utf8');
-    expect(source).toContain("HEPHAESTUS_HERMES_READY: '1'");
+    expect(source).toContain("hermesRuntime.available ? '1' : '0'");
+    expect(source).toContain('await detectHermesRuntime()');
     expect(source).not.toContain('HEPHAESTUS_HERMES_SECRET:');
     expect(serverSource).toContain("process.env.HEPHAESTUS_HERMES_READY === '1'");
     expect(serverSource).toContain('hermesWorkerReady || Boolean(hermes)');
-    expect(source).toContain('configureBundledHermes()');
+    expect(source).not.toContain("candidate && existsSync(candidate) ? candidate : 'hermes'");
   });
 
   it('keeps one-click Hermes execution bounded after observable worker failures', () => {

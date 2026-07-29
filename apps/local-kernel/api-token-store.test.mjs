@@ -2,7 +2,7 @@ import { chmod, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadOrCreateApiToken } from './api-token-store.mjs';
+import { loadExistingApiToken, loadOrCreateApiToken } from './api-token-store.mjs';
 
 function expectPrivateMode(mode) {
   if (process.platform === 'win32') return;
@@ -18,6 +18,15 @@ describe('local API token store', () => {
     expect(second).toMatchObject({ token: first.token, source: 'file' });
     expectPrivateMode((await stat(file)).mode);
     expect((await readFile(file, 'utf8')).trim()).toBe(first.token);
+  });
+
+  it('loads an existing private token without creating a missing file', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-token-'));
+    const file = join(dir, 'kernel-api-token');
+    const token = 'a'.repeat(64);
+    await writeFile(file, `${token}\n`, { mode: 0o600 });
+    await expect(loadExistingApiToken(file)).resolves.toMatchObject({ token, source: 'file', filePath: file });
+    await expect(loadExistingApiToken(join(dir, 'missing'))).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('rotates only when explicitly requested and validates environment overrides', async () => {

@@ -7,10 +7,8 @@ export async function loadOrCreateApiToken(filePath, options = {}) {
   const rotated = options.rotate === true;
   if (rotated) await rotateToken(filePath);
   try {
-    await assertPrivateFile(filePath);
-    const token = validateApiToken((await readFile(filePath, 'utf8')).trim());
-    await chmod(filePath, 0o600);
-    return { token, source: rotated ? 'rotated' : 'file', filePath };
+    const existing = await loadExistingApiToken(filePath);
+    return { ...existing, source: rotated ? 'rotated' : 'file' };
   } catch (error) {
     if (error?.code !== 'ENOENT') throw error;
   }
@@ -26,6 +24,13 @@ export async function loadOrCreateApiToken(filePath, options = {}) {
     if (error?.code !== 'EEXIST') throw error;
     return loadOrCreateApiToken(filePath);
   }
+}
+
+export async function loadExistingApiToken(filePath) {
+  await assertPrivateFile(filePath);
+  const token = validateApiToken((await readFile(filePath, 'utf8')).trim());
+  await chmod(filePath, 0o600);
+  return { token, source: 'file', filePath };
 }
 
 export function validateApiToken(value) {

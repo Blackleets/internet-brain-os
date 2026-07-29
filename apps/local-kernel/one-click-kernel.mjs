@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
-import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
+import { detectHermesRuntime } from './hermes-runtime.mjs';
 import { runHermesMissionWorker } from './hermes-mission-worker.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
@@ -21,7 +21,8 @@ if (!Number.isInteger(port) || port < 1 || port > 65535 || !Number.isInteger(int
   throw new Error('Kernel ports must be distinct valid TCP ports');
 }
 
-configureBundledHermes();
+const hermesRuntime = await detectHermesRuntime();
+if (hermesRuntime.available) process.env.HEPHAESTUS_HERMES_EXECUTABLE = hermesRuntime.executable;
 
 const kernel = spawn(process.execPath, [resolve('apps/local-kernel/server.mjs')], {
   shell: false,
@@ -31,7 +32,7 @@ const kernel = spawn(process.execPath, [resolve('apps/local-kernel/server.mjs')]
     ...process.env,
     HEPHAESTUS_HOST: '127.0.0.1',
     HEPHAESTUS_PORT: String(internalPort),
-    HEPHAESTUS_HERMES_READY: '1',
+    HEPHAESTUS_HERMES_READY: hermesRuntime.available ? '1' : '0',
   },
 });
 
@@ -78,7 +79,11 @@ proxy = createServer(async (request, response) => {
 
 proxy.listen(port, host, () => {
   console.log(`Hephaestus one-click Kernel listening on http://${host}:${port}`);
-  console.log('Efesto Research now starts Hermes automatically; manual mission-worker commands are not required.');
+  if (hermesRuntime.available) {
+    console.log('Efesto Research starts the detected Hermes runtime automatically.');
+  } else {
+    console.log('Hermes runtime was not found. Install Hermes or configure HEPHAESTUS_HERMES_EXECUTABLE.');
+  }
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
@@ -112,15 +117,6 @@ async function runMissionUntilTerminal(missionId, apiToken) {
     console.log(`Hermes mission ${missionId}: ${result.status}`);
     if (result.status !== 'failed') break;
   }
-}
-
-function configureBundledHermes() {
-  if (process.env.HEPHAESTUS_HERMES_EXECUTABLE) return;
-  const localAppData = process.env.LOCALAPPDATA;
-  const candidate = localAppData
-    ? join(localAppData, 'hermes', 'hermes-agent', 'venv', 'Scripts', 'hermes.exe')
-    : undefined;
-  process.env.HEPHAESTUS_HERMES_EXECUTABLE = candidate && existsSync(candidate) ? candidate : 'hermes';
 }
 
 async function waitForKernel() {
