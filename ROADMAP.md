@@ -97,9 +97,12 @@ Design baseline:
 
 - [x] Define the deterministic quarantine and toxic-memory lifecycle in `docs/memory-quarantine-lifecycle.md`.
 - [x] Separate observed records, deterministic interpretation, recommendations, and human decisions.
-- [x] Define Kernel authority, founder gates, reversible recovery, idempotent receipts, and startup reconciliation.
+- [x] Bind every approval-gated transition to immutable approval decisions and an exact policy version.
+- [x] Keep rejected, superseded, and revoked memories terminal; disputes use separate recovery-review records and new linked candidates.
+- [x] Define Kernel authority, founder gates, idempotent receipts, and startup reconciliation.
 - [ ] Implement pure lifecycle types and transition validation.
-- [ ] Add append-only persistence with optimistic revisions and request binding.
+- [ ] Add append-only persistence with optimistic revisions, request binding, approval provenance, and corruption checks.
+- [ ] Add a separate terminal recovery-review repository.
 - [ ] Add deterministic quarantine-signal evaluation.
 - [ ] Gate reasoning retrieval and reconcile lifecycle state at startup.
 - [ ] Add authenticated Replay Lab inspection and human-review actions.
@@ -108,9 +111,10 @@ Design baseline:
 Success criteria:
 
 - Only admitted memory can be reused by reasoning.
-- Quarantine suspends reuse without deleting Evidence, provenance, or history.
+- Quarantine suspends reuse without deleting Evidence, provenance, approvals, or history.
 - External agents cannot mutate durable-memory authority.
-- Every lifecycle transition is explicit, idempotent, attributable, and recoverable.
+- Every lifecycle transition is explicit, idempotent, attributable, policy-bound, and recoverable.
+- Terminal memory identities can never be reactivated through a generic quarantine path.
 - Corruption and missing references fail closed without fabricating history.
 
 ## Phase 4 - Monitoring and Alerts
