@@ -89,6 +89,34 @@ Success criteria:
 - System can answer: what do we know about this company/product/supplier?
 - Repeated investigations reuse previous knowledge.
 
+## Phase 3.5 - Memory Safety and Quarantine
+
+Goal: prevent unsupported, contradicted, corrupt, or revoked durable memory from silently re-entering reasoning.
+
+Design baseline:
+
+- [x] Define the deterministic quarantine and toxic-memory lifecycle in `docs/memory-quarantine-lifecycle.md`.
+- [x] Separate observed records, deterministic interpretation, recommendations, and human decisions.
+- [x] Bind every approval-gated transition to immutable approval decisions and an exact policy version.
+- [x] Keep rejected, superseded, and revoked memories terminal; disputes use separate recovery-review records and new linked candidates.
+- [x] Define Kernel authority, founder gates, idempotent receipts, and startup reconciliation.
+- [ ] Implement pure lifecycle types and transition validation.
+- [ ] Add append-only persistence with optimistic revisions, request binding, approval provenance, and corruption checks.
+- [ ] Add a separate terminal recovery-review repository.
+- [ ] Add deterministic quarantine-signal evaluation.
+- [ ] Gate reasoning retrieval and reconcile lifecycle state at startup.
+- [ ] Add authenticated Replay Lab inspection and human-review actions.
+- [ ] Migrate legacy admitted memories through reviewed genesis receipts.
+
+Success criteria:
+
+- Only admitted memory can be reused by reasoning.
+- Quarantine suspends reuse without deleting Evidence, provenance, approvals, or history.
+- External agents cannot mutate durable-memory authority.
+- Every lifecycle transition is explicit, idempotent, attributable, policy-bound, and recoverable.
+- Terminal memory identities can never be reactivated through a generic quarantine path.
+- Corruption and missing references fail closed without fabricating history.
+
 ## Phase 4 - Monitoring and Alerts
 
 Goal: detect change over time.
