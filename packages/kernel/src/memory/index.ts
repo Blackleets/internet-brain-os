@@ -8,6 +8,11 @@ export {
   isTerminalMemoryAuthorityState,
   validateMemoryAuthorityTransition,
 } from './memory-authority-lifecycle';
+export {
+  InMemoryMemoryAuthorityReceiptRepository,
+  MemoryAuthorityReceiptConflictError,
+  verifyMemoryAuthorityReceiptIntegrity,
+} from './memory-authority-receipt-repository';
 export type { CreateMemoryInput } from './memory-manager';
 export type {
   MemoryLifecycleAction,
@@ -23,6 +28,12 @@ export type {
   MemoryAuthorityTransitionRequest,
   MemoryAuthorityTransitionValidation,
 } from './memory-authority-lifecycle';
+export type {
+  MemoryAuthorityReceiptAppendResult,
+  MemoryAuthorityReceiptPayload,
+  MemoryAuthorityReceiptRepository,
+  MemoryAuthorityTransitionReceipt,
+} from './memory-authority-receipt-repository';
 export type { MemoryEventLog } from './memory-event-log';
 export type { MemoryConsolidationGroup } from './memory-consolidation';
 export type {
