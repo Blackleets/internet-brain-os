@@ -81,7 +81,9 @@ interface MemoryTransitionReceipt {
   to: MemoryLifecycleState;
   reasonCode: MemoryLifecycleReasonCode;
   reason: string;
-  actor: { id: string; type: 'kernel' | 'human' | 'founder' | 'recovery' };
+  executor: { id: string; type: 'kernel' | 'human' | 'founder' | 'recovery' };
+  approvalDecisionIds: string[];
+  policyVersion: string;
   evidenceIds: string[];
   contradictionDecisionIds: string[];
   admissionRecordIds: string[];
@@ -94,6 +96,8 @@ interface MemoryTransitionReceipt {
   integrityDigest: string;
 }
 ```
+
+`executor` records who appended the transition. `approvalDecisionIds` records the immutable human/founder decisions that authorized it, separately from execution. Every receipt records the exact `policyVersion` evaluated. A transition whose gate requires approval is invalid when the required approval reference is missing, stale, for another memory/revision, or issued under an incompatible policy.
 
 Free-text `reason` is bounded and sanitized. It explains the code but never replaces structured references.
 
@@ -114,6 +118,29 @@ interface MemoryQuarantineRecommendation {
 ```
 
 A recommendation becomes stale when the memory revision or referenced Evidence changes. Model-generated text may be retained only as explicitly uncertain supporting analysis; deterministic signals and persisted references remain mandatory.
+
+### 3.4 Terminal recovery review
+
+A dispute or corruption affecting a `superseded` or `revoked` record is handled outside the normal lifecycle graph. The terminal memory keeps its terminal state and remains non-reusable.
+
+```ts
+interface MemoryTerminalRecoveryReview {
+  recoveryReviewId: string;
+  terminalMemoryId: string;
+  terminalState: 'superseded' | 'revoked';
+  openedBy: { id: string; type: 'human' | 'founder' | 'recovery' };
+  reasonCode: 'supersession_dispute' | 'revocation_dispute' | 'corrupt_link' | 'operator_recovery';
+  referencedReceiptIds: string[];
+  policyVersion: string;
+  openedAt: string;
+  status: 'open' | 'resolved' | 'cancelled';
+  resolutionDecisionId?: string;
+  replacementCandidateMemoryId?: string;
+  integrityDigest: string;
+}
+```
+
+A recovery review cannot alter the terminal memory's lifecycle state. Restoration, when justified, creates a new candidate with a new `memoryId` or explicit generation and an immutable link to the terminal record.
 
 ## 4. State semantics
 
@@ -142,11 +169,9 @@ stateDiagram-v2
     admitted --> quarantined
     admitted --> superseded
     admitted --> revoked
-    superseded --> quarantined
-    revoked --> quarantined
 ```
 
-Every transition requires optimistic revision matching, an idempotency key, actor authorization, required references, and an append-only receipt.
+Every transition requires optimistic revision matching, an idempotency key, actor authorization, required references, the governing policy version, and an append-only receipt. When policy requires human or founder approval, the receipt must reference the immutable approval decision separately from the executor.
 
 ### 5.1 Valid transitions and gates
 
@@ -161,23 +186,21 @@ Every transition requires optimistic revision matching, an idempotency key, acto
 | admitted → quarantined | New persisted risk signal | Kernel may suspend reuse automatically; no content mutation |
 | admitted → superseded | Replacement memory is already admitted and explicitly linked | Human |
 | admitted → revoked | Invalidated Evidence, admission error, policy breach, or explicit legal/safety hold | Human; founder for permanent high-impact revocation |
-| superseded → quarantined | Replacement link is corrupt/disputed or recovery is required | Human/recovery actor |
-| revoked → quarantined | Revocation is disputed and a controlled review is opened | Founder or recovery actor |
 
 ### 5.2 Invalid transitions
 
 All transitions not listed above are invalid, including:
 
 - rejected → admitted/proposed/quarantined;
-- superseded → admitted/proposed/revoked;
-- revoked → admitted/proposed/superseded;
+- superseded → any lifecycle state;
+- revoked → any lifecycle state;
 - proposed → superseded/revoked;
 - quarantined → superseded/revoked;
 - any state → the same state as a new transition.
 
 A repeated request with the same `requestId` and identical normalized payload returns the original receipt. Reusing the same `requestId` with different content is a conflict.
 
-Rejected, superseded, and revoked records are terminal for direct reuse. Reconsideration creates a new candidate linked to the prior record; it never rewrites terminal history. The only exception is the explicit terminal-to-quarantine recovery path above, which opens investigation but still does not restore reuse authority.
+Rejected, superseded, and revoked records are terminal for direct reuse. Reconsideration creates a new candidate linked to the prior record; it never rewrites terminal history. A dispute concerning a superseded or revoked record creates a separate terminal recovery review and cannot move that record into `quarantined` or `admitted`.
 
 ## 6. Quarantine signals
 
@@ -213,7 +236,10 @@ The following alone are insufficient:
 | Reject candidate | No | Deterministic hard failure only | Required otherwise | Yes |
 | Supersede admitted memory | No | Validates and records | Required | Yes |
 | Revoke admitted memory | No | May emergency-quarantine, not silently revoke | Required | Required for permanent/high-impact cases |
+| Open terminal recovery review | No | Validates and records only | Required | Required for revoked-memory disputes |
 | Delete content/history | No | No autonomous authority | Request only | Explicit founder approval plus retention/legal checks |
+
+For every action requiring approval, the approval decision and its policy version are immutable inputs to the transition validator. The Kernel executor cannot substitute its own identity for the approving principal.
 
 Deletion is outside the lifecycle states. If ever implemented, it must be a separate destructive workflow with preview, exact targets, retention constraints, recovery/export plan, two-step approval, and a tombstone receipt. Evidence and audit receipts should normally be retained even when content must be redacted.
 
@@ -221,12 +247,12 @@ Deletion is outside the lifecycle states. If ever implemented, it must be a sepa
 
 - **Quarantine**: restore through a new reviewed transition to `proposed` or `admitted`; never erase the quarantine receipt.
 - **Rejection**: create a new linked candidate after new Evidence; do not reopen the rejected record.
-- **Supersession**: if the replacement becomes unsafe, quarantine the replacement and the superseded record for review. Do not silently reactivate the old memory.
-- **Revocation**: open a new candidate or use `revoked → quarantined` for controlled dispute/recovery. Restoration requires a new admission receipt and, if implemented later, should produce a new memory identity or explicit generation.
-- **Corrupt projection**: rebuild current state solely from validated receipts. If receipts conflict or a digest fails, fail closed to non-reusable quarantine in a recovery projection without fabricating a normal lifecycle receipt.
+- **Supersession**: if the replacement becomes unsafe, quarantine the replacement. Open a terminal recovery review for the superseded record when its replacement link is disputed; never reactivate the old memory.
+- **Revocation**: open a terminal recovery review. Any restoration requires a new candidate with a new memory identity or explicit generation, linked to the revoked record and admitted through the complete current policy.
+- **Corrupt projection**: rebuild current state solely from validated receipts. If receipts conflict or a digest fails, fail closed to a non-reusable recovery projection without fabricating a normal lifecycle receipt.
 - **Missing dependency**: mark startup reconciliation blocked, exclude the memory from reuse, and expose exact missing reference IDs through sanitized diagnostics.
 
-No recovery path may discard Evidence, provenance, or earlier receipts.
+No recovery path may discard Evidence, provenance, approvals, policy versions, or earlier receipts.
 
 ## 9. Startup reconciliation
 
@@ -235,11 +261,13 @@ Before memory reuse is enabled, the Kernel should eventually verify:
 1. one immutable memory payload matches its content digest;
 2. transition receipts form one continuous revision chain;
 3. every `from` matches the prior projected state;
-4. all Evidence, contradiction, admission, and supersession references resolve;
-5. terminal records are excluded from active-memory indexes;
-6. quarantined records cannot enter reasoning retrieval;
-7. supersession links are acyclic and point to an admitted replacement;
-8. duplicate request IDs have identical normalized payloads.
+4. all Evidence, contradiction, admission, approval, and supersession references resolve;
+5. every receipt policy version exists and is compatible with the referenced approval decisions;
+6. terminal records are excluded from active-memory indexes;
+7. quarantined records cannot enter reasoning retrieval;
+8. supersession links are acyclic and point to an admitted replacement;
+9. duplicate request IDs have identical normalized payloads;
+10. terminal recovery reviews never mutate the terminal lifecycle projection.
 
 Failures are classified:
 
@@ -248,7 +276,7 @@ Failures are classified:
 - **receipt corruption/digest mismatch**: fail closed, preserve bytes, require recovery authority;
 - **ambiguous chain/fork**: block reuse; never choose a branch by timestamp alone.
 
-Startup reconciliation must not emit ordinary lifecycle transitions merely because storage is corrupt. Recovery actions receive separate recovery receipts.
+Startup reconciliation must not emit ordinary lifecycle transitions merely because storage is corrupt. Recovery actions receive separate recovery receipts or terminal recovery-review records.
 
 ## 10. Replay Lab projection
 
@@ -258,9 +286,10 @@ Replay Lab must display three distinct layers:
 
 - current projected lifecycle state;
 - exact transition receipts;
-- referenced Evidence and decisions;
-- actor, timestamp, reason code, and revision;
-- integrity/reconciliation status.
+- referenced Evidence, approvals, policy versions, and decisions;
+- executor, approving principal, timestamp, reason code, and revision;
+- integrity/reconciliation status;
+- terminal recovery reviews without presenting them as lifecycle transitions.
 
 ### Deterministic interpretation
 
@@ -281,6 +310,7 @@ Safe language:
 - "Reuse suspended after unresolved contradiction signal."
 - "Kernel recommends quarantine; human review pending."
 - "Evidence reference is missing; reuse blocked during reconciliation."
+- "Terminal record remains revoked; recovery review opened for a new linked candidate."
 
 Forbidden language without direct persisted proof:
 
@@ -308,7 +338,9 @@ An existing admitted memory without a lifecycle record requires a migration plan
 - Duplicate identical `requestId`: return original receipt.
 - Duplicate altered `requestId`: reject as idempotency conflict.
 - Missing actor authority: reject and record a bounded security event, not a lifecycle transition.
+- Missing/invalid required approval decision or policy version: reject before append.
 - Invalid transition: reject with current state and allowed next states.
+- Attempted transition from `rejected`, `superseded`, or `revoked`: reject and direct the caller to create a linked candidate or terminal recovery review.
 - Partial write: no projected state change unless receipt append and durability barrier succeed.
 - Projection write failure after durable receipt: rebuild projection; do not append a compensating lifecycle transition.
 - Notification/UI failure: lifecycle state remains authoritative and is replayable.
@@ -317,24 +349,27 @@ An existing admitted memory without a lifecycle record requires a migration plan
 ## 13. Smallest follow-up implementation issues
 
 1. **Lifecycle types and pure transition validator**  
-   Add the enums, transition table, authorization checks, and exhaustive unit tests. No persistence.
+   Add the enums, transition table, authorization checks, approval-decision/policy binding, terminal-state guards, and exhaustive unit tests. No persistence.
 
 2. **Append-only repository and idempotent receipts**  
-   Persist lifecycle records with optimistic revisions, request binding, corruption detection, and defensive copies.
+   Persist lifecycle records with optimistic revisions, request binding, approval provenance, corruption detection, and defensive copies.
 
-3. **Quarantine signal evaluator**  
+3. **Terminal recovery-review repository**  
+   Persist disputes separately from lifecycle state and require a new linked candidate for any restoration.
+
+4. **Quarantine signal evaluator**  
    Derive recommendations only from existing Evidence, contradiction, admission, policy, and integrity records.
 
-4. **Startup reconciliation and retrieval gate**  
+5. **Startup reconciliation and retrieval gate**  
    Fail closed, rebuild projections, and exclude non-admitted memory from reasoning retrieval.
 
-5. **Authenticated local API and Replay Lab read model**  
-   Expose observed facts, deterministic interpretation, approvals, and safe operator actions.
+6. **Authenticated local API and Replay Lab read model**  
+   Expose observed facts, deterministic interpretation, approvals, terminal reviews, and safe operator actions.
 
-6. **Legacy admitted-memory migration**  
+7. **Legacy admitted-memory migration**  
    Produce reviewed genesis receipts linked to existing admission records with dry-run and rollback evidence.
 
-7. **Destructive retention workflow, if legally required**  
+8. **Destructive retention workflow, if legally required**  
    Design separately with founder approval, exact-target preview, tombstones, and recovery/export constraints.
 
 Each issue must preserve the rule that external agents propose Evidence while the Kernel owns all durable-memory authority.
