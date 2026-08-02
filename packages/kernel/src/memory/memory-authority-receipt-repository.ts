@@ -17,6 +17,7 @@ export interface MemoryAuthorityReceiptPayload {
   readonly evidenceIds?: readonly string[];
   readonly contradictionDecisionIds?: readonly string[];
   readonly admissionRecordIds?: readonly string[];
+  readonly quarantineSignalIds?: readonly string[];
   readonly replacementMemoryId?: string;
   readonly reasonCode: string;
   readonly reason: string;
@@ -60,13 +61,13 @@ export class InMemoryMemoryAuthorityReceiptRepository implements MemoryAuthority
   private readonly receiptsByRequest = new Map<string, MemoryAuthorityTransitionReceipt>();
 
   append(payload: MemoryAuthorityReceiptPayload, occurredAt: string): MemoryAuthorityReceiptAppendResult {
-    validatePayload(payload, occurredAt);
     const normalized = normalizePayload(payload);
+    const normalizedOccurredAt = required(occurredAt, 'occurredAt');
     const payloadDigest = digest(normalized);
-    const existing = this.receiptsByRequest.get(payload.requestId);
+    const existing = this.receiptsByRequest.get(normalized.requestId);
 
     if (existing) {
-      if (existing.payloadDigest !== payloadDigest || existing.memoryId !== payload.memoryId) {
+      if (existing.payloadDigest !== payloadDigest || existing.memoryId !== normalized.memoryId) {
         throw new MemoryAuthorityReceiptConflictError(
           'ALTERED_REPLAY',
           'The requestId was already bound to a different normalized transition payload.',
@@ -75,32 +76,29 @@ export class InMemoryMemoryAuthorityReceiptRepository implements MemoryAuthority
       return { kind: 'replayed', receipt: cloneReceipt(existing) };
     }
 
-    const chain = this.receiptsByMemory.get(payload.memoryId) ?? [];
+    const chain = this.receiptsByMemory.get(normalized.memoryId) ?? [];
     const latest = chain.at(-1);
     const currentRevision = latest?.resultingRevision ?? 0;
     const currentState = latest?.to;
 
-    if (payload.expectedRevision !== currentRevision) {
+    if (normalized.expectedRevision !== currentRevision) {
       throw new MemoryAuthorityReceiptConflictError(
         'REVISION_CONFLICT',
-        `Expected revision ${payload.expectedRevision} does not match current revision ${currentRevision}.`,
+        `Expected revision ${normalized.expectedRevision} does not match current revision ${currentRevision}.`,
       );
     }
-    if (latest && payload.from !== currentState) {
+    if (latest && normalized.from !== currentState) {
       throw new MemoryAuthorityReceiptConflictError(
         'STATE_CONFLICT',
-        `Receipt chain projects ${currentState}, not ${payload.from}.`,
+        `Receipt chain projects ${currentState}, not ${normalized.from}.`,
       );
     }
-    if (!latest && payload.expectedRevision !== 0) {
-      throw new MemoryAuthorityReceiptConflictError('INVALID_REVISION', 'The first receipt must start at revision 0.');
-    }
 
-    const resultingRevision = payload.expectedRevision + 1;
+    const resultingRevision = normalized.expectedRevision + 1;
     const receiptBase = {
-      ...clonePayload(payload),
+      ...normalized,
       resultingRevision,
-      occurredAt,
+      occurredAt: normalizedOccurredAt,
       payloadDigest,
     };
     const integrityDigest = digest(receiptBase);
@@ -110,18 +108,18 @@ export class InMemoryMemoryAuthorityReceiptRepository implements MemoryAuthority
       integrityDigest,
     };
 
-    chain.push(receipt);
-    this.receiptsByMemory.set(payload.memoryId, chain);
-    this.receiptsByRequest.set(payload.requestId, receipt);
-    return { kind: 'appended', receipt: cloneReceipt(receipt) };
+    const stored = cloneReceipt(receipt);
+    this.receiptsByMemory.set(normalized.memoryId, [...chain, stored]);
+    this.receiptsByRequest.set(normalized.requestId, stored);
+    return { kind: 'appended', receipt: cloneReceipt(stored) };
   }
 
   list(memoryId: string): readonly MemoryAuthorityTransitionReceipt[] {
-    return (this.receiptsByMemory.get(memoryId) ?? []).map(cloneReceipt);
+    return (this.receiptsByMemory.get(memoryId.trim()) ?? []).map(cloneReceipt);
   }
 
   findByRequestId(requestId: string): MemoryAuthorityTransitionReceipt | undefined {
-    const receipt = this.receiptsByRequest.get(requestId);
+    const receipt = this.receiptsByRequest.get(requestId.trim());
     return receipt ? cloneReceipt(receipt) : undefined;
   }
 }
@@ -131,28 +129,49 @@ export function verifyMemoryAuthorityReceiptIntegrity(receipt: MemoryAuthorityTr
   return digest(receiptBase) === integrityDigest;
 }
 
-function validatePayload(payload: MemoryAuthorityReceiptPayload, occurredAt: string): void {
-  if (!payload.memoryId.trim() || !payload.requestId.trim() || !payload.policyVersion.trim()) {
-    throw new MemoryAuthorityReceiptConflictError('INVALID_INPUT', 'memoryId, requestId, and policyVersion are required.');
+function normalizePayload(payload: MemoryAuthorityReceiptPayload): MemoryAuthorityReceiptPayload {
+  if (!Number.isSafeInteger(payload.expectedRevision) || payload.expectedRevision < 0) {
+    throw new MemoryAuthorityReceiptConflictError(
+      'INVALID_REVISION',
+      'expectedRevision must be a non-negative safe integer.',
+    );
   }
-  if (!Number.isInteger(payload.expectedRevision) || payload.expectedRevision < 0) {
-    throw new MemoryAuthorityReceiptConflictError('INVALID_REVISION', 'expectedRevision must be a non-negative integer.');
-  }
-  if (!occurredAt.trim()) {
-    throw new MemoryAuthorityReceiptConflictError('INVALID_INPUT', 'occurredAt is required.');
-  }
-}
 
-function normalizePayload(payload: MemoryAuthorityReceiptPayload): unknown {
   return {
-    ...clonePayload(payload),
-    approvalDecisions: [...(payload.approvalDecisions ?? [])]
-      .map((decision) => ({ ...decision, approver: { ...decision.approver } }))
-      .sort((a, b) => a.decisionId.localeCompare(b.decisionId)),
+    memoryId: required(payload.memoryId, 'memoryId'),
+    from: payload.from,
+    to: payload.to,
+    requestId: required(payload.requestId, 'requestId'),
+    expectedRevision: payload.expectedRevision,
+    executor: normalizeActor(payload.executor),
+    policyVersion: required(payload.policyVersion, 'policyVersion'),
+    approvalDecisions: normalizeApprovals(payload.approvalDecisions),
     evidenceIds: normalizeIds(payload.evidenceIds),
     contradictionDecisionIds: normalizeIds(payload.contradictionDecisionIds),
     admissionRecordIds: normalizeIds(payload.admissionRecordIds),
+    quarantineSignalIds: normalizeIds(payload.quarantineSignalIds),
+    replacementMemoryId: payload.replacementMemoryId?.trim() || undefined,
+    reasonCode: required(payload.reasonCode, 'reasonCode'),
+    reason: required(payload.reason, 'reason'),
   };
+}
+
+function normalizeApprovals(
+  approvals: readonly MemoryApprovalDecision[] | undefined,
+): readonly MemoryApprovalDecision[] | undefined {
+  if (!approvals) return undefined;
+  return approvals
+    .map((decision) => ({
+      decisionId: required(decision.decisionId, 'approval decisionId'),
+      approver: normalizeActor(decision.approver),
+      outcome: decision.outcome,
+      policyVersion: required(decision.policyVersion, 'approval policyVersion'),
+    }))
+    .sort((left, right) => left.decisionId.localeCompare(right.decisionId));
+}
+
+function normalizeActor(actor: MemoryAuthorityActor): MemoryAuthorityActor {
+  return { id: required(actor.id, 'actor id'), type: actor.type };
 }
 
 function clonePayload(payload: MemoryAuthorityReceiptPayload): MemoryAuthorityReceiptPayload {
@@ -166,6 +185,7 @@ function clonePayload(payload: MemoryAuthorityReceiptPayload): MemoryAuthorityRe
     evidenceIds: payload.evidenceIds ? [...payload.evidenceIds] : undefined,
     contradictionDecisionIds: payload.contradictionDecisionIds ? [...payload.contradictionDecisionIds] : undefined,
     admissionRecordIds: payload.admissionRecordIds ? [...payload.admissionRecordIds] : undefined,
+    quarantineSignalIds: payload.quarantineSignalIds ? [...payload.quarantineSignalIds] : undefined,
   };
 }
 
@@ -173,8 +193,17 @@ function cloneReceipt(receipt: MemoryAuthorityTransitionReceipt): MemoryAuthorit
   return { ...receipt, ...clonePayload(receipt) };
 }
 
-function normalizeIds(values: readonly string[] | undefined): readonly string[] {
-  return [...new Set(values ?? [])].sort();
+function normalizeIds(values: readonly string[] | undefined): readonly string[] | undefined {
+  if (!values) return undefined;
+  return [...new Set(values.map((value) => required(value, 'reference id')))].sort();
+}
+
+function required(value: string, field: string): string {
+  const normalized = value.trim();
+  if (!normalized) {
+    throw new MemoryAuthorityReceiptConflictError('INVALID_INPUT', `${field} is required.`);
+  }
+  return normalized;
 }
 
 function digest(value: unknown): string {
