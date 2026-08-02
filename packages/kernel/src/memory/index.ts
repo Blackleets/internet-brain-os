@@ -3,12 +3,26 @@ export { MemoryLifecycleEngine } from './memory-lifecycle';
 export { InMemoryMemoryEventLog } from './memory-event-log';
 export { MemoryConsolidationEngine } from './memory-consolidation';
 export { mergeMemoryProvenance } from './memory-provenance';
+export {
+  allowedMemoryAuthorityTransitions,
+  isTerminalMemoryAuthorityState,
+  validateMemoryAuthorityTransition,
+} from './memory-authority-lifecycle';
 export type { CreateMemoryInput } from './memory-manager';
 export type {
   MemoryLifecycleAction,
   MemoryLifecycleEvent,
   MemoryLifecycleOptions,
 } from './memory-lifecycle';
+export type {
+  MemoryApprovalDecision,
+  MemoryAuthorityActor,
+  MemoryAuthorityActorType,
+  MemoryAuthorityState,
+  MemoryAuthorityTransitionFailureCode,
+  MemoryAuthorityTransitionRequest,
+  MemoryAuthorityTransitionValidation,
+} from './memory-authority-lifecycle';
 export type { MemoryEventLog } from './memory-event-log';
 export type { MemoryConsolidationGroup } from './memory-consolidation';
 export type {
