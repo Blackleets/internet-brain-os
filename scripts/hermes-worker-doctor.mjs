@@ -1,5 +1,6 @@
-import { access, constants, stat } from 'node:fs/promises';
-import { delimiter, isAbsolute, resolve } from 'node:path';
+import { resolve } from 'node:path';
+import { loadExistingApiToken } from '../apps/local-kernel/api-token-store.mjs';
+import { detectHermesRuntime, resolveExecutable } from '../apps/local-kernel/hermes-runtime.mjs';
 
 const checks = [];
 
@@ -25,22 +26,41 @@ function validateLoopback(value) {
   return url.href.replace(/\/$/, '');
 }
 
-async function resolveExecutable(command) {
-  const candidates = isAbsolute(command) || command.includes('/') || command.includes('\\')
-    ? [resolve(command)]
-    : (process.env.PATH ?? '').split(delimiter).filter(Boolean).map((directory) => resolve(directory, command));
-  if (process.platform === 'win32' && !/\.[a-z0-9]+$/i.test(command)) {
-    const extensions = (process.env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM').split(';');
-    candidates.push(...candidates.flatMap((candidate) => extensions.map((extension) => `${candidate}${extension.toLowerCase()}`)));
+async function resolveToken() {
+  const environmentToken = process.env.HEPHAESTUS_API_TOKEN;
+  if (environmentToken !== undefined) {
+    if (environmentToken.trim() && !/[\u0000-\u0020\u007f]/.test(environmentToken)) return environmentToken;
+    return undefined;
   }
-  for (const candidate of candidates) {
+  const dataDir = resolve(process.env.HEPHAESTUS_DATA_DIR ?? '.hephaestus');
+  try {
+    return (await loadExistingApiToken(resolve(dataDir, 'kernel-api-token'))).token;
+  } catch {
+    return undefined;
+  }
+}
+
+async function checkHermesAdapter() {
+  const legacyCommand = process.env.HEPHAESTUS_HERMES_COMMAND?.trim();
+  if (legacyCommand) {
+    const executable = await resolveExecutable(legacyCommand);
+    executable
+      ? pass('Hermes adapter', 'legacy adapter executable found (path hidden)')
+      : fail('Hermes adapter', 'legacy adapter command was not found or is not executable');
     try {
-      await access(candidate, constants.X_OK);
-      const info = await stat(candidate);
-      if (info.isFile()) return candidate;
-    } catch { /* try next PATH entry */ }
+      const args = parseArgs(process.env.HEPHAESTUS_HERMES_ARGS_JSON);
+      pass('Hermes adapter arguments', `${args.length} configured argument(s); values hidden`);
+    } catch (error) {
+      fail('Hermes adapter arguments', error.message);
+    }
+    return;
   }
-  return undefined;
+
+  const runtime = await detectHermesRuntime();
+  runtime.available
+    ? pass('Hermes adapter', 'bundled adapter and Hermes runtime detected (path hidden)')
+    : fail('Hermes adapter', 'install Hermes or set HEPHAESTUS_HERMES_EXECUTABLE');
+  pass('Hermes adapter arguments', 'bundled adapter selected; no manual arguments required');
 }
 
 async function main() {
@@ -48,32 +68,29 @@ async function main() {
   try { pass('Kernel URL', validateLoopback(kernelUrl)); }
   catch (error) { fail('Kernel URL', error.message); }
 
-  const token = process.env.HEPHAESTUS_API_TOKEN;
-  if (typeof token === 'string' && token.trim() && !/[\u0000-\u0020\u007f]/.test(token)) pass('API token', 'configured (value hidden)');
-  else fail('API token', 'set HEPHAESTUS_API_TOKEN to the private local Kernel token');
+  const token = await resolveToken();
+  token
+    ? pass('API token', 'configured (value and path hidden)')
+    : fail('API token', 'start the Kernel once or set HEPHAESTUS_API_TOKEN');
 
-  const command = process.env.HEPHAESTUS_HERMES_COMMAND;
-  if (!command?.trim()) fail('Hermes adapter command', 'set HEPHAESTUS_HERMES_COMMAND');
-  else {
-    const executable = await resolveExecutable(command.trim());
-    executable ? pass('Hermes adapter command', `executable found: ${executable}`) : fail('Hermes adapter command', 'command was not found or is not executable');
-  }
-
-  try {
-    const args = parseArgs(process.env.HEPHAESTUS_HERMES_ARGS_JSON);
-    pass('Hermes adapter arguments', `${args.length} configured argument(s); values hidden`);
-  } catch (error) { fail('Hermes adapter arguments', error.message); }
+  await checkHermesAdapter();
 
   const kernelCheck = checks.find((check) => check.name === 'Kernel URL' && check.ok);
   if (kernelCheck && token) {
     try {
       const response = await fetch(`${kernelCheck.detail}/status`, {
-        headers: { 'x-hephaestus-token': token }, signal: AbortSignal.timeout(3000),
+        headers: { 'x-hephaestus-token': token },
+        signal: AbortSignal.timeout(3000),
       });
-      if (response.ok) pass('Kernel reachability', `HTTP ${response.status}`);
-      else fail('Kernel reachability', `HTTP ${response.status}`);
-    } catch { fail('Kernel reachability', 'Kernel is not reachable; start it with pnpm kernel:serve'); }
-  } else fail('Kernel reachability', 'skipped until URL and token are valid');
+      response.ok
+        ? pass('Kernel reachability', `HTTP ${response.status}`)
+        : fail('Kernel reachability', `HTTP ${response.status}`);
+    } catch {
+      fail('Kernel reachability', 'Kernel is not reachable; start it with pnpm kernel:serve');
+    }
+  } else {
+    fail('Kernel reachability', 'skipped until URL and token are valid');
+  }
 
   for (const check of checks) console.log(`${check.ok ? 'PASS' : 'FAIL'}  ${check.name}: ${check.detail}`);
   const failed = checks.filter((check) => !check.ok).length;
