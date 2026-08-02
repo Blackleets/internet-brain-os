@@ -14,6 +14,7 @@ export {
   verifyMemoryAuthorityReceiptIntegrity,
 } from './memory-authority-receipt-repository';
 export { MemoryAuthorityTransitionService } from './memory-authority-transition-service';
+export { projectMemoryAuthorityState } from './memory-authority-projector';
 export type { CreateMemoryInput } from './memory-manager';
 export type {
   MemoryLifecycleAction,
@@ -39,6 +40,12 @@ export type {
   ExecuteMemoryAuthorityTransitionInput,
   ExecuteMemoryAuthorityTransitionResult,
 } from './memory-authority-transition-service';
+export type {
+  BlockedMemoryAuthorityProjection,
+  MemoryAuthorityProjection,
+  MemoryAuthorityProjectionFailureCode,
+  ValidMemoryAuthorityProjection,
+} from './memory-authority-projector';
 export type { MemoryEventLog } from './memory-event-log';
 export type { MemoryConsolidationGroup } from './memory-consolidation';
 export type {
