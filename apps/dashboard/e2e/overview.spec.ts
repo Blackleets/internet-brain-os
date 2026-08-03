@@ -72,7 +72,7 @@ test('renders the migrated Sites UI and connects it to truthful Kernel data', as
   await page.getByRole('button', { name: /Agentes/ }).click();
   await expect(page.getByRole('heading', { name: 'Agentes e integraciones' })).toBeVisible();
   await expect(page.getByText('mission-1')).toBeVisible();
-  await expect(page.getByText(/no escribe Evidence ni memoria directamente/)).toBeVisible();
+  await expect(page.getByText(/Sus findings vuelven al Kernel para validación, deduplicación y Evidence/)).toBeVisible();
 });
 
 test('disconnect clears the tab-only token and returns to the offline forge', async ({ page }) => {
