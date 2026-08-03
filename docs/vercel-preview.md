@@ -9,15 +9,16 @@ database, agent worker, or memory service.
 - Repository: `Blackleets/internet-brain-os`
 - Project: `efesto`
 - Root directory: `apps/dashboard`
-- Include source files outside of the Root Directory: enabled
 - Framework: Next.js
 - Source: the selected GitHub branch or pull request, never a manually assembled subset
 - Production: do not promote a preview until the exact revision has passed the repository gates and the founder approves it
 
 The app-level `apps/dashboard/vercel.json` pins framework detection. Vercel's
 Root Directory remains a project setting rather than a `vercel.json` property.
-The complete repository must be available to the build because the dashboard
-extends the workspace `tsconfig.base.json` and uses the root pnpm lockfile.
+The dashboard owns a self-contained TypeScript configuration and uses the
+workspace root for local pnpm builds but its app root inside Vercel. This keeps
+the Git-backed monorepo build coherent and also makes an exact commit artifact
+independently buildable without copying unrelated Kernel packages.
 
 ## Local Kernel boundary
 

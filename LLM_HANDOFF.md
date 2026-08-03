@@ -71,11 +71,15 @@ Every AI must append a new handoff entry using this format:
 
 ### What I changed
 - Added an app-level Vercel manifest for the real dashboard at `apps/dashboard`.
+- Made dashboard TypeScript and Turbopack configuration independently deployable while preserving the local pnpm workspace build.
 - Documented the GitHub-to-Vercel preview boundary and exact local Kernel origin allowlist.
 
 ### Files changed
 - `apps/dashboard/vercel.json`
 - `apps/dashboard/vercel-config.test.ts`
+- `apps/dashboard/tsconfig.json`
+- `apps/dashboard/next.config.ts`
+- `apps/dashboard/next.config.test.ts`
 - `docs/vercel-preview.md`
 - `apps/dashboard/README.md`
 - `ARCHITECTURE.md`
@@ -83,16 +87,16 @@ Every AI must append a new handoff entry using this format:
 - `LLM_HANDOFF.md`
 
 ### Why I changed it
-- The previous manual deployment attempts omitted workspace files. Git-backed Vercel builds must receive the complete repository while keeping the local-first Kernel boundary intact.
+- The first complete preview attempt reached the real Next.js build but proved that `../../tsconfig.base.json` was unavailable after Vercel isolated `apps/dashboard`. The dashboard now owns the required compiler contract and selects the correct Turbopack root in both environments.
 
 ### Tests or checks performed
-- `pnpm verify:first-run` passed: 107 test files / 622 tests, typecheck, dashboard build, Hermes validators, Hermes smoke, altered-replay smoke, and Replay Lab API smoke.
+- `pnpm verify:first-run` passed: 107 test files / 624 tests, typecheck, dashboard build, Hermes validators, Hermes smoke, altered-replay smoke, and Replay Lab API smoke.
 - `pnpm audit --prod` passed with no known vulnerabilities.
 - The change is configuration/documentation only; no hosted deployment was claimed from this environment.
 
 ### Risks / uncertainties
 - The Vercel project still needs to be linked to the GitHub repository in the Vercel team UI; no Vercel CLI token is configured here.
-- Its Root Directory must be `apps/dashboard` and Include source files outside of the Root Directory must be enabled; these are Vercel project settings, not `vercel.json` properties.
+- Its Root Directory must be `apps/dashboard`; this is a Vercel project setting, not a `vercel.json` property.
 - A preview URL cannot call the local Kernel until its exact origin is explicitly allowlisted.
 
 ### Next recommended step

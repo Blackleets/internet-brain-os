@@ -25,11 +25,12 @@ the private API token for every `/api/*` request. Custom deployments must set a
 comma-separated `HEPHAESTUS_DASHBOARD_ORIGINS` allowlist; arbitrary web origins
 remain forbidden.
 
-The Git-backed Vercel preview uses `apps/dashboard` as its Root Directory and
-must include source files outside that directory for the shared workspace
-configuration. See [`docs/vercel-preview.md`](../../docs/vercel-preview.md) for
-the exact preview, browser Local Network Access permission, local-Kernel, and
-verification boundary.
+The Git-backed Vercel preview uses `apps/dashboard` as its Root Directory. Its
+TypeScript and Turbopack configuration is self-contained for deployment while
+remaining compatible with local pnpm workspace builds. See
+[`docs/vercel-preview.md`](../../docs/vercel-preview.md) for the exact preview,
+browser Local Network Access permission, local-Kernel, and verification
+boundary.
 
 ## Token handling
 
