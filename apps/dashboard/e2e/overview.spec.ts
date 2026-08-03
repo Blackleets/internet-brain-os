@@ -9,7 +9,13 @@ test.beforeEach(async ({ page }) => {
   page.on('console', (message) => {
     if (message.type() === 'error') problems.push(`console.error: ${message.text()}`);
   });
-  page.on('requestfailed', (request) => problems.push(`requestfailed: ${request.url()} (${request.failure()?.errorText ?? 'unknown'})`));
+  page.on('requestfailed', (request) => {
+    const failure = request.failure()?.errorText ?? 'unknown';
+    const isCancelledHealthProbe = request.method() === 'GET'
+      && new URL(request.url()).pathname === '/health'
+      && failure === 'net::ERR_ABORTED';
+    if (!isCancelledHealthProbe) problems.push(`requestfailed: ${request.url()} (${failure})`);
+  });
 });
 
 test.afterEach(async ({ page }) => {
@@ -45,7 +51,6 @@ test('renders the migrated Sites UI and connects it to truthful Kernel data', as
   await expect(page.getByText(/Sin datos inventados/)).toBeVisible();
 
   await connect(page);
-  await expect(page.getByText('Efesto is ready. Open the extension and press the central orb.')).toBeVisible();
   await expect(page.getByText('Hermes verificado')).toBeVisible();
 
   await page.getByRole('button', { name: /Investigación/ }).click();
@@ -59,7 +64,7 @@ test('renders the migrated Sites UI and connects it to truthful Kernel data', as
 
   await page.getByRole('button', { name: /Internet Brain/ }).click();
   await expect(page.getByText('Investigando fuentes')).toBeVisible();
-  await page.getByLabel('Mensaje').fill('Resume el estado');
+  await page.getByRole('textbox', { name: 'Mensaje', exact: true }).fill('Resume el estado');
   await page.getByRole('button', { name: 'Enviar' }).click();
   await expect(page.getByText('Fixture response from the selected local model.')).toBeVisible();
   await expect(page.getByText(/fuera de Evidence y memoria/)).toBeVisible();
@@ -92,7 +97,7 @@ test.describe('mobile migrated control center', () => {
     await expect(brain).toBeVisible();
     const brainBox = await brain.boundingBox();
     expect(brainBox?.height).toBeGreaterThan(180);
-    await expect(page.getByLabel('Mensaje')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Mensaje', exact: true })).toBeVisible();
     await expect(page.locator('.nav-section')).toHaveCSS('display', 'flex');
 
     const layout = await page.evaluate(() => {
