@@ -8,13 +8,14 @@ Every AI must update this file before ending a work session.
 
 ## Current project state
 
-Status (verified 2026-07-28 from `main` = `4f81239`):
+Status (verified 2026-08-03 from `codex/goal-10-10-mission-reliability`, based on `c8bb8f7`):
 - Foundation runtime, Replay Lab forensics, Internal Orchestrator v0, deterministic Hermes preflight, and local API token hardening are stable on `main`.
 - PR #103: authentic Efesto mission adapter merged (2026-07-22) — translates bounded Hermes output into Kernel execution events; it does NOT by itself prove a live external Hermes runtime.
 - PR #129: fully wired Kernel Control Center merged (2026-07-28) — `apps/local-kernel` chat service, model-provider registry, authenticated `/api/*` wiring, and dashboard Kernel workspaces UI. Dashboard is presentation-only and connects to the loopback Kernel.
 - PR #130: `.hephaestus/` and `.hermes/` added to `.gitignore` (2026-07-28).
 - Knowledge Graph projection and a general scheduler are NOT implemented; the dashboard shows them as explicitly unavailable.
 - Open work: PR #125 (design only — memory quarantine), Issues #98 (design memory quarantine) and #101 (prove Agent Hub worker with an authentic Hermes runtime).
+- The current 10/10 delivery goal is tracked as measured gates, not an overclaim. The first gate on this branch hardens Agent Hub completion retries and reconciles a lost result response without weakening Kernel authority or Obsidian ownership.
 
 Current phase: Product Star Phase A is blocked on a real external Hermes runtime capture for the Agent Hub worker (Issue #101). The Issue #57 ingestion acceptance is complete and must not be conflated with worker proof. Phases B and C are complete for their current read-only/local scopes.
 
@@ -372,3 +373,42 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 
 ### Do not forget
 - The extractor must stay dumb: no inferred claims, no fabricated evidence, no Kernel authority decisions.
+
+## Handoff 2026-08-03 - Codex - 10/10 mission reliability gate
+
+### What I changed
+- Made completed Agent Hub result submissions explicitly idempotent at the executor boundary.
+- Prevented duplicate result requests from re-running Obsidian projection or overwriting the persisted Obsidian receipt.
+- Added worker reconciliation: when the result response is ambiguous or lost, the worker checks the authenticated mission list and reports success only when the persisted mission is actually `completed`.
+- Recorded the founder's 10/10 goal in the canonical project checkpoint as a measured delivery objective.
+
+### Files changed
+- `apps/local-kernel/agent-mission-executor.mjs`
+- `apps/local-kernel/agent-mission-executor.test.mjs`
+- `apps/local-kernel/hermes-mission-worker.mjs`
+- `apps/local-kernel/hermes-mission-worker.test.mjs`
+- `apps/local-kernel/server.mjs`
+- `apps/local-kernel/server.test.mjs`
+- `CHANGELOG.md`
+- `PROJECT_STATE.md`
+- `LLM_HANDOFF.md`
+
+### Why I changed it
+- A real external worker can lose an HTTP response after the Kernel has durably completed a mission. Treating that ambiguity as a fresh failure is unsafe and can produce misleading retry behavior. The previous duplicate HTTP path could also re-project an empty result and degrade the stored Obsidian receipt.
+
+### Tests or checks performed
+- Focused Agent Hub/worker/server tests: 41 passed.
+- `pnpm typecheck`: passed.
+- `pnpm test`: 106 files / 621 tests passed.
+- `pnpm build`: passed, including the dashboard production build.
+- Hermes bounded validators, Hermes smoke, altered-replay attack smoke, and Replay Lab API smoke: passed.
+
+### Risks / uncertainties
+- The live external Hermes runtime is still not available in this environment; Issue #101 remains open and must be proven with the user's authentic configured Hermes installation.
+- Browser visual acceptance and deployment-scale capacity are not proven by this gate.
+
+### Next recommended step
+- Run one explicitly consented Goal mission with the user's authentic Hermes runtime using `pnpm hermes:worker:doctor` and `pnpm hermes:mission-worker`, then collect sanitized acceptance evidence for Issue #101.
+
+### Do not forget
+- Never present the worker adapter, fixtures, mocks, or this regression suite as proof of an authentic Hermes runtime execution.

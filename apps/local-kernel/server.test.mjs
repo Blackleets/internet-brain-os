@@ -423,6 +423,22 @@ describe('local Kernel HTTP receiver', () => {
     });
     const evidenceId = (await store.read()).evidence[0].id.replace(/[^A-Za-z0-9._-]/g, '-');
     expect(await readFile(join(dir, 'vault', 'Evidence', `${evidenceId}.md`), 'utf8')).toContain('hermes-public-research-v1');
+
+    const replay = await fetch(`${endpoint}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, {
+      method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({ leaseId: mission.leaseId, findings: [{
+        url: 'https://jobs.example/remote-ai', title: 'Remote AI engineer role',
+        text: 'We are hiring. Open role with salary. Apply now for this full-time remote position.',
+      }] }),
+    });
+    expect(replay.status).toBe(202);
+    expect(await replay.json()).toMatchObject({
+      ok: true,
+      mission: { status: 'completed', obsidianReceipt: completedBody.obsidianReceipt, resultSummary: { obsidianNotesWritten: 4 } },
+      obsidianReceipt: completedBody.obsidianReceipt,
+      findings: [],
+    });
+    expect((await store.read()).agentMissions[0].obsidianReceipt).toEqual(completedBody.obsidianReceipt);
   });
 
   it('lists Replay Lab cases through the authenticated local API', async () => {

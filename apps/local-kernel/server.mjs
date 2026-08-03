@@ -422,7 +422,16 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
       try {
         const missionId = decodeURIComponent(request.url.slice('/api/agent-missions/'.length, -'/results'.length));
-        const completed = await missionExecutor.complete(missionId, await readJson(request));
+        const completion = await missionExecutor.complete(missionId, await readJson(request));
+        if (completion.idempotent) {
+          const { idempotent: _idempotent, ...completed } = completion;
+          return send(response, 202, {
+            ok: true,
+            ...completed,
+            obsidianReceipt: completed.mission?.obsidianReceipt,
+          });
+        }
+        const completed = completion;
         const obsidianReceipt = await syncMissionObsidian(completed, obsidianProjector);
         const mission = await attachMissionObsidianReceipt(missionExecutor.store, missionId, obsidianReceipt);
         return send(response, 202, { ok: true, ...completed, mission, obsidianReceipt });

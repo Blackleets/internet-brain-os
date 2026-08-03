@@ -38,6 +38,7 @@ Then read, in order:
 - Explicitly consented, idempotent Goal research missions for the Hermes Agent Hub boundary; disconnected agents remain visibly `waiting_for_agent`, and mission scope contains only the Goal fields authorized by the user.
 - Private, erasable preference learning from explicit Opportunity feedback (`useful`, `saved`, `dismissed`, `not_interested`); bounded category, benefit, and public-source adjustments personalize Inbox ordering without rewriting objective Evidence relevance or exporting the profile.
 - Authenticated local Hermes worker transport for consented missions with expiring leases, at most three observable attempts, bounded public-result validation, sensitive/private URL rejection, Evidence preservation, Kernel-owned Opportunity classification, Goal-scope enforcement, deduplication, and private Obsidian projection. An authentic external Hermes runtime connection remains to be proven rather than simulated.
+- Agent Hub result delivery is response-loss tolerant: completed-result retries are idempotent, persisted Obsidian receipts are preserved, and the worker reconciles an ambiguous result response through the authenticated mission list before reporting failure.
 - Shell-free Hermes mission worker for an explicitly configured external adapter, with bounded JSON stdin/stdout, failure reporting, and observable Agent Hub mission states in the extension. No Hermes executable is bundled; authentic runtime proof still requires the user's configured Hermes instance.
 - Shared fail-closed Hermes runtime detection for the one-click Kernel and readiness doctor. The standard Windows install, an explicit executable, or a real `PATH` entry may activate the bundled adapter; a missing executable can no longer be reported as ready. The doctor reuses an existing private Kernel token without printing its value or path and keeps the explicit legacy adapter contract compatible.
 - Authenticated local Model Forge inspection with loopback-only Ollama detection, coarse hardware tiers, curated compatible model recommendations, installed/active model distinction, and manual setup instructions; it never installs software, pulls models, changes configuration, or grants model output Evidence authority.
@@ -76,16 +77,23 @@ Then read, in order:
 - PR #129: fully wired Kernel Control Center merged (2026-07-28). Adds `apps/local-kernel` chat service, model-provider registry, authenticated `/api/*` wiring, and the dashboard Kernel workspaces UI (Investigation, Knowledge, Agent Hub, Opportunity, Automation, System). The dashboard is presentation-only and connects to the loopback Kernel; Knowledge Graph projection and a general scheduler are NOT implemented and remain explicitly unavailable in the UI.
 - PR #130: `.hephaestus/` and `.hermes/` added to `.gitignore` so local runtime state, tokens, config, logs, and artifacts never enter the repository (merged 2026-07-28).
 - Fresh local validation on 2026-07-26: `pnpm typecheck`, `pnpm test`, `pnpm build`, and `pnpm verify:first-run` passed. The unit suite reported 93 test files / 540 tests; the dashboard E2E suite reported 3 passing Chromium tests. The root build includes the dashboard production build, while Vitest explicitly excludes Playwright E2E specifications. The observed Next workspace-root warning is deferred and does not change the loopback-only dashboard boundary.
+- Fresh local validation on 2026-08-03 on the bounded delivery branch: focused mission tests passed (41 tests), full `pnpm test` passed (106 files / 621 tests), `pnpm typecheck`, `pnpm build`, Hermes validators, Hermes smoke, altered-replay attack smoke, and Replay Lab API smoke passed. This does not prove a live external Hermes runtime or visual browser acceptance.
 
 ## Current operating state
 
 - `main` is the sole source of truth and includes the Efesto extension product surface, Opportunity and Goal workflows, Agent Hub transport, Model Forge, pixel-forge activity, deterministic forensic read path, real-capture importer, local token-file hardening, the Hephaestus Control Center dashboard, and the local Kernel chat/conversation wiring from PR #129.
+- Current bounded delivery branch: `codex/goal-10-10-mission-reliability`. It contains the first implementation increment for the founder's 10/10 goal: idempotent mission completion and safe worker reconciliation across the Kernel, worker, and Obsidian receipt boundary.
 - Open implementation/design tasks: PR #125 (design only — memory quarantine and toxic-memory lifecycle; no runtime enforcement). There is no active code-change task in this checkpoint.
 - Open issues: #98 (design memory quarantine) and #101 (prove Agent Hub worker with an authentic Hermes runtime).
 - There must be only one active implementation task at a time.
 - Do not work directly on `main`.
 - Do not merge, deploy, mutate secrets, delete data, or expand scope without the required human/founder gate.
 - Always trust `pnpm resume`, `git status`, GitHub PR state, and CI over a stale chat summary.
+
+## Active 10/10 delivery goal
+
+- Goal adopted on 2026-08-03: raise Efesto one measured gate at a time until the Kernel, agent boundary, user experience, privacy/security, operational readiness, and market proof each have executable acceptance evidence.
+- This is a roadmap commitment, not a claim that Efesto is already 10/10. The current increment is implemented and locally verified; the authentic Hermes Agent Hub run, Knowledge Graph projection, general scheduler, visual acceptance, alpha users, and scale proof remain separate gates.
 
 ## Next product priority
 

@@ -27,4 +27,18 @@ describe('Hermes mission worker', () => {
     const execute = vi.fn(async () => { throw new Error('provider\nfailed'); });
     await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({ status: 'failed', reason: 'provider failed' });
   });
+
+  it('reconciles a completed mission when the result response is lost', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockRejectedValueOnce(new Error('socket closed after commit'))
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, missions: [{ ...mission, status: 'completed' }] }) });
+    const execute = vi.fn(async () => ({ findings: [{ url: 'https://example.com/job', title: 'Job', text: 'Apply now' }] }));
+
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute }))
+      .resolves.toMatchObject({ status: 'completed', mission: { id: mission.id, status: 'completed' } });
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    expect(fetchImpl.mock.calls[2][0]).toBe('http://127.0.0.1:4000/api/agent-missions');
+    expect(fetchImpl.mock.calls[2][1].method).toBe('GET');
+  });
 });

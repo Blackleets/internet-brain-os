@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- Atomic Agent Hub result completion: one leased Hermes result batch now persists Evidence, Opportunity projection, and the forged mission state together, with regression coverage for partial-failure rollback and competing completion calls.
 - Deterministic design for memory quarantine and toxic-memory handling, including authority gates, append-only transition receipts, reversible recovery, startup reconciliation, and safe Replay Lab language.
 - Product launch kit with the verified one-minute narrative, five-minute demo flow, founder pitch, launch-post draft, and explicit no-overclaim guardrails.
 - Replay Lab authority-boundary projection and operator panel showing forbidden Kernel-owned fields without persisting or attributing rejected payload contents.
@@ -27,6 +28,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Agent Hub mission result delivery now treats completed-result retries as idempotent, preserves the persisted Obsidian receipt, and reconciles a lost result response through the authenticated mission state before recording a failure.
 - README opening now explains the current AI-forensics wedge, product boundaries, and local architecture before contributor doctrine.
 - Product Star roadmap and AI handoff now distinguish verified, partial, blocked, and deferred sections using the current repository evidence.
 - Kernel builds now emit executable CommonJS alongside declarations, and Hermes smoke replays use a stable signed timestamp so clean-checkout runtime validation is deterministic.

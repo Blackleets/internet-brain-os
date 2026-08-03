@@ -153,16 +153,24 @@ export class OpportunityProjector {
   async project(input, references = {}) {
     const classified = classifyOpportunity(input, references);
     if (classified.status !== 'opportunity') return classified;
-    return this.store.project(async (data) => {
-      const opportunities = Array.isArray(data.opportunities) ? data.opportunities : [];
-      const existing = opportunities.find((item) => item.id === classified.opportunity.id || item.evidenceId === references.evidenceId);
-      if (existing) return { changed: false, data, result: { status: 'opportunity', opportunity: existing, duplicate: true } };
-      return {
-        changed: true,
-        data: { ...data, opportunities: [...opportunities, classified.opportunity] },
-        result: { ...classified, duplicate: false },
-      };
-    });
+    return this.store.project(async (data) => this.projectInto(data, input, references));
+  }
+
+  /**
+   * Projects an already-loaded store snapshot without writing it. This keeps
+   * opportunity classification composable with larger Kernel transactions.
+   */
+  projectInto(data, input, references = {}) {
+    const classified = classifyOpportunity(input, references);
+    if (classified.status !== 'opportunity') return { changed: false, data, result: classified };
+    const opportunities = Array.isArray(data.opportunities) ? data.opportunities : [];
+    const existing = opportunities.find((item) => item.id === classified.opportunity.id || item.evidenceId === references.evidenceId);
+    if (existing) return { changed: false, data, result: { status: 'opportunity', opportunity: existing, duplicate: true } };
+    return {
+      changed: true,
+      data: { ...data, opportunities: [...opportunities, classified.opportunity] },
+      result: { ...classified, duplicate: false },
+    };
   }
 
   async list({ limit = 20 } = {}) {

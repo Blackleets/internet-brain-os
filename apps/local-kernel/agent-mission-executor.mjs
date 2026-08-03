@@ -51,21 +51,28 @@ export class AgentMissionExecutor {
       throw invalid(`findings must be an array with at most ${MAX_FINDINGS} items`);
     }
     const findings = input.findings.map(validateFinding);
-    const mission = await this.#requireLease(missionId, leaseId);
-    const verifyingAt = this.now().toISOString();
-    await this.#markVerifying(missionId, leaseId, verifyingAt);
-    const accepted = [];
-    for (const finding of findings) accepted.push(await this.#ingest(mission, finding));
-    const promoted = accepted.filter((item) => item.opportunity?.status === 'opportunity').length;
-    const completedAt = this.now().toISOString();
-    const result = await this.store.project(async (data) => {
+    return this.store.project(async (data) => {
       const missions = data.agentMissions ?? [];
       const index = missions.findIndex((item) => item.id === missionId);
       const current = missions[index];
-      if (current?.status === 'completed') return { changed: false, data, result: current };
+      if (current?.status === 'completed') {
+        return { changed: false, data, result: { mission: current, findings: [], idempotent: true } };
+      }
       requireActiveLease(current, leaseId, this.now());
+
+      const verifyingAt = this.now().toISOString();
+      let nextData = data;
+      const accepted = [];
+      for (const finding of findings) {
+        const ingested = this.#ingestInto(nextData, current, finding);
+        nextData = ingested.data;
+        accepted.push(ingested.result);
+      }
+
+      const promoted = accepted.filter((item) => item.opportunity?.status === 'opportunity').length;
+      const completedAt = this.now().toISOString();
       const completed = {
-        ...current, status: 'completed', executionPhase: 'forged', completedAt, forgedAt: completedAt,
+        ...current, status: 'completed', executionPhase: 'forged', verifyingAt, completedAt, forgedAt: completedAt,
         resultSummary: {
           received: findings.length,
           evidenceCreated: accepted.filter((item) => !item.duplicate).length,
@@ -76,9 +83,12 @@ export class AgentMissionExecutor {
       delete completed.leaseExpiresAt;
       const updated = [...missions];
       updated[index] = completed;
-      return { changed: true, data: { ...data, agentMissions: updated }, result: completed };
+      return {
+        changed: true,
+        data: { ...nextData, agentMissions: updated },
+        result: { mission: completed, findings: accepted },
+      };
     });
-    return { mission: result, findings: accepted };
   }
 
   async fail(missionId, input) {
@@ -104,27 +114,7 @@ export class AgentMissionExecutor {
     });
   }
 
-  async #requireLease(missionId, leaseId) {
-    const data = await this.store.read();
-    const mission = (data.agentMissions ?? []).find((item) => item.id === missionId);
-    requireActiveLease(mission, leaseId, this.now());
-    return mission;
-  }
-
-  async #markVerifying(missionId, leaseId, verifyingAt) {
-    return this.store.project(async (data) => {
-      const missions = data.agentMissions ?? [];
-      const index = missions.findIndex((item) => item.id === missionId);
-      const current = missions[index];
-      requireActiveLease(current, leaseId, this.now());
-      const verifying = { ...current, executionPhase: 'verifying', verifyingAt };
-      const updated = [...missions];
-      updated[index] = verifying;
-      return { changed: true, data: { ...data, agentMissions: updated }, result: verifying };
-    });
-  }
-
-  async #ingest(mission, finding) {
+  #ingestInto(data, mission, finding) {
     const suffix = createHash('sha256').update(`${mission.id}\n${finding.url}`).digest('hex');
     const caseId = `case:agent:${suffix}`;
     const evidenceId = `evidence:agent:${suffix}`;
@@ -133,35 +123,43 @@ export class AgentMissionExecutor {
       schemaVersion: 'hephaestus.page-context.v1', url: finding.url, title: finding.title,
       visibleText: finding.text, description: finding.summary, capturedAt,
     };
-    const evidence = await this.store.project(async (data) => {
-      const existing = (data.evidence ?? []).find((item) => item.id === evidenceId);
-      if (existing) return { changed: false, data, result: { caseId: existing.caseId, evidenceId, duplicate: true } };
-      const caseRecord = {
-        id: caseId, title: finding.title,
-        objective: `Verify a public finding returned for Goal: ${mission.goalTitle}`,
-        description: finding.summary, status: 'draft', tags: ['agent-research', mission.agent],
-        createdAt: capturedAt, updatedAt: capturedAt,
-      };
-      const evidenceRecord = {
-        id: evidenceId, caseId, sourceReceiptId: `agent-result:${suffix}`, sourceUrl: finding.url,
-        contentType: 'webpage', mimeType: 'text/plain',
-        contentHash: createHash('sha256').update(finding.text).digest('hex'), rawText: finding.text,
-        summary: finding.summary ?? finding.title, capturedAt,
-        extractionMethod: `${mission.agent}-public-research-v1`, confidence: 0.4,
-        tags: ['agent-research', 'unverified'], entityIds: [], relationshipIds: [], missionId: mission.id,
-      };
-      return {
-        changed: true,
-        data: { ...data, cases: [...(data.cases ?? []), caseRecord], evidence: [...(data.evidence ?? []), evidenceRecord] },
-        result: { caseId, evidenceId, duplicate: false },
-      };
-    });
+    const existing = (data.evidence ?? []).find((item) => item.id === evidenceId);
+    if (existing) {
+      const evidence = { caseId: existing.caseId, evidenceId, duplicate: true };
+      const classified = classifyOpportunity(context, evidence);
+      if (classified.status === 'opportunity' && mission.scope.categories?.length && !mission.scope.categories.includes(classified.opportunity.category)) {
+        return { data, result: { ...evidence, status: 'out_of_scope', sourceUrl: finding.url } };
+      }
+      const opportunity = this.opportunityProjector.projectInto(data, context, evidence);
+      return { data: opportunity.data, result: { ...evidence, sourceUrl: finding.url, opportunity: opportunity.result } };
+    }
+
+    const caseRecord = {
+      id: caseId, title: finding.title,
+      objective: `Verify a public finding returned for Goal: ${mission.goalTitle}`,
+      description: finding.summary, status: 'draft', tags: ['agent-research', mission.agent],
+      createdAt: capturedAt, updatedAt: capturedAt,
+    };
+    const evidenceRecord = {
+      id: evidenceId, caseId, sourceReceiptId: `agent-result:${suffix}`, sourceUrl: finding.url,
+      contentType: 'webpage', mimeType: 'text/plain',
+      contentHash: createHash('sha256').update(finding.text).digest('hex'), rawText: finding.text,
+      summary: finding.summary ?? finding.title, capturedAt,
+      extractionMethod: `${mission.agent}-public-research-v1`, confidence: 0.4,
+      tags: ['agent-research', 'unverified'], entityIds: [], relationshipIds: [], missionId: mission.id,
+    };
+    const nextData = {
+      ...data,
+      cases: [...(data.cases ?? []), caseRecord],
+      evidence: [...(data.evidence ?? []), evidenceRecord],
+    };
+    const evidence = { caseId, evidenceId, duplicate: false };
     const classified = classifyOpportunity(context, evidence);
     if (classified.status === 'opportunity' && mission.scope.categories?.length && !mission.scope.categories.includes(classified.opportunity.category)) {
-      return { ...evidence, status: 'out_of_scope', sourceUrl: finding.url };
+      return { data: nextData, result: { caseId, evidenceId, duplicate: false, status: 'out_of_scope', sourceUrl: finding.url } };
     }
-    const opportunity = await this.opportunityProjector.project(context, evidence);
-    return { ...evidence, sourceUrl: finding.url, opportunity };
+    const opportunity = this.opportunityProjector.projectInto(nextData, context, evidence);
+    return { data: opportunity.data, result: { ...evidence, sourceUrl: finding.url, opportunity: opportunity.result } };
   }
 }
 

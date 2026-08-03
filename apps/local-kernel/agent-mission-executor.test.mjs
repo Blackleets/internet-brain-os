@@ -73,6 +73,77 @@ describe('external agent mission executor boundary', () => {
     expect((await store.read()).evidence).toHaveLength(1);
   });
 
+  it('replays a completed result without changing persisted state', async () => {
+    const store = new LocalKnowledgeStore(join(await mkdtemp(join(tmpdir(), 'efesto-executor-idempotent-')), 'store.json'));
+    const goal = await new GoalManager(store).create({ title: 'Find remote AI work', categories: ['job'] });
+    const mission = await new AgentMissionManager(store, { isAgentReady: () => true }).create(goal.id, { agent: 'hermes', confirmed: true });
+    const executor = new AgentMissionExecutor(store, new OpportunityProjector(store));
+    const claim = await executor.claim();
+    const input = {
+      leaseId: claim.leaseId,
+      findings: [{ url: 'https://jobs.example/idempotent', title: 'Remote role', text: 'We are hiring for a full-time remote role with salary. Apply now.' }],
+    };
+
+    const first = await executor.complete(mission.id, input);
+    const beforeReplay = await store.read();
+    const replay = await executor.complete(mission.id, input);
+
+    expect(first.mission.resultSummary).toMatchObject({ received: 1, evidenceCreated: 1 });
+    expect(replay).toMatchObject({ idempotent: true, mission: { id: mission.id, status: 'completed' }, findings: [] });
+    const afterReplay = await store.read();
+    expect(afterReplay.evidence).toHaveLength(1);
+    expect(afterReplay).toEqual(beforeReplay);
+  });
+
+  it('does not persist partial Evidence when a later finding fails during projection', async () => {
+    const store = new LocalKnowledgeStore(join(await mkdtemp(join(tmpdir(), 'efesto-executor-atomic-')), 'store.json'));
+    const goal = await new GoalManager(store).create({ title: 'Find remote AI work', categories: ['job'] });
+    const mission = await new AgentMissionManager(store, { isAgentReady: () => true }).create(goal.id, { agent: 'hermes', confirmed: true });
+    const baseProjector = new OpportunityProjector(store);
+    const failingProjector = {
+      projectInto(data, input, references) {
+        if (input.url.includes('/second')) throw new Error('simulated opportunity projection failure');
+        return baseProjector.projectInto(data, input, references);
+      },
+    };
+    const executor = new AgentMissionExecutor(store, failingProjector);
+    const claim = await executor.claim();
+
+    await expect(executor.complete(mission.id, {
+      leaseId: claim.leaseId,
+      findings: [
+        { url: 'https://jobs.example/first', title: 'First role', text: 'We are hiring for a remote role.' },
+        { url: 'https://jobs.example/second', title: 'Second role', text: 'We are hiring for another remote role.' },
+      ],
+    })).rejects.toThrow('simulated opportunity projection failure');
+
+    const data = await store.read();
+    expect(data.agentMissions[0]).toMatchObject({ status: 'running', executionPhase: 'investigating' });
+    expect(data.cases).toHaveLength(0);
+    expect(data.evidence).toHaveLength(0);
+    expect(data.opportunities).toHaveLength(0);
+  });
+
+  it('serializes competing completion calls for one lease without duplicate side effects', async () => {
+    const store = new LocalKnowledgeStore(join(await mkdtemp(join(tmpdir(), 'efesto-executor-race-')), 'store.json'));
+    const goal = await new GoalManager(store).create({ title: 'Find remote AI work', categories: ['job'] });
+    const mission = await new AgentMissionManager(store, { isAgentReady: () => true }).create(goal.id, { agent: 'hermes', confirmed: true });
+    const executor = new AgentMissionExecutor(store, new OpportunityProjector(store));
+    const claim = await executor.claim();
+    const first = { url: 'https://jobs.example/race-first', title: 'First role', text: 'We are hiring for a remote role.' };
+    const second = { url: 'https://jobs.example/race-second', title: 'Second role', text: 'We are hiring for another remote role.' };
+
+    const results = await Promise.all([
+      executor.complete(mission.id, { leaseId: claim.leaseId, findings: [first] }),
+      executor.complete(mission.id, { leaseId: claim.leaseId, findings: [second] }),
+    ]);
+
+    expect(results.some((result) => result.findings.length === 1)).toBe(true);
+    expect(results.some((result) => result.findings.length === 0)).toBe(true);
+    expect((await store.read()).evidence).toHaveLength(1);
+    expect((await store.read()).agentMissions[0].status).toBe('completed');
+  });
+
   it.each([
     'http://[::1]/finding',
     'http://[fd00::1]/finding',
