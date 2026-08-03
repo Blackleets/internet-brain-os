@@ -16,6 +16,7 @@ export {
 export { MemoryAuthorityTransitionService } from './memory-authority-transition-service';
 export { projectMemoryAuthorityState } from './memory-authority-projector';
 export { reconcileMemoryAuthorityAtStartup } from './memory-authority-reconciliation';
+export { gateMemoryRetrieval } from './memory-retrieval-gate';
 export type { CreateMemoryInput } from './memory-manager';
 export type {
   MemoryLifecycleAction,
@@ -54,6 +55,10 @@ export type {
   MemoryAuthorityReconciliationStatus,
   MemoryAuthorityReferenceCatalog,
 } from './memory-authority-reconciliation';
+export type {
+  MemoryRetrievalCandidate,
+  MemoryRetrievalGateResult,
+} from './memory-retrieval-gate';
 export type { MemoryEventLog } from './memory-event-log';
 export type { MemoryConsolidationGroup } from './memory-consolidation';
 export type {
