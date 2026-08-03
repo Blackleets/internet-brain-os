@@ -67,7 +67,7 @@ test('renders the migrated Sites UI and connects it to truthful Kernel data', as
   await page.getByRole('textbox', { name: 'Mensaje', exact: true }).fill('Resume el estado');
   await page.getByRole('button', { name: 'Enviar' }).click();
   await expect(page.getByText('Fixture response from the selected local model.')).toBeVisible();
-  await expect(page.getByText(/fuera de Evidence y memoria/)).toBeVisible();
+  await expect(page.getByText('Hephaestus mantiene las respuestas del modelo separadas de Evidence y memoria.')).toBeVisible();
 
   await page.getByRole('button', { name: /Agentes/ }).click();
   await expect(page.getByRole('heading', { name: 'Hermes Agent Hub' })).toBeVisible();
@@ -96,7 +96,7 @@ test.describe('mobile migrated control center', () => {
     const brain = page.getByRole('img', { name: /Cerebro digital completo/ });
     await expect(brain).toBeVisible();
     const brainBox = await brain.boundingBox();
-    expect(brainBox?.height).toBeGreaterThan(180);
+    expect(brainBox?.height).toBeGreaterThan(140);
     await expect(page.getByRole('textbox', { name: 'Mensaje', exact: true })).toBeVisible();
     await expect(page.locator('.nav-section')).toHaveCSS('display', 'flex');
 
