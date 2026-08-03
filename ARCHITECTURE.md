@@ -74,6 +74,14 @@ remain explicitly unavailable until their Kernel contracts and implementations
 exist; the dashboard must not invent graph records, schedules, progress, or
 future executions.
 
+The dashboard may be built as a Git-backed Vercel preview from the complete
+repository with `apps/dashboard` as the application root and access to shared
+workspace files outside that directory. Hosting is a client distribution
+surface only: it does not move the Kernel, tokens, Evidence, Obsidian data,
+Hermes worker, or memory into Vercel. A hosted origin must be added exactly to
+`HEPHAESTUS_DASHBOARD_ORIGINS` before it can call a user's loopback Kernel;
+wildcard Vercel origins remain forbidden.
+
 The persistent bottom composer is a provider-neutral conversation surface.
 Authenticated users may register loopback Ollama or HTTPS OpenAI-compatible
 providers; credentials are accepted only by the loopback Kernel, persisted in

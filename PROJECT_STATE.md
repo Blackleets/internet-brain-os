@@ -78,17 +78,25 @@ Then read, in order:
 - PR #130: `.hephaestus/` and `.hermes/` added to `.gitignore` so local runtime state, tokens, config, logs, and artifacts never enter the repository (merged 2026-07-28).
 - Fresh local validation on 2026-07-26: `pnpm typecheck`, `pnpm test`, `pnpm build`, and `pnpm verify:first-run` passed. The unit suite reported 93 test files / 540 tests; the dashboard E2E suite reported 3 passing Chromium tests. The root build includes the dashboard production build, while Vitest explicitly excludes Playwright E2E specifications. The observed Next workspace-root warning is deferred and does not change the loopback-only dashboard boundary.
 - Fresh local validation on 2026-08-03 on the bounded delivery branch: focused mission tests passed (41 tests), full `pnpm test` passed (106 files / 621 tests), `pnpm typecheck`, `pnpm build`, Hermes validators, Hermes smoke, altered-replay attack smoke, and Replay Lab API smoke passed. This does not prove a live external Hermes runtime or visual browser acceptance.
+- Fresh local validation on 2026-08-03 on `codex/vercel-github-preview`: `pnpm verify:first-run` passed (107 files / 622 tests), including the dashboard Vercel-manifest regression, typecheck, build, Hermes validators/smokes, altered-replay attack smoke, and Replay Lab API smoke; `pnpm audit --prod` reported no known vulnerabilities. This does not prove a deployed preview or browser acceptance.
 
 ## Current operating state
 
 - `main` is the sole source of truth and includes the Efesto extension product surface, Opportunity and Goal workflows, Agent Hub transport, Model Forge, pixel-forge activity, deterministic forensic read path, real-capture importer, local token-file hardening, the Hephaestus Control Center dashboard, and the local Kernel chat/conversation wiring from PR #129.
-- Current bounded delivery branch: `codex/goal-10-10-mission-reliability`. It contains the first implementation increment for the founder's 10/10 goal: idempotent mission completion and safe worker reconciliation across the Kernel, worker, and Obsidian receipt boundary.
+- Current bounded delivery branch: `codex/vercel-github-preview`. It starts from the validated mission-reliability commit and adds only the Git-backed Vercel preview contract for `apps/dashboard`; no Kernel, agent, memory, or production deployment behavior is changed.
 - Open implementation/design tasks: PR #125 (design only — memory quarantine and toxic-memory lifecycle; no runtime enforcement). There is no active code-change task in this checkpoint.
 - Open issues: #98 (design memory quarantine) and #101 (prove Agent Hub worker with an authentic Hermes runtime).
 - There must be only one active implementation task at a time.
 - Do not work directly on `main`.
 - Do not merge, deploy, mutate secrets, delete data, or expand scope without the required human/founder gate.
 - Always trust `pnpm resume`, `git status`, GitHub PR state, and CI over a stale chat summary.
+
+The current preview gate requires project `efesto` to link to
+`Blackleets/internet-brain-os`, set Root Directory to `apps/dashboard`, and
+enable source files outside the Root Directory so the build receives the shared
+workspace configuration. Only a non-production preview from the bounded branch
+may be accepted, and its exact revision, rendered page, and access policy must
+be verified before any promotion.
 
 ## Active 10/10 delivery goal
 

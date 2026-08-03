@@ -67,6 +67,41 @@ Every AI must append a new handoff entry using this format:
 - ...
 ```
 
+## Handoff 2026-08-03 - Codex
+
+### What I changed
+- Added an app-level Vercel manifest for the real dashboard at `apps/dashboard`.
+- Documented the GitHub-to-Vercel preview boundary and exact local Kernel origin allowlist.
+
+### Files changed
+- `apps/dashboard/vercel.json`
+- `apps/dashboard/vercel-config.test.ts`
+- `docs/vercel-preview.md`
+- `apps/dashboard/README.md`
+- `ARCHITECTURE.md`
+- `PROJECT_STATE.md`
+- `LLM_HANDOFF.md`
+
+### Why I changed it
+- The previous manual deployment attempts omitted workspace files. Git-backed Vercel builds must receive the complete repository while keeping the local-first Kernel boundary intact.
+
+### Tests or checks performed
+- `pnpm verify:first-run` passed: 107 test files / 622 tests, typecheck, dashboard build, Hermes validators, Hermes smoke, altered-replay smoke, and Replay Lab API smoke.
+- `pnpm audit --prod` passed with no known vulnerabilities.
+- The change is configuration/documentation only; no hosted deployment was claimed from this environment.
+
+### Risks / uncertainties
+- The Vercel project still needs to be linked to the GitHub repository in the Vercel team UI; no Vercel CLI token is configured here.
+- Its Root Directory must be `apps/dashboard` and Include source files outside of the Root Directory must be enabled; these are Vercel project settings, not `vercel.json` properties.
+- A preview URL cannot call the local Kernel until its exact origin is explicitly allowlisted.
+
+### Next recommended step
+- Link project `efesto` to `Blackleets/internet-brain-os`, select the PR/branch preview, then verify the exact deployment revision and local-origin flow.
+- Separately run the authentic Hermes Agent Hub mission for Issue #101.
+
+### Do not forget
+- Never deploy a manually assembled subset, expose `*.vercel.app`, publish the Kernel token, or present a hosted build as proof of the authentic Hermes path.
+
 ## Model usage strategy
 
 ### Hermes
