@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- Dedicated dashboard browser-acceptance CI gate that installs Chromium and exercises the real connection, disconnect, and mobile Control Center flows, with a regression test protecting the delivery contract.
 - Atomic Agent Hub result completion: one leased Hermes result batch now persists Evidence, Opportunity projection, and the forged mission state together, with regression coverage for partial-failure rollback and competing completion calls.
 - Deterministic design for memory quarantine and toxic-memory handling, including authority gates, append-only transition receipts, reversible recovery, startup reconciliation, and safe Replay Lab language.
 - Product launch kit with the verified one-minute narrative, five-minute demo flow, founder pitch, launch-post draft, and explicit no-overclaim guardrails.

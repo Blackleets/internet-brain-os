@@ -27,16 +27,35 @@ async function connect(page: Page): Promise<void> {
 }
 
 test('renders the migrated Sites UI and connects it to truthful Kernel data', async ({ page }) => {
+  const missionMutations: string[] = [];
+  page.on('request', (request) => {
+    const path = new URL(request.url()).pathname;
+    if (request.method() === 'POST' && (path === '/api/goals' || path.endsWith('/missions'))) missionMutations.push(path);
+  });
   await page.goto('/');
   expect(page.viewportSize()).toEqual({ width: 1536, height: 1024 });
   await expect(page.locator('.app')).toHaveCSS('grid-template-columns', /270px/);
   await expect(page.getByRole('heading', { name: '¿Qué quieres investigar hoy?' })).toBeVisible();
+  const brain = page.getByRole('img', { name: /Cerebro digital completo/ });
+  await expect(brain).toBeVisible();
+  const brainBox = await brain.boundingBox();
+  expect(brainBox?.width).toBeGreaterThan(500);
+  expect(brainBox?.height).toBeGreaterThan(200);
   await expect(page.getByText('Esperando Kernel')).toBeVisible();
   await expect(page.getByText(/Sin datos inventados/)).toBeVisible();
 
   await connect(page);
   await expect(page.getByText('Efesto is ready. Open the extension and press the central orb.')).toBeVisible();
   await expect(page.getByText('Hermes verificado')).toBeVisible();
+
+  await page.getByRole('button', { name: /Investigación/ }).click();
+  await page.getByPlaceholder('¿Qué quieres comprobar con evidencia?').fill('Auditar fuentes públicas');
+  await page.getByRole('button', { name: /Crear borrador de caso/ }).click();
+  await expect(page.getByText('Requiere tu confirmación para crear la misión')).toBeVisible();
+  expect(missionMutations).toEqual([]);
+  await page.getByRole('button', { name: 'Ejecutar Auditar fuentes públicas' }).click();
+  await expect(page.getByText('Goal creado y misión confirmada para Hermes.')).toBeVisible();
+  expect(missionMutations).toEqual(['/api/goals', '/api/goals/goal-e2e/missions']);
 
   await page.getByRole('button', { name: /Internet Brain/ }).click();
   await expect(page.getByText('Investigando fuentes')).toBeVisible();
@@ -69,6 +88,10 @@ test.describe('mobile migrated control center', () => {
     expect(page.viewportSize()).toEqual({ width: 390, height: 844 });
     await expect(page.getByRole('heading', { name: '¿Qué quieres investigar hoy?' })).toBeVisible();
     await expect(page.locator('.brain-stage')).toBeVisible();
+    const brain = page.getByRole('img', { name: /Cerebro digital completo/ });
+    await expect(brain).toBeVisible();
+    const brainBox = await brain.boundingBox();
+    expect(brainBox?.height).toBeGreaterThan(180);
     await expect(page.getByLabel('Mensaje')).toBeVisible();
     await expect(page.locator('.nav-section')).toHaveCSS('display', 'flex');
 

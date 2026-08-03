@@ -9,11 +9,12 @@ import {
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
-import { normalizeKernelBaseUrl } from "../lib/kernel/url";
+import { KernelUrlError, normalizeKernelBaseUrl } from "../lib/kernel/url";
 
 type Mode = "chat" | "research" | "entities" | "relations" | "knowledge" | "agents" | "automations" | "settings";
 type Message = { role: "user" | "assistant"; content: string };
 type Thread = { id: string; title: string; messages?: Message[] };
+type ResearchDraft = { id: string; topic: string };
 type Provider = { id: string; type?: string; label: string; baseUrl?: string; models: string[]; managedBy?: string };
 type CaseRecord = { id: string; title?: string; status?: string; createdAt?: string };
 type Mission = { id: string; goalId?: string; agent?: string; status?: string; executionPhase?: string; cadence?: string; createdAt?: string };
@@ -54,7 +55,8 @@ export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [threads, setThreads] = useState<Thread[]>([]);
-  const [researchDrafts, setResearchDrafts] = useState<string[]>([]);
+  const [threadQuery, setThreadQuery] = useState("");
+  const [researchDrafts, setResearchDrafts] = useState<ResearchDraft[]>([]);
   const [cases, setCases] = useState<CaseRecord[]>([]);
   const [caseDetails, setCaseDetails] = useState<Record<string, CaseDetail>>({});
   const [selectedCaseId, setSelectedCaseId] = useState("");
@@ -70,6 +72,10 @@ export default function Home() {
 
   const title = useMemo(() => mode === "chat" ? "Nueva conversación" : tools.find((item) => item.id === mode)?.label ?? "Configuración", [mode]);
   const selectedProvider = providers.find((item) => item.id === provider);
+  const visibleThreads = useMemo(() => {
+    const query = threadQuery.trim().toLocaleLowerCase("es");
+    return query ? threads.filter((thread) => thread.title.toLocaleLowerCase("es").includes(query)) : threads;
+  }, [threadQuery, threads]);
   const canSend = kernel === "online" && Boolean(selectedProvider && model) && prompt.trim().length > 0;
   const activeMission = missions.find((item) => ["running", "queued", "waiting_for_agent"].includes(item.status ?? ""));
   const brainPhase: BrainPhase = kernel !== "online" ? "offline"
@@ -199,7 +205,7 @@ export default function Home() {
       const response = await fetch(`${baseUrl}/health`, {
         signal: AbortSignal.timeout(5000),
       });
-      if (!response.ok) throw new Error("unavailable");
+      if (!response.ok) throw new KernelHttpError(response.status);
       const verifiedConnection = { baseUrl, token };
       const [providerBody, caseBody, missionBody, conversationBody] = await Promise.all([
         kernelJson(verifiedConnection, "/api/chat/providers"),
@@ -226,16 +232,14 @@ export default function Home() {
       setKernelMessage("Kernel conectado. Casos, misiones, modelos e historial provienen del almacenamiento local.");
       setProvider(nextProviders[0]?.id ?? "Sin modelo");
       setModel(nextProviders[0]?.models?.[0] ?? "");
-    } catch {
+    } catch (error) {
       connectionRef.current = null;
       setProviders([]);
       setCases([]);
       setMissions([]);
       setBootstrap({});
       setKernel("offline");
-      setKernelMessage(options.automatic
-        ? "La conexión está guardada, pero el Launcher local no responde. Inícialo y pulsa Reconectar."
-        : "No se pudo alcanzar el Kernel desde este navegador. No mostraremos datos falsos.");
+      setKernelMessage(connectionFailureMessage(error, options.automatic === true));
     }
   }
 
@@ -270,17 +274,23 @@ export default function Home() {
     const form = new FormData(event.currentTarget);
     const topic = String(form.get("topic") ?? "").trim();
     if (!topic) return;
+    setResearchDrafts((current) => [{ id: crypto.randomUUID(), topic }, ...current]);
+    event.currentTarget.reset();
+    setToast(connectionRef.current
+      ? "Borrador preparado. Confirma Ejecutar para crear el Goal y la misión de Hermes."
+      : "Borrador creado en esta sesión. Conecta el Kernel para ejecutarlo.");
+  }
+
+  async function executeResearch(draft: ResearchDraft) {
     const connection = connectionRef.current;
     if (!connection) {
-      setResearchDrafts((current) => [topic, ...current]);
-      event.currentTarget.reset();
-      setToast("Borrador creado en esta sesión. Conecta el Kernel para ejecutarlo.");
+      setToast("Conecta el Kernel antes de confirmar esta misión.");
       return;
     }
     try {
       const goalBody = await kernelJson(connection, "/api/goals", {
         method: "POST",
-        body: JSON.stringify({ title: topic, keywords: topic.split(/\s+/).slice(0, 8), priority: 2 }),
+        body: JSON.stringify({ title: draft.topic, keywords: draft.topic.split(/\s+/).slice(0, 8), priority: 2 }),
       });
       const goal = object(goalBody.goal);
       const goalId = typeof goal.id === "string" ? goal.id : "";
@@ -289,13 +299,12 @@ export default function Home() {
         method: "POST",
         body: JSON.stringify({ confirmed: true, agent: "hermes", cadence: "manual" }),
       });
-      setResearchDrafts((current) => [topic, ...current]);
+      setResearchDrafts((current) => current.filter((item) => item.id !== draft.id));
       await refreshKernelData(connection);
       setToast("Goal creado y misión confirmada para Hermes.");
     } catch {
       setToast("El Kernel rechazó la misión. Revisa que Hermes esté instalado y autorizado.");
     }
-    event.currentTarget.reset();
   }
 
   async function createAutomation(event: FormEvent<HTMLFormElement>) {
@@ -410,7 +419,7 @@ export default function Home() {
           <button className="icon-button collapse" onClick={() => setSidebarOpen(false)} aria-label="Ocultar barra lateral"><PanelLeftClose /></button>
         </div>
         <button className="new-chat" onClick={newChat}><SquarePen /><span>Nueva conversación</span><kbd>⌘ K</kbd></button>
-        <label className="side-search"><Search /><input placeholder="Buscar conversaciones" /></label>
+        <label className="side-search"><Search /><input aria-label="Buscar conversaciones" type="search" value={threadQuery} onChange={(event) => setThreadQuery(event.target.value)} placeholder="Buscar conversaciones" /></label>
 
         <div className="nav-section">
           <span className="nav-label">ESPACIOS</span>
@@ -423,13 +432,13 @@ export default function Home() {
 
         <div className="history-section">
           <div className="nav-label"><span>RECIENTES</span><History /></div>
-          {threads.length ? threads.map((thread) => <button className="history-item" key={thread.id} onClick={() => openThread(thread)}><MessageSquare /><span>{thread.title}</span></button>)
-            : <p className="history-empty">Tus conversaciones aparecerán aquí.</p>}
+          {visibleThreads.length ? visibleThreads.map((thread) => <button className="history-item" key={thread.id} onClick={() => openThread(thread)}><MessageSquare /><span>{thread.title}</span></button>)
+            : <p className="history-empty">{threads.length ? "No hay conversaciones que coincidan." : "Tus conversaciones aparecerán aquí."}</p>}
         </div>
 
         <div className="sidebar-footer">
           <button className="kernel-row" onClick={() => kernel === "online" ? reconnect() : setMode("settings")}><span className={`status-dot ${kernel}`} /><span><strong>{kernel === "online" ? "Kernel conectado" : "Kernel local"}</strong><small>{kernel === "online" ? "Comprobar conexión" : rememberedDevice ? "Reconexión preparada" : "Sin conexión"}</small></span><ChevronRight /></button>
-          <button className="profile-row"><span className="avatar">B</span><span><strong>Blackleets</strong><small>Owner workspace</small></span><Settings /></button>
+          <button className="profile-row" onClick={() => setMode("settings")}><span className="avatar">B</span><span><strong>Blackleets</strong><small>Owner workspace</small></span><Settings /></button>
         </div>
       </aside>
 
@@ -446,7 +455,7 @@ export default function Home() {
           {mode === "chat" && (
             messages.length ? <ThreadView messages={messages} provider={provider} phase={brainPhase} /> : <Welcome onStart={setMode} phase={brainPhase} />
           )}
-          {mode === "research" && <Research drafts={researchDrafts} onCreate={createResearch} kernel={kernel} />}
+          {mode === "research" && <Research drafts={researchDrafts} onCreate={createResearch} onExecute={executeResearch} kernel={kernel} />}
           {mode === "entities" && <EvidenceWorkspace kind="entities" cases={cases} selectedId={selectedCaseId} detail={caseDetails[selectedCaseId]} onOpen={openCase} kernel={kernel} bootstrap={bootstrap} />}
           {mode === "relations" && <EvidenceWorkspace kind="relations" cases={cases} selectedId={selectedCaseId} detail={caseDetails[selectedCaseId]} onOpen={openCase} kernel={kernel} bootstrap={bootstrap} />}
           {mode === "knowledge" && <EvidenceWorkspace kind="knowledge" cases={cases} selectedId={selectedCaseId} detail={caseDetails[selectedCaseId]} onOpen={openCase} kernel={kernel} bootstrap={bootstrap} />}
@@ -503,7 +512,7 @@ function Welcome({ onStart, phase }: { onStart: (mode: Mode) => void; phase: Bra
     <div className={`brain-stage brain-${phase}`} onPointerMove={moveBrainFocus} onPointerLeave={resetBrainFocus}>
       <NeuralField phase={phase} />
       <div className="brain-image-frame">
-        <Image src="/internet-brain-core.webp" alt="Cerebro digital completo de Hephaestus recibiendo señales" fill priority sizes="(max-width: 680px) 720px, 1060px" />
+        <Image src="/internet-brain-core.webp" alt="Cerebro digital completo de Hephaestus recibiendo señales" width={1060} height={454} priority sizes="(max-width: 680px) 720px, 1060px" />
       </div>
     </div>
     <div className={`brain-telemetry brain-${phase}`}><i /><strong>{state.label}</strong><span>{state.detail}</span></div>
@@ -664,10 +673,10 @@ function ThreadView({ messages, provider, phase }: { messages: Message[]; provid
   </article>)}</div>;
 }
 
-function Research({ drafts, onCreate, kernel }: { drafts: string[]; onCreate: (event: FormEvent<HTMLFormElement>) => void; kernel: string }) {
+function Research({ drafts, onCreate, onExecute, kernel }: { drafts: ResearchDraft[]; onCreate: (event: FormEvent<HTMLFormElement>) => void; onExecute: (draft: ResearchDraft) => void; kernel: string }) {
   return <Workspace heading="Investigación" eyebrow="Evidence-first workflow" icon={FileSearch} copy="Convierte una pregunta en un caso con fuentes, claims y decisiones auditables.">
     <form className="research-form" onSubmit={onCreate}><label>Pregunta de investigación<textarea name="topic" rows={5} placeholder="¿Qué quieres comprobar con evidencia?" required /></label><div className="form-row"><label>Profundidad<select name="depth"><option>Estándar</option><option>Rápida</option><option>Profunda</option></select></label><label>Agente<select><option>Hermes</option></select></label></div><div className="guardrail"><ShieldCheck /><span>Hermes puede buscar y proponer. Hephaestus conserva la autoridad.</span></div><button><Plus /> Crear borrador de caso</button></form>
-    <section className="record-panel"><header><span>Borradores de esta sesión</span><b>{drafts.length}</b></header>{drafts.length ? drafts.map((draft, index) => <article key={`${draft}-${index}`}><FileSearch /><div><strong>{draft}</strong><small>{kernel === "online" ? "Listo para confirmar" : "Kernel requerido para ejecutar"}</small></div><button disabled={kernel !== "online"}>Ejecutar</button></article>) : <HonestEmpty icon={FileSearch} title="No hay casos todavía" copy="Crea el primero sin simular resultados." />}</section>
+    <section className="record-panel"><header><span>Borradores de esta sesión</span><b>{drafts.length}</b></header>{drafts.length ? drafts.map((draft) => <article key={draft.id}><FileSearch /><div><strong>{draft.topic}</strong><small>{kernel === "online" ? "Requiere tu confirmación para crear la misión" : "Kernel requerido para ejecutar"}</small></div><button type="button" disabled={kernel !== "online"} onClick={() => onExecute(draft)} aria-label={`Ejecutar ${draft.topic}`}>Ejecutar</button></article>) : <HonestEmpty icon={FileSearch} title="No hay casos todavía" copy="Crea el primero sin simular resultados." />}</section>
   </Workspace>;
 }
 
@@ -680,7 +689,7 @@ function AgentWorkspace({ kernel, missions, bootstrap, onConfigure }: { kernel: 
       <button onClick={onConfigure}><Plug /> Gestionar conexiones</button>
     </section>
     <section className="hermes-panel">
-      <div className="hermes-logo" aria-label="Hermes Agent, Nous Research"><Bot /></div>
+      <div className="hermes-logo" aria-label="Hermes Agent, Nous Research"><span>H</span><Bot /></div>
       <div className="hermes-copy"><small>AGENTE DE INVESTIGACIÓN · NOUS RESEARCH</small><h2>Hermes Agent</h2><p>Ejecuta investigación pública mediante el adaptador oficial configurado por el propietario. Sus findings vuelven al Kernel para validación, deduplicación y Evidence.</p></div>
       <span className={`integration-status ${hermesReady && kernel === "online" ? "active" : ""}`}><i />{kernel !== "online" ? "Kernel requerido" : hermesReady ? activeHermesMission ? `Misión ${activeHermesMission.executionPhase ?? activeHermesMission.status}` : "Instalado · esperando misión" : hermesStatusLabel(bootstrap.hermes)}</span>
       <button onClick={onConfigure}><Settings /> Configuración precisa</button>
@@ -703,13 +712,13 @@ function AgentWorkspace({ kernel, missions, bootstrap, onConfigure }: { kernel: 
 }
 
 function AutomationWorkspace({ kernel, missions, onCreate }: { kernel: string; missions: Mission[]; onCreate: (event: FormEvent<HTMLFormElement>) => void }) {
-  return <Workspace heading="Automatizaciones" eyebrow="Kernel-scheduled missions" icon={Workflow} copy="Crea misiones periódicas reales para Hermes. El worker debe estar activo para reclamarlas y cada resultado vuelve al Kernel.">
+  return <Workspace heading="Automatizaciones" eyebrow="Confirmed mission intents" icon={Workflow} copy="Guarda misiones confirmadas para Hermes. El worker puede ejecutar cada misión una vez; la repetición automática todavía requiere el scheduler del Kernel.">
     <div className="automation-grid">
       <form className="automation-form" onSubmit={onCreate}>
         <header><Workflow /><div><small>NUEVA MISIÓN PROGRAMADA</small><strong>Objetivo y frecuencia</strong></div></header>
         <label>Qué debe investigar o vigilar<input name="topic" placeholder="Ej. Cambios semanales en agentes de IA" required /></label>
-        <label>Frecuencia<select name="cadence" defaultValue="weekly"><option value="daily">Cada día</option><option value="weekly">Cada semana</option><option value="manual">Solo una vez</option></select></label>
-        <div className="guardrail"><ShieldCheck /><span>Se guarda en el Kernel; no se ejecuta ni simula en esta página.</span></div>
+        <label>Cadencia solicitada<select name="cadence" defaultValue="manual"><option value="manual">Solo una vez</option><option value="daily">Diaria (scheduler pendiente)</option><option value="weekly">Semanal (scheduler pendiente)</option></select></label>
+        <div className="guardrail"><ShieldCheck /><span>El Kernel conserva la cadencia como intención. Esta página no simula recurrencia ni inicia procesos locales.</span></div>
         <button disabled={kernel !== "online"}><Plus /> Guardar misión confirmada</button>
       </form>
       <section className="record-panel automation-runs">
@@ -874,8 +883,35 @@ async function kernelJson(connection: Connection, path: string, init: RequestIni
     },
     signal: AbortSignal.timeout(10_000),
   });
-  if (!response.ok) throw new Error(`Kernel request failed: ${response.status}`);
+  if (!response.ok) throw new KernelHttpError(response.status);
   return object(await response.json());
+}
+
+class KernelHttpError extends Error {
+  constructor(readonly status: number) {
+    super(`Kernel request failed: ${status}`);
+    this.name = "KernelHttpError";
+  }
+}
+
+function connectionFailureMessage(error: unknown, automatic: boolean) {
+  if (error instanceof KernelUrlError) {
+    return error.code === "NON_LOOPBACK_KERNEL_URL"
+      ? "Bloqueado: el token solo puede enviarse a localhost o 127.0.0.1."
+      : "La URL del Kernel no es válida. Usa http://127.0.0.1:4000 sin rutas adicionales.";
+  }
+  if (error instanceof KernelHttpError && error.status === 401) {
+    return "El Kernel respondió, pero rechazó el token. Copia de nuevo el token privado del Launcher.";
+  }
+  if (error instanceof KernelHttpError && error.status === 403) {
+    return "El Kernel respondió, pero este origen no está autorizado. Añade la URL exacta de la preview a HEPHAESTUS_DASHBOARD_ORIGINS.";
+  }
+  if (error instanceof DOMException && error.name === "TimeoutError") {
+    return "El Kernel tardó demasiado en responder. Comprueba que el Launcher siga activo en el puerto configurado.";
+  }
+  return automatic
+    ? "La conexión está guardada, pero el Launcher local no responde o el navegador bloqueó el acceso local. Inícialo y pulsa Reconectar."
+    : "No se alcanzó el Kernel local. Comprueba el Launcher, el puerto y el permiso de red local del navegador.";
 }
 
 function object(value: unknown): Record<string, unknown> {

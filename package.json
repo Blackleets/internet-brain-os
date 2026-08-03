@@ -22,6 +22,7 @@
     "efesto:bootstrap": "node scripts/efesto-bootstrap.mjs",
     "efesto:launcher": "node scripts/efesto-launcher.mjs",
     "dashboard:dev": "pnpm --filter @internet-brain-os/dashboard dev",
+    "dashboard:e2e": "pnpm --filter @internet-brain-os/dashboard e2e",
     "dashboard:test": "pnpm --filter @internet-brain-os/dashboard test",
     "dashboard:build": "pnpm --filter @internet-brain-os/dashboard build",
     "hermes:mission-worker": "node apps/local-kernel/hermes-mission-worker.mjs",

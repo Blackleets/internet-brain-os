@@ -105,7 +105,9 @@ evidence actually obtained.
 ## Current application
 
 This contract is applied to the active 10/10 goal on the bounded delivery
-branch. The latest verified baseline is 106 test files / 621 tests, typecheck,
-build, Hermes validators, replay smoke, and dashboard tests. The authentic
-Agent Hub Hermes runtime and an explicitly authorized Vercel destination remain
-separate gates.
+branch. The latest verified baseline is 108 test files / 625 tests, typecheck,
+build, Hermes validators, replay smoke, dashboard tests, and a live local Kernel
+authorization/CORS probe. CI owns a separate three-flow Playwright browser gate;
+its fresh remote result is still required because Chromium could not be
+downloaded in this environment. The authentic Agent Hub Hermes runtime and an
+explicitly authorized Vercel destination remain separate gates.

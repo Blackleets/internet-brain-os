@@ -80,6 +80,15 @@ remain explicitly unavailable until their Kernel contracts and implementations
 exist; the dashboard must not invent graph records, schedules, progress, or
 future executions.
 
+Research creation in the dashboard is a two-step owner action: composing a
+session draft performs no network mutation, while the separate `Execute`
+confirmation creates the Goal and its bounded Hermes mission through the
+Kernel. Mission `cadence` is persisted as requested intent only; daily or weekly
+labels do not claim recurrence until a Kernel-owned scheduler exists. Connection
+failures distinguish invalid loopback URLs, rejected tokens, unauthorized
+browser origins, timeouts, and an unavailable local Launcher without exposing
+the token.
+
 The dashboard may be built as a Git-backed Vercel preview with
 `apps/dashboard` as the application root. Its deploy configuration is
 self-contained and its Turbopack root adapts between the local pnpm workspace

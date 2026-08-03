@@ -90,9 +90,10 @@ Every AI must append a new handoff entry using this format:
 - The first complete preview attempt reached the real Next.js build but proved that `../../tsconfig.base.json` was unavailable after Vercel isolated `apps/dashboard`. The dashboard now owns the required compiler contract and selects the correct Turbopack root in both environments.
 
 ### Tests or checks performed
-- `pnpm verify:first-run` passed: 107 test files / 624 tests, typecheck, dashboard build, Hermes validators, Hermes smoke, altered-replay smoke, and Replay Lab API smoke.
+- `pnpm verify:first-run` passed: 108 test files / 625 tests, typecheck, dashboard build, Hermes validators, Hermes smoke, altered-replay smoke, and Replay Lab API smoke.
+- CI now installs Chromium in a separate job and runs the three Playwright dashboard acceptance flows. Local execution remains unproven in this environment because the browser CDN returned an empty archive; treat the remote CI result as the next required evidence.
 - `pnpm audit --prod` passed with no known vulnerabilities.
-- The change is configuration/documentation only; no hosted deployment was claimed from this environment.
+- The runtime remains unchanged; the delivery gate and its regression test are the only additions beyond configuration/documentation. No hosted deployment was claimed from this environment.
 
 ### Risks / uncertainties
 - The Vercel project still needs to be linked to the GitHub repository in the Vercel team UI; no Vercel CLI token is configured here.

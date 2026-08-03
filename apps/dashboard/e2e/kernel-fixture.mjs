@@ -60,6 +60,14 @@ const server = createServer((request, response) => {
     response.writeHead(200, headers).end(JSON.stringify({ ok: true, response: { content: 'Fixture response from the selected local model.', model: 'qwen3:4b', evidenceStatus: 'unverified_model_output', memoryStatus: 'not_admitted' } }));
     return;
   }
+  if (request.method === 'POST' && path === '/api/goals') {
+    response.writeHead(200, headers).end(JSON.stringify({ ok: true, goal: { id: 'goal-e2e', title: 'Auditar fuentes públicas' } }));
+    return;
+  }
+  if (request.method === 'POST' && path === '/api/goals/goal-e2e/missions') {
+    response.writeHead(200, headers).end(JSON.stringify({ ok: true, mission: { id: 'mission-e2e', status: 'queued' } }));
+    return;
+  }
   if (request.method === 'POST' && path === '/api/chat/stream') {
     response.writeHead(200, { ...headers, 'content-type': 'application/x-ndjson; charset=utf-8' });
     response.write(`${JSON.stringify({ type: 'conversation', conversationId: 'conversation-fixture' })}\n`);

@@ -157,3 +157,15 @@
 .launcher-steps{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px}.integration-truth{display:flex;align-items:center;gap:7px;margin:0;padding:0 16px 16px;color:#737d8a;font-size:7px;line-height:1.5}.integration-truth svg{width:13px;flex:0 0 auto;color:var(--green)}
 @media(max-width:900px){.integration-control-grid{grid-template-columns:1fr 1fr}.launcher-steps{grid-template-columns:1fr}}
 @media(max-width:680px){.connection-button{min-width:34px}.connection-button>span:not(.status-dot){display:none}.integration-control>header{align-items:flex-start;flex-direction:column}.integration-control-grid{grid-template-columns:1fr}.integration-control-grid article{min-height:145px}.settings-actions{grid-template-columns:1fr}}
+
+/* v12 — visual recovery and interaction clarity. Intrinsic media dimensions are mandatory. */
+.brain-stage{isolation:isolate;border-radius:28px;background:radial-gradient(ellipse at 66% 49%,rgba(42,92,205,.2),transparent 42%),linear-gradient(180deg,rgba(12,18,31,.34),rgba(8,10,15,0))}
+.brain-image-frame{aspect-ratio:530/227;min-height:1px}
+.brain-image-frame img{width:100%;height:auto}
+.brain-stage::after{position:absolute;inset:8% 12%;z-index:1;border:1px solid rgba(79,144,255,.1);border-radius:50%;content:"";filter:blur(.2px);box-shadow:0 0 70px rgba(55,108,235,.13);pointer-events:none}
+.hermes-logo{position:relative;color:#c9bcff;border-color:#6350a0;background:radial-gradient(circle at 68% 25%,#6c52bb 0,#282044 42%,#11131b 76%);box-shadow:inset 0 0 25px rgba(153,111,255,.2),0 0 34px rgba(96,62,190,.16)}
+.hermes-logo::after{position:absolute;inset:7px;border:1px solid rgba(214,199,255,.2);border-radius:13px;content:""}
+.hermes-logo span{position:absolute;right:10px;top:8px;color:#fff;font-size:9px;font-weight:850;letter-spacing:.08em}
+.hermes-logo svg{width:34px;height:34px;filter:drop-shadow(0 0 10px rgba(186,159,255,.55))}
+.workspace-heading p,.hermes-copy p,.integration-copy p{font-size:10px}.workspace-heading small,.hermes-copy small{font-size:8px}.record-panel article strong{font-size:10px}.record-panel article small,.guardrail{font-size:8px}.side-search:focus-within{color:#b9c7d8;background:#151922;border-radius:8px}.history-item:focus-visible,.nav-section>button:focus-visible,.profile-row:focus-visible,.starter-grid button:focus-visible,.record-panel button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}.composer-wrap{isolation:isolate}.conversation{scroll-padding-bottom:120px}
+@media(max-width:680px){.brain-stage{min-height:270px}.brain-image-frame{width:720px}.composer-wrap{position:sticky;bottom:62px}.conversation{padding-bottom:12px}.workspace-heading p{font-size:10px}.hermes-logo svg{width:27px;height:27px}}
