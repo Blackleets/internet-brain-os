@@ -53,6 +53,9 @@ failure and must never trigger a cloud proxy or a broader origin rule. See the
 3. With the local Kernel running and the exact origin allowlisted, connect using
    the owner-private token held only in the browser tab; grant the browser's
    Local Network Access permission to that confirmed origin if prompted.
+   Persistent device reconnection is an explicit opt-in: its checkbox is off by
+   default, and the disconnect/forget control must remove the browser-local
+   connection before the device is shared or retired.
 4. Verify a read-only Overview request, an unauthorized `401`, and the local
    Kernel's origin rejection for an unlisted origin.
 

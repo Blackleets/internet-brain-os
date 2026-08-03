@@ -69,6 +69,12 @@ processes, and subsystem readiness. It may create Goals, launch an explicitly
 confirmed manual Hermes mission, and record private Opportunity feedback only
 through existing authenticated Kernel contracts. It preserves Efesto as the
 primary capture/consent surface and Replay Lab as the advanced forensic surface.
+Its official visual shell is the ChatGPT-style forge migrated from the prior
+Internet Brain OS Sites deployment into `apps/dashboard`: neural activity is
+derived only from connection, streaming, and persisted mission state; sidebar,
+composer, evidence inspectors, Hermes workspace, and integration control plane
+remain presentation-only. GitHub is the maintained source, while the older
+Sites URL is a visual reference rather than an editable authority.
 Knowledge Graph projections and a general scheduler are not complete and must
 remain explicitly unavailable until their Kernel contracts and implementations
 exist; the dashboard must not invent graph records, schedules, progress, or
@@ -81,7 +87,9 @@ and the isolated Vercel app without importing Kernel runtime code. Hosting is a
 client distribution surface only: it does not move the Kernel, tokens,
 Evidence, Obsidian data, Hermes worker, or memory into Vercel. A hosted origin
 must be added exactly to `HEPHAESTUS_DASHBOARD_ORIGINS` before it can call a
-user's loopback Kernel; wildcard Vercel origins remain forbidden.
+user's loopback Kernel; wildcard Vercel origins remain forbidden. A user may
+explicitly opt to remember the loopback URL and token in that browser only;
+the control is off by default and disconnect/forget clears the persisted value.
 
 The persistent bottom composer is a provider-neutral conversation surface.
 Authenticated users may register loopback Ollama or HTTPS OpenAI-compatible

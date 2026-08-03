@@ -5,6 +5,13 @@ Hephaestus Kernel. It reads the same Kernel state as Efesto and Replay Lab; it
 does not create a second store, bypass Kernel authority, or send data through a
 cloud service.
 
+Its current interaction model is the ChatGPT-style forge previously published
+through Internet Brain OS Sites: persistent conversation composer, neural forge
+stage, workspace navigation, Hermes mission surface, evidence inspectors, and a
+single integration control plane. The maintained source now lives here in
+GitHub; the Sites deployment is only the visual lineage, not a second product
+authority.
+
 ## Start locally
 
 From the repository root, start the loopback Kernel and then the dashboard in a
@@ -36,9 +43,11 @@ boundary.
 
 Enter the local Kernel token in the connection screen. By default it stays only
 in the current browser tab's memory: it is not put in a URL, log, analytics
-payload, build artifact, `localStorage`, or repository file. A 401 response
-returns to the connection screen without clearing the last non-sensitive UI
-state.
+payload, build artifact, `localStorage`, or repository file. The optional
+“Recordar solo en este dispositivo” control is off by default and is the only
+path that persists the connection in browser-local storage; “Olvidar
+dispositivo” removes it. A 401 response returns to the connection screen
+without rendering the token.
 
 With the default Kernel data directory, the persistent token is stored at
 `.hephaestus/kernel-api-token` relative to the repository root. If
