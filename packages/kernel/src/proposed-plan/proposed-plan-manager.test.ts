@@ -3,6 +3,7 @@ import { ProposedPlanManager } from './proposed-plan-manager';
 import { PROPOSED_PLAN_CONTRACT_VERSION } from './proposed-plan-contract';
 import { UniversalGoal, GOAL_CONTRACT_VERSION } from '../goal/goal-contract';
 import { MissionTask, MissionTaskId } from '../mission/mission-types';
+import { GoalNotFoundForPlanError, ProposedPlanCapabilityDeniedError, ProposedPlanDependencyError } from './proposed-plan-errors';
 
 // Helper to create a minimal valid UniversalGoal for testing
 function createTestGoal(overrides: Partial<UniversalGoal> = {}): UniversalGoal {
@@ -58,7 +59,7 @@ function createTestGoal(overrides: Partial<UniversalGoal> = {}): UniversalGoal {
   return { ...base, ...overrides };
 }
 
-// Helper to create a minimal valid MissionTask for testing
+// Helper to create a valid MissionTask for testing
 function createTestTask(overrides: Partial<MissionTask> = {}): MissionTask {
   const base: MissionTask = {
     id: 'task:test-id' as MissionTaskId,
@@ -74,19 +75,19 @@ function createTestTask(overrides: Partial<MissionTask> = {}): MissionTask {
 describe('ProposedPlanManager', () => {
   // Mock store
   const createMockStore = () => ({
-    transaction: vi.fn((callback) => callback({ proposedPlans: [] })),
+    transaction: vi.fn((callback: (plans: any[]) => Promise<any>) => callback([])),
     write: vi.fn(),
-    getGoal: vi.fn(),
   });
 
   test('should create a proposed plan', async () => {
     const store = createMockStore();
-    const manager = new ProposedPlanManager(store as any);
+    const getGoal = vi.fn();
+    const manager = new ProposedPlanManager(store as any, getGoal);
 
     const goalId = 'goal:123';
     const mockGoal = createTestGoal({ id: goalId });
 
-    store.getGoal.mockResolvedValue(mockGoal);
+    getGoal.mockResolvedValue(mockGoal);
 
     const input = {
       goalId,
@@ -126,9 +127,8 @@ describe('ProposedPlanManager', () => {
 
   test('should throw if goal not found', async () => {
     const store = createMockStore();
-    const manager = new ProposedPlanManager(store as any);
-
-    store.getGoal.mockResolvedValue(null);
+    const getGoal = vi.fn().mockResolvedValue(null);
+    const manager = new ProposedPlanManager(store as any, getGoal);
 
     const input = {
       goalId: 'goal:999',
@@ -140,17 +140,18 @@ describe('ProposedPlanManager', () => {
       completionConditions: [],
     };
 
-    await expect(manager.createProposedPlan(input)).rejects.toThrow(/Goal not found/);
+    await expect(manager.createProposedPlan(input)).rejects.toThrow(GoalNotFoundForPlanError);
   });
 
   test('should throw if plan tasks exceed maxTasks', async () => {
     const store = createMockStore();
-    const manager = new ProposedPlanManager(store as any, 10, 2); // maxTasks = 2
+    const getGoal = vi.fn();
+    const manager = new ProposedPlanManager(store as any, getGoal, 10, 2); // maxTasks = 2
 
     const goalId = 'goal:123';
     const mockGoal = createTestGoal({ id: goalId });
 
-    store.getGoal.mockResolvedValue(mockGoal);
+    getGoal.mockResolvedValue(mockGoal);
 
     const input = {
       goalId,
@@ -171,12 +172,13 @@ describe('ProposedPlanManager', () => {
 
   test('should detect cycles in task dependencies', async () => {
     const store = createMockStore();
-    const manager = new ProposedPlanManager(store as any);
+    const getGoal = vi.fn();
+    const manager = new ProposedPlanManager(store as any, getGoal);
 
     const goalId = 'goal:123';
     const mockGoal = createTestGoal({ id: goalId });
 
-    store.getGoal.mockResolvedValue(mockGoal);
+    getGoal.mockResolvedValue(mockGoal);
 
     const input = {
       goalId,
@@ -191,18 +193,19 @@ describe('ProposedPlanManager', () => {
       completionConditions: [],
     };
 
-    await expect(manager.createProposedPlan(input)).rejects.toThrow(/Dependency cycle detected/);
+    await expect(manager.createProposedPlan(input)).rejects.toThrow(ProposedPlanDependencyError);
   });
 
   test('should reject a capability not allowed by the goal', async () => {
     const store = createMockStore();
-    const manager = new ProposedPlanManager(store as any);
+    const getGoal = vi.fn();
+    const manager = new ProposedPlanManager(store as any, getGoal);
 
     const goalId = 'goal:123';
     const mockGoal = createTestGoal({ id: goalId });
     // Override allowedCapabilities: ['allowed_cap'];
-    mockGoal.constraints.allowedCapabilities = ['allowed_cap'];
-    store.getGoal.mockResolvedValue(mockGoal);
+    mockGoal.allowedCapabilities = ['allowed_cap'];
+    getGoal.mockResolvedValue(mockGoal);
 
     const input = {
       goalId,
@@ -214,19 +217,20 @@ describe('ProposedPlanManager', () => {
       completionConditions: [],
     };
 
-    await expect(manager.createProposedPlan(input)).rejects.toThrow(/is not allowed by the goal/);
+    await expect(manager.createProposedPlan(input)).rejects.toThrow(ProposedPlanCapabilityDeniedError);
   });
 
   test('should allow a capability that is allowed by the goal', async () => {
     const store = createMockStore();
-    const manager = new ProposedPlanManager(store as any);
+    const getGoal = vi.fn();
+    const manager = new ProposedPlanManager(store as any, getGoal);
 
     const goalId = 'goal:123';
     const mockGoal = createTestGoal({ id: goalId });
     // Ensure the capability is allowed
     mockGoal.allowedCapabilities = ['allowed_cap'];
     mockGoal.constraints.allowedCapabilities = ['allowed_cap'];
-    store.getGoal.mockResolvedValue(mockGoal);
+    getGoal.mockResolvedValue(mockGoal);
 
     const input = {
       goalId,
@@ -243,72 +247,71 @@ describe('ProposedPlanManager', () => {
 
   test('should list proposed plans for a goal', async () => {
     const store = createMockStore();
-    const manager = new ProposedPlanManager(store as any);
+    const getGoal = vi.fn();
+    const manager = new ProposedPlanManager(store as any, getGoal);
 
     const goalId = 'goal:123';
     const mockGoal = createTestGoal({ id: goalId });
-    store.getGoal.mockResolvedValue(mockGoal);
+    getGoal.mockResolvedValue(mockGoal);
 
     // Mock the store's transaction to return some existing plans when listing.
-    store.transaction.mockImplementationOnce((callback) => {
-      return callback({
-        proposedPlans: [
-          {
-            id: 'plan:1',
-            goalId,
-            revisionNumber: 1,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            planSummary: 'Plan 1',
-            planTasks: [],
-            requestedCapabilities: [],
-            expectedEvidence: [],
-            approvalCheckpoints: [],
-            completionConditions: [],
-            status: 'draft',
-            contractVersion: PROPOSED_PLAN_CONTRACT_VERSION,
-            createdRevision: {
-              revision: 1,
-              changedAt: new Date().toISOString(),
-              changedBy: 'system',
-              diff: {},
-            },
-            currentRevision: {
-              revision: 1,
-              changedAt: new Date().toISOString(),
-              changedBy: 'system',
-              diff: {},
-            },
+    store.transaction.mockImplementationOnce((callback: (plans: any[]) => Promise<any>) => {
+      return callback([
+        {
+          id: 'plan:1',
+          goalId,
+          revisionNumber: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          planSummary: 'Plan 1',
+          planTasks: [],
+          requestedCapabilities: [],
+          expectedEvidence: [],
+          approvalCheckpoints: [],
+          completionConditions: [],
+          status: 'draft',
+          contractVersion: PROPOSED_PLAN_CONTRACT_VERSION,
+          createdRevision: {
+            revision: 1,
+            changedAt: new Date().toISOString(),
+            changedBy: 'system',
+            diff: {},
           },
-          {
-            id: 'plan:2',
-            goalId,
-            revisionNumber: 2,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            planSummary: 'Plan 2',
-            planTasks: [],
-            requestedCapabilities: [],
-            expectedEvidence: [],
-            approvalCheckpoints: [],
-            completionConditions: [],
-            status: 'draft',
-            contractVersion: PROPOSED_PLAN_CONTRACT_VERSION,
-            createdRevision: {
-              revision: 1,
-              changedAt: new Date().toISOString(),
-              changedBy: 'system',
-              diff: {},
-            },
-            currentRevision: {
-              revision: 1,
-              changedAt: new Date().toISOString(),
-              changedBy: 'system',
-              diff: {},
-            },
+          currentRevision: {
+            revision: 1,
+            changedAt: new Date().toISOString(),
+            changedBy: 'system',
+            diff: {},
           },
-        ],
-      });
+        },
+        {
+          id: 'plan:2',
+          goalId,
+          revisionNumber: 2,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          planSummary: 'Plan 2',
+          planTasks: [],
+          requestedCapabilities: [],
+          expectedEvidence: [],
+          approvalCheckpoints: [],
+          completionConditions: [],
+          status: 'draft',
+          contractVersion: PROPOSED_PLAN_CONTRACT_VERSION,
+          createdRevision: {
+            revision: 1,
+            changedAt: new Date().toISOString(),
+            changedBy: 'system',
+            diff: {},
+          },
+          currentRevision: {
+            revision: 1,
+            changedAt: new Date().toISOString(),
+            changedBy: 'system',
+            diff: {},
+          },
+        },
+      ]);
     });
 
     const plans = await manager.listProposedPlansForGoal(goalId);

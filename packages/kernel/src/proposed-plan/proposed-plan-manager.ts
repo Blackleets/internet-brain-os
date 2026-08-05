@@ -5,18 +5,21 @@ import { ProposedPlan, CreateProposedPlanInput, PROPOSED_PLAN_CONTRACT_VERSION, 
 import { ProposedPlanNotFoundError, GoalNotFoundForPlanError, InvalidProposedPlanInputError, ProposedPlanCapabilityDeniedError, ProposedPlanDependencyError, ProposedPlanRevisionConflictError } from './proposed-plan-errors';
 
 export interface ProposedPlanStore {
-  transaction<T>(callback: (data: any) => Promise<T>): Promise<T>;
-  write(data: any): Promise<void>;
-  // We assume the store also has a way to get a goal by id.
-  getGoal?(goalId: string): Promise<UniversalGoal | null>;
+  transaction<T>(callback: (plans: ProposedPlan[]) => Promise<T>): Promise<T>;
+  write(plans: ProposedPlan[]): Promise<void>;
 }
 
 export class ProposedPlanManager {
-  constructor(private store: ProposedPlanStore, private maxDepth = 10, private maxTasks = 20) {}
+  constructor(
+    private store: ProposedPlanStore,
+    private getGoal: (goalId: string) => Promise<UniversalGoal | null>,
+    private maxDepth = 10,
+    private maxTasks = 20
+  ) {}
 
   async createProposedPlan(input: CreateProposedPlanInput): Promise<ProposedPlan> {
     // Fetch the goal to validate against it
-    const goal = await this.store.getGoal?.(input.goalId);
+    const goal = await this.getGoal(input.goalId);
     if (!goal) {
       throw new GoalNotFoundForPlanError('unknown', input.goalId);
     }
@@ -27,7 +30,7 @@ export class ProposedPlanManager {
     }
 
     // Validate that there are no cycles in the task dependency graph
-    this.validateNoCycles(input.planTasks);
+    this.validateNoCycles(input.id ?? `proposed-plan:${uuidv4()}`, input.planTasks);
 
     // Generate ID if not provided
     const id = input.id ?? `proposed-plan:${uuidv4()}`;
@@ -88,29 +91,26 @@ export class ProposedPlanManager {
     await this.validateProposedPlan(proposedPlan);
 
     // Save to store
-    return this.store.transaction(async (data) => {
-      const plans = Array.isArray(data.proposedPlans) ? data.proposedPlans : [];
+    return this.store.transaction(async (plans) => {
       // Check for duplicate id (optional)
       const existing = plans.find((p: ProposedPlan) => p.id === proposedPlan.id);
       if (existing) {
         throw new Error(`Proposed plan with id ${proposedPlan.id} already exists`);
       }
       const updated = [...plans, proposedPlan];
-      await this.store.write({ ...data, proposedPlans: updated });
+      await this.store.write(updated);
       return proposedPlan;
     });
   }
 
   async getProposedPlan(id: string): Promise<ProposedPlan | null> {
-    return this.store.transaction(async (data) => {
-      const plans = Array.isArray(data.proposedPlans) ? data.proposedPlans : [];
+    return this.store.transaction(async (plans) => {
       return plans.find((p: ProposedPlan) => p.id === id) ?? null;
     });
   }
 
   async listProposedPlansForGoal(goalId: string): Promise<ProposedPlan[]> {
-    return this.store.transaction(async (data) => {
-      const plans = Array.isArray(data.proposedPlans) ? data.proposedPlans : [];
+    return this.store.transaction(async (plans) => {
       return plans
         .filter((p: ProposedPlan) => p.goalId === goalId)
         .sort((a: ProposedPlan, b: ProposedPlan) => {
@@ -122,8 +122,7 @@ export class ProposedPlanManager {
   }
 
   async updateProposedPlan(id: string, updates: Partial<Omit<ProposedPlan, 'id' | 'contractVersion' | 'createdAt' | 'createdRevision'>>): Promise<ProposedPlan> {
-    return this.store.transaction(async (data) => {
-      const plans = Array.isArray(data.proposedPlans) ? data.proposedPlans : [];
+    return this.store.transaction(async (plans) => {
       const index = plans.findIndex((p: ProposedPlan) => p.id === id);
       if (index === -1) {
         throw new ProposedPlanNotFoundError(id);
@@ -140,7 +139,7 @@ export class ProposedPlanManager {
 
       // Validate that the requested capabilities are allowed by the goal (if they are being updated)
       if (updates.requestedCapabilities !== undefined) {
-        const goal = await this.store.getGoal?.(updatedBase.goalId);
+        const goal = await this.getGoal(updatedBase.goalId);
         if (!goal) {
           throw new GoalNotFoundForPlanError(id, updatedBase.goalId);
         }
@@ -149,7 +148,7 @@ export class ProposedPlanManager {
 
       // Validate that there are no cycles in the task dependency graph (if planTasks are being updated)
       if (updates.planTasks !== undefined) {
-        this.validateNoCycles(updatedBase.planTasks);
+        this.validateNoCycles(id, updatedBase.planTasks);
       }
 
       // Compute content hash from the canonical content (excluding mutables)
@@ -190,14 +189,14 @@ export class ProposedPlanManager {
 
       const newPlans = [...plans];
       newPlans[index] = updatedPlan;
-      await this.store.write({ ...data, proposedPlans: newPlans });
+      await this.store.write(newPlans);
       return updatedPlan;
     });
   }
 
   // Helper methods
 
-  private validateNoCycles(tasks: readonly MissionTask[]): void {
+  private validateNoCycles(planId: string, tasks: readonly MissionTask[]): void {
     // We'll reuse the cycle detection from the evidence-aware-planner (simplified)
     const tasksById = new Map<MissionTaskId, MissionTask>();
     tasks.forEach((task) => {
@@ -210,7 +209,7 @@ export class ProposedPlanManager {
     const visit = (taskId: MissionTaskId): void => {
       if (visited.has(taskId)) return;
       if (visiting.has(taskId)) {
-        throw new ProposedPlanDependencyError('unknown', taskId, 'Dependency cycle detected');
+        throw new ProposedPlanDependencyError(planId, taskId, 'Dependency cycle detected');
       }
       visiting.add(taskId);
       const task = tasksById.get(taskId);
@@ -233,34 +232,17 @@ export class ProposedPlanManager {
     goal: UniversalGoal,
     planId: string
   ): void {
-    // If the goal specifies allowedCapabilities, then every requested capability must be in that list.
-    // If the goal specifies forbiddenCapabilities, then no requested capability can be in that list.
-    // If the goal does not specify allowedCapabilities, then we assume no capabilities are allowed (deny by default).
-    // However, the goal might not have any capabilities specified (meaning it's a generic goal).
-    // We'll follow the rule: if the goal has allowedCapabilities defined, then we must check against it.
-    // If the goal has forbiddenCapabilities defined, we must check against it.
-    // If neither is defined, then we allow? But the principle says absence of permission means denial.
-    // We'll interpret: if the goal does not specify any allowedCapabilities, then no capabilities are allowed unless explicitly allowed? 
-    // Actually, the goal's allowedCapabilities and forbiddenCapabilities are the policy.
-    // If they are not set, then there is no policy? We'll assume that means no restrictions (but that violates the principle).
-    // To be safe, we will require that the goal explicitly defines allowedCapabilities. If it doesn't, then we treat it as allowing none.
-    // However, note that the goal might be legacy and not have these fields. We'll need to handle legacy goals.
-    // For now, we'll assume that the goal has been migrated to a UniversalGoal and has the capabilities fields.
-    // We'll do:
     const allowed = goal.allowedCapabilities ?? [];
     const forbidden = goal.forbiddenCapabilities ?? [];
 
-    // If allowed is non-empty, then we must check that every requested capability is in allowed.
-    // If allowed is empty, then we treat it as no capabilities are allowed (unless the goal has no capability fields at all?).
-    // We'll check if the goal has the capability fields (they are optional in UniversalGoal? Actually, they are required arrays).
-    // Looking at the goal-contract.ts, allowedCapabilities and forbiddenCapabilities are required arrays (they are present, but can be empty).
-    // So we can rely on them being present.
-
     for (const req of requested) {
-      if (allowed.length > 0 && !allowed.includes(req.capabilityId)) {
-        throw new ProposedPlanCapabilityDeniedError(planId, req.capabilityId);
+      let isAllowed = false;
+      if (allowed.length > 0) {
+        isAllowed = allowed.includes(req.capabilityId);
       }
-      if (forbidden.includes(req.capabilityId)) {
+      // If allowed is empty, then isAllowed remains false (deny by default)
+
+      if (!isAllowed || forbidden.includes(req.capabilityId)) {
         throw new ProposedPlanCapabilityDeniedError(planId, req.capabilityId);
       }
     }

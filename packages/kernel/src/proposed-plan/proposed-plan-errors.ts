@@ -13,7 +13,7 @@ export class GoalNotFoundForPlanError extends Error {
   readonly planId: string;
   readonly goalId: string;
   constructor(planId: string, goalId: string) {
-    super(`Goal not found: ${goalId}`);
+    super(`Goal not found for proposed plan: planId=${planId}, goalId=${goalId}`);
     this.name = 'GoalNotFoundForPlanError';
     this.planId = planId;
     this.goalId = goalId;
@@ -35,7 +35,7 @@ export class ProposedPlanCapabilityDeniedError extends Error {
   readonly planId: string;
   readonly capabilityId: string;
   constructor(planId: string, capabilityId: string) {
-    super(`Capability ${capabilityId} is not allowed by the goal`);
+    super(`Capability ${capabilityId} is not allowed by the goal for proposed plan ${planId}`);
     this.name = 'ProposedPlanCapabilityDeniedError';
     this.planId = planId;
     this.capabilityId = capabilityId;
@@ -45,10 +45,11 @@ export class ProposedPlanCapabilityDeniedError extends Error {
 export class ProposedPlanDependencyError extends Error {
   readonly planId: string;
   readonly taskId: string;
-  constructor(planId: string, taskId: string, message: string) {
-    super(message);
+  constructor(planId: string | undefined, taskId: string, message: string) {
+    const pid = planId ?? 'unknown';
+    super(`Dependency error in plan ${pid} for task ${taskId}: ${message}`);
     this.name = 'ProposedPlanDependencyError';
-    this.planId = planId;
+    this.planId = pid;
     this.taskId = taskId;
   }
 }
