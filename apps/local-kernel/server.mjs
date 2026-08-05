@@ -413,7 +413,13 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     if (request.method === 'POST' && request.url === '/api/agent-missions/claim') {
       if (!missionExecutor) return send(response, 404, { ok: false, code: 'AGENT_EXECUTOR_UNAVAILABLE' });
       try {
-        const mission = await missionExecutor.claim('hermes');
+        const contentType = String(request.headers['content-type'] ?? '').toLowerCase();
+        const body = contentType.startsWith('application/json') ? await readJson(request) : undefined;
+        const requestedId = body?.missionId;
+        if (requestedId !== undefined && (typeof requestedId !== 'string' || !requestedId || requestedId.length > 200)) {
+          return send(response, 400, { ok: false, code: 'INVALID_MISSION_ID' });
+        }
+        const mission = await missionExecutor.claim('hermes', requestedId);
         return send(response, mission ? 200 : 204, mission ? { ok: true, mission } : undefined);
       } catch { return send(response, 500, { ok: false, code: 'AGENT_MISSION_CLAIM_FAILED' }); }
     }
