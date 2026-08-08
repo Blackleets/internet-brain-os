@@ -80,7 +80,7 @@ describe('Golden Goal: quality drill between 18 and 25 EUR', () => {
     });
     const reader = new WebPageFetcher({
       lookupImpl: async () => [{ address: '93.184.216.34', family: 4 }],
-      requestImpl: async () => new Response(`<html><title>Quality cordless drill 24.99 EUR</title><body>Limited offer. Discount deal. Quality cordless drill with warranty for 24.99 EUR. Offer expires August 12, 2026.</body></html>`, {
+      requestImpl: async () => new Response(`<html><title>Quality cordless drill 24.99 EUR</title><body>Limited offer. Discount deal. Oferta limitada. Descuento y promoción. Quality cordless drill with warranty for 24.99 EUR. Hasta el 12 de agosto de 2026.</body></html>`, {
         status: 200, headers: { 'content-type': 'text/html' },
       }),
     });
