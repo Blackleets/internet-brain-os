@@ -14,5 +14,6 @@ export * from './proposed-plan';
 export * from './relationship';
 export * from './replay-lab';
 export * from './report/report-generator';
+export * from './scheduler';
 export * from './storage';
 export * from './storage/in-memory';
