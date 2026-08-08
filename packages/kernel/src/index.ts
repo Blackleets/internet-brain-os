@@ -17,3 +17,4 @@ export * from './report/report-generator';
 export * from './scheduler';
 export * from './storage';
 export * from './storage/in-memory';
+export * from './trigger';
