@@ -6,6 +6,7 @@ export * from './evidence';
 export * from './execution';
 export * from './goal';
 export * from './ingestion/web-ingestion';
+export * from './knowledge-graph';
 export * from './llm';
 export * from './memory';
 export * from './mission';
