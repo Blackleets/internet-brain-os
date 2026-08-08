@@ -13,6 +13,7 @@ export {
   MemoryAuthorityReceiptConflictError,
   verifyMemoryAuthorityReceiptIntegrity,
 } from './memory-authority-receipt-repository';
+export { DurableMemoryAuthorityReceiptRepository } from './durable-memory-authority-receipt-repository';
 export { MemoryAuthorityTransitionService } from './memory-authority-transition-service';
 export { projectMemoryAuthorityState } from './memory-authority-projector';
 export { reconcileMemoryAuthorityAtStartup } from './memory-authority-reconciliation';
