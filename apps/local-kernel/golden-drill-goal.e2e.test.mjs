@@ -146,7 +146,7 @@ describe('Golden Goal: quality drill between 18 and 25 EUR', () => {
       body: `${ranked.title} — 24.99 EUR. Efesto conservó la Evidence y no realizó ninguna compra.`,
       priority: 'high', actionRequired: true, createdAt: t2,
     });
-    expect(notification.state).toBe('queued');
+    expect(notification.state).toBe('unread');
     expect(notification.evidenceIds).toEqual([evidence.id]);
     expect(notification.body).toContain('no realizó ninguna compra');
 
