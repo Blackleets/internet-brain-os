@@ -186,7 +186,7 @@ async function verifyProcessIdentity(record, options = {}) {
   if (!record.nonce || !record.commandFingerprint || !record.startedAt) return { verified: false, reason: 'missing_fingerprint' };
   const actual = options.readProcessIdentity
     ? await options.readProcessIdentity(record.pid)
-    : await readProcessIdentity(record.pid);
+    : await readProcessIdentity(record.pid, options);
   if (!actual?.commandLine) return { verified: false, reason: 'identity_unavailable' };
   const commandLine = normalizeCommandText(actual.commandLine);
   const fingerprint = normalizeCommandText(record.commandFingerprint);
@@ -198,13 +198,28 @@ function normalizeCommandText(value) {
   return String(value).replace(/\\/g, '/').toLowerCase();
 }
 
-async function readProcessIdentity(pid) {
+async function readProcessIdentity(pid, options = {}) {
   if (process.platform !== 'win32') {
     try { return { commandLine: await readFile(`/proc/${Number(pid)}/cmdline`, 'utf8') }; }
     catch { return undefined; }
   }
-  const result = await runCommand('wmic.exe', ['process', 'where', `ProcessId=${Number(pid)}`, 'get', 'CommandLine', '/format:list'], { timeoutMs: 3000 });
-  return result.code === 0 ? { commandLine: result.stdout || result.stderr || '' } : undefined;
+  return readWindowsProcessIdentity(pid, options);
+}
+
+export async function readWindowsProcessIdentity(pid, options = {}) {
+  const numericPid = Number(pid);
+  if (!Number.isInteger(numericPid) || numericPid <= 0) return undefined;
+  const runner = options.runProcessCommand ?? runCommand;
+
+  const cimScript = `$p = Get-CimInstance Win32_Process -Filter 'ProcessId = ${numericPid}' -ErrorAction SilentlyContinue; if ($null -ne $p -and $null -ne $p.CommandLine) { [Console]::Out.Write($p.CommandLine) }`;
+  const cim = await runner('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', cimScript], { timeoutMs: 3000 });
+  if (cim.code === 0 && String(cim.stdout ?? '').trim()) return { commandLine: String(cim.stdout).trim() };
+
+  const wmic = await runner('wmic.exe', ['process', 'where', `ProcessId=${numericPid}`, 'get', 'CommandLine', '/format:list'], { timeoutMs: 3000 });
+  if (wmic.code === 0 && String(wmic.stdout ?? wmic.stderr ?? '').trim()) {
+    return { commandLine: String(wmic.stdout || wmic.stderr).trim() };
+  }
+  return undefined;
 }
 
 function safeMessage(error) {
