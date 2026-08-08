@@ -1,3 +1,4 @@
+export * from './approval';
 export * from './capability';
 export * from './case';
 export * from './entity';
