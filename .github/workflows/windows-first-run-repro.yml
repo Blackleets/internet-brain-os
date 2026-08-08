@@ -88,8 +88,10 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $dataDir = Join-Path $PWD '.uat-existing-hermes-secret'
+          $installerLog = Join-Path $PWD '.uat-existing-hermes-secret-installer.log'
           Remove-Item -Recurse -Force $dataDir -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force 'packages/kernel/dist' -ErrorAction SilentlyContinue
+          Remove-Item -Force $installerLog -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
           Set-Content -Path (Join-Path $dataDir 'kernel-api-token') -Value ('d' * 64) -NoNewline
 
@@ -104,8 +106,15 @@ jobs:
 
           try {
             if (Test-Path 'packages/kernel/dist/index.js') { throw 'Precondition failed: Kernel dist must start absent.' }
-            powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install-efesto.ps1 -SkipNodeInstall -SkipShortcut *> $null
-            if ($LASTEXITCODE -ne 0) { throw "Installer failed with an existing Hermes boundary secret: $LASTEXITCODE" }
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install-efesto.ps1 -SkipNodeInstall -SkipShortcut *> $installerLog
+            $installerExit = $LASTEXITCODE
+            if ($installerExit -ne 0) {
+              Write-Host 'Sanitized installer tail:'
+              Get-Content $installerLog -ErrorAction SilentlyContinue |
+                Where-Object { $_ -notmatch '(?i)pairing code|token|secret|authorization|cookie' } |
+                Select-Object -Last 160
+              throw "Installer failed with an existing Hermes boundary secret: $installerExit"
+            }
             if (-not (Test-Path 'packages/kernel/dist/index.js')) { throw 'Installer did not build the Kernel runtime.' }
 
             Start-Sleep -Seconds 1
@@ -116,4 +125,5 @@ jobs:
           }
           finally {
             pnpm efesto:launcher shutdown 2>$null | Out-Null
+            Remove-Item -Force $installerLog -ErrorAction SilentlyContinue
           }
