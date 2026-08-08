@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildKernelChildEnv, repairEfestoLauncher, shutdownEfestoLauncher } from './efesto-launcher-core.mjs';
+import { buildKernelChildEnv, repairEfestoLauncher, shutdownEfestoLauncher, stopLauncherProcessTree } from './efesto-launcher-core.mjs';
 
 function harness(overrides = {}) {
   const calls = [];
@@ -93,6 +93,19 @@ describe('Efesto Windows launcher core', () => {
     const { calls, ops } = harness({ status: ready });
     await shutdownEfestoLauncher({ ops });
     expect(calls).toContainEqual(['stopOwnedProcess', 111]);
+  });
+
+  it('terminates the full verified Efesto process tree on Windows', async () => {
+    const calls = [];
+    const result = await stopLauncherProcessTree(4242, {
+      platform: 'win32',
+      runStopCommand: async (command, args, options) => {
+        calls.push([command, args, options]);
+        return { code: 0 };
+      },
+    });
+    expect(result).toMatchObject({ stopped: true, code: 0 });
+    expect(calls).toEqual([['taskkill.exe', ['/PID', '4242', '/T', '/F'], { timeoutMs: 5000 }]]);
   });
 
   it('passes the configured Obsidian vault to the child Kernel process environment', () => {
