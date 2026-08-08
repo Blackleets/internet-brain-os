@@ -1,261 +1,364 @@
 import { v4 as uuidv4 } from 'uuid';
-import { UniversalGoal } from '../goal/goal-contract';
-import { MissionTask, MissionTaskId } from '../mission/mission-types';
-import { ProposedPlan, CreateProposedPlanInput, PROPOSED_PLAN_CONTRACT_VERSION, ProposedPlanStatus, computeProposedPlanHash } from './proposed-plan-contract';
-import { ProposedPlanNotFoundError, GoalNotFoundForPlanError, InvalidProposedPlanInputError, ProposedPlanCapabilityDeniedError, ProposedPlanDependencyError, ProposedPlanRevisionConflictError } from './proposed-plan-errors';
+import type { UniversalGoal } from '../goal/goal-contract';
+import type { MissionTask, MissionTaskId } from '../mission/mission-types';
+import {
+  computeProposedPlanHash,
+  PROPOSED_PLAN_CONTRACT_VERSION,
+  type CreateProposedPlanInput,
+  type PlanDependencyCheckpoint,
+  type ProposedPlan,
+  type RequestedCapability,
+  type UpdateProposedPlanInput,
+} from './proposed-plan-contract';
+import {
+  GoalNotFoundForPlanError,
+  InvalidProposedPlanInputError,
+  ProposedPlanCapabilityDeniedError,
+  ProposedPlanDependencyError,
+  ProposedPlanNotFoundError,
+  ProposedPlanRevisionConflictError,
+} from './proposed-plan-errors';
 
 export interface ProposedPlanStore {
   transaction<T>(callback: (plans: ProposedPlan[]) => Promise<T>): Promise<T>;
   write(plans: ProposedPlan[]): Promise<void>;
 }
 
+export interface ProposedPlanManagerOptions {
+  readonly maxDepth?: number;
+  readonly maxTasks?: number;
+  readonly now?: () => Date;
+  readonly createId?: () => string;
+}
+
 export class ProposedPlanManager {
+  private readonly maxDepth: number;
+  private readonly maxTasks: number;
+  private readonly now: () => Date;
+  private readonly createId: () => string;
+
   constructor(
-    private store: ProposedPlanStore,
-    private getGoal: (goalId: string) => Promise<UniversalGoal | null>,
-    private maxDepth = 10,
-    private maxTasks = 20
-  ) {}
+    private readonly store: ProposedPlanStore,
+    private readonly getGoal: (goalId: string) => Promise<UniversalGoal | null>,
+    options: ProposedPlanManagerOptions | number = {},
+    legacyMaxTasks?: number,
+  ) {
+    if (typeof options === 'number') {
+      this.maxDepth = options;
+      this.maxTasks = legacyMaxTasks ?? 20;
+      this.now = () => new Date();
+      this.createId = () => `proposed-plan:${uuidv4()}`;
+      return;
+    }
+    this.maxDepth = options.maxDepth ?? 10;
+    this.maxTasks = options.maxTasks ?? 20;
+    this.now = options.now ?? (() => new Date());
+    this.createId = options.createId ?? (() => `proposed-plan:${uuidv4()}`);
+  }
 
   async createProposedPlan(input: CreateProposedPlanInput): Promise<ProposedPlan> {
-    // Fetch the goal to validate against it
-    const goal = await this.getGoal(input.goalId);
-    if (!goal) {
-      throw new GoalNotFoundForPlanError('unknown', input.goalId);
-    }
-
-    // Validate that the plan does not exceed max tasks
-    if (input.planTasks.length > this.maxTasks) {
-      throw new Error(`Plan exceeds maximum allowed tasks (${this.maxTasks})`);
-    }
-
-    // Validate that there are no cycles in the task dependency graph
-    this.validateNoCycles(input.id ?? `proposed-plan:${uuidv4()}`, input.planTasks);
-
-    // Generate ID if not provided
-    const id = input.id ?? `proposed-plan:${uuidv4()}`;
-    const now = new Date().toISOString();
-
-    // Build the proposed plan (without revision metadata and contentHash)
-    const basePlan: Omit<ProposedPlan, 'revisionNumber' | 'previousRevisionId' | 'revisionId' | 'contentHash' | 'createdRevision' | 'currentRevision'> = {
-      ...input,
+    const id = cleanRequired(input.id ?? this.createId(), 'id');
+    const goalId = cleanRequired(input.goalId, 'goalId');
+    const goal = await this.requireGoal(id, goalId);
+    const content = this.validateAndCloneContent(id, goal, input);
+    const now = this.now().toISOString();
+    const changedBy = cleanActor(input.changedBy);
+    const revisionNumber = 1;
+    const plan = this.buildRevision({
       id,
-      contractVersion: PROPOSED_PLAN_CONTRACT_VERSION,
-      status: 'draft', // starts as draft
+      goalId,
+      status: 'draft',
       createdAt: now,
       updatedAt: now,
-    };
-
-    // Validate that the requested capabilities are allowed by the goal (now that we have the id)
-    this.validateRequestedCapabilities(input.requestedCapabilities, goal, id);
-
-    // Compute content hash from the canonical content (excluding mutables)
-    const contentHash = computeProposedPlanHash(basePlan as Pick<ProposedPlan, 
-      | 'goalId'
-      | 'planSummary'
-      | 'planTasks'
-      | 'requestedCapabilities'
-      | 'expectedEvidence'
-      | 'approvalCheckpoints'
-      | 'completionConditions'>);
-
-    // Create revision metadata
-    const revisionNumber = 1;
-    const previousRevisionId: string | null = null;
-    const revisionId = `${id}:rev:${revisionNumber}`; // simple deterministic revision ID
-    const changedAt = now;
-    const changedBy = 'system';
-    const diff: Record<string, unknown> = {};
-
-    const proposedPlan: ProposedPlan = {
-      ...basePlan,
       revisionNumber,
-      previousRevisionId,
-      revisionId,
-      contentHash,
-      createdRevision: {
-        revision: revisionNumber,
-        changedAt,
-        changedBy,
-        diff,
-      },
-      currentRevision: {
-        revision: revisionNumber,
-        changedAt,
-        changedBy,
-        diff,
-      },
-    };
+      previousRevisionId: null,
+      changedBy,
+      content,
+    });
 
-    // Validate the proposed plan (basic validation)
-    await this.validateProposedPlan(proposedPlan);
-
-    // Save to store
     return this.store.transaction(async (plans) => {
-      // Check for duplicate id (optional)
-      const existing = plans.find((p: ProposedPlan) => p.id === proposedPlan.id);
-      if (existing) {
-        throw new Error(`Proposed plan with id ${proposedPlan.id} already exists`);
+      if (plans.some((candidate) => candidate.id === id)) {
+        throw new InvalidProposedPlanInputError('id', id, `Proposed plan already exists: ${id}`);
       }
-      const updated = [...plans, proposedPlan];
-      await this.store.write(updated);
-      return proposedPlan;
+      await this.store.write([...plans, clonePlan(plan)]);
+      return clonePlan(plan);
     });
   }
 
   async getProposedPlan(id: string): Promise<ProposedPlan | null> {
     return this.store.transaction(async (plans) => {
-      return plans.find((p: ProposedPlan) => p.id === id) ?? null;
+      const latest = latestRevision(plans.filter((plan) => plan.id === id));
+      return latest ? clonePlan(latest) : null;
     });
+  }
+
+  async getProposedPlanHistory(id: string): Promise<readonly ProposedPlan[]> {
+    return this.store.transaction(async (plans) => plans
+      .filter((plan) => plan.id === id)
+      .sort((left, right) => left.revisionNumber - right.revisionNumber)
+      .map(clonePlan));
   }
 
   async listProposedPlansForGoal(goalId: string): Promise<ProposedPlan[]> {
     return this.store.transaction(async (plans) => {
-      return plans
-        .filter((p: ProposedPlan) => p.goalId === goalId)
-        .sort((a: ProposedPlan, b: ProposedPlan) => {
-          // Sort by revisionNumber descending, then by updatedAt descending
-          if (a.revisionNumber !== b.revisionNumber) return b.revisionNumber - a.revisionNumber;
-          return b.updatedAt.localeCompare(a.updatedAt);
-        });
+      const latestById = new Map<string, ProposedPlan>();
+      for (const plan of plans) {
+        if (plan.goalId !== goalId) continue;
+        const current = latestById.get(plan.id);
+        if (!current || plan.revisionNumber > current.revisionNumber) latestById.set(plan.id, plan);
+      }
+      return [...latestById.values()]
+        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt) || left.id.localeCompare(right.id))
+        .map(clonePlan);
     });
   }
 
-  async updateProposedPlan(id: string, updates: Partial<Omit<ProposedPlan, 'id' | 'contractVersion' | 'createdAt' | 'createdRevision'>>): Promise<ProposedPlan> {
+  async updateProposedPlan(id: string, updates: UpdateProposedPlanInput): Promise<ProposedPlan> {
+    const expectedRevisionId = cleanRequired(updates.expectedRevisionId, 'expectedRevisionId');
+
     return this.store.transaction(async (plans) => {
-      const index = plans.findIndex((p: ProposedPlan) => p.id === id);
-      if (index === -1) {
-        throw new ProposedPlanNotFoundError(id);
-      }
-      const old = plans[index];
-
-      // We cannot change the goalId or the id (immutable)
-      // We'll merge the updates, but we must ensure that we don't change immutable fields
-      const updatedBase: Omit<ProposedPlan, 'revisionNumber' | 'previousRevisionId' | 'revisionId' | 'contentHash' | 'createdRevision' | 'currentRevision'> = {
-        ...old,
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      };
-
-      // Validate that the requested capabilities are allowed by the goal (if they are being updated)
-      if (updates.requestedCapabilities !== undefined) {
-        const goal = await this.getGoal(updatedBase.goalId);
-        if (!goal) {
-          throw new GoalNotFoundForPlanError(id, updatedBase.goalId);
-        }
-        this.validateRequestedCapabilities(updatedBase.requestedCapabilities, goal, id);
+      const current = latestRevision(plans.filter((plan) => plan.id === id));
+      if (!current) throw new ProposedPlanNotFoundError(id);
+      if (current.revisionId !== expectedRevisionId) {
+        throw new ProposedPlanRevisionConflictError(id, expectedRevisionId, current.revisionId);
       }
 
-      // Validate that there are no cycles in the task dependency graph (if planTasks are being updated)
-      if (updates.planTasks !== undefined) {
-        this.validateNoCycles(id, updatedBase.planTasks);
-      }
+      const goal = await this.requireGoal(id, current.goalId);
+      const content = this.validateAndCloneContent(id, goal, {
+        goalId: current.goalId,
+        planSummary: updates.planSummary ?? current.planSummary,
+        planTasks: updates.planTasks ?? current.planTasks,
+        requestedCapabilities: updates.requestedCapabilities ?? current.requestedCapabilities,
+        expectedEvidence: updates.expectedEvidence ?? current.expectedEvidence,
+        approvalCheckpoints: updates.approvalCheckpoints ?? current.approvalCheckpoints,
+        completionConditions: updates.completionConditions ?? current.completionConditions,
+      });
+      const now = this.now().toISOString();
+      const next = this.buildRevision({
+        id: current.id,
+        goalId: current.goalId,
+        status: current.status,
+        createdAt: current.createdAt,
+        updatedAt: now,
+        revisionNumber: current.revisionNumber + 1,
+        previousRevisionId: current.revisionId,
+        changedBy: cleanActor(updates.changedBy),
+        content,
+        createdRevision: current.createdRevision,
+      });
 
-      // Compute content hash from the canonical content (excluding mutables)
-      const contentHash = computeProposedPlanHash(updatedBase as Pick<ProposedPlan, 
-        | 'goalId'
-        | 'planSummary'
-        | 'planTasks'
-        | 'requestedCapabilities'
-        | 'expectedEvidence'
-        | 'approvalCheckpoints'
-        | 'completionConditions'>);
-
-      // Update revision metadata
-      const previousRevisionId = old.revisionId;
-      const revisionNumber = old.revisionNumber + 1;
-      const revisionId = `${id}:rev:${revisionNumber}`;
-      const changedAt = new Date().toISOString();
-      const changedBy = 'system'; // TODO: get from context
-      const diff: Record<string, unknown> = {}; // TODO: compute diff
-
-      const updatedPlan: ProposedPlan = {
-        ...updatedBase,
-        revisionNumber,
-        previousRevisionId,
-        revisionId,
-        contentHash,
-        createdRevision: old.createdRevision, // unchanged
-        currentRevision: {
-          revision: revisionNumber,
-          changedAt,
-          changedBy,
-          diff,
-        },
-      };
-
-      // Validate the updated plan (basic validation)
-      await this.validateProposedPlan(updatedPlan);
-
-      const newPlans = [...plans];
-      newPlans[index] = updatedPlan;
-      await this.store.write(newPlans);
-      return updatedPlan;
+      await this.store.write([...plans, clonePlan(next)]);
+      return clonePlan(next);
     });
   }
 
-  // Helper methods
+  private async requireGoal(planId: string, goalId: string): Promise<UniversalGoal> {
+    const goal = await this.getGoal(goalId);
+    if (!goal) throw new GoalNotFoundForPlanError(planId, goalId);
+    return goal;
+  }
 
-  private validateNoCycles(planId: string, tasks: readonly MissionTask[]): void {
-    // We'll reuse the cycle detection from the evidence-aware-planner (simplified)
-    const tasksById = new Map<MissionTaskId, MissionTask>();
-    tasks.forEach((task) => {
-      tasksById.set(task.id, task);
-    });
+  private validateAndCloneContent(
+    planId: string,
+    goal: UniversalGoal,
+    input: Pick<CreateProposedPlanInput,
+      | 'planSummary'
+      | 'planTasks'
+      | 'requestedCapabilities'
+      | 'expectedEvidence'
+      | 'approvalCheckpoints'
+      | 'completionConditions'>,
+  ) {
+    const planSummary = cleanRequired(input.planSummary, 'planSummary');
+    if (planSummary.length < 3) {
+      throw new InvalidProposedPlanInputError('planSummary', input.planSummary, 'Proposed plan summary must be at least 3 characters');
+    }
+    if (input.planTasks.length > this.maxTasks) {
+      throw new InvalidProposedPlanInputError('planTasks', input.planTasks.length, `Plan exceeds maximum allowed tasks (${this.maxTasks})`);
+    }
+
+    const planTasks = input.planTasks.map(cloneTask);
+    this.validateTaskGraph(planId, planTasks);
+    this.validateCheckpoints(planId, planTasks, input.approvalCheckpoints, 'approvalCheckpoints');
+    this.validateCheckpoints(planId, planTasks, input.completionConditions, 'completionConditions');
+
+    const requestedCapabilities = input.requestedCapabilities.map((capability) => ({
+      capabilityId: cleanRequired(capability.capabilityId, 'capabilityId'),
+      ...(capability.version === undefined ? {} : { version: cleanRequired(capability.version, 'capabilityVersion') }),
+    }));
+    this.validateRequestedCapabilities(requestedCapabilities, goal, planId);
+
+    const expectedEvidence = input.expectedEvidence.map((evidence) => ({
+      key: cleanRequired(evidence.key, 'expectedEvidence.key'),
+      description: cleanRequired(evidence.description, 'expectedEvidence.description'),
+    }));
+    assertUnique(expectedEvidence.map((evidence) => evidence.key), 'expectedEvidence.key');
+
+    return {
+      planSummary,
+      planTasks,
+      requestedCapabilities,
+      expectedEvidence,
+      approvalCheckpoints: input.approvalCheckpoints.map(cloneCheckpoint),
+      completionConditions: input.completionConditions.map(cloneCheckpoint),
+    };
+  }
+
+  private validateTaskGraph(planId: string, tasks: readonly MissionTask[]): void {
+    const taskIds = tasks.map((task) => task.id);
+    assertUnique(taskIds.map(String), 'planTasks.id');
+    const tasksById = new Map(tasks.map((task) => [task.id, task] as const));
+
+    for (const task of tasks) {
+      for (const dependencyId of task.dependsOn) {
+        if (!tasksById.has(dependencyId)) {
+          throw new ProposedPlanDependencyError(planId, String(task.id), `Unknown dependency ${String(dependencyId)}`);
+        }
+      }
+    }
 
     const visiting = new Set<MissionTaskId>();
     const visited = new Set<MissionTaskId>();
-
-    const visit = (taskId: MissionTaskId): void => {
+    const visit = (taskId: MissionTaskId, depth: number): void => {
+      if (depth > this.maxDepth) {
+        throw new ProposedPlanDependencyError(planId, String(taskId), `Dependency depth exceeds ${this.maxDepth}`);
+      }
       if (visited.has(taskId)) return;
       if (visiting.has(taskId)) {
-        throw new ProposedPlanDependencyError(planId, taskId, 'Dependency cycle detected');
+        throw new ProposedPlanDependencyError(planId, String(taskId), 'Dependency cycle detected');
       }
       visiting.add(taskId);
-      const task = tasksById.get(taskId);
-      if (task) {
-        for (const depId of task.dependsOn) {
-          visit(depId);
-        }
-      }
+      for (const dependencyId of tasksById.get(taskId)?.dependsOn ?? []) visit(dependencyId, depth + 1);
       visiting.delete(taskId);
       visited.add(taskId);
     };
+    for (const task of tasks) visit(task.id, 1);
+  }
 
-    for (const task of tasks) {
-      visit(task.id);
+  private validateCheckpoints(
+    planId: string,
+    tasks: readonly MissionTask[],
+    checkpoints: readonly PlanDependencyCheckpoint[],
+    field: string,
+  ): void {
+    const taskIds = new Set(tasks.map((task) => task.id));
+    for (const checkpoint of checkpoints) {
+      cleanRequired(checkpoint.description, `${field}.description`);
+      for (const dependencyId of checkpoint.dependsOn) {
+        if (!taskIds.has(dependencyId)) {
+          throw new ProposedPlanDependencyError(planId, String(dependencyId), `${field} references an unknown task`);
+        }
+      }
     }
   }
 
   private validateRequestedCapabilities(
-    requested: readonly { capabilityId: string; version?: string }[],
+    requested: readonly RequestedCapability[],
     goal: UniversalGoal,
-    planId: string
+    planId: string,
   ): void {
-    const allowed = goal.allowedCapabilities ?? [];
-    const forbidden = goal.forbiddenCapabilities ?? [];
+    const topLevelAllowed = new Set(goal.allowedCapabilities ?? []);
+    const constrainedAllowed = new Set(goal.constraints?.allowedCapabilities ?? []);
+    const forbidden = new Set([
+      ...(goal.forbiddenCapabilities ?? []),
+      ...(goal.constraints?.forbiddenCapabilities ?? []),
+    ]);
 
-    for (const req of requested) {
-      let isAllowed = false;
-      if (allowed.length > 0) {
-        isAllowed = allowed.includes(req.capabilityId);
-      }
-      // If allowed is empty, then isAllowed remains false (deny by default)
-
-      if (!isAllowed || forbidden.includes(req.capabilityId)) {
-        throw new ProposedPlanCapabilityDeniedError(planId, req.capabilityId);
+    for (const request of requested) {
+      const allowedByGoal = topLevelAllowed.has(request.capabilityId);
+      const allowedByConstraints = constrainedAllowed.size === 0 || constrainedAllowed.has(request.capabilityId);
+      if (!allowedByGoal || !allowedByConstraints || forbidden.has(request.capabilityId)) {
+        throw new ProposedPlanCapabilityDeniedError(planId, request.capabilityId);
       }
     }
   }
 
-  private async validateProposedPlan(plan: ProposedPlan): Promise<void> {
-    // Basic validation: planSummary required, status valid, etc.
-    if (!plan.planSummary || plan.planSummary.trim().length < 3) {
-      throw new InvalidProposedPlanInputError('planSummary', plan.planSummary, 'Proposed plan summary must be at least 3 characters');
-    }
-    if (!['draft', 'validated', 'approved', 'rejected'].includes(plan.status)) {
-      throw new InvalidProposedPlanInputError('status', plan.status, `Invalid proposed plan status: ${plan.status}`);
-    }
-    // Additional validation can be added here (e.g., check that the plan's expected evidence is reasonable, etc.)
+  private buildRevision(input: {
+    readonly id: string;
+    readonly goalId: string;
+    readonly status: ProposedPlan['status'];
+    readonly createdAt: string;
+    readonly updatedAt: string;
+    readonly revisionNumber: number;
+    readonly previousRevisionId: string | null;
+    readonly changedBy: string;
+    readonly content: ReturnType<ProposedPlanManager['validateAndCloneContent']>;
+    readonly createdRevision?: ProposedPlan['createdRevision'];
+  }): ProposedPlan {
+    const revisionId = `${input.id}:rev:${input.revisionNumber}`;
+    const revision = {
+      revision: input.revisionNumber,
+      changedAt: input.updatedAt,
+      changedBy: input.changedBy,
+      diff: {},
+    };
+    const hashInput = { goalId: input.goalId, ...input.content };
+    return {
+      contractVersion: PROPOSED_PLAN_CONTRACT_VERSION,
+      id: input.id,
+      goalId: input.goalId,
+      ...input.content,
+      status: input.status,
+      revisionNumber: input.revisionNumber,
+      previousRevisionId: input.previousRevisionId,
+      revisionId,
+      contentHash: computeProposedPlanHash(hashInput),
+      createdAt: input.createdAt,
+      updatedAt: input.updatedAt,
+      createdRevision: input.createdRevision ? cloneRevision(input.createdRevision) : revision,
+      currentRevision: revision,
+    };
   }
+}
+
+function latestRevision(plans: readonly ProposedPlan[]): ProposedPlan | undefined {
+  return plans.reduce<ProposedPlan | undefined>((latest, candidate) => (
+    !latest || candidate.revisionNumber > latest.revisionNumber ? candidate : latest
+  ), undefined);
+}
+
+function cleanRequired(value: string, field: string): string {
+  if (typeof value !== 'string') throw new InvalidProposedPlanInputError(field, value, `${field} must be a string`);
+  const cleaned = value.trim();
+  if (!cleaned) throw new InvalidProposedPlanInputError(field, value, `${field} must not be empty`);
+  return cleaned;
+}
+
+function cleanActor(value: string | undefined): string {
+  return value === undefined ? 'system' : cleanRequired(value, 'changedBy');
+}
+
+function assertUnique(values: readonly string[], field: string): void {
+  if (new Set(values).size !== values.length) {
+    throw new InvalidProposedPlanInputError(field, values, `${field} must contain unique values`);
+  }
+}
+
+function cloneTask(task: MissionTask): MissionTask {
+  return {
+    ...task,
+    dependsOn: [...task.dependsOn],
+    evidenceRequirements: task.evidenceRequirements.map((requirement) => ({ ...requirement })),
+  };
+}
+
+function cloneCheckpoint(checkpoint: PlanDependencyCheckpoint): PlanDependencyCheckpoint {
+  return { description: checkpoint.description.trim(), dependsOn: [...checkpoint.dependsOn] };
+}
+
+function cloneRevision(revision: ProposedPlan['createdRevision']): ProposedPlan['createdRevision'] {
+  return { ...revision, diff: { ...revision.diff } };
+}
+
+function clonePlan(plan: ProposedPlan): ProposedPlan {
+  return {
+    ...plan,
+    planTasks: plan.planTasks.map(cloneTask),
+    requestedCapabilities: plan.requestedCapabilities.map((capability) => ({ ...capability })),
+    expectedEvidence: plan.expectedEvidence.map((evidence) => ({ ...evidence })),
+    approvalCheckpoints: plan.approvalCheckpoints.map(cloneCheckpoint),
+    completionConditions: plan.completionConditions.map(cloneCheckpoint),
+    createdRevision: cloneRevision(plan.createdRevision),
+    currentRevision: cloneRevision(plan.currentRevision),
+  };
 }
