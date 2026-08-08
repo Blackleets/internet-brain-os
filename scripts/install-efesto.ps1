@@ -118,6 +118,14 @@ try {
   Write-Step 'Installing verified workspace dependencies from the lockfile...'
   Invoke-Pnpm @('install', '--frozen-lockfile') 'Dependency installation failed'
 
+  Write-Step 'Building the trusted Kernel runtime required by local Hermes ingestion...'
+  Invoke-Pnpm @('--filter', '@internet-brain-os/kernel', 'build') 'Kernel runtime build failed'
+
+  $kernelRuntime = Join-Path $RepoRoot 'packages\kernel\dist\index.js'
+  if (-not (Test-Path $kernelRuntime)) {
+    throw 'Kernel runtime build completed but packages\kernel\dist\index.js is missing.'
+  }
+
   Write-Step 'Building the browser extension bundle...'
   Invoke-Pnpm @('build:extension') 'Extension build failed'
 
