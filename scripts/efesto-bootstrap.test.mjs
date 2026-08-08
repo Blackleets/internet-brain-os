@@ -29,6 +29,14 @@ describe('Efesto launcher process identity probe', () => {
     })).resolves.toMatchObject({ pid: 4321, alive: true, owned: true, verified: true });
   });
 
+  it('verifies the same owned process when Windows reports backslash paths', async () => {
+    const paths = await pathsWithRecord(validRecord);
+    await expect(probeLauncherProcess(paths, {
+      isProcessAlive: async () => true,
+      readProcessIdentity: async () => ({ commandLine: `node C:\\repo\\apps\\local-kernel\\one-click-kernel.mjs --efesto-launcher-nonce ${validRecord.nonce}` }),
+    })).resolves.toMatchObject({ pid: 4321, alive: true, owned: true, verified: true });
+  });
+
   it('marks an absent PID as unverified stale state', async () => {
     const paths = await pathsWithRecord(validRecord);
     await expect(probeLauncherProcess(paths, { isProcessAlive: async () => false })).resolves.toMatchObject({
