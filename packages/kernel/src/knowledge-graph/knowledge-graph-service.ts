@@ -1,4 +1,4 @@
-import type { Entity, EntityId, Relationship } from '@internet-brain-os/shared';
+import type { Entity, EntityId, Relationship, RelationshipId } from '@internet-brain-os/shared';
 import type { EntityRepository } from '../entity/entity-repository';
 import type { RelationshipRepository } from '../relationship/relationship-repository';
 import type { EntityKnowledgeView, GoalRelevantEntity, TemporalProperty } from './knowledge-graph-contract';
@@ -9,11 +9,11 @@ export interface TemporalPropertyStore {
 }
 
 export class KnowledgeGraphError extends Error {
-  readonly code = 'KNOWLEDGE_GRAPH_ERROR';
+  readonly code: string = 'KNOWLEDGE_GRAPH_ERROR';
   constructor(message: string) { super(message); this.name = 'KnowledgeGraphError'; }
 }
 export class TemporalPropertyConflictError extends KnowledgeGraphError {
-  readonly code = 'TEMPORAL_PROPERTY_CONFLICT';
+  override readonly code = 'TEMPORAL_PROPERTY_CONFLICT';
 }
 
 export class KnowledgeGraphService {
@@ -79,7 +79,7 @@ export class KnowledgeGraphService {
       if (!await this.entities.getById(property.subjectId as EntityId)) throw new KnowledgeGraphError(`Entity not found: ${property.subjectId}`);
       return;
     }
-    if (!await this.relationships.getById(property.subjectId as never)) throw new KnowledgeGraphError(`Relationship not found: ${property.subjectId}`);
+    if (!await this.relationships.getById(property.subjectId as RelationshipId)) throw new KnowledgeGraphError(`Relationship not found: ${property.subjectId}`);
   }
 }
 
