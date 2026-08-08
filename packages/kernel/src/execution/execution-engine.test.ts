@@ -36,7 +36,7 @@ function store(): ExecutionRecordStore {
   let records: ExecutionRecord[] = [];
   return { transaction: async (callback) => callback(records), write: async (next) => { records = next.map((record) => ({ ...record })); } };
 }
-function adapter(capabilityId: string, execute = vi.fn(async () => ({ ok: true }))): CapabilityExecutionAdapter { return { capabilityId, execute }; }
+function adapter(capabilityId: string, execute: CapabilityExecutionAdapter['execute'] = async () => ({ ok: true })): CapabilityExecutionAdapter { return { capabilityId, execute }; }
 function approval(capabilityId: string): ApprovalReceipt {
   return { id: 'approval:1', planId: 'plan:1', revisionId: 'plan:1:rev:1', decision: 'approved', approvedCapabilities: [capabilityId], decidedBy: 'user:local', decidedAt: now };
 }
