@@ -3,13 +3,19 @@ import { buildKernelChildEnv, repairEfestoLauncher, shutdownEfestoLauncher } fro
 
 function harness(overrides = {}) {
   const calls = [];
+  let inspectCount = 0;
   const ops = {
-    inspect: async () => overrides.status,
+    inspect: async () => {
+      inspectCount += 1;
+      if (typeof overrides.inspect === 'function') return overrides.inspect(inspectCount);
+      return overrides.status;
+    },
     ensureDirectories: async () => calls.push(['ensureDirectories']),
     writeLog: async (message) => calls.push(['log', message]),
     removeStalePidFile: async () => calls.push(['removeStalePidFile']),
-    startKernel: async () => { calls.push(['startKernel']); return { pid: 4242 }; },
+    startKernel: async (options) => { calls.push(['startKernel', options]); return { pid: 4242 }; },
     stopOwnedProcess: async (pid) => calls.push(['stopOwnedProcess', pid]),
+    waitForStopped: async () => { calls.push(['waitForStopped']); return overrides.afterStopStatus ?? overrides.status; },
     openEfesto: async () => calls.push(['openEfesto']),
     waitForReady: async () => overrides.afterStartStatus ?? overrides.status,
   };
@@ -21,21 +27,49 @@ const ready = {
   diagnostics: { kernel: { pid: 111, owned: true, verified: true } }, actions: [], message: 'ready',
 };
 
+const pairingRequired = {
+  kernel: 'ready', hermes: 'ready', obsidian: 'ready', pairing: 'required', overall: 'needs_setup',
+  diagnostics: { kernel: { pid: 111, owned: true, verified: true } }, actions: [], message: 'pair extension',
+};
+
 describe('Efesto Windows launcher core', () => {
-  it('repairs first run by creating local dirs and starting the one-click Kernel once', async () => {
+  it('repairs first run by creating local dirs and starting the one-click Kernel with visible pairing output', async () => {
     const { calls, ops } = harness({
       status: { kernel: 'offline', hermes: 'ready', obsidian: 'ready', pairing: 'required', overall: 'needs_setup', diagnostics: { kernel: {} } },
-      afterStartStatus: ready,
+      afterStartStatus: pairingRequired,
     });
     const result = await repairEfestoLauncher({ ops });
-    expect(result.status).toMatchObject({ overall: 'ready', kernel: 'ready' });
-    expect(calls.map((call) => call[0])).toEqual(['ensureDirectories', 'startKernel', 'log']);
+    expect(result.status).toMatchObject({ kernel: 'ready', pairing: 'required' });
+    expect(calls).toContainEqual(['startKernel', { showPairing: true }]);
   });
 
-  it('does not duplicate processes when the Kernel is already ready', async () => {
+  it('does not duplicate processes when the Kernel is already paired and ready', async () => {
     const { calls, ops } = harness({ status: ready });
     const result = await repairEfestoLauncher({ ops });
     expect(result.started).toBe(false);
+    expect(calls.map((call) => call[0])).not.toContain('startKernel');
+  });
+
+  it('safely restarts an owned verified Kernel when pairing is still required', async () => {
+    const offlineAfterStop = { ...pairingRequired, kernel: 'offline', diagnostics: { kernel: { pidFilePresent: false } } };
+    const { calls, ops } = harness({
+      inspect: (count) => count === 1 ? pairingRequired : offlineAfterStop,
+      afterStopStatus: offlineAfterStop,
+      afterStartStatus: pairingRequired,
+    });
+    const result = await repairEfestoLauncher({ ops });
+    expect(result.started).toBe(true);
+    expect(calls).toContainEqual(['stopOwnedProcess', 111]);
+    expect(calls).toContainEqual(['waitForStopped']);
+    expect(calls).toContainEqual(['startKernel', { showPairing: true }]);
+  });
+
+  it('refuses pairing recovery when the existing process cannot be verified', async () => {
+    const unsafe = { ...pairingRequired, diagnostics: { kernel: { pid: 111, owned: true, verified: false, reason: 'fingerprint_mismatch' } } };
+    const { calls, ops } = harness({ status: unsafe });
+    const result = await repairEfestoLauncher({ ops });
+    expect(result.started).toBe(false);
+    expect(calls.map((call) => call[0])).not.toContain('stopOwnedProcess');
     expect(calls.map((call) => call[0])).not.toContain('startKernel');
   });
 

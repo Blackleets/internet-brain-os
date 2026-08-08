@@ -7,18 +7,32 @@ import { defaultEfestoPaths, inspectEfestoBootstrap, readLauncherConfig } from '
 
 export async function repairEfestoLauncher(options = {}) {
   const ops = launcherOps(options);
-  const before = await ops.inspect();
+  let before = await ops.inspect();
   await ops.ensureDirectories();
-  if (before.kernel === 'ready') {
+
+  if (before.kernel === 'ready' && before.pairing === 'paired') {
     await ops.writeLog('Efesto already ready; no duplicate Kernel process started.');
     return { started: false, status: before };
   }
+
+  if (before.kernel === 'ready' && before.pairing === 'required') {
+    const kernel = before.diagnostics?.kernel ?? {};
+    if (!(kernel.pid && kernel.owned === true && kernel.verified === true)) {
+      await ops.writeLog(`Pairing recovery blocked because the existing Kernel process is not safely verified (${kernel.reason ?? 'not_verified'}).`);
+      return { started: false, status: before };
+    }
+    await ops.writeLog('Pairing is required; safely restarting the owned Kernel to issue a fresh one-time pairing code.');
+    await ops.stopOwnedProcess(kernel.pid);
+    if (ops.waitForStopped) await ops.waitForStopped();
+    before = await ops.inspect();
+  }
+
   if (before.kernel === 'port_conflict') {
     await ops.writeLog('Repair stopped: port conflict detected.');
     return { started: false, status: before };
   }
   if (before.kernel === 'stale') await ops.removeStalePidFile(before.diagnostics?.kernel?.pid);
-  const started = await ops.startKernel();
+  const started = await ops.startKernel({ showPairing: before.pairing === 'required' });
   const status = await ops.waitForReady(started);
   await ops.writeLog(`Repair finished with ${status.overall}.`);
   return { started: true, pid: started?.pid, status };
@@ -55,8 +69,9 @@ export function launcherOps(options = {}) {
     ensureDirectories: () => mkdir(dirname(paths.logFile), { recursive: true }),
     writeLog: (message) => appendLog(paths.logFile, message),
     removeStalePidFile: () => rm(paths.pidFile, { force: true }),
-    startKernel: () => startKernelProcess({ env, cwd, paths }),
+    startKernel: ({ showPairing = false } = {}) => startKernelProcess({ env, cwd, paths, showPairing }),
     waitForReady: () => waitForReady({ ...options, env, cwd, paths }),
+    waitForStopped: () => waitForStopped({ ...options, env, cwd, paths }),
     stopOwnedProcess: async (pid) => { try { process.kill(Number(pid), 'SIGTERM'); } catch {} await rm(paths.pidFile, { force: true }); },
     openEfesto: () => openEfesto(env),
   };
@@ -70,7 +85,7 @@ export function buildKernelChildEnv(env = process.env, config = {}) {
   };
 }
 
-async function startKernelProcess({ env, cwd, paths }) {
+async function startKernelProcess({ env, cwd, paths, showPairing = false }) {
   await mkdir(dirname(paths.pidFile), { recursive: true });
   const config = await readLauncherConfig({ paths, env, cwd });
   const scriptPath = resolve(cwd, 'apps/local-kernel/one-click-kernel.mjs');
@@ -80,8 +95,8 @@ async function startKernelProcess({ env, cwd, paths }) {
     cwd,
     shell: false,
     detached: true,
-    windowsHide: true,
-    stdio: ['ignore', 'ignore', 'ignore'],
+    windowsHide: !showPairing,
+    stdio: showPairing ? ['ignore', 'inherit', 'inherit'] : ['ignore', 'ignore', 'ignore'],
     env: buildKernelChildEnv(env, config),
   });
   child.unref();
@@ -96,10 +111,23 @@ async function waitForReady(options = {}) {
   while (Date.now() < deadline) {
     latest = await inspectEfestoBootstrap(options);
     if (latest.kernel === 'ready' || latest.kernel === 'port_conflict' || latest.kernel === 'failed') return latest;
-    await new Promise((resolvePromise) => setTimeout(resolvePromise, 250));
+    await sleep(250);
   }
   return latest ?? await inspectEfestoBootstrap(options);
 }
+
+async function waitForStopped(options = {}) {
+  const deadline = Date.now() + Number(options.stopTimeoutMs ?? 5_000);
+  let latest;
+  while (Date.now() < deadline) {
+    latest = await inspectEfestoBootstrap(options);
+    if (latest.kernel !== 'ready') return latest;
+    await sleep(150);
+  }
+  return latest ?? await inspectEfestoBootstrap(options);
+}
+
+function sleep(ms) { return new Promise((resolvePromise) => setTimeout(resolvePromise, ms)); }
 
 async function appendLog(path, message) {
   await mkdir(dirname(path), { recursive: true });
