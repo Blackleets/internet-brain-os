@@ -35,7 +35,11 @@ jobs:
       - name: Read internal release metadata
         id: release
         shell: bash
-        run: echo "version=$(node -p \"require('./INTERNAL_RELEASE.json').version\")" >> "$GITHUB_OUTPUT"
+        run: |
+          set -euo pipefail
+          version="$(node -e 'const release = require("./INTERNAL_RELEASE.json"); process.stdout.write(release.version)')"
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Create source-of-truth internal package
         shell: bash
         env:
