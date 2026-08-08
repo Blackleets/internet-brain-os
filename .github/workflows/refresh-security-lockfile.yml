@@ -1,0 +1,41 @@
+name: Refresh security lockfile
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - agent/remove-nanoid-audit-exception
+
+jobs:
+  refresh-lockfile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/remove-nanoid-audit-exception
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Regenerate lockfile for patched dependency override
+        run: pnpm install --lockfile-only --no-frozen-lockfile
+      - name: Commit only the regenerated lockfile
+        shell: bash
+        run: |
+          if git diff --quiet -- pnpm-lock.yaml; then
+            echo 'Lockfile already current.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add pnpm-lock.yaml
+          test "$(git diff --cached --name-only)" = "pnpm-lock.yaml"
+          git commit -m 'chore(security): refresh lockfile for patched nanoid'
+          git push origin HEAD:agent/remove-nanoid-audit-exception
