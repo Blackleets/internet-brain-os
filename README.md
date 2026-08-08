@@ -1,247 +1,253 @@
-# HEPHAESTUS
+# HEPHAESTUS / Efesto
 
-**The Intelligence Forge — evidence and memory safety for autonomous agents.**
+**The Intelligence Forge — evidence, autonomous research and memory safety for AI agents.**
 
-Hephaestus is a local-first AI intelligence Kernel. It turns public-internet research and agent runs into evidence-backed cases before any claim can become trusted, connected memory.
-
-Hermes and other agents may discover sources, record evidence, and propose claims. The Kernel owns validation, contradiction checks, admission, replay protection, and persistence. The first visible operator surface, Replay Lab, explains what happened without granting the UI or the agent authority over memory.
+Hephaestus is a local-first intelligence Kernel. Efesto is the product experience around that Kernel: users define Goals, approved capabilities research the public web, findings become Evidence-backed opportunities, and the Kernel controls what may be trusted, remembered or acted on.
 
 ```text
-Agent run → signed ingestion → evidence-backed case → Kernel gates → controlled memory
+Goal
+→ Proposed Plan
+→ Capability / Risk Gate
+→ controlled execution
+→ Evidence
+→ Opportunity / Knowledge
+→ Trigger / Notification
+→ controlled memory
+```
+
+For agent ingestion the core invariant remains:
+
+```text
+Agent run → signed ingestion → evidence-backed Case → Kernel gates → controlled memory
                   ↘ exact replay: safe
                   ↘ altered replay: blocked
 ```
 
-## What this is / what this is not
+**An agent is never the Kernel.** Hermes and other agents may discover, research and propose. The Kernel owns Evidence, validation, contradiction handling, admission, capability policy, replay and durable-memory authority.
 
-Hephaestus is:
+## Install Efesto on Windows
 
-- An evidence-first intelligence and AI-forensics Kernel.
-- A local boundary between agent output and durable memory.
-- A reusable foundation for sourcing, research, monitoring, and decision intelligence.
-- LLM-flexible, Obsidian-compatible, and free or near-zero-cost by default.
+The normal user path does not require knowing Node, pnpm or terminal commands.
 
-Hephaestus is not:
+1. Download/clone this repository.
+2. Double-click **`Install Efesto.cmd`**.
+3. The installer checks and repairs Node.js 22+, pinned pnpm 11.11.0 and frozen-lockfile dependencies.
+4. It builds the browser extension and repairs/starts the trusted local Efesto launcher.
+5. It creates an owner-local **Efesto** desktop shortcut.
+6. Load the built extension in Chrome/Chromium if it is not already installed, pair it when requested, and use the central Efesto orb.
 
-- A generic scraper or a prettier log viewer.
-- An autonomous agent with permission to rewrite its own history.
-- A cloud-only observability product.
-- A route for Hermes or another model to bypass validation and write durable memory directly.
+`Efesto Launcher.cmd` is self-healing: if Node, pnpm or workspace dependencies are missing, it routes through the installer instead of leaving the user with a raw shell failure.
 
-## Try the Hermes → Kernel demo
+The installer does **not** embed or print Kernel tokens, provider credentials or Hermes boundary secrets.
 
-The fastest safe demo proves the AI Forensics boundary between Hermes-style agent output and the local Kernel:
+### Browser extension
+
+After installation/build:
+
+1. Open `chrome://extensions`.
+2. Enable **Developer mode**.
+3. Choose **Load unpacked**.
+4. Select `apps/extension/dist`.
+
+The extension is a local sensor/copilot and operator surface. Heavy intelligence and authority stay in the local Kernel.
+
+## What the current MVP proves
+
+The canonical Golden journey is an economic Goal for a quality drill between €18 and €25:
 
 ```text
-Hermes output
-→ offline validation
-→ signed local ingestion
-→ idempotent Kernel processing
-→ replay-safe cognitive record
-→ altered replay blocked
+Goal
+→ authorized web.search
+→ authorized web.read
+→ Case
+→ Evidence
+→ Opportunity ranking
+→ new-match Trigger
+→ deduplicated Notification
 ```
 
+The journey retains source provenance and performs **no purchase, login, form submission or automatic memory admission**. Irreversible actions remain outside this Golden path and require explicit policy/approval.
+
+Native `web.search` and `web.read` are read-only/public-web capabilities executed through the Capability Registry and Execution Engine. They are not a direct Hermes bypass.
+
+## Memory and replay safety
+
+The Kernel includes:
+
+- explicit memory-authority lifecycle validation;
+- append-only authority receipts;
+- durable on-disk receipt persistence and restart reconstruction;
+- deterministic authority projection;
+- startup reconciliation;
+- reasoning retrieval gating;
+- exact replay idempotency;
+- altered replay rejection;
+- fail-closed handling for corrupt, tampered, gapped or missing-reference authority histories.
+
+Only reconciled **admitted** memory may be reused by reasoning.
+
+## Authentic Hermes boundary
+
+Efesto includes a bounded, shell-free Hermes adapter and authentic runtime acceptance for Hermes v0.19.0. The live acceptance path proves the Agent Hub worker boundary with a real runtime rather than simulated agent output.
+
+Hermes still does not receive Kernel memory authority. Unsafe URLs, malformed output, authority-field injection and sensitive data are rejected/sanitized at the boundary.
+
+## Operator surfaces
+
+### Efesto extension
+
+The Chromium extension contains four bounded workspaces:
+
+- **Forge** — Goals, system readiness and active work.
+- **Missions** — persisted Agent Hub mission states and forge ledger.
+- **Finds** — Evidence-backed opportunity leads and provenance.
+- **Models** — local Model Forge inspection/recommendations.
+
+The pixel blacksmith/forge reflects observable persisted states; it never invents agent progress.
+
+### Hephaestus Control Center
+
+The dashboard is an authenticated local client for Investigation, Knowledge, Agent Hub, Opportunity, Automation and System views plus owner-private multi-model chat.
+
+When hosted, the dashboard remains presentation-only. Kernel authority, credentials, Evidence, Hermes worker state, Obsidian data and controlled memory remain local.
+
+### Replay Lab
+
+Replay Lab is the forensic surface for explaining what happened. It may inspect causality, replay and recorded decisions, but it never gains authority to rewrite durable memory.
+
+## Opportunity intelligence and privacy
+
+Efesto can capture authorized public-page context, classify opportunities, match them against private Goals, rank them and project useful records to an Obsidian-compatible vault.
+
+Privacy boundaries include:
+
+- loopback-only authenticated Kernel APIs for owner data;
+- no password/cookie/localStorage capture by Opportunity Radar;
+- sensitive path/query/selection blocks;
+- explicit per-site authorization;
+- preference learning only from explicit feedback;
+- bounded and erasable private preference state;
+- credentials never returned from the Kernel to the dashboard;
+- local runtime state excluded from Git.
+
+Finds are **unverified leads**, not guarantees or professional advice. Personalized ordering never rewrites objective Evidence relevance.
+
+## Developer verification
+
+Install the pinned workspace and run the complete gates:
+
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
+pnpm release:verify
+pnpm typecheck
+pnpm test
 pnpm build
-pnpm hermes:smoke
-pnpm hermes:attack-smoke
+pnpm verify:first-run
+pnpm --filter @internet-brain-os/dashboard e2e
+```
+
+`pnpm release:verify` is a machine-checkable MVP readiness contract. CI also enforces:
+
+- frozen-lockfile install;
+- unfiltered `pnpm audit --prod`;
+- TypeScript typecheck;
+- full Vitest suite;
+- production build;
+- first-run Hermes/replay/Replay Lab verification;
+- dedicated Chromium/Playwright dashboard acceptance.
+
+The supply-chain gate locks patched `nanoid@3.3.17`; no GHSA audit ignore is permitted.
+
+## Hermes forensics demo
+
+For development/forensic verification:
+
+```bash
 pnpm hermes:validate-agent examples/hermes-agent-run-output.sample.json
 pnpm hermes:validate-agent --native-jsonl examples/hermes-native-log.sample.jsonl
+pnpm hermes:smoke
+pnpm hermes:attack-smoke
+pnpm replay-lab:api-smoke
 ```
 
-To run the complete first-test gate with one command:
+These checks exercise validation, signed local ingestion, exact replay, altered-replay blocking and Replay Lab visibility without granting fixtures durable-memory authority.
 
-```bash
-pnpm verify:first-run
-```
-
-This verifies type safety, unit/integration tests, the production build, both supported Hermes export formats, signed ingestion, exact replay, altered-replay rejection, and the authenticated Replay Lab API. It uses temporary local data and development-only smoke credentials; it does not write secrets or test records into the repository.
-
-For the full demo, including local server ingestion and replay checks, read:
-
-- `docs/hermes-demo-quickstart.md`
-- `docs/hermes-real-runtime-validation.md`
-- `docs/hermes-ingestion-contract.md`
-
-### Import a real Hermes run in Replay Lab
-
-Build and start the loopback-only Kernel with a local Hermes boundary secret:
-
-```bash
-pnpm build
-IBOS_HERMES_SECRET="use-a-local-development-secret" pnpm kernel:serve
-```
-
-Open `http://127.0.0.1:4000/replay-lab`, paste the private local API token from `.hephaestus/kernel-api-token`, and select a sanitized `.json` or `.jsonl` Hermes capture. **Validate capture** performs no writes. **Ingest validated run** is a separate explicit action that signs server-side, passes through the existing authority and idempotency boundary, and then refreshes the investigation list.
-
-The browser never receives the Hermes boundary secret. Captures containing recognized secrets or Kernel-owned authority fields are rejected before ingestion and are not persisted.
-
-For the product story behind the demo, read:
-
-- `docs/ai-forensics-case-study.md`
-- `docs/product-star-roadmap.md`
-- `docs/replay-lab-contract.md`
-- `docs/replay-lab-api.md`
-
-## Core idea
-
-Give the system an objective, not a selector.
-
-Example:
-
-> Find European suppliers for a niche e-commerce idea and build an evidence-backed opportunity report.
-
-The system should:
-
-1. Discover public sources.
-2. Extract useful information.
-3. Save evidence.
-4. Connect entities in memory.
-5. Generate hypotheses.
-6. Produce an actionable report.
-7. Export results.
-8. Sync knowledge to Obsidian.
-
-## The Forge Model
+## Architecture
 
 ```text
-OBJECTIVE
-   ↓
-CASE
-   ↓
-SOURCES → EVIDENCE
-             ↓
-       ENTITIES + RELATIONSHIPS
-             ↓
-        KNOWLEDGE GRAPH
-             ↓
-      INSTITUTIONAL MEMORY
-             ↓
-        AGENTS + ANALYSIS
-             ↓
-           REPORT
+USER GOALS
+    │
+    ▼
+Proposed Plan
+    │
+    ▼
+Capability + Risk + Approval Gates
+    │
+    ▼
+Execution Engine ─────→ Hermes / Browser / Connectors
+    │                         │
+    └──────────── Evidence ←──┘
+                  │
+                  ▼
+        Claims / Opportunities / Knowledge
+                  │
+                  ▼
+        Controlled Memory Authority
+                  │
+          ┌───────┴────────┐
+          ▼                ▼
+   Goal Evaluation    Scheduler / Trigger
+                           │
+                           ▼
+                      Notification
 ```
 
-## Current architecture
-
-```text
-Hermes / browser extension / CLI
-              │
-              ▼
- authenticated loopback-only API
-              │
-              ▼
-      HEPHAESTUS KERNEL
-   ┌──────────┼───────────┐
-   │          │           │
-Evidence   Cognitive   Replay-safe
-  store     gates      receipts
-   │          │           │
-   └──────────┼───────────┘
-              ▼
- controlled memory + Obsidian
-              │
-              ▼
-     Replay Lab (read only)
-```
-
-See `docs/architecture.md` for system boundaries and `docs/launch-kit.md` for the one-minute explanation and demo narrative.
+See `ARCHITECTURE.md` for the authoritative system boundary and `PROJECT_STATE.md` for the current verified checkpoint.
 
 ## Non-negotiable direction
 
-Hephaestus must remain:
+Hephaestus / Efesto remains:
 
-- Local-first.
-- Evidence-first.
-- Modular.
-- LLM-flexible.
-- Obsidian-compatible.
-- Free or near-zero-cost by default.
-- Safe, legal, and focused on public/authorized information.
+- local-first;
+- evidence-first;
+- modular and LLM-flexible;
+- deny-by-default for capabilities;
+- Obsidian-compatible;
+- free or near-zero-cost by default;
+- safe and focused on public/authorized information;
+- explicit about consent for external side effects;
+- incapable of allowing an agent to rewrite its own authority history.
 
-## Product identity
+## Deliberately outside this MVP completion claim
 
-**Name:** Hephaestus  
-**Codename:** The Intelligence Forge  
-**Mission:** Transform the open internet into evidence-backed, connected intelligence.
+The current green MVP does **not** claim that every long-term idea is shipped. These remain later product choices:
 
-The project is named after Hephaestus, the Greek god of fire, craftsmanship, metallurgy, and extraordinary creations. The metaphor is deliberate: raw information enters the forge; structured knowledge and actionable intelligence come out.
+- automatic purchases or irreversible financial actions;
+- a broad email/calendar/commerce connector catalog;
+- public Skill/agent marketplace;
+- multi-tenant cloud brain or central telemetry;
+- native mobile application;
+- token/blockchain/social layers;
+- decorative graph experiences unsupported by real Kernel data.
 
-## Mandatory reading order
+## Contributor recovery
 
-Every human or AI contributor must run `pnpm resume` and read these files before making changes:
+Before changing the repository:
+
+```bash
+pnpm resume
+```
+
+Then read, in order:
 
 1. `PROJECT_STATE.md`
 2. `AGENTS.md`
-3. `PROJECT_DNA.md`
-4. `PROJECT_BIBLE.md`
-5. `AI_CONSTITUTION.md`
-6. `brain/FOUNDER_VISION.md`
-7. `brain/BRAIN_LOG.md`
-8. `LLM_HANDOFF.md`
-9. `AGENT_ROLES.md`
-10. `docs/hermes-operating-protocol.md`
-11. `docs/hermes-ingestion-contract.md`
-12. `docs/hermes-demo-quickstart.md`
-13. `docs/hermes-real-runtime-validation.md`
-14. `docs/ai-forensics-case-study.md`
-15. `docs/product-star-roadmap.md`
-16. `docs/replay-lab-contract.md`
-17. `docs/replay-lab-api.md`
-18. `docs/obsidian-sync-protocol.md`
-19. `docs/architecture.md`
-20. `ROADMAP.md`
-21. `DECISIONS.md`
-22. The active task or GitHub issue.
+3. `ARCHITECTURE.md`
+4. `ROADMAP.md`
+5. the one active GitHub task/PR, if any.
 
-## Institutional memory
-
-## Efesto Opportunity Radar
-
-A private, local-first **opportunity intelligence** browser extension (Chrome MV3). It watches what you
-read, scores it against your active Goals via the local Hephaestus Kernel, and writes the useful
-captures into your Obsidian vault as Cases / Evidence / Opportunities. Nothing leaves your machine.
-
-### Try it
-- Landing page: `apps/web/landing/index.html` (open locally, or deploy via GitHub Pages).
-- Download the packaged extension: `efesto-extension.zip` (built with `npm run build:extension`).
-
-### Install (Load unpacked)
-1. Run the local Kernel: `npm run kernel:serve` (listens on `http://127.0.0.1:4000`).
-2. In Chrome, open `chrome://extensions`, enable **Developer mode**.
-3. Click **Load unpacked** and select `apps/extension/dist` (or unzip `efesto-extension.zip`).
-4. Reload the extension after any code change.
-
-### How it works
-- **Auto Radar**: a service worker observes navigation (URL changes, SPA, tab activation) and
-  extracts minimal context (canonical URL, title, visible text).
-- **Goal matching**: `scoreRelevance()` scores the page against active Goals from the Kernel
-  locally; only pages above the threshold are submitted. Irrelevant pages are discarded (`IRRELEVANT`).
-- **Fuzzy dedupe**: `fuzzyDuplicate()` (Jaccard similarity, threshold 0.5) detects reposts / near-identical
-  content so the same opportunity is not stored twice.
-- **Privacy**: no passwords, cookies, or localStorage are captured. Data is sent only via authenticated
-  Kernel endpoints (`POST /api/browser/page-context`).
-
-This repository is not only a code repository.
-
-It is the institutional memory and operating doctrine of the company.
-
-Important strategic conversations, product discoveries, architecture decisions, failed experiments, risks, and lessons must be captured in versioned documentation and synchronized to Obsidian.
-
-Nothing important may exist only in a temporary AI conversation.
-
-## Operating model
-
-- Founder: final strategic authority.
-- Strategic CEO/reviewer: protects product coherence and reviews major decisions.
-- Hermes: operational orchestrator and model router.
-- OpenCode/Codex/other models: specialized implementation and review workers.
-- GitHub: source of truth for code and versioned operating doctrine.
-- Obsidian: human-readable institutional brain.
+Use one bounded branch at a time. Never weaken Evidence provenance, local-first secrecy, replay protection, capability gates or Kernel authority merely to make a test pass.
 
 ## Golden rule
 
-Every search must make the system smarter.
-
-If a feature does not strengthen the Kernel, memory, evidence, agents, workflows, Obsidian knowledge, or user decision-making, it does not belong in the core product.
+**Every search must make the system smarter without making the agent more authoritative than the Kernel.**
