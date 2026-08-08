@@ -72,12 +72,12 @@ export class ProposedPlanRevisionConflictError extends Error {
 }
 
 export class ProposedPlanPersistenceError extends Error {
-  override readonly cause?: unknown;
+  readonly causeValue?: unknown;
 
   constructor(message: string, cause?: unknown) {
     super(`Proposed plan persistence error: ${message}`);
     this.name = 'ProposedPlanPersistenceError';
-    this.cause = cause;
+    this.causeValue = cause;
   }
 }
 
