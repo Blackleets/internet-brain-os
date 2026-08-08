@@ -13,11 +13,12 @@ describe('Efesto Windows one-click installer contract', () => {
     expect(installer).toContain("@('install', '--frozen-lockfile')");
   });
 
-  test('builds the Kernel runtime and extension before starting the trusted launcher path', () => {
-    const kernelBuild = "@('--filter', '@internet-brain-os/kernel', 'build')";
+  test('builds Kernel project references and extension before starting the trusted launcher path', () => {
+    const kernelBuild = "@('exec', 'tsc', '-b', 'packages/kernel/tsconfig.json')";
     const extensionBuild = "@('build:extension')";
     const launcherRepair = "@('efesto:launcher', 'repair')";
     expect(installer).toContain(kernelBuild);
+    expect(installer).toContain('packages\\shared\\dist\\index.js');
     expect(installer).toContain('packages\\kernel\\dist\\index.js');
     expect(installer).toContain(extensionBuild);
     expect(installer).toContain(launcherRepair);
