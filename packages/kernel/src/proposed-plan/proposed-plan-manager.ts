@@ -125,7 +125,6 @@ export class ProposedPlanManager {
 
       const goal = await this.requireGoal(id, current.goalId);
       const content = this.validateAndCloneContent(id, goal, {
-        goalId: current.goalId,
         planSummary: updates.planSummary ?? current.planSummary,
         planTasks: updates.planTasks ?? current.planTasks,
         requestedCapabilities: updates.requestedCapabilities ?? current.requestedCapabilities,
