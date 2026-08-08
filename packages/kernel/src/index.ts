@@ -9,6 +9,7 @@ export * from './ingestion/web-ingestion';
 export * from './llm';
 export * from './memory';
 export * from './mission';
+export * from './notification';
 export * from './orchestration';
 export * from './proposed-plan';
 export * from './relationship';
