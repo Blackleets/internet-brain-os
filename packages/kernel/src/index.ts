@@ -3,6 +3,7 @@ export * from './capability';
 export * from './case';
 export * from './entity';
 export * from './evidence';
+export * from './execution';
 export * from './goal';
 export * from './ingestion/web-ingestion';
 export * from './llm';
