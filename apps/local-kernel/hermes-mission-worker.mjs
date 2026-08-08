@@ -22,9 +22,16 @@ export async function runHermesMissionWorker(options = {}) {
     const timeoutMs = options.timeoutMs ?? configuredTimeout(process.env.HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
     const result = await execute(command, args, mission, { timeoutMs });
     const findings = validateAdapterResult(result);
-    const completed = await request(fetchImpl, `${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, apiToken, {
-      method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, findings }),
-    });
+    let completed;
+    try {
+      completed = await request(fetchImpl, `${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, apiToken, {
+        method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, findings }),
+      });
+    } catch (error) {
+      const reconciled = await reconcileCompletedMission(fetchImpl, baseUrl, apiToken, mission.id);
+      if (reconciled) return { status: 'completed', mission: reconciled };
+      throw error;
+    }
     return { status: 'completed', mission: completed.mission };
   } catch (error) {
     const reason = sanitizeFailure(error);
@@ -63,6 +70,18 @@ async function request(fetchImpl, url, token, init, allowEmpty = false) {
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error ?? `Kernel request failed with HTTP ${response.status}`);
   return body;
+}
+
+async function reconcileCompletedMission(fetchImpl, baseUrl, token, missionId) {
+  try {
+    const body = await request(fetchImpl, `${baseUrl}/api/agent-missions`, token, { method: 'GET' });
+    const mission = Array.isArray(body.missions)
+      ? body.missions.find((item) => item?.id === missionId)
+      : undefined;
+    return mission?.status === 'completed' ? mission : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function validateAdapterResult(value) {

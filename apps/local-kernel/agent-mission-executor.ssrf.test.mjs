@@ -12,7 +12,7 @@ function createStore() {
         scope: { categories: ['tool'], keywords: ['x'] },
         createdAt: new Date().toISOString(),
       }],
-      evidence: [], cases: [],
+      evidence: [], cases: [], opportunities: [],
     },
   };
   return {
@@ -21,6 +21,14 @@ function createStore() {
       const outcome = await fn(state.data);
       if (outcome.changed) state.data = outcome.data;
       return outcome.result;
+    },
+  };
+}
+
+function createOpportunityProjectionPort() {
+  return {
+    projectInto(data) {
+      return { changed: false, data, result: { status: 'ordinary_evidence' } };
     },
   };
 }
@@ -38,7 +46,7 @@ const BLOCKED = [
 ];
 
 describe('agent mission executor SSRF hardening', () => {
-  const executor = () => new AgentMissionExecutor(createStore(), { project: async () => ({ status: 'noise' }) });
+  const executor = () => new AgentMissionExecutor(createStore(), createOpportunityProjectionPort());
 
   for (const url of BLOCKED) {
     it(`rejects ${url}`, async () => {
@@ -49,7 +57,7 @@ describe('agent mission executor SSRF hardening', () => {
     });
   }
 
-  it('still accepts a genuinely public URL', async () => {
+  it('still accepts a genuinely public URL through the transactional projection port', async () => {
     const result = await executor().complete('mission:1', {
       leaseId: 'lease-1',
       findings: [{ url: 'https://example.com/public', title: 'probe', text: 'bounded probe text' }],
