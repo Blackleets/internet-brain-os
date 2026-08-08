@@ -1,7 +1,6 @@
-import { InvalidGoalError } from '../goal/goal-errors';
-
 export class ProposedPlanNotFoundError extends Error {
   readonly planId: string;
+
   constructor(planId: string) {
     super(`Proposed plan not found: ${planId}`);
     this.name = 'ProposedPlanNotFoundError';
@@ -12,6 +11,7 @@ export class ProposedPlanNotFoundError extends Error {
 export class GoalNotFoundForPlanError extends Error {
   readonly planId: string;
   readonly goalId: string;
+
   constructor(planId: string, goalId: string) {
     super(`Goal not found for proposed plan: planId=${planId}, goalId=${goalId}`);
     this.name = 'GoalNotFoundForPlanError';
@@ -23,8 +23,9 @@ export class GoalNotFoundForPlanError extends Error {
 export class InvalidProposedPlanInputError extends Error {
   readonly field: string;
   readonly value: unknown;
+
   constructor(field: string, value: unknown, message?: string) {
-    super(message || `Invalid proposed plan input for field '${field}': ${JSON.stringify(value)}`);
+    super(message ?? `Invalid proposed plan input for field '${field}'`);
     this.name = 'InvalidProposedPlanInputError';
     this.field = field;
     this.value = value;
@@ -34,8 +35,9 @@ export class InvalidProposedPlanInputError extends Error {
 export class ProposedPlanCapabilityDeniedError extends Error {
   readonly planId: string;
   readonly capabilityId: string;
+
   constructor(planId: string, capabilityId: string) {
-    super(`Capability ${capabilityId} is not allowed by the goal for proposed plan ${planId}`);
+    super(`Capability ${capabilityId} is not allowed by the Goal for proposed plan ${planId}`);
     this.name = 'ProposedPlanCapabilityDeniedError';
     this.planId = planId;
     this.capabilityId = capabilityId;
@@ -45,11 +47,12 @@ export class ProposedPlanCapabilityDeniedError extends Error {
 export class ProposedPlanDependencyError extends Error {
   readonly planId: string;
   readonly taskId: string;
+
   constructor(planId: string | undefined, taskId: string, message: string) {
-    const pid = planId ?? 'unknown';
-    super(`Dependency error in plan ${pid} for task ${taskId}: ${message}`);
+    const resolvedPlanId = planId ?? 'unknown';
+    super(`Dependency error in plan ${resolvedPlanId} for task ${taskId}: ${message}`);
     this.name = 'ProposedPlanDependencyError';
-    this.planId = pid;
+    this.planId = resolvedPlanId;
     this.taskId = taskId;
   }
 }
@@ -58,8 +61,9 @@ export class ProposedPlanRevisionConflictError extends Error {
   readonly planId: string;
   readonly expectedRevisionId: string;
   readonly currentRevisionId: string;
+
   constructor(planId: string, expectedRevisionId: string, currentRevisionId: string) {
-    super(`Revision conflict for plan ${planId}: expected revision ${expectedRevisionId}, but current is ${currentRevisionId}`);
+    super(`Revision conflict for plan ${planId}: expected ${expectedRevisionId}, current ${currentRevisionId}`);
     this.name = 'ProposedPlanRevisionConflictError';
     this.planId = planId;
     this.expectedRevisionId = expectedRevisionId;
@@ -68,13 +72,12 @@ export class ProposedPlanRevisionConflictError extends Error {
 }
 
 export class ProposedPlanPersistenceError extends Error {
+  override readonly cause?: unknown;
+
   constructor(message: string, cause?: unknown) {
     super(`Proposed plan persistence error: ${message}`);
     this.name = 'ProposedPlanPersistenceError';
-    if (cause) {
-      // eslint-disable-next-line no-constructor-return
-      Object.setPrototypeOf(this, new.target.prototype);
-    }
+    this.cause = cause;
   }
 }
 
