@@ -3,14 +3,18 @@ export function rankOpportunity(opportunity, { goalMatches = [], learnedAdjustme
   const goalFit = clamp(Number(goalMatches?.[0]?.score) || 0);
   const evidenceStrength = provenanceScore(opportunity);
   const freshness = freshnessScore(opportunity?.detectedAt, now);
-  const preference = clamp(50 + boundedAdjustment(learnedAdjustment));
+  const explicitPreferenceAdjustment = boundedAdjustment(learnedAdjustment);
+  const preference = clamp(50 + explicitPreferenceAdjustment);
   const riskPenalty = provenanceRiskPenalty(opportunity);
+  const provenanceAdjustment = evidenceStrength >= 90 ? 8 : evidenceStrength >= 70 ? 0 : -10;
+  const freshnessAdjustment = freshness >= 85 ? 5 : freshness >= 70 ? 0 : freshness >= 50 ? -5 : -10;
+  const goalAdjustment = Math.round(goalFit * 0.20);
   const score = clamp(Math.round(
-    (relevance * 0.30)
-    + (goalFit * 0.25)
-    + (evidenceStrength * 0.20)
-    + (freshness * 0.15)
-    + (preference * 0.10)
+    relevance
+    + goalAdjustment
+    + provenanceAdjustment
+    + freshnessAdjustment
+    + explicitPreferenceAdjustment
     - riskPenalty,
   ));
 
@@ -18,13 +22,24 @@ export function rankOpportunity(opportunity, { goalMatches = [], learnedAdjustme
   if (goalFit >= 60) reasons.push('Strong Goal fit');
   if (evidenceStrength >= 90) reasons.push('Case and Evidence provenance available');
   if (freshness >= 85) reasons.push('Recently detected');
-  if (learnedAdjustment > 0) reasons.push('Boosted by explicit useful/saved feedback');
-  if (learnedAdjustment < 0) reasons.push('Reduced by explicit dismiss/not-interested feedback');
+  if (explicitPreferenceAdjustment > 0) reasons.push('Boosted by explicit useful/saved feedback');
+  if (explicitPreferenceAdjustment < 0) reasons.push('Reduced by explicit dismiss/not-interested feedback');
   if (riskPenalty > 0) reasons.push('Reduced because provenance is incomplete');
 
   return {
     score,
-    components: { relevance, goalFit, evidenceStrength, freshness, preference, riskPenalty },
+    components: {
+      relevance,
+      goalFit,
+      evidenceStrength,
+      freshness,
+      preference,
+      riskPenalty,
+      goalAdjustment,
+      provenanceAdjustment,
+      freshnessAdjustment,
+      explicitPreferenceAdjustment,
+    },
     reasons,
   };
 }
