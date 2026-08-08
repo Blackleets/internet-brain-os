@@ -9,6 +9,9 @@ import { deriveEfestoBootstrapStatus } from '../apps/local-kernel/efesto-bootstr
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 4000;
 const DEFAULT_TIMEOUT_MS = 3000;
+const DEFAULT_WINDOWS_IDENTITY_ATTEMPTS = 2;
+const DEFAULT_WINDOWS_IDENTITY_RETRY_MS = 250;
+const DEFAULT_WINDOWS_IDENTITY_TIMEOUT_MS = 6000;
 
 export function defaultEfestoPaths(env = process.env, cwd = process.cwd()) {
   const dataDir = resolve(env.HEPHAESTUS_DATA_DIR ?? join(cwd, '.hephaestus'));
@@ -210,16 +213,31 @@ export async function readWindowsProcessIdentity(pid, options = {}) {
   const numericPid = Number(pid);
   if (!Number.isInteger(numericPid) || numericPid <= 0) return undefined;
   const runner = options.runProcessCommand ?? runCommand;
-
+  const attempts = boundedInteger(options.windowsIdentityAttempts, DEFAULT_WINDOWS_IDENTITY_ATTEMPTS, 1, 4);
+  const retryMs = boundedInteger(options.windowsIdentityRetryMs, DEFAULT_WINDOWS_IDENTITY_RETRY_MS, 0, 2000);
+  const timeoutMs = boundedInteger(options.windowsIdentityTimeoutMs, DEFAULT_WINDOWS_IDENTITY_TIMEOUT_MS, 1000, 10_000);
   const cimScript = `$p = Get-CimInstance Win32_Process -Filter 'ProcessId = ${numericPid}' -ErrorAction SilentlyContinue; if ($null -ne $p -and $null -ne $p.CommandLine) { [Console]::Out.Write($p.CommandLine) }`;
-  const cim = await runner('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', cimScript], { timeoutMs: 3000 });
-  if (cim.code === 0 && String(cim.stdout ?? '').trim()) return { commandLine: String(cim.stdout).trim() };
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const cim = await runner('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', cimScript], { timeoutMs });
+    if (cim.code === 0 && String(cim.stdout ?? '').trim()) return { commandLine: String(cim.stdout).trim() };
+    if (attempt + 1 < attempts && retryMs > 0) await sleep(retryMs);
+  }
 
   const wmic = await runner('wmic.exe', ['process', 'where', `ProcessId=${numericPid}`, 'get', 'CommandLine', '/format:list'], { timeoutMs: 3000 });
   if (wmic.code === 0 && String(wmic.stdout ?? wmic.stderr ?? '').trim()) {
     return { commandLine: String(wmic.stdout || wmic.stderr).trim() };
   }
   return undefined;
+}
+
+function boundedInteger(value, fallback, minimum, maximum) {
+  const numeric = Number(value ?? fallback);
+  return Number.isInteger(numeric) && numeric >= minimum && numeric <= maximum ? numeric : fallback;
+}
+
+function sleep(ms) {
+  return new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
 }
 
 function safeMessage(error) {
