@@ -5,6 +5,7 @@ on:
     paths:
       - 'apps/local-kernel/**'
       - 'packages/kernel/**'
+      - 'packages/shared/**'
       - 'scripts/efesto-*.mjs'
       - 'scripts/install-efesto.ps1'
       - 'Efesto Launcher.cmd'
@@ -51,6 +52,7 @@ jobs:
           Remove-Item Env:HEPHAESTUS_HERMES_SECRET -ErrorAction SilentlyContinue
 
           try {
+            # NUL keeps the real first-run pairing session active without exposing its one-time code.
             cmd.exe /d /s /c "pnpm efesto:launcher repair >NUL 2>NUL"
             $repairExit = $LASTEXITCODE
             Start-Sleep -Seconds 1
@@ -83,15 +85,14 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - name: Verify one-click installer builds missing Kernel runtime before launch
+      - name: Verify one-click installer rebuilds source-package runtimes before launch
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $dataDir = Join-Path $PWD '.uat-existing-hermes-secret'
-          $installerLog = Join-Path $PWD '.uat-existing-hermes-secret-installer.log'
           Remove-Item -Recurse -Force $dataDir -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force 'packages/shared/dist' -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force 'packages/kernel/dist' -ErrorAction SilentlyContinue
-          Remove-Item -Force $installerLog -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
           Set-Content -Path (Join-Path $dataDir 'kernel-api-token') -Value ('d' * 64) -NoNewline
 
@@ -105,16 +106,13 @@ jobs:
           Remove-Item Env:IBOS_HERMES_SECRET -ErrorAction SilentlyContinue
 
           try {
+            if (Test-Path 'packages/shared/dist/index.js') { throw 'Precondition failed: Shared dist must start absent.' }
             if (Test-Path 'packages/kernel/dist/index.js') { throw 'Precondition failed: Kernel dist must start absent.' }
-            powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install-efesto.ps1 -SkipNodeInstall -SkipShortcut *> $installerLog
-            $installerExit = $LASTEXITCODE
-            if ($installerExit -ne 0) {
-              Write-Host 'Sanitized installer tail:'
-              Get-Content $installerLog -ErrorAction SilentlyContinue |
-                Where-Object { $_ -notmatch '(?i)pairing code|token|secret|authorization|cookie' } |
-                Select-Object -Last 160
-              throw "Installer failed with an existing Hermes boundary secret: $installerExit"
-            }
+
+            # The token is pre-created and HEPHAESTUS_PAIRING=0, so this path emits no one-time pairing code.
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install-efesto.ps1 -SkipNodeInstall -SkipShortcut
+            if ($LASTEXITCODE -ne 0) { throw "Installer failed with an existing Hermes boundary secret: $LASTEXITCODE" }
+            if (-not (Test-Path 'packages/shared/dist/index.js')) { throw 'Installer did not build the Shared runtime dependency.' }
             if (-not (Test-Path 'packages/kernel/dist/index.js')) { throw 'Installer did not build the Kernel runtime.' }
 
             Start-Sleep -Seconds 1
@@ -125,5 +123,4 @@ jobs:
           }
           finally {
             pnpm efesto:launcher shutdown 2>$null | Out-Null
-            Remove-Item -Force $installerLog -ErrorAction SilentlyContinue
           }
