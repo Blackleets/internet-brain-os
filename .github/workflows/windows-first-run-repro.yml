@@ -7,6 +7,7 @@ on:
       - 'packages/kernel/**'
       - 'scripts/efesto-*.mjs'
       - 'scripts/install-efesto.ps1'
+      - 'Efesto Launcher.cmd'
       - '.github/workflows/windows-first-run-repro.yml'
   workflow_dispatch:
 
@@ -28,7 +29,7 @@ jobs:
           cache: pnpm
       - name: Frozen install
         run: pnpm install --frozen-lockfile
-      - name: Reproduce fresh Windows install with pairing and no Obsidian
+      - name: Fresh Windows first run with pairing, Hermes and no Obsidian
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -36,7 +37,6 @@ jobs:
           Remove-Item -Recurse -Force $dataDir -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
 
-          # Match the user's real environment: Hermes exists in the standard Windows install location.
           $hermesDir = Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent\venv\Scripts'
           New-Item -ItemType Directory -Force -Path $hermesDir | Out-Null
           Copy-Item -Force (Get-Command node).Source (Join-Path $hermesDir 'hermes.exe')
@@ -51,7 +51,6 @@ jobs:
           Remove-Item Env:HEPHAESTUS_HERMES_SECRET -ErrorAction SilentlyContinue
 
           try {
-            # NUL keeps the real pairing session active without leaking its one-time code into Actions logs.
             cmd.exe /d /s /c "pnpm efesto:launcher repair >NUL 2>NUL"
             $repairExit = $LASTEXITCODE
             Start-Sleep -Seconds 1
@@ -60,7 +59,6 @@ jobs:
             if ($repairExit -ne 0 -or $bootstrap.kernel -ne 'ready' -or -not $bootstrap.diagnostics.kernel.alive -or -not $bootstrap.diagnostics.kernel.owned -or -not $bootstrap.diagnostics.kernel.verified) {
               throw "Real first-run failed: exit=$repairExit bootstrap=$($bootstrap | ConvertTo-Json -Compress)"
             }
-
             if ($bootstrap.hermes -ne 'ready') { throw 'Standard Windows Hermes install was not detected.' }
             if ($bootstrap.obsidian -ne 'not_configured') { throw "Expected Obsidian not_configured, got $($bootstrap.obsidian)" }
             if ($bootstrap.pairing -ne 'required') { throw "Expected first-run pairing required, got $($bootstrap.pairing)" }
@@ -73,7 +71,7 @@ jobs:
             pnpm efesto:launcher shutdown 2>$null | Out-Null
           }
 
-  existing-hermes-secret-with-source-package:
+  existing-hermes-secret-source-install:
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
@@ -85,14 +83,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - name: Frozen install only, matching installer before runtime launch
-        run: pnpm install --frozen-lockfile
-      - name: Reproduce startup when a Hermes boundary secret already exists
+      - name: Verify one-click installer builds missing Kernel runtime before launch
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $dataDir = Join-Path $PWD '.uat-existing-hermes-secret'
           Remove-Item -Recurse -Force $dataDir -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force 'packages/kernel/dist' -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
           Set-Content -Path (Join-Path $dataDir 'kernel-api-token') -Value ('d' * 64) -NoNewline
 
@@ -106,19 +103,16 @@ jobs:
           Remove-Item Env:IBOS_HERMES_SECRET -ErrorAction SilentlyContinue
 
           try {
-            # packages/kernel/dist is intentionally absent here: this matches the source ZIP + current installer path.
-            if (Test-Path 'packages/kernel/dist/index.js') { throw 'Diagnostic precondition failed: Kernel dist already exists.' }
-            cmd.exe /d /s /c "pnpm efesto:launcher repair >NUL 2>NUL"
-            $repairExit = $LASTEXITCODE
-            Start-Sleep -Milliseconds 750
+            if (Test-Path 'packages/kernel/dist/index.js') { throw 'Precondition failed: Kernel dist must start absent.' }
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install-efesto.ps1 -SkipNodeInstall -SkipShortcut *> $null
+            if ($LASTEXITCODE -ne 0) { throw "Installer failed with an existing Hermes boundary secret: $LASTEXITCODE" }
+            if (-not (Test-Path 'packages/kernel/dist/index.js')) { throw 'Installer did not build the Kernel runtime.' }
+
+            Start-Sleep -Seconds 1
             $bootstrap = node scripts/efesto-bootstrap.mjs | ConvertFrom-Json
-            if ($repairExit -eq 0 -and $bootstrap.kernel -eq 'ready') {
-              throw 'Expected the current source-package path to reproduce the missing Kernel build defect, but it started successfully.'
+            if ($bootstrap.kernel -ne 'ready' -or -not $bootstrap.diagnostics.kernel.alive -or -not $bootstrap.diagnostics.kernel.owned -or -not $bootstrap.diagnostics.kernel.verified) {
+              throw "Installer did not recover the previously reproduced launcher death: $($bootstrap | ConvertTo-Json -Compress)"
             }
-            if ($bootstrap.diagnostics.kernel.alive) {
-              throw "Expected launcher-owned process to have exited during the reproduced defect: $($bootstrap | ConvertTo-Json -Compress)"
-            }
-            Write-Host 'Reproduced missing Kernel runtime build as launcher-owned process exit.'
           }
           finally {
             pnpm efesto:launcher shutdown 2>$null | Out-Null
