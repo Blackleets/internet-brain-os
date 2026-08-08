@@ -1,6 +1,16 @@
 name: Windows Launcher Smoke
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/local-kernel/**'
+      - 'scripts/efesto-*.mjs'
+      - 'scripts/install-efesto.ps1'
+      - 'Efesto Launcher.cmd'
+      - 'Install Efesto.cmd'
+      - '.github/workflows/windows-launcher-smoke.yml'
   pull_request:
     paths:
       - 'apps/local-kernel/**'
