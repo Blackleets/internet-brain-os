@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'vitest';
 import {
   ArchivedCaseMutationError,
+  CapabilityDeniedError,
+  CapabilityGatedProposedPlanService,
+  CapabilityNotFoundError,
+  CapabilityRegistry,
   CaseAlreadyExistsError,
   CaseManager,
   CaseNotFoundError,
@@ -13,6 +17,8 @@ import {
   StaleCaseUpdateError,
 } from '../src';
 import type {
+  CapabilityDefinition,
+  CapabilityRequest,
   CaseRepository,
   CreateCaseInput,
   CreateProposedPlanInput,
@@ -48,11 +54,20 @@ describe('kernel public API', () => {
     expect(ProposedPlanRevisionConflictError).toBeTypeOf('function');
   });
 
-  test('exports compile-time Goal and Proposed Plan contracts', () => {
+  test('exports Capability Registry runtime boundaries', () => {
+    expect(CapabilityRegistry).toBeTypeOf('function');
+    expect(CapabilityGatedProposedPlanService).toBeTypeOf('function');
+    expect(CapabilityNotFoundError).toBeTypeOf('function');
+    expect(CapabilityDeniedError).toBeTypeOf('function');
+  });
+
+  test('exports compile-time Goal, Plan and Capability contracts', () => {
     const acceptPlanTypes = (
       _goal: UniversalGoal,
       _create: CreateProposedPlanInput,
       _update: UpdateProposedPlanInput,
+      _capability: CapabilityDefinition,
+      _request: CapabilityRequest,
     ): void => undefined;
     expect(acceptPlanTypes).toBeTypeOf('function');
   });
