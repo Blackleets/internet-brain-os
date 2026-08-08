@@ -53,9 +53,26 @@ describe('Efesto launcher process identity probe', () => {
     expect(calls[0][1].at(-1)).toContain('ProcessId = 4321');
   });
 
-  it('falls back to WMIC only when CIM cannot return a command line', async () => {
+  it('retries CIM when a new Windows process has not propagated its command line yet', async () => {
     const calls = [];
     const result = await readWindowsProcessIdentity(4321, {
+      windowsIdentityAttempts: 2,
+      windowsIdentityRetryMs: 0,
+      runProcessCommand: async (command) => {
+        calls.push(command);
+        if (calls.length === 1) return { code: 0, stdout: '' };
+        return { code: 0, stdout: `node C:\\repo\\apps\\local-kernel\\one-click-kernel.mjs --efesto-launcher-nonce ${validRecord.nonce}` };
+      },
+    });
+    expect(result?.commandLine).toContain(validRecord.nonce);
+    expect(calls).toEqual(['powershell.exe', 'powershell.exe']);
+  });
+
+  it('falls back to WMIC only after bounded CIM attempts cannot return a command line', async () => {
+    const calls = [];
+    const result = await readWindowsProcessIdentity(4321, {
+      windowsIdentityAttempts: 2,
+      windowsIdentityRetryMs: 0,
       runProcessCommand: async (command) => {
         calls.push(command);
         return command === 'powershell.exe'
@@ -64,7 +81,7 @@ describe('Efesto launcher process identity probe', () => {
       },
     });
     expect(result?.commandLine).toContain(validRecord.nonce);
-    expect(calls).toEqual(['powershell.exe', 'wmic.exe']);
+    expect(calls).toEqual(['powershell.exe', 'powershell.exe', 'wmic.exe']);
   });
 
   it('marks an absent PID as unverified stale state', async () => {
