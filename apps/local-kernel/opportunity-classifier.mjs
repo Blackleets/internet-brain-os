@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { validatePageContext } from './page-context-inbox.mjs';
 import { matchOpportunityToGoals } from './goals.mjs';
 import { buildPreferenceProfile, preferenceAdjustment } from './preference-learner.mjs';
+import { rankOpportunity } from './opportunity-ranking.mjs';
 
 export const OPPORTUNITY_CATEGORIES = [
   {
@@ -24,7 +25,7 @@ export const OPPORTUNITY_CATEGORIES = [
     id: 'client', label: 'Potential client', benefitType: 'income', nextAction: 'Qualify the need before contacting',
     signals: [
       [/\b(looking for|seeking|need help with|request for proposal|rfp|freelancer|consultant)\b/gi, 26],
-      [/\b(busco|buscamos|necesitamos|solicitud de propuesta|aut[oó]nomo|consultor|proveedor)\b/gi, 26],
+      [/\b(busco|buscamos|necesitamos|solicitud de propuesta|rfp|aut[oó]nomo|consultor|proveedor)\b/gi, 26],
       [/\b(budget|paid|contract|project|presupuesto|pagado|contrato|proyecto)\b/gi, 12],
     ],
   },
@@ -171,7 +172,7 @@ export class OpportunityProjector {
     };
   }
 
-  async list({ limit = 20 } = {}) {
+  async list({ limit = 20, now = new Date().toISOString() } = {}) {
     const data = await this.store.read();
     const preferenceProfile = buildPreferenceProfile(data.preferenceFeedback ?? []);
     return (data.opportunities ?? [])
@@ -179,7 +180,8 @@ export class OpportunityProjector {
       .map((item) => {
         const goalMatches = matchOpportunityToGoals(item, data.goals ?? []);
         const learnedAdjustment = preferenceAdjustment(item, preferenceProfile);
-        return { ...item, goalMatches, learnedAdjustment, personalizedRelevance: Math.max(0, Math.min(99, item.relevance + Math.round((goalMatches[0]?.score ?? 0) * 0.25) + learnedAdjustment)) };
+        const ranking = rankOpportunity(item, { goalMatches, learnedAdjustment, now });
+        return { ...item, goalMatches, learnedAdjustment, ranking, personalizedRelevance: ranking.score };
       })
       .sort((left, right) => right.personalizedRelevance - left.personalizedRelevance || right.detectedAt.localeCompare(left.detectedAt))
       .slice(0, Math.max(1, Math.min(Number(limit) || 20, 100)));
