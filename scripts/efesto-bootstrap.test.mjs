@@ -2,7 +2,7 @@ import { mkdtemp, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
-import { probeLauncherProcess } from './efesto-bootstrap.mjs';
+import { probeLauncherProcess, readWindowsProcessIdentity } from './efesto-bootstrap.mjs';
 
 async function pathsWithRecord(record) {
   const dir = await mkdtemp(join(tmpdir(), 'efesto-process-'));
@@ -35,6 +35,53 @@ describe('Efesto launcher process identity probe', () => {
       isProcessAlive: async () => true,
       readProcessIdentity: async () => ({ commandLine: `node C:\\repo\\apps\\local-kernel\\one-click-kernel.mjs --efesto-launcher-nonce ${validRecord.nonce}` }),
     })).resolves.toMatchObject({ pid: 4321, alive: true, owned: true, verified: true });
+  });
+
+  it('uses modern PowerShell CIM process inspection on Windows', async () => {
+    const calls = [];
+    const result = await readWindowsProcessIdentity(4321, {
+      runProcessCommand: async (command, args) => {
+        calls.push([command, args]);
+        return { code: 0, stdout: `node C:\\repo\\apps\\local-kernel\\one-click-kernel.mjs --efesto-launcher-nonce ${validRecord.nonce}` };
+      },
+    });
+    expect(result?.commandLine).toContain(validRecord.nonce);
+    expect(calls).toHaveLength(1);
+    expect(calls[0][0]).toBe('powershell.exe');
+    expect(calls[0][1]).toContain('-Command');
+    expect(calls[0][1].at(-1)).toContain('Get-CimInstance Win32_Process');
+    expect(calls[0][1].at(-1)).toContain('ProcessId = 4321');
+  });
+
+  it('retries CIM when a new Windows process has not propagated its command line yet', async () => {
+    const calls = [];
+    const result = await readWindowsProcessIdentity(4321, {
+      windowsIdentityAttempts: 2,
+      windowsIdentityRetryMs: 0,
+      runProcessCommand: async (command) => {
+        calls.push(command);
+        if (calls.length === 1) return { code: 0, stdout: '' };
+        return { code: 0, stdout: `node C:\\repo\\apps\\local-kernel\\one-click-kernel.mjs --efesto-launcher-nonce ${validRecord.nonce}` };
+      },
+    });
+    expect(result?.commandLine).toContain(validRecord.nonce);
+    expect(calls).toEqual(['powershell.exe', 'powershell.exe']);
+  });
+
+  it('falls back to WMIC only after bounded CIM attempts cannot return a command line', async () => {
+    const calls = [];
+    const result = await readWindowsProcessIdentity(4321, {
+      windowsIdentityAttempts: 2,
+      windowsIdentityRetryMs: 0,
+      runProcessCommand: async (command) => {
+        calls.push(command);
+        return command === 'powershell.exe'
+          ? { code: 0, stdout: '' }
+          : { code: 0, stdout: `CommandLine=node C:\\repo\\apps\\local-kernel\\one-click-kernel.mjs --efesto-launcher-nonce ${validRecord.nonce}` };
+      },
+    });
+    expect(result?.commandLine).toContain(validRecord.nonce);
+    expect(calls).toEqual(['powershell.exe', 'powershell.exe', 'wmic.exe']);
   });
 
   it('marks an absent PID as unverified stale state', async () => {

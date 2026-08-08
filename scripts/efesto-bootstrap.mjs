@@ -9,6 +9,9 @@ import { deriveEfestoBootstrapStatus } from '../apps/local-kernel/efesto-bootstr
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 4000;
 const DEFAULT_TIMEOUT_MS = 3000;
+const DEFAULT_WINDOWS_IDENTITY_ATTEMPTS = 2;
+const DEFAULT_WINDOWS_IDENTITY_RETRY_MS = 250;
+const DEFAULT_WINDOWS_IDENTITY_TIMEOUT_MS = 6000;
 
 export function defaultEfestoPaths(env = process.env, cwd = process.cwd()) {
   const dataDir = resolve(env.HEPHAESTUS_DATA_DIR ?? join(cwd, '.hephaestus'));
@@ -186,7 +189,7 @@ async function verifyProcessIdentity(record, options = {}) {
   if (!record.nonce || !record.commandFingerprint || !record.startedAt) return { verified: false, reason: 'missing_fingerprint' };
   const actual = options.readProcessIdentity
     ? await options.readProcessIdentity(record.pid)
-    : await readProcessIdentity(record.pid);
+    : await readProcessIdentity(record.pid, options);
   if (!actual?.commandLine) return { verified: false, reason: 'identity_unavailable' };
   const commandLine = normalizeCommandText(actual.commandLine);
   const fingerprint = normalizeCommandText(record.commandFingerprint);
@@ -198,13 +201,43 @@ function normalizeCommandText(value) {
   return String(value).replace(/\\/g, '/').toLowerCase();
 }
 
-async function readProcessIdentity(pid) {
+async function readProcessIdentity(pid, options = {}) {
   if (process.platform !== 'win32') {
     try { return { commandLine: await readFile(`/proc/${Number(pid)}/cmdline`, 'utf8') }; }
     catch { return undefined; }
   }
-  const result = await runCommand('wmic.exe', ['process', 'where', `ProcessId=${Number(pid)}`, 'get', 'CommandLine', '/format:list'], { timeoutMs: 3000 });
-  return result.code === 0 ? { commandLine: result.stdout || result.stderr || '' } : undefined;
+  return readWindowsProcessIdentity(pid, options);
+}
+
+export async function readWindowsProcessIdentity(pid, options = {}) {
+  const numericPid = Number(pid);
+  if (!Number.isInteger(numericPid) || numericPid <= 0) return undefined;
+  const runner = options.runProcessCommand ?? runCommand;
+  const attempts = boundedInteger(options.windowsIdentityAttempts, DEFAULT_WINDOWS_IDENTITY_ATTEMPTS, 1, 4);
+  const retryMs = boundedInteger(options.windowsIdentityRetryMs, DEFAULT_WINDOWS_IDENTITY_RETRY_MS, 0, 2000);
+  const timeoutMs = boundedInteger(options.windowsIdentityTimeoutMs, DEFAULT_WINDOWS_IDENTITY_TIMEOUT_MS, 1000, 10_000);
+  const cimScript = `$p = Get-CimInstance Win32_Process -Filter 'ProcessId = ${numericPid}' -ErrorAction SilentlyContinue; if ($null -ne $p -and $null -ne $p.CommandLine) { [Console]::Out.Write($p.CommandLine) }`;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const cim = await runner('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', cimScript], { timeoutMs });
+    if (cim.code === 0 && String(cim.stdout ?? '').trim()) return { commandLine: String(cim.stdout).trim() };
+    if (attempt + 1 < attempts && retryMs > 0) await sleep(retryMs);
+  }
+
+  const wmic = await runner('wmic.exe', ['process', 'where', `ProcessId=${numericPid}`, 'get', 'CommandLine', '/format:list'], { timeoutMs: 3000 });
+  if (wmic.code === 0 && String(wmic.stdout ?? wmic.stderr ?? '').trim()) {
+    return { commandLine: String(wmic.stdout || wmic.stderr).trim() };
+  }
+  return undefined;
+}
+
+function boundedInteger(value, fallback, minimum, maximum) {
+  const numeric = Number(value ?? fallback);
+  return Number.isInteger(numeric) && numeric >= minimum && numeric <= maximum ? numeric : fallback;
+}
+
+function sleep(ms) {
+  return new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
 }
 
 function safeMessage(error) {

@@ -72,7 +72,10 @@ export function launcherOps(options = {}) {
     startKernel: ({ showPairing = false } = {}) => startKernelProcess({ env, cwd, paths, showPairing }),
     waitForReady: () => waitForReady({ ...options, env, cwd, paths }),
     waitForStopped: () => waitForStopped({ ...options, env, cwd, paths }),
-    stopOwnedProcess: async (pid) => { try { process.kill(Number(pid), 'SIGTERM'); } catch {} await rm(paths.pidFile, { force: true }); },
+    stopOwnedProcess: async (pid) => {
+      await stopLauncherProcessTree(pid, options);
+      await rm(paths.pidFile, { force: true });
+    },
     openEfesto: () => openEfesto(env),
   };
 }
@@ -83,6 +86,25 @@ export function buildKernelChildEnv(env = process.env, config = {}) {
     HEPHAESTUS_PAIRING: env.HEPHAESTUS_PAIRING ?? '1',
     ...(config.obsidianDir && !env.HEPHAESTUS_OBSIDIAN_DIR ? { HEPHAESTUS_OBSIDIAN_DIR: config.obsidianDir } : {}),
   };
+}
+
+export async function stopLauncherProcessTree(pid, options = {}) {
+  const numericPid = Number(pid);
+  if (!Number.isInteger(numericPid) || numericPid <= 0) return { stopped: false, reason: 'invalid_pid' };
+  const platform = options.platform ?? process.platform;
+
+  if (platform === 'win32') {
+    const runner = options.runStopCommand ?? runHiddenCommand;
+    const result = await runner('taskkill.exe', ['/PID', String(numericPid), '/T', '/F'], { timeoutMs: 5000 });
+    return { stopped: result.code === 0, code: result.code };
+  }
+
+  try {
+    process.kill(numericPid, 'SIGTERM');
+    return { stopped: true };
+  } catch {
+    return { stopped: false, reason: 'not_alive' };
+  }
 }
 
 async function startKernelProcess({ env, cwd, paths, showPairing = false }) {
@@ -125,6 +147,25 @@ async function waitForStopped(options = {}) {
     await sleep(150);
   }
   return latest ?? await inspectEfestoBootstrap(options);
+}
+
+function runHiddenCommand(command, args, options = {}) {
+  return new Promise((resolvePromise) => {
+    const child = spawn(command, args, { shell: false, windowsHide: true, stdio: 'ignore' });
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolvePromise(result);
+    };
+    const timer = setTimeout(() => {
+      try { child.kill(); } catch {}
+      finish({ code: 124 });
+    }, options.timeoutMs ?? 5000);
+    child.once('error', () => finish({ code: 127 }));
+    child.once('close', (code) => finish({ code: code ?? 1 }));
+  });
 }
 
 function sleep(ms) { return new Promise((resolvePromise) => setTimeout(resolvePromise, ms)); }
