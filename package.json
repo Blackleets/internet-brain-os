@@ -11,6 +11,8 @@
     "build": "tsc -b && pnpm --filter @internet-brain-os/dashboard build",
     "build:extension": "node scripts/build-extension.mjs",
     "clean": "tsc -b --clean",
+    "hermes:acceptance": "node scripts/hermes-acceptance-runner.mjs",
+    "hermes:acceptance:live": "node scripts/hermes-acceptance-runner.mjs --live",
     "hermes:attack-smoke": "node scripts/hermes-idempotency-attack-test.mjs",
     "hermes:efesto-adapter": "node scripts/hermes-efesto-adapter.mjs",
     "hermes:ingest-agent": "node scripts/hermes-ingest-agent-output.mjs",
