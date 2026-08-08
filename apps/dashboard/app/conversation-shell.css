@@ -1,0 +1,858 @@
+/* Conversation-first shell inspired by modern assistant UX.
+ * This file intentionally overrides presentation only; Kernel and data authority stay unchanged.
+ */
+
+:root {
+  --conversation-bg: #212121;
+  --conversation-panel: #171717;
+  --conversation-elevated: #2f2f2f;
+  --conversation-hover: #2a2a2a;
+  --conversation-border: rgba(255,255,255,.08);
+  --conversation-text: #ececec;
+  --conversation-muted: #a8a8a8;
+  --conversation-accent: #7c6cff;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  background: var(--conversation-bg);
+}
+
+body {
+  color: var(--conversation-text);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app {
+  grid-template-columns: 270px minmax(0, 1fr);
+  background: var(--conversation-bg);
+}
+
+.sidebar {
+  padding: 12px 10px;
+  border-right: 0;
+  background: var(--conversation-panel);
+}
+
+.sidebar-head {
+  min-height: 46px;
+  padding: 3px 4px 10px;
+}
+
+.logo {
+  min-width: 0;
+  gap: 10px;
+}
+
+.logo > span {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #263853, #222237);
+}
+
+.logo strong {
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -.01em;
+}
+
+.new-chat {
+  min-height: 44px;
+  border-color: transparent;
+  background: transparent;
+  border-radius: 10px;
+}
+
+.new-chat:hover,
+.new-chat:focus-visible,
+.side-search:focus-within,
+.history-item:hover,
+.kernel-row:hover,
+.profile-row:hover {
+  background: var(--conversation-hover);
+}
+
+.new-chat span,
+.nav-section strong,
+.history-item span,
+.kernel-row strong,
+.profile-row strong {
+  font-size: 13px;
+}
+
+.new-chat kbd,
+.nav-section small,
+.kernel-row small,
+.profile-row small,
+.history-empty {
+  font-size: 11px;
+}
+
+.side-search {
+  min-height: 40px;
+  margin-top: 4px;
+  border-radius: 10px;
+}
+
+.side-search input {
+  font-size: 13px;
+}
+
+.nav-section {
+  gap: 2px;
+  margin-top: 14px;
+}
+
+.nav-label {
+  padding: 0 9px 8px;
+  color: #777;
+  font-size: 10px;
+  letter-spacing: .08em;
+}
+
+.nav-section > button {
+  min-height: 48px;
+  gap: 11px;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.nav-section > button:hover,
+.nav-section > button.active {
+  background: var(--conversation-hover);
+}
+
+.nav-section > button.active {
+  box-shadow: none;
+}
+
+.nav-section small {
+  margin-top: 1px;
+  color: #858585;
+}
+
+.history-section {
+  margin-top: 16px;
+}
+
+.history-item {
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+.sidebar-footer {
+  border-top-color: var(--conversation-border);
+}
+
+.kernel-row,
+.profile-row {
+  min-height: 48px;
+}
+
+.main {
+  height: 100dvh;
+  grid-template-rows: 54px minmax(0, 1fr) auto;
+  background:
+    radial-gradient(circle at 50% 0, rgba(61, 83, 143, .16), transparent 34%),
+    var(--conversation-bg);
+}
+
+.topbar {
+  padding: 0 14px;
+  border-bottom: 0;
+  background: rgba(33,33,33,.88);
+  backdrop-filter: blur(18px);
+}
+
+.topbar-left {
+  min-width: 0;
+}
+
+.conversation-title {
+  max-width: min(54vw, 420px);
+  min-height: 40px;
+  padding: 0 8px;
+  overflow: hidden;
+  color: var(--conversation-text);
+  border-radius: 9px;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversation-title:hover {
+  background: var(--conversation-hover);
+}
+
+.context-button {
+  min-height: 38px;
+  padding: 0 11px;
+  border-color: var(--conversation-border);
+  border-radius: 11px;
+  background: rgba(47,47,47,.82);
+  font-size: 12px;
+}
+
+.conversation {
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.welcome {
+  width: 100%;
+  max-width: 980px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 18px 22px 24px;
+}
+
+.brain-stage {
+  width: min(940px, 100%);
+  height: clamp(280px, 40vh, 390px);
+  border-radius: 0;
+  background: transparent;
+}
+
+.brain-stage::after {
+  opacity: .5;
+}
+
+.brain-telemetry {
+  margin-top: -18px;
+  border-color: var(--conversation-border);
+  background: rgba(23,23,23,.72);
+  font-size: 11px;
+}
+
+.brain-telemetry span {
+  font-size: 10px;
+}
+
+.welcome-copy {
+  max-width: 760px;
+  margin: 14px auto 0;
+}
+
+.welcome-copy > span {
+  font-size: 10px;
+  letter-spacing: .14em;
+}
+
+.welcome-copy h1 {
+  margin: 8px 0 8px;
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 540;
+  letter-spacing: -.035em;
+}
+
+.welcome-copy p {
+  max-width: 680px;
+  margin: 0 auto;
+  color: var(--conversation-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.starter-grid {
+  width: min(760px, 100%);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.starter-grid button {
+  min-height: 72px;
+  padding: 13px 14px;
+  border-color: var(--conversation-border);
+  border-radius: 14px;
+  background: rgba(47,47,47,.55);
+}
+
+.starter-grid button:hover {
+  border-color: rgba(255,255,255,.14);
+  background: var(--conversation-elevated);
+  transform: none;
+}
+
+.starter-grid strong {
+  font-size: 13px;
+}
+
+.starter-grid small {
+  margin-top: 4px;
+  color: var(--conversation-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.truth-strip {
+  margin-top: 12px;
+  color: #929292;
+  font-size: 11px;
+}
+
+.thread,
+.workspace {
+  width: min(780px, calc(100% - 40px));
+}
+
+.thread {
+  padding: 26px 0 90px;
+}
+
+.thread article {
+  grid-template-columns: 34px minmax(0,1fr);
+  gap: 14px;
+  padding: 20px 0;
+  border-bottom: 0;
+}
+
+.thread header strong {
+  font-size: 13px;
+}
+
+.thread header span {
+  font-size: 10px;
+}
+
+.thread p {
+  margin-top: 9px;
+  color: var(--conversation-text);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.activity-header {
+  border-color: var(--conversation-border);
+  background: rgba(33,33,33,.86);
+}
+
+.activity-header small {
+  font-size: 9px;
+}
+
+.activity-header strong {
+  font-size: 12px;
+}
+
+.activity-header span {
+  font-size: 10px;
+}
+
+.composer-wrap {
+  width: min(780px, calc(100% - 28px));
+  padding: 0 0 12px;
+}
+
+.composer {
+  min-height: 96px;
+  padding: 11px 13px 10px;
+  border: 1px solid var(--conversation-border);
+  border-radius: 26px;
+  background: var(--conversation-elevated);
+  box-shadow: 0 10px 28px rgba(0,0,0,.24);
+}
+
+.composer textarea {
+  min-height: 38px;
+  padding: 7px 9px 3px;
+  color: var(--conversation-text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.composer .add-button,
+.voice-button {
+  width: 36px;
+  height: 36px;
+  background: transparent;
+}
+
+.composer .add-button:hover,
+.voice-button:hover {
+  background: rgba(255,255,255,.08);
+}
+
+.composer .send-button {
+  width: 38px;
+  height: 38px;
+  background: #f1f1f1;
+  color: #191919;
+}
+
+.composer .send-button:disabled {
+  background: #494949;
+  color: #8d8d8d;
+}
+
+.composer-tools button,
+.model-trigger {
+  font-size: 11px;
+}
+
+.model-trigger > strong {
+  max-width: 220px;
+  font-size: 11px;
+}
+
+.composer-wrap > p {
+  color: #7d7d7d;
+  font-size: 10px;
+}
+
+.workspace {
+  padding: 26px 0 100px;
+}
+
+.workspace-heading {
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom-color: var(--conversation-border);
+}
+
+.workspace-heading > span {
+  width: 42px;
+  height: 42px;
+  border-color: var(--conversation-border);
+  background: rgba(47,47,47,.7);
+}
+
+.workspace-heading small {
+  font-size: 10px;
+}
+
+.workspace-heading h1 {
+  margin: 3px 0 5px;
+  font-size: 26px;
+}
+
+.workspace-heading p {
+  color: var(--conversation-muted);
+  font-size: 13px;
+}
+
+.research-form,
+.record-panel,
+.agent-card,
+.flow-builder,
+.large-empty,
+.settings-card,
+.integration-control,
+.automation-form,
+.case-index,
+.evidence-detail,
+.hermes-panel {
+  border-color: var(--conversation-border);
+  background: rgba(23,23,23,.64);
+}
+
+.research-form label,
+.settings-card label,
+.automation-form label {
+  font-size: 12px;
+}
+
+.research-form textarea,
+.research-form select,
+.settings-card input,
+.settings-card select,
+.automation-form input,
+.automation-form select {
+  min-height: 44px;
+  border-color: var(--conversation-border);
+  background: #242424;
+  font-size: 13px;
+}
+
+.honest-empty strong,
+.record-panel article strong,
+.agent-card h3,
+.integration-copy h3,
+.health-row,
+.command-step strong {
+  font-size: 12px;
+}
+
+.honest-empty p,
+.record-panel article small,
+.agent-card p,
+.integration-copy p,
+.guardrail,
+.command-step code,
+.integration-truth,
+.readiness-note {
+  font-size: 11px;
+}
+
+/* Tablet: keep the conversation dominant and compress navigation. */
+@media (max-width: 980px) {
+  .app {
+    grid-template-columns: 220px minmax(0,1fr);
+  }
+
+  .sidebar {
+    padding-inline: 8px;
+  }
+
+  .thread,
+  .workspace,
+  .composer-wrap {
+    width: min(760px, calc(100% - 24px));
+  }
+}
+
+/* Mobile: one readable column, persistent composer, safe touch targets. */
+@media (max-width: 680px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    font-size: 15px;
+  }
+
+  .app {
+    display: block;
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Keep the existing product spaces available as a compact launcher,
+   * while the conversation itself remains the main surface.
+   */
+  .sidebar {
+    inset: auto 8px max(8px, env(safe-area-inset-bottom)) 8px;
+    width: auto;
+    height: 56px;
+    padding: 5px 7px;
+    border: 1px solid var(--conversation-border);
+    border-radius: 18px;
+    background: rgba(23,23,23,.92);
+    box-shadow: 0 12px 34px rgba(0,0,0,.34);
+    backdrop-filter: blur(18px);
+  }
+
+  .nav-section {
+    gap: 2px;
+  }
+
+  .nav-section > button {
+    min-width: 0;
+    min-height: 44px;
+    padding: 3px 6px;
+    border-radius: 12px;
+  }
+
+  .nav-section > button.active {
+    background: rgba(255,255,255,.09);
+  }
+
+  .nav-section strong {
+    font-size: 9px;
+  }
+
+  .main {
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    padding-bottom: 0;
+    grid-template-rows: 52px minmax(0,1fr) auto;
+  }
+
+  .topbar {
+    position: relative;
+    top: auto;
+    z-index: 20;
+    min-height: 52px;
+    padding: 0 10px;
+    background: rgba(33,33,33,.92);
+  }
+
+  .conversation-title {
+    max-width: 64vw;
+    min-height: 42px;
+    font-size: 14px;
+  }
+
+  .context-button {
+    width: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .conversation {
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: 0;
+    scroll-padding-bottom: 20px;
+  }
+
+  .welcome {
+    min-height: 100%;
+    padding: 4px 14px 20px;
+  }
+
+  .brain-stage {
+    width: 100%;
+    height: clamp(190px, 29vh, 245px);
+  }
+
+  .brain-image-frame {
+    width: 100%;
+    max-width: 100%;
+    transform: translate(calc(-50% + var(--brain-x)), calc(-50% + var(--brain-y)));
+  }
+
+  .brain-telemetry {
+    min-height: 28px;
+    margin-top: -12px;
+    padding: 5px 9px;
+    font-size: 10px;
+  }
+
+  .brain-telemetry span {
+    display: none;
+  }
+
+  .welcome-copy {
+    margin-top: 12px;
+  }
+
+  .welcome-copy > span {
+    font-size: 9px;
+  }
+
+  .welcome-copy h1 {
+    margin: 7px 0 8px;
+    font-size: clamp(25px, 8vw, 31px);
+    line-height: 1.08;
+  }
+
+  .welcome-copy p {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .starter-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .starter-grid button {
+    min-height: 86px;
+    padding: 11px;
+  }
+
+  .starter-grid strong {
+    font-size: 12px;
+  }
+
+  .starter-grid small {
+    font-size: 10px;
+  }
+
+  .truth-strip {
+    max-width: 94%;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  .thread,
+  .workspace {
+    width: calc(100% - 24px);
+  }
+
+  .thread {
+    padding: 12px 0 28px;
+  }
+
+  .thread article {
+    grid-template-columns: 30px minmax(0,1fr);
+    gap: 10px;
+    padding: 15px 0;
+  }
+
+  .thread p {
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  .activity-header {
+    top: 0;
+  }
+
+  .composer-wrap {
+    position: relative;
+    bottom: auto;
+    z-index: 25;
+    width: calc(100% - 14px);
+    padding: 4px 0 calc(70px + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, transparent, var(--conversation-bg) 22%);
+  }
+
+  .composer {
+    min-height: 88px;
+    padding: 9px 10px 8px;
+    border-radius: 22px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.28);
+  }
+
+  .composer textarea {
+    min-height: 36px;
+    max-height: 112px;
+    padding: 5px 7px 3px;
+    font-size: 16px;
+  }
+
+  .composer-bottom {
+    gap: 6px;
+  }
+
+  .composer-left,
+  .composer-right {
+    gap: 4px;
+  }
+
+  .composer-tools {
+    display: none;
+  }
+
+  .model-trigger {
+    max-width: 144px;
+    min-height: 36px;
+  }
+
+  .model-trigger > strong {
+    max-width: 92px;
+    font-size: 10px;
+  }
+
+  .model-menu {
+    left: -45px;
+    width: min(330px, calc(100vw - 24px));
+    max-height: 44vh;
+  }
+
+  .composer-wrap > p {
+    display: none;
+  }
+
+  .workspace {
+    padding: 16px 0 86px;
+  }
+
+  .workspace-heading {
+    align-items: center;
+    padding-bottom: 14px;
+  }
+
+  .workspace-heading > span {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+  }
+
+  .workspace-heading h1 {
+    font-size: 22px;
+  }
+
+  .workspace-heading p {
+    font-size: 12px;
+  }
+
+  .research-form,
+  .settings-card,
+  .automation-form,
+  .record-panel,
+  .evidence-detail,
+  .case-index,
+  .integration-control > header,
+  .hermes-panel {
+    padding: 14px;
+  }
+
+  .research-form textarea,
+  .research-form select,
+  .settings-card input,
+  .settings-card select,
+  .automation-form input,
+  .automation-form select {
+    font-size: 16px;
+  }
+
+  .form-row,
+  .settings-grid,
+  .automation-grid,
+  .integration-grid,
+  .evidence-browser,
+  .projection-list,
+  .hermes-contract {
+    grid-template-columns: 1fr;
+  }
+
+  .record-panel article {
+    align-items: flex-start;
+  }
+
+  .record-panel article button,
+  .settings-actions button,
+  .automation-form > button,
+  .integration-card > button {
+    min-height: 42px;
+  }
+}
+
+@media (max-width: 390px) {
+  .starter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .starter-grid button {
+    min-height: 68px;
+  }
+
+  .brain-stage {
+    height: 185px;
+  }
+
+  .welcome-copy h1 {
+    font-size: 25px;
+  }
+
+  .model-trigger {
+    max-width: 118px;
+  }
+
+  .model-trigger > strong {
+    max-width: 68px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+  }
+}
