@@ -48,7 +48,9 @@ describe('Efesto launcher process identity probe', () => {
     expect(result?.commandLine).toContain(validRecord.nonce);
     expect(calls).toHaveLength(1);
     expect(calls[0][0]).toBe('powershell.exe');
-    expect(calls[0][1]).toContain('Get-CimInstance Win32_Process -Filter \'ProcessId = 4321\' -ErrorAction SilentlyContinue; if ($null -ne $p -and $null -ne $p.CommandLine) { [Console]::Out.Write($p.CommandLine) }'.replace('Get-CimInstance', '$p = Get-CimInstance'));
+    expect(calls[0][1]).toContain('-Command');
+    expect(calls[0][1].at(-1)).toContain('Get-CimInstance Win32_Process');
+    expect(calls[0][1].at(-1)).toContain('ProcessId = 4321');
   });
 
   it('falls back to WMIC only when CIM cannot return a command line', async () => {
