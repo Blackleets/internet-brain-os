@@ -1,180 +1,114 @@
 # ROADMAP
 
-Internet Brain OS must grow in controlled phases.
+Internet Brain OS / Hephaestus grows in controlled phases. Do not bypass Kernel authority to accelerate product work.
 
-Do not jump to advanced features before the Kernel works.
+## MVP completion status — 2026-08-08
 
-## Phase 0 - Minimum Kernel
-
-Goal: prove the core loop works locally.
-
-Core loop:
+The core local-first Efesto MVP completion gate is now focused on a bounded autonomous value loop:
 
 ```text
-Objective -> Case -> Evidence -> Memory -> Obsidian notes -> Report
+Goal → Plan → Capability/Risk Gate → Execution → Evidence → Opportunity/Knowledge → Trigger → Notification
 ```
 
-Deliverables:
+with durable controlled-memory authority behind the same Kernel boundary.
 
-- Project structure.
-- Case model.
-- Evidence model.
-- Local storage.
-- Basic web/page ingestion.
-- Markdown/Obsidian exporter.
-- Simple report generator.
-- CLI or minimal local command runner.
-- Basic tests.
+### Phase 0 — Minimum Kernel ✅
 
-Success criteria:
+- Case and Evidence models.
+- Local storage and public-page ingestion.
+- Obsidian-compatible export/reporting.
+- CLI/local runtime and regression tests.
+- No paid cloud service required for the baseline.
 
-- User can create a Case from a text objective.
-- System can save public evidence.
-- System can generate Obsidian-compatible Markdown.
-- System can produce a basic evidence-backed report.
-- No paid cloud service is required.
+### Phase 1 — Browser Extension Copilot ✅
 
-## Phase 1 - Browser Extension Copilot
+- Chrome/Chromium MV3 extension.
+- Authenticated loopback Kernel transport.
+- Public page context capture with privacy blocks.
+- Forge/Missions/Finds/Models operator workspaces.
+- Opportunity Radar and explicit per-site authorization.
 
-Goal: make the system useful while browsing.
+### Phase 2 — Modular intelligence foundation ✅
 
-Deliverables:
+- Shared Skills package and evidence-producing skill contracts.
+- Capability Registry and deny-by-default capability validation.
+- Native public `web.search` and `web.read` capability adapters.
+- Execution Engine routes capability use through Kernel policy rather than direct agent authority.
 
-- Chrome/Chromium extension.
-- Floating AI button.
-- Page context capture.
-- Send current page to Kernel.
-- Trigger Case from current page.
-- Basic side panel.
-- Local backend connection.
+### Phase 3 — Knowledge and reusable context ✅ foundation
 
-Success criteria:
+- Entity and relationship domain support.
+- Knowledge Graph service and evidence links exist in the Kernel.
+- Goal-relevant opportunity/context reuse is implemented.
 
-- User can browse a public page and send it to a Case.
-- Extension does not do heavy work.
-- Kernel receives structured context.
+The graph remains a local Kernel projection; do not invent graph data in UI. A richer product graph browser is future UX, not a prerequisite for the current MVP release gate.
 
-## Phase 2 - Skills System
+### Phase 3.5 — Memory Safety and Quarantine ✅ core authority
 
-Goal: make intelligence modular.
+Goal: prevent unsupported, contradicted, corrupt or revoked durable memory from silently re-entering reasoning.
 
-Deliverables:
+Verified core authority:
 
-- Skill manifest format.
-- Skill runner.
-- Shopify Intelligence Skill.
-- Supplier Finder Skill.
-- Competitor Snapshot Skill.
-- Obsidian Export Skill.
+- [x] Deterministic quarantine/toxic-memory lifecycle design.
+- [x] Observed records separated from interpretation, recommendations and human decisions.
+- [x] Approval-gated transitions bound to approval/policy context.
+- [x] Rejected, superseded and revoked authority states remain terminal.
+- [x] Pure lifecycle types and transition validation.
+- [x] Append-only authority receipts with request binding, replay semantics and integrity checks.
+- [x] Fail-closed transactional transition service.
+- [x] Deterministic authority-state projection.
+- [x] Startup reconciliation and reasoning retrieval gate.
+- [x] Durable on-disk authority receipt repository with restart reconstruction.
+- [x] Corrupt/tampered/gapped/missing-reference authority histories fail closed.
+- [x] Exact replay is safe and altered replay is rejected.
+- [x] Legacy migration is explicit/reviewed rather than automatic admission.
 
-Success criteria:
+Additional specialized recovery-review UX can evolve later without weakening the completed core authority boundary.
 
-- New Skills can be added without rewriting the Kernel.
-- Skills produce evidence and entities in standard formats.
+### Phase 4 — Monitoring, scheduling and alerts ✅ foundation
 
-## Phase 3 - Knowledge Graph
+- Scheduler Engine exists as a Kernel primitive.
+- Trigger Engine supports bounded conditions including new-match flows.
+- Notification Gateway provides deduplication and Evidence linkage.
+- Golden E2E proves Goal → discovery → Evidence → Opportunity → Trigger → Notification.
 
-Goal: connect entities into reusable memory.
+Future work may add richer recurring product UX and additional condition types; these are extensions of the existing authority model, not permission for direct agent side effects.
 
-Deliverables:
+### Phase 5 — AI overlay and operator experience ✅ MVP surface
 
-- Entity graph model.
-- Relationship model.
-- Graph queries.
-- Obsidian backlinks.
-- Case-to-entity linking.
+- Opportunity ranking and explainable relevance.
+- Evidence-first Find details.
+- Control Center with authenticated local workspaces and private multi-model chat.
+- Pixel forge activity driven only from persisted/observable states.
+- Dedicated Chromium/Playwright acceptance is part of CI.
 
-Success criteria:
+### Distribution ✅ Windows MVP
 
-- System can answer: what do we know about this company/product/supplier?
-- Repeated investigations reuse previous knowledge.
+- Double-click `Install Efesto.cmd` setup/repair path.
+- Automatic Node.js 22+ and pinned pnpm prerequisite repair when Windows Package Manager is available.
+- Frozen-lockfile dependency install, extension build and trusted Kernel launcher repair/start.
+- Owner-local desktop shortcut and self-healing daily launcher.
+- No embedded or printed Kernel secrets.
 
-## Phase 3.5 - Memory Safety and Quarantine
+### Supply-chain gate ✅
 
-Goal: prevent unsupported, contradicted, corrupt, or revoked durable memory from silently re-entering reasoning.
+- Frozen lockfile required.
+- `pnpm audit --prod` runs without GHSA ignores.
+- Patched `nanoid@3.3.17` is locked; vulnerable `3.3.16` is regression-blocked.
+- Typecheck, tests, production build, first-run verification and Chromium acceptance are mandatory.
 
-Design baseline:
+## Deliberately outside the MVP completion claim
 
-- [x] Define the deterministic quarantine and toxic-memory lifecycle in `docs/memory-quarantine-lifecycle.md`.
-- [x] Separate observed records, deterministic interpretation, recommendations, and human decisions.
-- [x] Bind every approval-gated transition to immutable approval decisions and an exact policy version.
-- [x] Keep rejected, superseded, and revoked memories terminal; disputes use separate recovery-review records and new linked candidates.
-- [x] Define Kernel authority, founder gates, idempotent receipts, and startup reconciliation.
-- [ ] Implement pure lifecycle types and transition validation.
-- [ ] Add append-only persistence with optimistic revisions, request binding, approval provenance, and corruption checks.
-- [ ] Add a separate terminal recovery-review repository.
-- [ ] Add deterministic quarantine-signal evaluation.
-- [ ] Gate reasoning retrieval and reconcile lifecycle state at startup.
-- [ ] Add authenticated Replay Lab inspection and human-review actions.
-- [ ] Migrate legacy admitted memories through reviewed genesis receipts.
+These are possible later phases, not missing “yellow lights” in the current release:
 
-Success criteria:
+- automatic purchases or irreversible financial actions;
+- broad email/calendar/commerce connector catalog;
+- public Skill/agent marketplace;
+- multi-tenant cloud brain or central telemetry;
+- native mobile application;
+- social/feed/token/blockchain layers;
+- a decorative graph UI without real Kernel-backed data.
 
-- Only admitted memory can be reused by reasoning.
-- Quarantine suspends reuse without deleting Evidence, provenance, approvals, or history.
-- External agents cannot mutate durable-memory authority.
-- Every lifecycle transition is explicit, idempotent, attributable, policy-bound, and recoverable.
-- Terminal memory identities can never be reactivated through a generic quarantine path.
-- Corruption and missing references fail closed without fabricating history.
+## Next product phase — evidence-led expansion
 
-## Phase 4 - Monitoring and Alerts
-
-Goal: detect change over time.
-
-Deliverables:
-
-- Scheduled checks.
-- Page snapshots.
-- Change diffing.
-- Price/product monitoring.
-- Notification hooks.
-
-Success criteria:
-
-- User can monitor a source and receive meaningful change summaries.
-- Alerts are ranked to avoid notification spam.
-
-## Phase 5 - AI Overlay and Live Browser Intelligence
-
-Goal: make the web feel intelligent.
-
-Deliverables:
-
-- Context-aware page overlays.
-- Opportunity scores.
-- Confidence scores.
-- Quick actions.
-- Evidence preview.
-
-Success criteria:
-
-- The extension adapts to the page context.
-- User sees useful intelligence without leaving the page.
-
-## Phase 6 - Marketplace and Skill Economy
-
-Goal: allow Skills, agents, templates, and workflows to be shared.
-
-Deliverables:
-
-- Skill packaging.
-- Local installation.
-- Marketplace metadata.
-- Trust/review model.
-- Versioning.
-
-Success criteria:
-
-- Users can install new capabilities without changing the Kernel.
-
-## Long-term future
-
-- AI Missions.
-- Curiosity Engine.
-- Internet Relationship Map.
-- Research Timeline.
-- AI Daily Brief.
-- Deep public research mode.
-- Local/cloud hybrid agents.
-- Team workflows.
-- API and MCP support.
+Choose the next bounded workflow from real user value. Preferred candidates extend the proven local loop, for example freelance opportunity discovery or another read-only research connector. Every new capability must declare risk, scope, consent, credentials, rate limits and execution policy in the Kernel Capability Registry.
