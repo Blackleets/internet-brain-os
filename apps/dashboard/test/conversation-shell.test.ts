@@ -16,7 +16,7 @@ describe('conversation-first dashboard shell', () => {
 
   it('keeps desktop conversation width restrained and readable', async () => {
     const css = await text('app/conversation-shell.css');
-    expect(css).toContain('grid-template-columns: 260px minmax(0, 1fr)');
+    expect(css).toContain('grid-template-columns: 270px minmax(0, 1fr)');
     expect(css).toContain('width: min(780px, calc(100% - 28px))');
     expect(css).toContain('font-size: 15px');
     expect(css).toContain('border-radius: 26px');
