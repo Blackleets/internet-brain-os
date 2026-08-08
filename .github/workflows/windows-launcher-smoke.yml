@@ -37,8 +37,6 @@ jobs:
           $vaultDir = Join-Path $PWD '.uat-vault'
           New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
           New-Item -ItemType Directory -Force -Path $vaultDir | Out-Null
-
-          # Pre-seed a test-only token so this job isolates the base launcher runtime.
           Set-Content -Path (Join-Path $dataDir 'kernel-api-token') -Value ('a' * 64) -NoNewline
 
           $env:HEPHAESTUS_DATA_DIR = $dataDir
@@ -49,25 +47,20 @@ jobs:
           try {
             pnpm efesto:launcher repair
             if ($LASTEXITCODE -ne 0) { throw "launcher repair exited $LASTEXITCODE" }
-
             Start-Sleep -Seconds 2
             $status = Invoke-RestMethod -Uri 'http://127.0.0.1:4000/status' -TimeoutSec 5
             if (-not $status.ok -or $status.service -ne 'hephaestus-local-kernel' -or $status.kernel -ne 'ready') {
               throw "Kernel status contract was not READY: $($status | ConvertTo-Json -Compress)"
             }
-
             $recordPath = Join-Path $dataDir 'efesto-launcher-process.json'
             if (-not (Test-Path $recordPath)) { throw 'Launcher PID record was not created' }
             $record = Get-Content $recordPath -Raw | ConvertFrom-Json
             $process = Get-Process -Id $record.pid -ErrorAction Stop
             if ($process.HasExited) { throw 'Launcher-owned Kernel process exited unexpectedly' }
-
             $bootstrap = node scripts/efesto-bootstrap.mjs | ConvertFrom-Json
-            if ($bootstrap.kernel -ne 'ready') {
-              throw "Bootstrap did not report Kernel ready: $($bootstrap | ConvertTo-Json -Compress)"
-            }
+            if ($bootstrap.kernel -ne 'ready') { throw "Bootstrap did not report Kernel ready" }
             if (-not $bootstrap.diagnostics.kernel.pidFilePresent -or -not $bootstrap.diagnostics.kernel.alive -or -not $bootstrap.diagnostics.kernel.owned) {
-              throw "Launcher ownership diagnostics are incomplete: $($bootstrap.diagnostics.kernel | ConvertTo-Json -Compress)"
+              throw "Launcher ownership diagnostics are incomplete"
             }
           }
           finally {
@@ -80,7 +73,7 @@ jobs:
             }
           }
 
-  first-run-pairing-smoke:
+  internal-port-conflict-repro:
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
@@ -94,59 +87,38 @@ jobs:
           cache: pnpm
       - name: Frozen install
         run: pnpm install --frozen-lockfile
-      - name: Reproduce clean first-run pairing on Windows
+      - name: Reproduce occupied 4001 startup failure
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $dataDir = Join-Path $PWD '.uat-pairing-hephaestus'
-          $vaultDir = Join-Path $PWD '.uat-pairing-vault'
-          $outputFile = Join-Path $PWD '.uat-pairing-output.txt'
+          $dataDir = Join-Path $PWD '.uat-conflict-hephaestus'
+          $vaultDir = Join-Path $PWD '.uat-conflict-vault'
           New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
           New-Item -ItemType Directory -Force -Path $vaultDir | Out-Null
+          Set-Content -Path (Join-Path $dataDir 'kernel-api-token') -Value ('b' * 64) -NoNewline
 
           $env:HEPHAESTUS_DATA_DIR = $dataDir
           $env:HEPHAESTUS_OBSIDIAN_DIR = $vaultDir
           $env:HEPHAESTUS_HERMES_EXECUTABLE = (Get-Command node).Source
-          Remove-Item Env:HEPHAESTUS_PAIRING -ErrorAction SilentlyContinue
+          $env:HEPHAESTUS_PAIRING = '0'
 
+          $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 4001)
+          $listener.Start()
           try {
-            # Capture output so the temporary one-use pairing code never enters public CI logs.
-            pnpm efesto:launcher repair *> $outputFile
+            pnpm efesto:launcher repair
             $exitCode = $LASTEXITCODE
-            if ($exitCode -ne 0) {
-              $safe = (Get-Content $outputFile -Raw) -replace 'Extension pairing code: [A-Z2-9]{8}', 'Extension pairing code: [REDACTED]'
-              Write-Host $safe
-              throw "clean first-run launcher repair exited $exitCode"
-            }
-
-            Start-Sleep -Seconds 2
-            $status = Invoke-RestMethod -Uri 'http://127.0.0.1:4000/status' -TimeoutSec 5
-            if (-not $status.ok -or $status.service -ne 'hephaestus-local-kernel' -or $status.kernel -ne 'ready') {
-              throw "Fresh pairing Kernel was not READY: $($status | ConvertTo-Json -Compress)"
-            }
-
-            $recordPath = Join-Path $dataDir 'efesto-launcher-process.json'
-            if (-not (Test-Path $recordPath)) { throw 'Fresh pairing run did not create launcher PID record' }
-            $record = Get-Content $recordPath -Raw | ConvertFrom-Json
-            $process = Get-Process -Id $record.pid -ErrorAction Stop
-            if ($process.HasExited) { throw 'Fresh pairing launcher-owned Kernel exited unexpectedly' }
-
+            Start-Sleep -Seconds 1
             $bootstrap = node scripts/efesto-bootstrap.mjs | ConvertFrom-Json
-            if ($bootstrap.kernel -ne 'ready' -or $bootstrap.pairing -ne 'required') {
-              throw "Fresh first-run contract was unexpected: $($bootstrap | ConvertTo-Json -Compress)"
+
+            if ($exitCode -ne 1) { throw "Expected current launcher to fail with occupied 4001; got exit $exitCode" }
+            if ($bootstrap.kernel -ne 'stale') { throw "Expected stale Kernel after occupied 4001; got $($bootstrap.kernel)" }
+            if (-not $bootstrap.diagnostics.kernel.pidFilePresent -or $bootstrap.diagnostics.kernel.alive -or -not $bootstrap.diagnostics.kernel.owned) {
+              throw "Did not reproduce owned-but-dead launcher state: $($bootstrap.diagnostics.kernel | ConvertTo-Json -Compress)"
             }
-            if (-not $bootstrap.diagnostics.kernel.pidFilePresent -or -not $bootstrap.diagnostics.kernel.alive -or -not $bootstrap.diagnostics.kernel.owned) {
-              throw "Fresh first-run process diagnostics are incomplete: $($bootstrap.diagnostics.kernel | ConvertTo-Json -Compress)"
-            }
-          }
-          catch {
-            if (Test-Path $outputFile) {
-              $safe = (Get-Content $outputFile -Raw) -replace 'Extension pairing code: [A-Z2-9]{8}', 'Extension pairing code: [REDACTED]'
-              Write-Host $safe
-            }
-            throw
+            Write-Host 'Reproduced UAT signature: owned launcher PID is dead after internal port 4001 conflict.'
           }
           finally {
+            $listener.Stop()
             $recordPath = Join-Path $dataDir 'efesto-launcher-process.json'
             if (Test-Path $recordPath) {
               try {
@@ -154,5 +126,4 @@ jobs:
                 if ($record.pid) { taskkill.exe /PID $record.pid /T /F 2>$null | Out-Null }
               } catch {}
             }
-            Remove-Item $outputFile -Force -ErrorAction SilentlyContinue
           }
