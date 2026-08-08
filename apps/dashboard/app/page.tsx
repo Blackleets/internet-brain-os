@@ -1,10 +1,5 @@
-import { AppShell } from '../components/app-shell';
-import { ConnectionGate } from '../components/connection-gate';
+import ControlCenter from '../components/control-center';
 
 export default function HomePage() {
-  return (
-    <AppShell>
-      <ConnectionGate />
-    </AppShell>
-  );
+  return <ControlCenter />;
 }

@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Hephaestus Control Center',
+  title: 'Efesto · Hephaestus Control Center',
+  description: 'Interfaz local-first para conversar con modelos, dirigir Hermes y auditar evidencia bajo autoridad del Kernel.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
