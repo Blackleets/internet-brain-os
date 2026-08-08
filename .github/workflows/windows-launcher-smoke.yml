@@ -47,23 +47,21 @@ jobs:
           try {
             pnpm efesto:launcher repair
             if ($LASTEXITCODE -ne 0) { throw "launcher repair exited $LASTEXITCODE" }
-            Start-Sleep -Seconds 2
+            Start-Sleep -Seconds 1
+
             $status = Invoke-RestMethod -Uri 'http://127.0.0.1:4000/status' -TimeoutSec 5
             if (-not $status.ok -or $status.service -ne 'hephaestus-local-kernel' -or $status.kernel -ne 'ready') {
               throw "Kernel status contract was not READY: $($status | ConvertTo-Json -Compress)"
             }
-            $recordPath = Join-Path $dataDir 'efesto-launcher-process.json'
-            if (-not (Test-Path $recordPath)) { throw 'Launcher PID record was not created' }
-            $record = Get-Content $recordPath -Raw | ConvertFrom-Json
-            $process = Get-Process -Id $record.pid -ErrorAction Stop
-            if ($process.HasExited) { throw 'Launcher-owned Kernel process exited unexpectedly' }
+
             $bootstrap = node scripts/efesto-bootstrap.mjs | ConvertFrom-Json
-            if ($bootstrap.kernel -ne 'ready') { throw "Bootstrap did not report Kernel ready" }
-            if (-not $bootstrap.diagnostics.kernel.pidFilePresent -or -not $bootstrap.diagnostics.kernel.alive -or -not $bootstrap.diagnostics.kernel.owned) {
-              throw "Launcher ownership diagnostics are incomplete"
+            if ($bootstrap.kernel -ne 'ready') { throw 'Bootstrap did not report Kernel ready' }
+            if (-not $bootstrap.diagnostics.kernel.pidFilePresent -or -not $bootstrap.diagnostics.kernel.alive -or -not $bootstrap.diagnostics.kernel.owned -or -not $bootstrap.diagnostics.kernel.verified) {
+              throw "Launcher process was not fully verified: $($bootstrap.diagnostics.kernel | ConvertTo-Json -Compress)"
             }
           }
           finally {
+            pnpm efesto:launcher shutdown 2>$null | Out-Null
             $recordPath = Join-Path $dataDir 'efesto-launcher-process.json'
             if (Test-Path $recordPath) {
               try {
@@ -73,7 +71,7 @@ jobs:
             }
           }
 
-  internal-port-conflict-repro:
+  internal-port-conflict-resilience:
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
@@ -87,7 +85,7 @@ jobs:
           cache: pnpm
       - name: Frozen install
         run: pnpm install --frozen-lockfile
-      - name: Reproduce occupied 4001 startup failure
+      - name: Skip occupied 4001 and remain ready
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -106,19 +104,94 @@ jobs:
           $listener.Start()
           try {
             pnpm efesto:launcher repair
-            $exitCode = $LASTEXITCODE
+            if ($LASTEXITCODE -ne 0) { throw "launcher repair failed while 4001 was occupied: $LASTEXITCODE" }
             Start-Sleep -Seconds 1
-            $bootstrap = node scripts/efesto-bootstrap.mjs | ConvertFrom-Json
 
-            if ($exitCode -ne 1) { throw "Expected current launcher to fail with occupied 4001; got exit $exitCode" }
-            if ($bootstrap.kernel -ne 'stale') { throw "Expected stale Kernel after occupied 4001; got $($bootstrap.kernel)" }
-            if (-not $bootstrap.diagnostics.kernel.pidFilePresent -or $bootstrap.diagnostics.kernel.alive -or -not $bootstrap.diagnostics.kernel.owned) {
-              throw "Did not reproduce owned-but-dead launcher state: $($bootstrap.diagnostics.kernel | ConvertTo-Json -Compress)"
+            $outer = Invoke-RestMethod -Uri 'http://127.0.0.1:4000/status' -TimeoutSec 5
+            if (-not $outer.ok -or $outer.kernel -ne 'ready') { throw 'External Kernel proxy was not ready' }
+
+            $inner = Invoke-RestMethod -Uri 'http://127.0.0.1:4002/health' -TimeoutSec 5
+            if (-not $inner.ok -or $inner.service -ne 'hephaestus-local-kernel') {
+              throw "Expected internal Kernel on fallback port 4002: $($inner | ConvertTo-Json -Compress)"
             }
-            Write-Host 'Reproduced UAT signature: owned launcher PID is dead after internal port 4001 conflict.'
+
+            $bootstrap = node scripts/efesto-bootstrap.mjs | ConvertFrom-Json
+            if ($bootstrap.kernel -ne 'ready' -or -not $bootstrap.diagnostics.kernel.alive -or -not $bootstrap.diagnostics.kernel.verified) {
+              throw "Efesto did not remain ready after skipping 4001: $($bootstrap.diagnostics.kernel | ConvertTo-Json -Compress)"
+            }
           }
           finally {
             $listener.Stop()
+            pnpm efesto:launcher shutdown 2>$null | Out-Null
+            $recordPath = Join-Path $dataDir 'efesto-launcher-process.json'
+            if (Test-Path $recordPath) {
+              try {
+                $record = Get-Content $recordPath -Raw | ConvertFrom-Json
+                if ($record.pid) { taskkill.exe /PID $record.pid /T /F 2>$null | Out-Null }
+              } catch {}
+            }
+          }
+
+  pairing-restart-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Verify safe pairing restart on modern Windows
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dataDir = Join-Path $PWD '.uat-restart-hephaestus'
+          $vaultDir = Join-Path $PWD '.uat-restart-vault'
+          New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
+          New-Item -ItemType Directory -Force -Path $vaultDir | Out-Null
+          Set-Content -Path (Join-Path $dataDir 'kernel-api-token') -Value ('c' * 64) -NoNewline
+
+          $env:HEPHAESTUS_DATA_DIR = $dataDir
+          $env:HEPHAESTUS_OBSIDIAN_DIR = $vaultDir
+          $env:HEPHAESTUS_HERMES_EXECUTABLE = (Get-Command node).Source
+          # Keep pairing-session output disabled in CI; missing registry still makes pairing status required.
+          $env:HEPHAESTUS_PAIRING = '0'
+
+          try {
+            pnpm efesto:launcher repair
+            if ($LASTEXITCODE -ne 0) { throw "first launcher repair exited $LASTEXITCODE" }
+            Start-Sleep -Milliseconds 750
+
+            $before = node scripts/efesto-bootstrap.mjs | ConvertFrom-Json
+            if ($before.kernel -ne 'ready' -or $before.pairing -ne 'required' -or -not $before.diagnostics.kernel.verified) {
+              throw "Pre-restart state is not safely verified: $($before | ConvertTo-Json -Compress)"
+            }
+            $firstPid = [int]$before.diagnostics.kernel.pid
+
+            pnpm efesto:launcher repair
+            if ($LASTEXITCODE -ne 0) { throw "pairing recovery repair exited $LASTEXITCODE" }
+            Start-Sleep -Milliseconds 750
+
+            $after = node scripts/efesto-bootstrap.mjs | ConvertFrom-Json
+            if ($after.kernel -ne 'ready' -or $after.pairing -ne 'required' -or -not $after.diagnostics.kernel.verified) {
+              throw "Post-restart state is not safely verified: $($after | ConvertTo-Json -Compress)"
+            }
+            $secondPid = [int]$after.diagnostics.kernel.pid
+            if ($firstPid -eq $secondPid) { throw 'Pairing recovery did not replace the launcher process' }
+
+            $status = Invoke-RestMethod -Uri 'http://127.0.0.1:4000/status' -TimeoutSec 5
+            if (-not $status.ok -or $status.kernel -ne 'ready') { throw 'Kernel was not ready after pairing restart' }
+
+            $internal = Invoke-RestMethod -Uri 'http://127.0.0.1:4001/health' -TimeoutSec 5
+            if (-not $internal.ok) { throw 'Internal Kernel did not recover on 4001 after process-tree restart' }
+          }
+          finally {
+            pnpm efesto:launcher shutdown 2>$null | Out-Null
             $recordPath = Join-Path $dataDir 'efesto-launcher-process.json'
             if (Test-Path $recordPath) {
               try {
