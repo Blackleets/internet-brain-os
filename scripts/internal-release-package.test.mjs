@@ -26,6 +26,10 @@ describe('internal Efesto release package', () => {
     expect(workflow).toContain('sha256sum');
     expect(workflow).toContain("(node_modules|\\.git|\\.hephaestus|\\.hermes)/");
     expect(workflow).toContain('retention-days: 14');
+    expect(workflow).toContain('INTERNAL_RELEASE.json');
+    expect(workflow).toContain('process.stdout.write(release.version)');
+    expect(workflow).toContain('version=${RELEASE_VERSION}');
+    expect(workflow).not.toContain('version=0.1.0-internal.1');
     expect(workflow).not.toMatch(/permissions:\s*[\s\S]*contents:\s*write/);
   });
 

@@ -32,11 +32,21 @@ jobs:
         run: pnpm release:verify
       - name: Build extension
         run: pnpm build:extension
-      - name: Create source-of-truth internal package
+      - name: Read internal release metadata
+        id: release
         shell: bash
         run: |
           set -euo pipefail
-          package='efesto-v0.1.0-internal-windows.zip'
+          version="$(node -e 'const release = require("./INTERNAL_RELEASE.json"); process.stdout.write(release.version)')"
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Create source-of-truth internal package
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          package="efesto-v${RELEASE_VERSION}-windows.zip"
           git archive --format=zip --output="$package" HEAD
           unzip -l "$package" > package-contents.txt
           grep -q 'Install Efesto.cmd' package-contents.txt
@@ -49,16 +59,16 @@ jobs:
           fi
           sha256sum "$package" > SHA256SUMS.txt
           {
-            echo "version=0.1.0-internal.1"
+            echo "version=${RELEASE_VERSION}"
             echo "commit=${GITHUB_SHA}"
             echo "workflow_run=${GITHUB_RUN_ID}"
           } > BUILD_INFO.txt
       - name: Upload internal candidate
         uses: actions/upload-artifact@v4
         with:
-          name: efesto-v0.1.0-internal-windows-${{ github.sha }}
+          name: efesto-v${{ steps.release.outputs.version }}-windows-${{ github.sha }}
           path: |
-            efesto-v0.1.0-internal-windows.zip
+            efesto-v${{ steps.release.outputs.version }}-windows.zip
             SHA256SUMS.txt
             BUILD_INFO.txt
             package-contents.txt
