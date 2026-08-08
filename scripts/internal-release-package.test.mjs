@@ -34,7 +34,11 @@ describe('internal Efesto release package', () => {
   });
 
   it('requires clean install, real-web Goal, replay and failure UAT before public launch', async () => {
+    const release = JSON.parse(await text('INTERNAL_RELEASE.json'));
     const uat = await text('docs/internal-uat-v0.1.0.md');
+    expect(uat).toContain(`Candidate: \`${release.version}\``);
+    expect(uat).toContain(`efesto-v${release.version}-windows.zip`);
+    expect(uat).not.toContain('Candidate: `0.1.0-internal.1`');
     expect(uat).toContain('UAT-1 — clean Windows install');
     expect(uat).toContain('UAT-3 — real public-web economic Goal');
     expect(uat).toContain('UAT-4 — persistence and replay');
