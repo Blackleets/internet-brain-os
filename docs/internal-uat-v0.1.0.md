@@ -5,7 +5,7 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.1`
+- Candidate: `0.1.0-internal.2`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
 - Test only the artifact produced from the exact `main` commit under review.
@@ -13,7 +13,7 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Download the `efesto-v0.1.0-internal-windows.zip` artifact from the successful `Internal Test Package` workflow on `main`.
+2. Download the `efesto-v0.1.0-internal.2-windows.zip` artifact from the successful `Internal Test Package` workflow on `main`.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
