@@ -46,7 +46,7 @@ requireCondition(searchAdapter.includes('PUBLIC_WEB_SEARCH_CAPABILITY'), 'web.se
 requireCondition(searchAdapter.includes('PublicWebSearchExecutionAdapter'), 'web.search execution adapter is missing');
 
 requireCondition(await exists('apps/local-kernel/golden-drill-goal.e2e.test.mjs'), 'Golden Goal E2E is missing');
-requireCondition(await exists('features/golden-drill-goal.feature'), 'Golden Goal feature contract is missing');
+requireCondition(await exists('tests/acceptance/golden-drill-goal.feature'), 'Golden Goal feature contract is missing');
 
 requireCondition(await exists('Install Efesto.cmd'), 'Windows one-click installer entrypoint is missing');
 requireCondition(await exists('scripts/install-efesto.ps1'), 'Windows self-healing installer is missing');
