@@ -1,0 +1,66 @@
+name: Internal Test Package
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  package-internal-windows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Strict production audit
+        run: pnpm audit --prod
+      - name: Release readiness
+        run: pnpm release:verify
+      - name: Build extension
+        run: pnpm build:extension
+      - name: Create source-of-truth internal package
+        shell: bash
+        run: |
+          set -euo pipefail
+          package='efesto-v0.1.0-internal-windows.zip'
+          git archive --format=zip --output="$package" HEAD
+          unzip -l "$package" > package-contents.txt
+          grep -q 'Install Efesto.cmd' package-contents.txt
+          grep -q 'scripts/install-efesto.ps1' package-contents.txt
+          grep -q 'pnpm-lock.yaml' package-contents.txt
+          grep -q 'INTERNAL_RELEASE.json' package-contents.txt
+          if grep -Eq '(^|/)(node_modules|\.git|\.hephaestus|\.hermes)/' package-contents.txt; then
+            echo 'Forbidden runtime/development state found in internal package.' >&2
+            exit 1
+          fi
+          sha256sum "$package" > SHA256SUMS.txt
+          {
+            echo "version=0.1.0-internal.1"
+            echo "commit=${GITHUB_SHA}"
+            echo "workflow_run=${GITHUB_RUN_ID}"
+          } > BUILD_INFO.txt
+      - name: Upload internal candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: efesto-v0.1.0-internal-windows-${{ github.sha }}
+          path: |
+            efesto-v0.1.0-internal-windows.zip
+            SHA256SUMS.txt
+            BUILD_INFO.txt
+            package-contents.txt
+          if-no-files-found: error
+          retention-days: 14
