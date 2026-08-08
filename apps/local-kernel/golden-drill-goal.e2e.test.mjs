@@ -108,7 +108,7 @@ describe('Golden Goal: quality drill between 18 and 25 EUR', () => {
     await caseManager.create({ id: 'case:golden-drill', title: 'Drill research', objective: goal().desiredOutcome, createdAt: t1 });
     const evidence = await evidenceManager.create({
       id: 'evidence:golden-drill', caseId: 'case:golden-drill', sourceUrl: read.result.sourceUrl,
-      contentType: 'web_page', rawText: read.result.text, capturedAt: t1, extractionMethod: 'web.read', confidence: 0.9,
+      contentType: 'webpage', rawText: read.result.text, capturedAt: t1, extractionMethod: 'web.read', confidence: 0.9,
       tags: ['golden', 'offer', 'drill'],
     });
     expect(evidence.sourceUrl).toBe('https://shop.example.com/drill-24');
