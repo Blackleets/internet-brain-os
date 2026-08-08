@@ -47,3 +47,21 @@ jobs:
       - run: pnpm build
       - name: First-run end-to-end verification
         run: pnpm verify:first-run
+
+  dashboard-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm --filter @internet-brain-os/dashboard exec playwright install --with-deps chromium
+      - name: Dashboard browser acceptance
+        run: pnpm --filter @internet-brain-os/dashboard e2e
