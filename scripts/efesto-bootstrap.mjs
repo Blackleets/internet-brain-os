@@ -19,6 +19,7 @@ export function defaultEfestoPaths(env = process.env, cwd = process.cwd()) {
     pidFile: resolve(dataDir, 'efesto-launcher-process.json'),
     tokenFile: resolve(dataDir, 'kernel-api-token'),
     extensionRegistryFile: resolve(dataDir, 'authorized-extensions.json'),
+    pairingFile: resolve(dataDir, 'extension-pairing.json'),
     logFile: resolve(dataDir, 'logs', 'efesto-launcher.log'),
   };
 }
@@ -85,7 +86,7 @@ export async function probeObsidian({ env = process.env, config = {}, paths, opt
       await writeFile(probePath, 'efesto write probe\n', { flag: 'w' });
       await rm(probePath, { force: true });
     }
-    return { configured: true, writable: true, path: vaultPath, vaultRelativePath: config.obsidianLabel ?? 'configured vault' };
+    return { configured: true, writable: true, path: vaultPath, error: undefined, vaultRelativePath: config.obsidianLabel ?? 'configured vault' };
   } catch (error) {
     return { configured: true, writable: false, path: vaultPath, error: error?.code ?? safeMessage(error) };
   }
@@ -187,9 +188,14 @@ async function verifyProcessIdentity(record, options = {}) {
     ? await options.readProcessIdentity(record.pid)
     : await readProcessIdentity(record.pid);
   if (!actual?.commandLine) return { verified: false, reason: 'identity_unavailable' };
-  const commandLine = String(actual.commandLine);
-  if (!commandLine.includes(record.nonce) || !commandLine.includes(record.commandFingerprint)) return { verified: false, reason: 'fingerprint_mismatch' };
+  const commandLine = normalizeCommandText(actual.commandLine);
+  const fingerprint = normalizeCommandText(record.commandFingerprint);
+  if (!commandLine.includes(record.nonce) || !commandLine.includes(fingerprint)) return { verified: false, reason: 'fingerprint_mismatch' };
   return { verified: true };
+}
+
+function normalizeCommandText(value) {
+  return String(value).replace(/\\/g, '/').toLowerCase();
 }
 
 async function readProcessIdentity(pid) {
