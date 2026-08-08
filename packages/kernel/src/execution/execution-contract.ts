@@ -12,6 +12,7 @@ export interface ExecuteCapabilityInput {
 
 export interface ExecutionRecord {
   readonly executionId: string;
+  readonly sequence: number;
   readonly planId: string;
   readonly revisionId: string;
   readonly capabilityId: string;
