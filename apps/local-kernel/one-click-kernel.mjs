@@ -111,6 +111,7 @@ async function runMissionUntilTerminal(missionId, apiToken) {
     const result = await runHermesMissionWorker({
       baseUrl: internalBaseUrl,
       apiToken,
+      missionId,
       command: process.execPath,
       args: [resolve('scripts/hermes-efesto-adapter.mjs')],
     });

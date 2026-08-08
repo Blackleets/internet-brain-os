@@ -14,11 +14,13 @@ export class AgentMissionExecutor {
     this.leaseMs = options.leaseMs ?? DEFAULT_LEASE_MS;
   }
 
-  async claim(agent = 'hermes') {
+  async claim(agent = 'hermes', missionId) {
     const claimedAt = this.now();
     return this.store.project(async (data) => {
       const missions = data.agentMissions ?? [];
-      const index = missions.findIndex((item) => item.agent === agent && isClaimable(item, claimedAt));
+      const index = missions.findIndex((item) => item.agent === agent
+        && (missionId === undefined || item.id === missionId)
+        && isClaimable(item, claimedAt));
       if (index < 0) return { changed: false, data, result: undefined };
       const current = missions[index];
       const attempt = Number(current.attempt ?? 0) + 1;
@@ -237,9 +239,15 @@ function isPrivateHost(hostname) {
 }
 
 function isPrivateIpv4(octets) {
-  return octets.some((value) => value > 255) || octets[0] === 10 || octets[0] === 127
-    || (octets[0] === 169 && octets[1] === 254) || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31)
-    || (octets[0] === 192 && octets[1] === 168) || octets[0] === 0;
+  if (octets.some((value) => !Number.isInteger(value) || value < 0 || value > 255)) return true;
+  const [a, b] = octets;
+  return a === 0 || a === 10 || a === 127
+    || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31)
+    || (a === 192 && b === 168) || (a === 192 && b === 0)
+    || (a === 100 && b >= 64 && b <= 127)
+    || (a === 198 && (b === 18 || b === 19))
+    || (a === 198 && b === 51) || (a === 203 && b === 0)
+    || a >= 224;
 }
 
 function parseIpv6(host) {

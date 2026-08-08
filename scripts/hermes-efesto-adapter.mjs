@@ -97,7 +97,7 @@ export async function runHermesOneShot(payload, options = {}) {
     child.stderr.on('data', (chunk) => collect(chunk, 'stderr'));
     child.on('error', finish);
     child.on('close', (code) => {
-      if (code !== 0) return finish(new Error(`Hermes exited with code ${code}${stderr ? `: ${stderr.slice(0, 500)}` : ''}`));
+      if (code !== 0) return finish(new Error(`Hermes exited with code ${code}`));
       try { finish(undefined, parseHermesFindings(stdout)); }
       catch (error) { finish(error); }
     });

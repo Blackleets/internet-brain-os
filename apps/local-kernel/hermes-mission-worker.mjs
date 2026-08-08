@@ -12,7 +12,10 @@ export async function runHermesMissionWorker(options = {}) {
   const args = options.args ?? parseArgs(process.env.HEPHAESTUS_HERMES_ARGS_JSON);
   const fetchImpl = options.fetchImpl ?? fetch;
   const execute = options.execute ?? executeAdapter;
-  const claimed = await request(fetchImpl, `${baseUrl}/api/agent-missions/claim`, apiToken, { method: 'POST' }, true);
+  const claimed = await request(fetchImpl, `${baseUrl}/api/agent-missions/claim`, apiToken, {
+    method: 'POST',
+    ...(options.missionId ? { body: JSON.stringify({ missionId: options.missionId }) } : {}),
+  }, true);
   if (!claimed) return { status: 'idle' };
   const mission = claimed.mission;
   try {
@@ -47,7 +50,7 @@ function executeAdapter(command, args, mission, options) {
     child.stderr.on('data', (chunk) => collect(chunk, 'stderr'));
     child.on('error', finish);
     child.on('close', (code) => {
-      if (code !== 0) return finish(new Error(`Hermes adapter exited with code ${code}${stderr ? `: ${stderr}` : ''}`));
+      if (code !== 0) return finish(new Error(`Hermes adapter exited with code ${code}`));
       try { finish(undefined, JSON.parse(stdout)); } catch { finish(new Error('Hermes adapter did not return valid JSON')); }
     });
     child.stdin.end(JSON.stringify({ schemaVersion: 'efesto.hermes-mission.v1', mission }));
@@ -86,7 +89,15 @@ function normalizeLoopback(value) {
   return url.href.replace(/\/$/, '');
 }
 function requireValue(value, name) { if (typeof value !== 'string' || !value.trim()) throw new Error(`${name} is required`); return value.trim(); }
-function sanitizeFailure(error) { return String(error instanceof Error ? error.message : error).replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 500); }
+function sanitizeFailure(error) {
+  return String(error instanceof Error ? error.message : error)
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\b(?:sk|pk|ghp|gho|xox[abps])[-_][A-Za-z0-9._-]{8,}/gi, '<redacted-secret>')
+    .replace(/\b[A-Fa-f0-9]{32,}\b/g, '<redacted-secret>')
+    .replace(/[A-Za-z]:\\[^\s"']+/g, '<redacted-path>')
+    .replace(/\/(?:home|Users)\/[^\s"']+/g, '<redacted-path>')
+    .slice(0, 500);
+}
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const result = await runHermesMissionWorker();
