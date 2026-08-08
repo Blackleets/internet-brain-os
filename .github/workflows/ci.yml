@@ -28,6 +28,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Production dependency audit
         run: pnpm audit --prod
+      - name: MVP release readiness contract
+        run: pnpm release:verify
       - id: typecheck
         name: Typecheck
         shell: bash

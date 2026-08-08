@@ -29,6 +29,7 @@
     "hermes:mission-worker": "node apps/local-kernel/hermes-mission-worker.mjs",
     "hermes:worker:doctor": "node scripts/hermes-worker-doctor.mjs",
     "orchestrator": "node scripts/orchestrator-cli.mjs",
+    "release:verify": "node scripts/release-readiness.mjs",
     "replay-lab:api-smoke": "node scripts/replay-lab-api-smoke.mjs",
     "resume": "node scripts/project-resume.mjs",
     "test": "vitest run --passWithNoTests",
