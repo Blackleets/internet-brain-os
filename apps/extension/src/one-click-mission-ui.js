@@ -1,6 +1,12 @@
-const ACTIVE_MISSION_STATUSES = new Set(['waiting_for_agent', 'queued', 'running']);
-const missionState = document.querySelector('#mission-state');
-const goals = document.querySelector('#goal-list');
+import { syncGoalSurfacePopup } from './goal-surface-popup-binding.js';
+
+const ACTIVE_MISSION_STATUSES = new Set(['waiting_for_agent', 'queued', 'running', 'investigating', 'verifying']);
+const doc = globalThis.document;
+const missionState = doc?.querySelector?.('#mission-state');
+const goals = doc?.querySelector?.('#goal-list');
+let lastSharedState;
+let syncQueued = false;
+let syncInFlight = false;
 
 export function applyResearchButtonState(button, status) {
   const active = ACTIVE_MISSION_STATUSES.has(status);
@@ -14,17 +20,54 @@ export function applyResearchButtonState(button, status) {
 
 function syncResearchActions() {
   const status = missionState?.dataset.status ?? 'idle';
-  for (const button of document.querySelectorAll('.goal-research')) applyResearchButtonState(button, status);
+  for (const button of doc?.querySelectorAll?.('.goal-research') ?? []) applyResearchButtonState(button, status);
 }
 
-const stateObserver = new MutationObserver(syncResearchActions);
-if (missionState) stateObserver.observe(missionState, { attributes: true, attributeFilter: ['data-status'] });
+async function syncSharedTruth() {
+  if (syncInFlight) return;
+  syncInFlight = true;
+  try {
+    lastSharedState = await syncGoalSurfacePopup();
+    syncResearchActions();
+  } finally {
+    syncInFlight = false;
+  }
+}
 
-const goalObserver = new MutationObserver(syncResearchActions);
-if (goals) goalObserver.observe(goals, { childList: true });
+function scheduleSharedTruthSync() {
+  if (syncQueued) return;
+  syncQueued = true;
+  queueMicrotask(() => {
+    syncQueued = false;
+    void syncSharedTruth();
+  });
+}
 
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') syncResearchActions();
+function legacyStateOverrodeSharedTruth() {
+  if (!lastSharedState || !missionState) return false;
+  return missionState.dataset.status !== lastSharedState.status || missionState.textContent !== lastSharedState.text;
+}
+
+const stateObserver = typeof MutationObserver === 'function' && missionState
+  ? new MutationObserver(() => {
+      syncResearchActions();
+      if (!syncInFlight && legacyStateOverrodeSharedTruth()) scheduleSharedTruthSync();
+    })
+  : undefined;
+stateObserver?.observe(missionState, { attributes: true, attributeFilter: ['data-status'], childList: true, characterData: true, subtree: true });
+
+const goalObserver = typeof MutationObserver === 'function' && goals
+  ? new MutationObserver(syncResearchActions)
+  : undefined;
+goalObserver?.observe(goals, { childList: true });
+
+doc?.addEventListener?.('visibilitychange', () => {
+  if (doc.visibilityState === 'visible') scheduleSharedTruthSync();
+});
+
+globalThis.chrome?.storage?.onChanged?.addListener?.((changes, area) => {
+  if (area === 'local' && (changes.kernelApiToken || changes.kernelBaseUrl)) scheduleSharedTruthSync();
 });
 
 syncResearchActions();
+scheduleSharedTruthSync();
