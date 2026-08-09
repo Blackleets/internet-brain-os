@@ -98,6 +98,9 @@ export function assessMemoryQuarantineRecommendationFreshness(
   context: MemoryQuarantineRecommendationFreshnessContext,
 ): MemoryQuarantineRecommendationFreshness {
   const normalized = normalizeRecommendation(recommendation);
+  if (!isRecord(context)) {
+    throw new MemoryQuarantineRecommendationConflictError('INVALID_INPUT', 'freshness context must be an object.');
+  }
   if (!Number.isSafeInteger(context.currentLifecycleRevision) || context.currentLifecycleRevision < 0) {
     throw new MemoryQuarantineRecommendationConflictError(
       'INVALID_INPUT',
@@ -125,6 +128,7 @@ export function assessMemoryQuarantineRecommendationFreshness(
 export function verifyMemoryQuarantineRecommendationIntegrity(
   recommendation: StoredMemoryQuarantineRecommendation,
 ): boolean {
+  if (!isRecord(recommendation) || typeof recommendation.integrityDigest !== 'string') return false;
   const { integrityDigest, ...base } = recommendation;
   return digest(base) === integrityDigest;
 }
@@ -132,6 +136,9 @@ export function verifyMemoryQuarantineRecommendationIntegrity(
 function normalizeRecommendation(
   recommendation: MemoryQuarantineRecommendation,
 ): MemoryQuarantineRecommendation {
+  if (!isRecord(recommendation)) {
+    throw new MemoryQuarantineRecommendationConflictError('INVALID_INPUT', 'recommendation must be an object.');
+  }
   const memoryId = required(recommendation.memoryId, 'memoryId');
   const evaluatorVersion = required(recommendation.evaluatorVersion, 'evaluatorVersion');
   const recommendationId = required(recommendation.recommendationId, 'recommendationId');
@@ -141,7 +148,10 @@ function normalizeRecommendation(
       'lifecycleRevision must be a non-negative safe integer.',
     );
   }
-  const recommendedAt = String(recommendation.recommendedAt).trim();
+  if (typeof recommendation.recommendedAt !== 'string') {
+    throw new MemoryQuarantineRecommendationConflictError('INVALID_INPUT', 'recommendedAt must be a string date-time.');
+  }
+  const recommendedAt = recommendation.recommendedAt.trim();
   if (!recommendedAt || Number.isNaN(Date.parse(recommendedAt))) {
     throw new MemoryQuarantineRecommendationConflictError('INVALID_INPUT', 'recommendedAt must be a valid date-time.');
   }
@@ -199,17 +209,27 @@ const EXPECTED_SEVERITY: Readonly<Record<MemoryQuarantineSignalType, MemoryQuara
 };
 
 function normalizeSignals(signals: readonly MemoryQuarantineSignal[]): MemoryQuarantineSignal[] {
+  if (!Array.isArray(signals)) {
+    throw new MemoryQuarantineRecommendationConflictError('INVALID_INPUT', 'signals must be an array.');
+  }
   const byType = new Map<MemoryQuarantineSignalType, Set<string>>();
   for (const signal of signals) {
-    if (!SIGNAL_ORDER.includes(signal.type)) {
+    if (!isRecord(signal)) {
+      throw new MemoryQuarantineRecommendationConflictError('INVALID_INPUT', 'quarantine signal must be an object.');
+    }
+    if (typeof signal.type !== 'string' || !SIGNAL_ORDER.includes(signal.type as MemoryQuarantineSignalType)) {
       throw new MemoryQuarantineRecommendationConflictError('INVALID_INPUT', 'Unknown quarantine signal type.');
     }
-    if (signal.severity !== EXPECTED_SEVERITY[signal.type]) {
+    const type = signal.type as MemoryQuarantineSignalType;
+    if (signal.severity !== EXPECTED_SEVERITY[type]) {
       throw new MemoryQuarantineRecommendationConflictError('INVALID_INPUT', 'Quarantine signal severity does not match policy.');
     }
-    const references = byType.get(signal.type) ?? new Set<string>();
+    if (!Array.isArray(signal.referenceIds)) {
+      throw new MemoryQuarantineRecommendationConflictError('INVALID_INPUT', 'signal referenceIds must be an array.');
+    }
+    const references = byType.get(type) ?? new Set<string>();
     for (const referenceId of signal.referenceIds) references.add(required(referenceId, 'signal reference id'));
-    byType.set(signal.type, references);
+    byType.set(type, references);
   }
   return SIGNAL_ORDER.flatMap((type) => {
     const referenceIds = [...(byType.get(type) ?? [])].sort();
@@ -227,10 +247,19 @@ function cloneStored(value: StoredMemoryQuarantineRecommendation): StoredMemoryQ
   return { ...value, signals: value.signals.map((signal) => ({ ...signal, referenceIds: [...signal.referenceIds] })) };
 }
 
-function required(value: string, field: string): string {
-  const normalized = String(value).trim();
-  if (!normalized) throw new MemoryQuarantineRecommendationConflictError('INVALID_INPUT', `${field} is required.`);
+function required(value: unknown, field: string): string {
+  if (typeof value !== 'string') {
+    throw new MemoryQuarantineRecommendationConflictError('INVALID_INPUT', `${field} must be a string.`);
+  }
+  const normalized = value.trim();
+  if (!normalized || normalized.length > 240 || /[\u0000-\u001f\u007f]/.test(normalized)) {
+    throw new MemoryQuarantineRecommendationConflictError('INVALID_INPUT', `${field} is invalid.`);
+  }
   return normalized;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function digest(value: unknown): string {
