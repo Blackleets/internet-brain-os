@@ -177,7 +177,7 @@ This prevents agents from silently rewriting history or poisoning memory.
 
 ## PASS criteria
 
-A clean demo passes when all of these work:
+A clean deterministic demo passes when all of these work:
 
 - `pnpm build`
 - `pnpm hermes:smoke`
@@ -189,10 +189,8 @@ A clean demo passes when all of these work:
 - exact replay returns the same record id
 - altered replay returns `409 Conflict`
 
-## What this demo does not prove yet
+## What this demo proves — and what it does not
 
-This demo uses representative Hermes-shaped fixtures.
+This deterministic demo intentionally uses representative Hermes-shaped fixtures for repeatability. Separate authentic-runtime acceptance has already closed Issue #57, and the authentic Agent Hub runtime proof has closed Issue #101.
 
-Issue #57 remains the real validation gate for an actual Hermes runtime output captured from console, Telegram, or another runtime source.
-
-If real Hermes output differs, add a tested thin extractor. Do not weaken the Kernel contract.
+The demo is not public-launch approval. Public promotion remains blocked until the current immutable Windows candidate passes `docs/internal-uat-v0.1.0.md` without weakening the Kernel contract.
