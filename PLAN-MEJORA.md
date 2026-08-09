@@ -7,10 +7,10 @@
 - Kernel authority, Evidence, contradiction/admission, exact replay and altered-replay rejection are implemented.
 - Authentic Hermes ingestion and Agent Hub runtime validation are complete.
 - Goal-first Control Center, living Efesto forge, extension workspaces and Replay Lab are wired to real Kernel state.
-- Production dependency audit, typecheck, Vitest, build, first-run verification, Chromium acceptance and Windows launcher/first-run gates are green on the `main` baseline before packaged-candidate hardening.
+- Production dependency audit, architecture boundary guard, typecheck, Vitest, build, first-run verification, Chromium acceptance and Windows launcher/first-run gates are part of the required `main` baseline.
 - Windows distribution is generated from an exact Git commit as an immutable internal artifact. Public launch approval is intentionally separate from CI.
 
-## Current release-closeout work
+## Release-closeout status
 
 - [x] Close extension background-runtime gaps and regressions in `0.1.0-internal.6`.
 - [x] Identify the missing release proof: source-tree installation tests did not install the exact generated ZIP artifact.
@@ -27,24 +27,25 @@
 - [x] Persist only sanitized failure diagnostics for CI investigation.
 - [x] Add Gherkin and machine-checked release-contract coverage for packaged installation.
 - [x] Freeze `0.1.0-internal.7` through `0.1.0-internal.10` as non-promotable qualification attempts rather than reusing their identities.
-- [x] Advance the corrected qualification state to `0.1.0-internal.11`.
-- [ ] Make the exact packaged-candidate qualification green on both Windows generations for the final PR SHA.
-- [ ] Merge only after the complete CI, Chromium, legacy Windows and packaged-candidate gates are green for the same SHA.
-- [ ] Re-run the same required gates on the merged `main` commit.
-- [ ] Only then begin manual UAT-1 through UAT-6 on that exact `internal.11` artifact.
+- [x] Qualify and merge the exact packaged candidate work from `0.1.0-internal.11`.
+- [x] Enforce provider-neutral architecture boundaries through `pnpm architecture:check`.
+- [x] Freeze `0.1.0-internal.11` after later source/runtime work made a new immutable candidate necessary before UAT.
+- [ ] Qualify the new `0.1.0-internal.12` candidate on the final Memory Safety E1 SHA.
+- [ ] Only then begin manual UAT-1 through UAT-6 on that exact `internal.12` artifact.
 - [ ] Set `publicLaunchApproved=true` only after UAT passes on the same immutable candidate.
 
-## Engineering sequence after release qualification
+## Engineering sequence — Memory Safety
 
-After packaged installation qualification is merged and green, the next bounded engineering phase is Memory Safety completion:
+The bounded Memory Safety completion sequence is tracked as explicit GitHub issues:
 
-1. deterministic Kernel-owned quarantine signal evaluation and recommendations;
-2. explicit terminal-memory recovery review records without creating an agent mutation path;
-3. repeated-failure aggregation into read-only prevention recommendations;
-4. operator/read-model exposure with provenance and no Replay Lab write authority;
-5. contract freeze and full regression/acceptance gates.
+1. **#185 — deterministic Kernel-owned quarantine signal evaluation and recommendations**;
+2. **#187 — append-only quarantine recommendation persistence/read contracts without transition authority**;
+3. **#188 — terminal-memory recovery review records without reopening terminal states**;
+4. **#189 — repeated-failure aggregation into read-only prevention recommendations**;
+5. **#190 — operator/read-model exposure with provenance and no Replay Lab write authority**;
+6. **#191 — contract freeze plus adversarial regression/acceptance gates**.
 
-Only after those contracts are stable do we begin formal Product Design work against the real Goal-first product state.
+Issue #186 separately defines the enterprise product scorecard. Product Design issue #192 is blocked until #191 closes.
 
 ## UAT promotion gate
 
@@ -57,6 +58,20 @@ The release is not publicly promotable until automated packaged qualification is
 5. second value Goal;
 6. truthful failure handling/recovery.
 
+## Enterprise operating rule
+
+Engineering completion is not the same as business success. Efesto must also become measurable against:
+
+- Goal → Useful Find Rate;
+- Time to First Useful Find;
+- Repeat Goal Usage;
+- mission completion/failure rates;
+- installation-to-first-Goal activation;
+- Find usefulness/dismissal rates;
+- zero altered-replay acceptance, unauthorized memory admission and credential/privacy leakage.
+
+Initial measurement must remain local-first. Collective analytics require a separate opt-in privacy design.
+
 ## Engineering rules
 
 1. **Kernel authority stays local-first and fail-closed.**
@@ -66,3 +81,4 @@ The release is not publicly promotable until automated packaged qualification is
 5. **Every shipped behavior or release-validation change advances the immutable internal candidate.**
 6. **CI green is necessary, but public launch requires UAT evidence.**
 7. **A generated package is not qualified until that exact package installs and repairs successfully.**
+8. **Every major feature PR must state which enterprise scorecard dimension it improves.**

@@ -28,6 +28,8 @@ Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active Git
 - Memory authority has explicit lifecycle validation, immutable authority receipts, fail-closed transition service, deterministic projection, startup reconciliation and retrieval gating.
 - Authority receipts are durably persisted and reconstruct correctly after restart; malformed, tampered, corrupt, missing-reference and altered-replay states fail closed.
 - Only reconciled admitted memory may be reused by reasoning.
+- Protected Kernel authority modules are provider-neutral under the executable `pnpm architecture:check` CI gate.
+- Memory Safety E1 adds a pure Kernel-owned quarantine-signal evaluator. It can produce deterministic read-only recommendations only from normalized persisted reference IDs; it cannot execute a memory-authority transition, and terminal memory states stay outside the normal quarantine graph.
 
 ### Autonomous Goal execution foundation
 
@@ -112,26 +114,28 @@ The release qualification layer requires the **exact generated ZIP**, rather tha
 Every PR and push to `main` must pass, when affected:
 
 1. frozen lockfile install;
-2. production dependency audit with no GHSA ignore;
-3. TypeScript typecheck;
-4. full Vitest suite;
-5. production build;
-6. `pnpm verify:first-run` including Hermes validation, replay and Replay Lab smoke;
-7. dedicated Chromium/Playwright dashboard acceptance;
-8. Windows launcher smoke and first-run reproduction;
-9. exact internal-package generation and integrity binding;
-10. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
+2. architecture boundary guard;
+3. production dependency audit with no GHSA ignore;
+4. TypeScript typecheck;
+5. full Vitest suite;
+6. production build;
+7. `pnpm verify:first-run` including Hermes validation, replay and Replay Lab smoke;
+8. dedicated Chromium/Playwright dashboard acceptance;
+9. Windows launcher smoke and first-run reproduction;
+10. exact internal-package generation and integrity binding;
+11. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
 Never quote an old test count as current truth; use the exact current CI run.
 
 ## Current operating state
 
-- `main` remains the implementation source of truth; PR #182 is the bounded release-qualification change until merged.
+- `main` is the implementation source of truth and includes exact packaged qualification from PR #182 plus the architecture/forensic guardrails from PR #184.
 - The Goal-first shell plus living-forge identity layer is the current product UI baseline.
 - `0.1.0-internal.6` remains the immutable previous runtime-readiness candidate.
-- `0.1.0-internal.7` through `0.1.0-internal.10` are frozen non-promotable automated-qualification candidates and must not be reused.
-- The current qualification candidate is `0.1.0-internal.11`. It must not be treated as qualified until the exact ZIP passes both packaged Windows jobs and the complete PR/main gate for the same code state.
+- `0.1.0-internal.7` through `0.1.0-internal.11` are frozen non-promotable or superseded pre-UAT candidates and must not be reused.
+- The current qualification candidate is `0.1.0-internal.12`; it is not qualified until the exact ZIP passes the complete CI/Chromium/Windows packaged matrix for the final merged code state.
 - `publicLaunchApproved` remains `false`. Manual UAT-1 through UAT-6 may begin only after automated packaged qualification is green on the same immutable candidate.
+- Phase E is tracked through issues #185 and #187–#191. Issue #186 defines the enterprise product scorecard. Product Design issue #192 is blocked until Memory Safety contracts are frozen.
 - Work directly on `main` is prohibited; use one bounded implementation branch/PR at a time.
 - Do not weaken Kernel authority, replay protection, consent, provenance, secrecy or qualification gates to make a test pass.
 
@@ -147,6 +151,7 @@ The agreed MVP implementation lights are green only when the current `main` prov
 - consolidated browser-tested Goal-first Control Center;
 - one-click/self-healing Windows setup;
 - strict production dependency audit without exceptions;
+- provider-neutral architecture boundary enforcement;
 - exact packaged Windows candidate integrity;
 - exact packaged fresh-install + paired-repair qualification on the supported Windows matrix;
 - synchronized documentation and machine-checkable release readiness.
@@ -157,24 +162,27 @@ This does **not** mean every long-term idea is shipped. Automatic purchases, a p
 
 ## Next bounded engineering phase
 
-After packaged-candidate qualification is merged and re-proven on `main`, complete the remaining Memory Safety layer without changing the core authority model:
+Complete Memory Safety without changing the core authority model:
 
-1. Kernel-owned quarantine signal evaluation and deterministic recommendations;
-2. explicit terminal-memory recovery review records, separate from automatic state mutation;
-3. repeated-failure aggregation into read-only prevention recommendations;
-4. forensic/operator exposure with provenance and no Replay Lab write authority;
-5. contract freeze plus full regression and acceptance gates.
+1. #185 — deterministic quarantine-signal evaluator and read-only recommendation contract;
+2. #187 — persist/read quarantine recommendations without transition authority;
+3. #188 — explicit terminal-memory recovery review records, separate from automatic state mutation;
+4. #189 — repeated-failure aggregation into read-only prevention recommendations;
+5. #190 — forensic/operator exposure with provenance and no Replay Lab write authority;
+6. #191 — contract freeze plus full adversarial regression and acceptance gates.
+
+Issue #186 defines the product/business measurement layer. Initial measurement must remain local-first; any collective analytics remain separately opt-in and privacy-reviewed.
 
 ## Product Design gate
 
-Formal Product Design begins only after the engineering contracts above are stable. The design work must refine the existing Goal-first surface, not invent a second product or fake backend state.
+Formal Product Design begins only after the engineering contracts above are stable. Issue #192 is intentionally blocked until #191 closes. The design work must refine the existing Goal-first surface, not invent a second product or fake backend state.
 
 The living forge should expose real Mission/Evidence activity around the central brain without duplicating Kernel state or turning the product into a dense admin dashboard. Visual direction remains: dark cyber-forge foundation, Efesto orange plus restrained electric-blue intelligence accents, central living brain/forge presence, pixel-smith identity, and motion that mirrors real persisted/streaming state. Mobile and reduced-motion behavior remain first-class acceptance constraints.
 
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Do not mix any other project. Read PROJECT_STATE.md and AGENTS.md, run pnpm resume, inspect GitHub main/open PRs/CI, and treat live Git as newer than chat memory. Preserve Kernel authority, local-first secrecy, Evidence provenance, capability gates, exact replay and altered-replay rejection. Work on exactly one bounded branch and require the full CI + Chromium + Windows packaged-candidate gate before merge. Treat the Goal-first shell plus living-forge visual layer as the UI baseline and keep visual motion truthful to persisted or streaming state.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Do not mix any other project. Read PROJECT_STATE.md and AGENTS.md, run pnpm resume, inspect GitHub main/open PRs/CI, and treat live Git as newer than chat memory. Preserve Kernel authority, local-first secrecy, Evidence provenance, capability gates, exact replay and altered-replay rejection. Work on exactly one bounded branch and require the full architecture + CI + Chromium + Windows packaged-candidate gate before merge. Treat the Goal-first shell plus living-forge visual layer as the UI baseline and keep visual motion truthful to persisted or streaming state.
 ```
 
 ## Update rule
