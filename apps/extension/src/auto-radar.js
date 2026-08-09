@@ -201,7 +201,7 @@ export class AutoRadar {
           break;
       }
 
-      await chrome.action.setBadge({ text: badgeText });
+      await chrome.action.setBadgeText({ text: badgeText });
       await chrome.action.setBadgeBackgroundColor({ color: badgeColor });
       await chrome.action.setTitle({ title });
     } catch (error) {
