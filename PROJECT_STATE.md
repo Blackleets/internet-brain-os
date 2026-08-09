@@ -19,7 +19,7 @@ Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active Git
 - **An agent is never the Kernel.**
 - Hosted/dashboard surfaces are clients only; Kernel authority, secrets, Evidence and controlled memory remain local-first.
 
-## Verified completion baseline — 2026-08-08
+## Verified completion baseline — 2026-08-09
 
 ### Evidence, replay and memory authority
 
@@ -71,7 +71,9 @@ The drill scenario finds a quality candidate inside an €18–€25 budget fixt
 - Browser extension provides Forge, Missions, Finds and Models workspaces plus state-derived pixel-forge activity.
 - Replay Lab is an authenticated forensic/read surface and never gains memory authority.
 - Control Center is an authenticated loopback client with Investigation, Knowledge, Agent Hub, Opportunity, Automation and System surfaces plus private multi-model chat.
-- The consolidated Control Center passed dedicated Chromium/Playwright browser acceptance on the current architecture.
+- PR #178 merged the Goal-first Efesto product shell: Home/Goal, Missions, Finds, Evidence, Models/chat, Agents, Automations and Settings are wired to existing Kernel contracts rather than decorative fake state.
+- The product shell is responsive and preserves explicit confirmation before Goal execution; chat remains separate from Evidence and durable memory.
+- The consolidated Control Center and Goal-first shell pass dedicated Chromium/Playwright browser acceptance on the current architecture.
 - The dashboard never receives provider credentials from the Kernel and remains presentation/client-only when hosted.
 
 ### Distribution
@@ -80,9 +82,10 @@ Windows has a non-technical double-click path:
 
 1. Double-click `Install Efesto.cmd`.
 2. The installer checks/repairs Node.js 22+, pinned pnpm 11.11.0 and frozen-lockfile workspace dependencies.
-3. It builds the browser extension and starts/repairs the trusted local Efesto launcher.
-4. It creates an owner-local desktop shortcut.
-5. `Efesto Launcher.cmd` self-heals missing prerequisites instead of exposing raw package-manager errors.
+3. It builds Shared, Kernel and the browser extension before launching the trusted local runtime.
+4. It starts/repairs the trusted local Efesto launcher and verifies the owned process truthfully.
+5. It creates an owner-local desktop shortcut.
+6. `Efesto Launcher.cmd` self-heals missing prerequisites instead of exposing raw package-manager errors.
 
 No Kernel token or boundary secret is embedded or printed by this installer.
 
@@ -92,6 +95,7 @@ No Kernel token or boundary secret is embedded or printed by this installer.
 - The former temporary Nano ID GHSA exception is removed.
 - `nanoid@3.3.17` is locked through a workspace override; `nanoid@3.3.16` is forbidden by regression tests.
 - Dashboard Chromium acceptance runs as a separate required CI job.
+- Windows launcher smoke, first-run reproduction and the internal test package run as release-control gates on relevant `main` changes.
 
 ## Canonical CI gate
 
@@ -103,43 +107,48 @@ Every PR and push to `main` must pass:
 4. full Vitest suite;
 5. production build;
 6. `pnpm verify:first-run` including Hermes validation, replay and Replay Lab smoke;
-7. dedicated Chromium/Playwright dashboard acceptance.
+7. dedicated Chromium/Playwright dashboard acceptance;
+8. affected Windows launcher/first-run/internal-package workflows when their paths apply.
 
 Never quote an old test count as current truth; use the exact current CI run.
 
 ## Current operating state
 
 - `main` is the sole implementation source of truth.
-- At this checkpoint there are **no open GitHub issues and no open pull requests**.
-- Previously competing UI drafts were closed after their validated dashboard layer was consolidated onto modern `main`.
-- The former Nano ID security exception issue was closed only after the patched dependency resolved and all normal gates passed without an audit ignore.
+- PR #178 is merged; the Goal-first shell is now the product UI baseline, not a pending draft.
+- The internal Windows candidate is `0.1.0-internal.4` after the post-`internal.3` user-visible UI changes. Internal candidate identifiers are immutable and must not be reused for a different code state.
+- `publicLaunchApproved` remains `false` until UAT-1 through UAT-6 pass on the same immutable candidate: clean Windows install, browser pairing/surfaces, real public-web economic Goal, persistence/replay, second value Goal and truthful failure recovery.
 - Work directly on `main` is prohibited; use one bounded implementation branch/PR at a time.
 - Do not weaken Kernel authority, replay protection, consent, provenance or local-first secrecy to make a test pass.
 
 ## What “green” means here
 
-The agreed MVP completion lights are green when CI confirms the current `main` contains:
+The agreed MVP implementation lights are green when CI confirms the current `main` contains:
 
 - durable memory authority;
 - authentic Hermes boundary;
 - native public web discovery/read capabilities;
 - bounded Goal/plan/capability/execution primitives;
 - Golden Goal-to-notification E2E;
-- consolidated browser-tested Control Center;
+- consolidated browser-tested Goal-first Control Center;
 - one-click/self-healing Windows setup;
 - strict production dependency audit without exceptions;
 - synchronized documentation and machine-checkable release readiness.
 
+The **public release light is separate**: it remains blocked until the manual/internal UAT evidence for the exact candidate is complete. CI success alone is not public-launch approval.
+
 This does **not** mean every long-term idea is shipped. Automatic purchases, a public marketplace, multi-tenant cloud brain, broad connector catalog and native mobile application remain outside this MVP completion claim.
 
-## Next direction after MVP release gate
+## Next direction after candidate control
 
-Do not add another broad platform subsystem immediately. The next product work should be selected from real user-value evidence, with preference for one bounded connector/journey that extends the proven Goal → Evidence → Notification loop while preserving existing capability and approval policies.
+Do not add another broad platform subsystem. Product work should refine the existing Goal-first surface and extend the proven Goal → Evidence → Notification loop without changing authority semantics.
+
+The current visual direction is a modern, living Efesto forge rather than a generic admin dashboard: dark cyber-forge foundation, Efesto orange plus restrained electric-blue intelligence accents, a central living brain/forge presence, truthful state motion, and a pixel-smith identity that visually transfers work into the brain. These visuals must remain subordinate to real Goal, Mission, Evidence and Kernel state and must respect reduced-motion/accessibility settings.
 
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Do not mix any other project. Read PROJECT_STATE.md and AGENTS.md, run pnpm resume, inspect GitHub main/open PRs/CI, and treat live Git as newer than chat memory. Preserve Kernel authority, local-first secrecy, Evidence provenance, capability gates, exact replay and altered-replay rejection. Work on exactly one bounded branch and require the full CI + Chromium gate before merge.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Do not mix any other project. Read PROJECT_STATE.md and AGENTS.md, run pnpm resume, inspect GitHub main/open PRs/CI, and treat live Git as newer than chat memory. Preserve Kernel authority, local-first secrecy, Evidence provenance, capability gates, exact replay and altered-replay rejection. Work on exactly one bounded branch and require the full CI + Chromium gate before merge. Treat the Goal-first shell as the UI baseline and keep visual motion truthful to persisted or streaming state.
 ```
 
 ## Update rule

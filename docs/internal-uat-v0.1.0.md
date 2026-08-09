@@ -5,7 +5,7 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.3`
+- Candidate: `0.1.0-internal.4`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
 - Test only the artifact produced from the exact `main` commit under review.
@@ -13,7 +13,7 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Download the `efesto-v0.1.0-internal.3-windows.zip` artifact from the successful `Internal Test Package` workflow on `main`.
+2. Download the `efesto-v0.1.0-internal.4-windows.zip` artifact from the successful `Internal Test Package` workflow on `main`.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -43,7 +43,7 @@ Pass only if:
 - Kernel readiness is truthful;
 - pairing succeeds without exposing secrets;
 - all four extension workspaces render;
-- the Control Center loads as an authenticated local client;
+- the Goal-first Control Center loads as an authenticated local client on desktop and mobile-width layouts;
 - Replay Lab is readable but cannot mutate durable-memory authority;
 - no blank/white/black dead screen blocks the journey.
 
@@ -105,6 +105,8 @@ Pass only if:
 
 ## Promotion decision
 
-Public launch remains blocked until UAT-1 through UAT-6 are all marked PASS on the same internal candidate or on a newer candidate that has rerun all affected checks.
+Public launch remains blocked until UAT-1 through UAT-6 are all marked PASS on the same immutable internal candidate or on a newer candidate that has rerun all affected checks.
+
+A candidate version must never be reused after a user-visible, installer, runtime or validation change lands. Advance the internal candidate number instead so test evidence always maps to one code state.
 
 When approved, create a separate public-release PR/tag from the exact green commit. Do not convert an internal artifact into a public release by renaming it.
