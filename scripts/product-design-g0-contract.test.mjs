@@ -36,7 +36,7 @@ describe('Goal-first cross-surface G0 contract', () => {
     expect(contract).toContain('Full Control Center — mobile-width');
     expect(contract).toContain('Browser extension');
     expect(contract).toContain('Public landing');
-    expect(contract).toContain('must not receive Kernel tokens');
+    expect(contract).toContain('- receive Kernel tokens;');
   });
 
   it('requires mobile-width, accessibility, truthful motion and no fake remote-PC claim', async () => {
