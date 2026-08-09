@@ -5,17 +5,18 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.11`
+- Candidate: `0.1.0-internal.12`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
-- `0.1.0-internal.7`, `0.1.0-internal.8`, `0.1.0-internal.9`, and `0.1.0-internal.10` are frozen as non-promotable automated-qualification candidates and must not be reused.
+- `0.1.0-internal.7` through `0.1.0-internal.10` remain frozen non-promotable qualification attempts.
+- `0.1.0-internal.11` is frozen as the previously qualified pre-Memory-Safety candidate and must not be reused for this changed Kernel state.
 - Test only the artifact produced from the exact `main` commit under review.
 - Automated packaged-candidate qualification on Windows 2022 and Windows 2025 must be green before manual UAT begins.
 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Use only the `efesto-v0.1.0-internal.11-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
+2. Use only the `efesto-v0.1.0-internal.12-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -74,13 +75,14 @@ and:
 
 Record at least: Goal text, timestamp, number of search results, number of Evidence records, number of promoted Finds, top result URL/domain, and whether a notification was emitted.
 
-## UAT-4 — persistence and replay
+## UAT-4 — persistence, memory safety and replay
 
 1. Complete UAT-3.
 2. Close the extension/dashboard and stop Efesto normally.
 3. Restart using the Efesto desktop shortcut.
 4. Re-open the Goal/Mission/Find.
 5. Exercise an exact replay where the product exposes it, then attempt an altered replay in the supported forensic path.
+6. Where quarantine recommendation data exists, verify it remains recommendation-only and is tied to persisted references/current lifecycle revision.
 
 Pass only if:
 
@@ -88,7 +90,9 @@ Pass only if:
 - durable memory-authority receipts reconstruct without corruption;
 - exact replay is idempotent;
 - altered replay is rejected;
-- no duplicate Evidence/Notification side effects appear from the exact replay.
+- no duplicate Evidence/Notification side effects appear from the exact replay;
+- a quarantine recommendation cannot substitute for the Kernel's persisted quarantine-signal transition gate;
+- stale/tampered quarantine recommendations fail closed.
 
 ## UAT-5 — second value Goal
 
