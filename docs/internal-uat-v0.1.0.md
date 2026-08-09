@@ -5,17 +5,17 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.31`
+- Candidate: `0.1.0-internal.32`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
-- `0.1.0-internal.7` through `0.1.0-internal.30` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
+- `0.1.0-internal.7` through `0.1.0-internal.31` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
 - Test only the artifact produced from the exact `main` commit under review.
 - Automated packaged-candidate qualification on Windows 2022 and Windows 2025 must be green before manual UAT begins.
 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Use only the `efesto-v0.1.0-internal.31-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
+2. Use only the `efesto-v0.1.0-internal.32-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -64,8 +64,9 @@ Pass only if:
 - mobile navigation uses the visible drawer controls before selecting a workspace, so acceptance exercises the user-reachable path rather than hidden off-viewport controls;
 - the extension includes a fail-closed Shared Goal Truth v1 wire-contract parser that accepts Kernel schema/source/work-state as-is and does not upgrade legacy Goals client-side;
 - the extension Shared Goal Truth transport can only GET list/detail through an authenticated HTTP loopback endpoint, rejects invalid tokens/non-loopback URLs/invalid Goal ids before network access, and never fabricates an empty list on failure;
-- the extension is **not yet claimed to render Shared Goal Truth v1**; Forge/Goals presentation remains G3.2;
-- `completed` without persisted `forged` state remains visually calm and is not presented as Evidence forjada;
+- the extension Shared Goal Truth presentation preserves Kernel ordering, labels legacy compatibility explicitly, and derives Forge activity only from persisted `mission.workState`;
+- `completed` without persisted `forged` remains visually calm and is not presented as a forged-success state;
+- the extension is **not yet claimed to render Shared Goal Truth v1 in the popup**; DOM wiring remains G3.2b;
 - existing Goal/Mission POST writers remain unchanged and still require explicit confirmation before mission creation;
 - the Efesto pixel-smith/brain visual identity renders without obscuring controls or causing horizontal overflow;
 - work/data-flow motion appears only for observable active states such as queued, investigating, verifying or model thinking, and does not imply work while offline or failed;
@@ -132,7 +133,7 @@ Pass only if real public results are sourced, ranked and notified with provenanc
 
 ## UAT-6 — failure handling
 
-During an internal test, deliberately exercise at least one safe failure such as disconnecting the network before a read/search or stopping the Kernel before opening the extension.
+During an internal test, deliberately exercise at least one safe failure such as disconnecting the network before opening the extension or stopping the Kernel before a Shared Goal Truth read.
 
 Pass only if:
 
