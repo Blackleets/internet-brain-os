@@ -10,6 +10,22 @@ on:
       - 'scripts/install-efesto.ps1'
       - 'Efesto Launcher.cmd'
       - '.github/workflows/windows-first-run-repro.yml'
+      - 'INTERNAL_RELEASE.json'
+      - 'docs/internal-uat-v0.1.0.md'
+      - 'scripts/internal-release-package.test.mjs'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/local-kernel/**'
+      - 'packages/kernel/**'
+      - 'packages/shared/**'
+      - 'scripts/efesto-*.mjs'
+      - 'scripts/install-efesto.ps1'
+      - 'Efesto Launcher.cmd'
+      - '.github/workflows/windows-first-run-repro.yml'
+      - 'INTERNAL_RELEASE.json'
+      - 'docs/internal-uat-v0.1.0.md'
+      - 'scripts/internal-release-package.test.mjs'
   workflow_dispatch:
 
 permissions:
