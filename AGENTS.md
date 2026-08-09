@@ -23,6 +23,19 @@ Before changing code in this repository:
 - New integrations should be adapters, not domain-layer provider coupling.
 - Do not overwrite concurrent work based on stale file contents.
 
+## Product UI Contract
+
+Any change to `apps/dashboard`, `apps/extension`, or another end-user Efesto surface must apply the exported `skill:efesto-product-ui` contract from `packages/skills`.
+
+- Start from the user's Goal or next decision, not from internal subsystem names.
+- Every visible control must have a real action, disabled state, or explicit unavailable explanation. Decorative fake buttons are forbidden.
+- A control that mutates Kernel state must call an existing authenticated Kernel contract and render success/failure truthfully.
+- External or irreversible actions require explicit confirmation and policy/capability approval.
+- Motion may only communicate observable state such as ready, queued, investigating, verifying, forged, failed, or active model streaming.
+- Mobile and desktop are first-class surfaces. Preserve keyboard focus, touch targets, safe-area insets, reduced motion, and readable input sizing.
+- Never invent progress, opportunities, Evidence, graph edges, mission state, model availability, or readiness.
+- Prefer progressive disclosure: Goal/chat surface first; Missions, Finds, Evidence, Models, Agents, Automations, and Settings remain directly reachable but secondary.
+
 ## Current Direction
 
 Stabilize the foundation first. Then make the Hermes ↔ Hephaestus bridge production-grade. Then connect research outputs to evidence, claims, graph, and memory. Keep the future Nametrom model/distillation work behind provider/model adapters.
