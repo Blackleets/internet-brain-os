@@ -32,6 +32,7 @@ Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active Git
 
 - PR #202 / G0 merged at `792f5ec128e534a1a5c52fc6fbd304ff9f8762ea`.
 - Forge Focus, one Kernel-owned persisted Goal truth, truthful motion, explicit authority and responsive 390×844 behavior are frozen product requirements.
+- The Goal-first shell and living-forge visual baseline remain machine-checkable release-readiness contracts; do not remove those phrases during checkpoint compaction.
 - Mobile-width support does not imply arbitrary phone → PC Kernel remote control; secure cross-device transport requires its own threat-modelled slice.
 
 ### Shared Goal Truth v1 backend
