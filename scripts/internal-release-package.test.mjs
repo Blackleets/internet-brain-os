@@ -55,7 +55,9 @@ describe('internal Efesto release package', () => {
     expect(harness).toContain('Start-Process');
     expect(harness).toContain('-RedirectStandardOutput $stdoutPath');
     expect(harness).toContain('-RedirectStandardError $stderrPath');
+    expect(harness).toContain('$process.WaitForExit()');
     expect(harness).toContain('$process.ExitCode');
+    expect(harness).not.toContain('    -Wait `');
     expect(harness).not.toContain('& powershell.exe @arguments *> $logPath');
   });
 
