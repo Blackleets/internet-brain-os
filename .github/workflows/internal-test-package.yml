@@ -13,6 +13,8 @@ jobs:
   package-internal-windows:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      release-version: ${{ steps.release.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,6 +53,7 @@ jobs:
           unzip -l "$package" > package-contents.txt
           grep -q 'Install Efesto.cmd' package-contents.txt
           grep -q 'scripts/install-efesto.ps1' package-contents.txt
+          grep -q 'scripts/qualify-packaged-windows-install.ps1' package-contents.txt
           grep -q 'pnpm-lock.yaml' package-contents.txt
           grep -q 'INTERNAL_RELEASE.json' package-contents.txt
           if grep -Eq '(^|/)(node_modules|\.git|\.hephaestus|\.hermes)/' package-contents.txt; then
@@ -72,5 +75,44 @@ jobs:
             SHA256SUMS.txt
             BUILD_INFO.txt
             package-contents.txt
+            scripts/qualify-packaged-windows-install.ps1
           if-no-files-found: error
           retention-days: 14
+
+  qualify-packaged-windows-install:
+    name: qualify packaged install (${{ matrix.os }})
+    needs: package-internal-windows
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+      - name: Download exact internal candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: efesto-v${{ needs.package-internal-windows.outputs.release-version }}-windows-${{ github.sha }}
+          path: candidate
+      - name: Verify, install and repair the exact packaged candidate
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass `
+            -File candidate/scripts/qualify-packaged-windows-install.ps1 `
+            -CandidateDir candidate `
+            -ReleaseVersion '${{ needs.package-internal-windows.outputs.release-version }}' `
+            -ExpectedCommit '${{ github.sha }}'
+      - name: Upload sanitized qualification diagnostic
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: efesto-packaged-install-diagnostic-${{ matrix.os }}-${{ github.sha }}
+          path: candidate/qualification-diagnostic.txt
+          if-no-files-found: warn
+          retention-days: 7

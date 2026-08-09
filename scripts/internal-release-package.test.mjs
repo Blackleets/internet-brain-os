@@ -11,7 +11,7 @@ describe('internal Efesto release package', () => {
   it('is explicitly internal and blocks public promotion by default', async () => {
     const release = JSON.parse(await text('INTERNAL_RELEASE.json'));
     expect(release.schema).toBe('efesto.internal-release.v1');
-    expect(release.version).toBe('0.1.0-internal.6');
+    expect(release.version).toBe('0.1.0-internal.11');
     expect(release.channel).toBe('internal');
     expect(release.publicLaunchApproved).toBe(false);
     expect(release.entrypoint).toBe('Install Efesto.cmd');
@@ -31,6 +31,41 @@ describe('internal Efesto release package', () => {
     expect(workflow).toContain('version=${RELEASE_VERSION}');
     expect(workflow).not.toContain('version=0.1.0-internal.1');
     expect(workflow).not.toMatch(/permissions:\s*[\s\S]*contents:\s*write/);
+  });
+
+  it('qualifies the exact packaged candidate on two supported Windows generations', async () => {
+    const workflow = await text('.github/workflows/internal-test-package.yml');
+    const harness = await text('scripts/qualify-packaged-windows-install.ps1');
+
+    expect(workflow).toContain('qualify-packaged-windows-install:');
+    expect(workflow).toContain('os: [windows-2022, windows-2025]');
+    expect(workflow).toContain('actions/download-artifact@v4');
+    expect(workflow).toContain('qualify-packaged-windows-install.ps1');
+    expect(harness).toContain('Get-FileHash -Algorithm SHA256');
+    expect(harness).toContain('Efesto Candidate With Spaces');
+    expect(harness).toContain('Efesto Data With Spaces');
+    expect(harness).toContain('publicLaunchApproved');
+    expect(harness).toContain("'Install Efesto.cmd'");
+    expect(harness).toContain('Invoke-FreshInstall');
+    expect(harness).toContain("-StdoutTarget 'NUL' -StderrTarget 'NUL'");
+    expect(harness).toContain("$freshBootstrap.pairing -ne 'required'");
+    expect(harness).toContain('authorized-extensions.json');
+    expect(harness).toContain('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    expect(harness).toContain('Invoke-CapturedRepair');
+    expect(harness).toContain("$afterRepair.pairing -ne 'paired'");
+    expect(harness).toContain('apps\\extension\\dist\\manifest.json');
+    expect(harness).toContain('Efesto.lnk');
+    expect(harness).toContain('tokenDigestAfter');
+    expect(harness).toContain('owned');
+    expect(harness).toContain('verified');
+    expect(harness).toContain('System.Diagnostics.ProcessStartInfo');
+    expect(harness).toContain('$process.WaitForExit($TimeoutMs)');
+    expect(harness).toContain('node scripts\\efesto-launcher.mjs shutdown >NUL 2>NUL');
+    expect(harness).not.toContain('pnpm efesto:launcher shutdown');
+    expect(harness).not.toContain('RedirectStandardOutput = $true');
+    expect(harness).not.toContain('ReadToEndAsync()');
+    expect(harness).not.toContain('Start-Process');
+    expect(harness).toContain('captured repair output');
   });
 
   it('requires one immutable candidate plus corrected clean-install, real-web, replay and failure UAT before launch', async () => {

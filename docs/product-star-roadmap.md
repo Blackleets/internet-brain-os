@@ -20,11 +20,12 @@ Implemented:
 - Browser extension workspaces for Forge, Missions, Finds and Models.
 - One-click/self-healing Windows setup and immutable internal release packaging.
 - Frozen-lockfile install, production dependency audit, typecheck, Vitest, build, first-run verification, Chromium acceptance and Windows smoke/reproduction gates.
+- Exact packaged-candidate qualification is now a required release-control layer before manual UAT.
 
 Status legend:
 
-- `[x]` verified in the repository/current baseline.
-- `[ ]` intentionally deferred or still requiring proof.
+- `[x]` implemented or contractually added in the current repository/active release-hardening branch.
+- `[ ]` still requiring green proof or intentionally deferred.
 
 ## North star
 
@@ -108,35 +109,74 @@ Status: **MVP loop implemented**.
 
 ## Phase E — Memory-safety expansion
 
-Purpose: extend the existing authority foundation without turning agents into the Kernel.
+Purpose: complete the advanced operator/safety layer without turning agents into the Kernel.
 
-Status: **partially implemented; advanced controls remain future work**.
+Status: **next bounded engineering phase after release qualification**.
+
+Already present:
 
 - [x] Kernel-owned contradiction/admission explanations.
 - [x] Durable authority receipts and restart reconciliation.
 - [x] Conservative prevention proposals from forensic outcomes.
-- [ ] Richer quarantine/toxic-memory operator controls.
-- [ ] Reversible memory-management workflows beyond the current lifecycle gates.
-- [ ] Repeated-failure aggregation for prevention-rule recommendations.
+- [x] Retrieval reuse gate that only admits reconciled `admitted` memory.
+- [x] Fail-closed lifecycle/transition authorization.
+
+Next implementation sequence:
+
+- [ ] Kernel-owned quarantine-signal evaluator producing deterministic recommendations from persisted references.
+- [ ] Persist/read quarantine recommendations without granting them transition authority.
+- [ ] Explicit terminal-memory recovery review records with founder/policy approval requirements.
+- [ ] Repeated-failure aggregation into read-only prevention recommendations.
+- [ ] Replay Lab/operator read model for these recommendations with provenance and no mutation authority.
+- [ ] Full unit, negative, replay, corruption, Gherkin and integration coverage for the new contracts.
 
 ## Phase F — Distribution and release closeout
 
-Purpose: ship an internally testable Windows candidate without confusing CI success with public approval.
+Purpose: prove that the exact package we would hand to a person is installable before asking that person to test it.
 
 Status: **current active release gate**.
 
 - [x] Non-technical `Install Efesto.cmd` path.
 - [x] Self-healing launcher prerequisites.
-- [x] Immutable internal artifact packaging with SHA-256 manifest.
+- [x] Immutable internal artifact packaging with SHA-256 manifest and BUILD_INFO commit binding.
 - [x] Production dependency audit without a GHSA ignore.
 - [x] Windows launcher, first-run and pairing recovery automation.
-- [x] Advance runtime-changing candidate to `0.1.0-internal.6`.
-- [x] Add extension background runtime regression + Gherkin coverage.
-- [ ] Full PR/main CI green for the exact `internal.6` code state.
-- [ ] UAT-1 through UAT-6 on the same generated Windows artifact.
+- [x] `0.1.0-internal.6` preserved as the immutable previous runtime-readiness candidate.
+- [x] `0.1.0-internal.7` through `0.1.0-internal.10` frozen as non-promotable automated-qualification candidates.
+- [x] Advance the corrected qualification state to `0.1.0-internal.11`.
+- [x] Add exact-ZIP download, checksum/commit verification and extraction to a path containing spaces.
+- [x] Add Windows 2022 + Windows 2025 packaged-install qualification.
+- [x] Exercise a real fresh unpaired install from the ZIP with pairing truthfully required.
+- [x] Require runtime builds, Kernel ownership verification, Hermes readiness and trusted shortcut from the extracted ZIP.
+- [x] Add a separate paired repair with private Kernel-token digest preservation.
+- [x] Add credential-leak detection against captured repair output and sanitized diagnostic artifacts.
+- [x] Isolate qualification shutdown from PowerShell/pnpm stderr semantics and verify the trusted launcher exit code directly.
+- [x] Add Gherkin + machine-checked release-contract regression coverage.
+- [ ] Both packaged-install matrix jobs green for the final PR SHA.
+- [ ] Full PR CI/Chromium/Windows gates green for the same SHA.
+- [ ] Merge and prove the merged `main` SHA through the same affected gates.
+- [ ] UAT-1 through UAT-6 on the exact resulting `internal.11` artifact.
 - [ ] Public-release PR/tag only after UAT passes and `publicLaunchApproved` is explicitly promoted.
 
-## Phase G — Product narrative and evidence
+## Phase G — Product Design formalization
+
+Purpose: turn the stable Goal-first product into a coherent product system rather than decorating unstable contracts.
+
+Status: **starts only after Phase E contracts are stable and Phase F automated qualification is green**.
+
+Planned design deliverables:
+
+- [ ] formal product/design brief tied to real Kernel capabilities and user journeys;
+- [ ] information architecture and priority hierarchy for Goal, Missions, Finds, Evidence, Models, Agents, Automations and Settings;
+- [ ] design tokens and component/system language for the Efesto cyber-forge identity;
+- [ ] exact visual mapping for offline, ready, queued, investigating, verifying, completed and failed states;
+- [ ] three distinct visual directions for selection before implementation;
+- [ ] selected direction translated faithfully into responsive frontend code;
+- [ ] accessibility, reduced-motion and mobile acceptance;
+- [ ] design QA against the rendered implementation and source target;
+- [ ] real release-candidate screenshots only after the implementation is validated.
+
+## Phase H — Product narrative and evidence
 
 Purpose: make the product understandable to users, contributors and investors without overclaiming.
 
@@ -158,27 +198,34 @@ Do not:
 - expose trusted Kernel routes publicly without a new security design;
 - add fake UI state or animation that implies work not present in persisted/streaming state;
 - authorize purchases, logins or form submissions as part of the current Golden path;
-- reuse an internal candidate number after shipped behavior changes.
+- reuse an internal candidate number after shipped behavior or release-validation changes;
+- start visual redesign work against contracts that are still moving.
 
 ## Next bounded sequence
 
-1. Make the `internal.6` runtime-readiness PR fully green.
-2. Merge only after required CI, Chromium and affected Windows gates pass.
-3. Generate the immutable `internal.6` Windows artifact from merged `main`.
-4. Run UAT-1 through UAT-6 on that exact artifact.
-5. If every UAT passes, create a separate public-release promotion change.
-6. Then resume product expansion from real user feedback rather than adding another broad subsystem.
+1. Make PR #182 exact packaged Windows qualification green on both Windows generations.
+2. Require the full CI, Chromium and Windows suite to be green for that same PR head.
+3. Merge and re-prove the resulting `main` SHA.
+4. Complete Phase E Memory Safety in separate bounded PRs with no agent authority expansion.
+5. Freeze the product/state contracts.
+6. Begin formal Product Design exploration with the stable Goal-first product as the baseline.
+7. Only after automated qualification is green, run UAT-1 through UAT-6 on the exact immutable candidate.
+8. Promote publicly only after the UAT evidence is complete.
 
 ## Definition of “project star”
 
-The project is a star when the user-value and safety loops are both visible:
+The product reaches the intended engineering bar when the user-value, safety and distribution loops are all demonstrable:
 
 ```text
-A user gives Efesto a Goal.
+A user installs the exact qualified package.
+The local Kernel proves ownership and readiness.
+The user gives Efesto a Goal.
 An agent or native capability researches bounded public sources.
 The Kernel preserves Evidence and provenance.
 The Kernel blocks forged authority and altered history.
 Useful Opportunities are ranked and surfaced.
 Exact replay is safe and side effects remain controlled.
-The operator can understand why a result was trusted, rejected or retained.
+Unsafe or questionable memory can be quarantined/reviewed without agent authority.
+The operator can understand why a result was trusted, rejected, retained or isolated.
+The product UI mirrors those real states faithfully.
 ```

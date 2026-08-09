@@ -1,6 +1,6 @@
 {
   "schema": "efesto.internal-release.v1",
-  "version": "0.1.0-internal.6",
+  "version": "0.1.0-internal.11",
   "channel": "internal",
   "audience": "founder-and-internal-testers",
   "publicLaunchApproved": false,
@@ -8,5 +8,5 @@
   "platform": "windows",
   "entrypoint": "Install Efesto.cmd",
   "uat": "docs/internal-uat-v0.1.0.md",
-  "promotionRule": "Do not promote to a public release until the internal UAT checklist passes on a clean Windows machine and a real public-web Goal produces evidence-backed results without unauthorized side effects."
+  "promotionRule": "Do not promote to a public release until automated packaged-candidate qualification and the internal UAT checklist pass on the same immutable candidate, including a clean Windows machine and a real public-web Goal producing evidence-backed results without unauthorized side effects."
 }
