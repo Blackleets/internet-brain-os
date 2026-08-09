@@ -32,17 +32,17 @@ Status: **active bounded engineering phase**.
 - [x] #185 — deterministic quarantine-signal evaluation and read-only recommendation identity.
 - [x] #187 — append-only durable recommendation persistence, integrity reconstruction, exact replay and fresh/stale assessment without transition authority.
 - [x] #188 — terminal-memory recovery review records requiring human/founder decisions under policy version; approved recovery names a distinct new candidate and never reopens the terminal memory ID.
-- [x] #189 — repeated persisted failures are grouped only by memory/category inside a bounded policy window and produce deterministic `read_only` prevention recommendations with exact failure/reference IDs; exact failure replay is deduplicated and conflicting failure identity fails closed.
-- [ ] #190 — Replay Lab/operator read model for safety recommendations with provenance and no mutation authority.
+- [x] #189 — repeated persisted failures produce deterministic `read_only` prevention guidance with exact failure/reference provenance; PR #199 additionally hardened malformed runtime inputs fail-closed.
+- [x] #190 — Replay Lab/operator Memory Safety projection separates persisted records, deterministic interpretations and human decisions, preserves exact references/current-vs-stale status, and consumes only read/list dependencies.
 - [ ] #191 — contract freeze with full unit, negative, replay, corruption, Gherkin and adversarial coverage.
 
 ## Distribution / release closeout
 
 - [x] Exact ZIP is checksum/commit-bound and tested through fresh install + paired repair on Windows 2022/2025.
 - [x] `0.1.0-internal.6` preserved as prior runtime-readiness candidate.
-- [x] `0.1.0-internal.7` through `0.1.0-internal.14` frozen after qualification/supersession.
-- [ ] Qualify `0.1.0-internal.15` on the final E4 SHA through architecture, CI, Chromium, Windows launcher/first-run and both exact package jobs.
-- [ ] Run UAT only after affected Memory Safety work is frozen on one exact candidate.
+- [x] `0.1.0-internal.7` through `0.1.0-internal.16` frozen after qualification/supersession.
+- [ ] Qualify `0.1.0-internal.17` on the final E5 SHA through architecture, CI, Chromium, Windows launcher/first-run and both exact package jobs.
+- [ ] Run UAT only after #191 freezes Memory Safety on one exact candidate.
 - [ ] Public release only after UAT and explicit `publicLaunchApproved=true` promotion.
 
 ## Enterprise measurement — #186
@@ -66,21 +66,21 @@ Blocked until #191 freezes Memory Safety contracts. Design must refine the real 
 Do not:
 
 - turn Efesto into a generic scraper/admin dashboard;
-- let Hermes/agents write durable memory, approve recovery, or change prevention policy;
+- let Hermes/agents write durable memory, approve recovery, change prevention policy, or mutate through Replay Lab;
 - reopen terminal memory IDs;
 - infer hidden agent intent from repeated failures;
+- collapse persisted facts, deterministic interpretations and human decisions into one trust label;
 - silently rewrite stale safety records;
 - add fake UI state or unproven progress;
 - reuse an immutable internal candidate identity after behavior changes.
 
 ## Next bounded sequence
 
-1. Merge #189 only after all architecture, CI, Chromium and exact Windows package gates are green.
-2. Execute #190 as a read-only operator projection, not a new authority path.
-3. Close #191 with adversarial contract-freeze coverage.
-4. Implement #186 local-first business measurement.
-5. Begin #192 formal Product Design.
-6. Freeze exact candidate → UAT → public promotion decision.
+1. Merge #190 only after all architecture, CI, Chromium and exact Windows package gates are green.
+2. Close #191 with adversarial contract-freeze coverage across E1–E5 plus the runtime hardening from #199.
+3. Implement #186 local-first business measurement.
+4. Begin #192 formal Product Design.
+5. Freeze exact candidate → UAT → public promotion decision.
 
 ## Definition of “project star”
 
@@ -96,6 +96,7 @@ Install exact qualified package
 → deterministic quarantine + durable reviews
 → terminal disputes require governed new-candidate recovery
 → repeated persisted failures become read-only prevention guidance
-→ operator can understand without mutating authority
+→ operator sees current/stale safety state with epistemic source labels
+→ Replay Lab remains incapable of mutating authority
 → product measures user value while preserving privacy
 ```
