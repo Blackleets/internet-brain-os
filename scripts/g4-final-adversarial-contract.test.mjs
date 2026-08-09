@@ -6,7 +6,7 @@ const read = (path) => readFileSync(resolve(path), 'utf8');
 
 describe('G4 final automatic read-only adversarial contract', () => {
   it('requires trusted user receipt plus real registered R0 capabilities before any automatic lease', () => {
-    const policy = read('packages/kernel/src/goal/automatic-read-only-policy.ts');
+    const policy = read('packages/kernel/src/goal/automatic-read-only-continuation.ts');
     const receipt = read('apps/local-kernel/goal-execution-authorization.mjs');
     const claimGate = read('apps/local-kernel/automatic-mission-claim-gate.mjs');
     const executor = read('apps/local-kernel/agent-mission-executor-legacy.mjs');
