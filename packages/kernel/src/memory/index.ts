@@ -19,6 +19,10 @@ export { projectMemoryAuthorityState } from './memory-authority-projector';
 export { reconcileMemoryAuthorityAtStartup } from './memory-authority-reconciliation';
 export { gateMemoryRetrieval } from './memory-retrieval-gate';
 export { planLegacyMemoryMigration } from './memory-legacy-migration-plan';
+export {
+  MemoryQuarantineEvaluationInputError,
+  evaluateMemoryQuarantineSignals,
+} from './memory-quarantine-signal-evaluator';
 export type { CreateMemoryInput } from './memory-manager';
 export type {
   MemoryLifecycleAction,
@@ -66,6 +70,17 @@ export type {
   LegacyMemoryMigrationPlan,
   LegacyMemoryMigrationPlanEntry,
 } from './memory-legacy-migration-plan';
+export type {
+  MemoryQuarantineEvaluationDecision,
+  MemoryQuarantineEvaluationInput,
+  MemoryQuarantineEvaluationInputErrorCode,
+  MemoryQuarantineEvaluationResult,
+  MemoryQuarantineRecommendation,
+  MemoryQuarantineReferenceSet,
+  MemoryQuarantineSignal,
+  MemoryQuarantineSignalSeverity,
+  MemoryQuarantineSignalType,
+} from './memory-quarantine-signal-evaluator';
 export type { MemoryEventLog } from './memory-event-log';
 export type { MemoryConsolidationGroup } from './memory-consolidation';
 export type {
