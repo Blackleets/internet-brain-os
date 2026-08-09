@@ -39,13 +39,49 @@ export class GoalSurfaceReader {
   }
 }
 
-/** Production composition loads the already-built trusted Kernel package. */
-export async function createGoalSurfaceReader(store, options = {}) {
-  const kernel = options.kernel ?? await loadKernel();
-  if (!kernel || typeof kernel.buildGoalSurfaceSnapshots !== 'function') {
-    throw invalid('Built Kernel does not expose buildGoalSurfaceSnapshots');
+/**
+ * Production composition is intentionally lazy: launcher/source-tree startup must not
+ * require packages/kernel/dist before any Goal-surface read is requested. Packaged
+ * installs build the trusted Kernel runtime before launch; source-tree readers fail
+ * closed on the first read if that runtime is still unavailable.
+ */
+class LazyGoalSurfaceReader {
+  constructor(store, options = {}) {
+    if (!store || typeof store.read !== 'function') throw invalid('store.read is required');
+    this.store = store;
+    this.now = options.now ?? (() => new Date());
+    this.delegate = undefined;
   }
-  return new GoalSurfaceReader(store, kernel.buildGoalSurfaceSnapshots, { now: options.now });
+
+  async list() {
+    return (await this.#resolve()).list();
+  }
+
+  async get(goalId) {
+    const normalizedGoalId = requireGoalId(goalId);
+    return (await this.#resolve()).get(normalizedGoalId);
+  }
+
+  async #resolve() {
+    if (this.delegate) return this.delegate;
+    const kernel = await loadKernel();
+    if (!kernel || typeof kernel.buildGoalSurfaceSnapshots !== 'function') {
+      throw invalid('Built Kernel does not expose buildGoalSurfaceSnapshots');
+    }
+    this.delegate = new GoalSurfaceReader(this.store, kernel.buildGoalSurfaceSnapshots, { now: this.now });
+    return this.delegate;
+  }
+}
+
+/** Production composition defers loading the already-built trusted Kernel package until the first read. */
+export async function createGoalSurfaceReader(store, options = {}) {
+  if (options.kernel !== undefined) {
+    if (!options.kernel || typeof options.kernel.buildGoalSurfaceSnapshots !== 'function') {
+      throw invalid('Built Kernel does not expose buildGoalSurfaceSnapshots');
+    }
+    return new GoalSurfaceReader(store, options.kernel.buildGoalSurfaceSnapshots, { now: options.now });
+  }
+  return new LazyGoalSurfaceReader(store, { now: options.now });
 }
 
 async function loadKernel() {
