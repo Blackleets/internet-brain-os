@@ -101,9 +101,13 @@ function Invoke-QualifiedInstall([string]$LogName, [switch]$SkipShortcut) {
     -WorkingDirectory $extractRoot `
     -RedirectStandardOutput $stdoutPath `
     -RedirectStandardError $stderrPath `
-    -Wait `
     -PassThru `
     -NoNewWindow
+
+  # Wait only for the installer shell itself. The installer intentionally leaves the
+  # trusted Efesto launcher/Kernel alive; a process-tree wait would never represent
+  # installer completion correctly for this daemon-style product.
+  $process.WaitForExit()
 
   $stdout = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw } else { '' }
   $stderr = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw } else { '' }
