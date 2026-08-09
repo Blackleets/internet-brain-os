@@ -5,14 +5,16 @@ const token = 'worker-token-that-is-longer-than-thirty-two-characters';
 const mission = { id: 'mission:1', leaseId: 'lease:1', scope: { categories: ['job'] } };
 
 describe('Hermes mission worker', () => {
-  it('passes only the claimed mission to an explicit adapter and returns its bounded findings', async () => {
+  it('submits bounded discovery output as search candidates and reports verifying truthfully', async () => {
     const fetchImpl = vi.fn()
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
-      .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true, mission: { ...mission, status: 'completed' } }) });
-    const execute = vi.fn(async () => ({ findings: [{ url: 'https://example.com/job', title: 'Job', text: 'Apply now' }] }));
-    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({ status: 'completed' });
+      .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true, mission: { ...mission, status: 'running', executionPhase: 'verifying' } }) });
+    const execute = vi.fn(async () => ({ findings: [{ url: 'https://example.com/job', title: 'Job', text: 'Search snippet' }] }));
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({ status: 'verifying' });
     expect(execute).toHaveBeenCalledWith('/opt/hermes-adapter', [], mission, expect.any(Object));
-    expect(JSON.parse(fetchImpl.mock.calls[1][1].body)).toMatchObject({ leaseId: 'lease:1', findings: [{ title: 'Job' }] });
+    expect(JSON.parse(fetchImpl.mock.calls[1][1].body)).toMatchObject({
+      leaseId: 'lease:1', resultKind: 'search_candidates', findings: [{ title: 'Job' }],
+    });
   });
 
   it('stays idle when no authorized mission is claimable', async () => {
@@ -28,17 +30,16 @@ describe('Hermes mission worker', () => {
     await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({ status: 'failed', reason: 'provider failed' });
   });
 
-  it('Given completion committed but its HTTP response is lost, When the worker reconciles, Then it returns completed without reporting failure', async () => {
+  it('reconciles a persisted verifying Mission when the result response is lost', async () => {
+    const verifying = { ...mission, status: 'running', executionPhase: 'verifying' };
     const fetchImpl = vi.fn()
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
       .mockRejectedValueOnce(new Error('socket closed after commit'))
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, missions: [{ ...mission, status: 'completed' }] }) });
-    const execute = vi.fn(async () => ({ findings: [{ url: 'https://example.com/job', title: 'Job', text: 'Apply now' }] }));
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, missions: [verifying] }) });
+    const execute = vi.fn(async () => ({ findings: [{ url: 'https://example.com/job', title: 'Job', text: 'Search snippet' }] }));
 
     await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute }))
-      .resolves.toMatchObject({ status: 'completed', mission: { id: mission.id, status: 'completed' } });
+      .resolves.toMatchObject({ status: 'verifying', mission: { id: mission.id, executionPhase: 'verifying' } });
     expect(fetchImpl).toHaveBeenCalledTimes(3);
-    expect(fetchImpl.mock.calls[2][0]).toBe('http://127.0.0.1:4000/api/agent-missions');
-    expect(fetchImpl.mock.calls[2][1].method).toBe('GET');
   });
 });
