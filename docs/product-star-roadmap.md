@@ -56,7 +56,7 @@ Status: **G0 active**.
 - [x] **Forge Focus selected** for Home implementation;
 - [x] accessibility/reduced-motion/no-horizontal-overflow requirements;
 - [x] machine-checkable contract test + stakeholder Gherkin;
-- [ ] qualify immutable `0.1.0-internal.20` on the final G0 SHA and merge.
+- [ ] qualify immutable `0.1.0-internal.21` on the final G0 SHA and merge.
 
 ### G1 — Shared Goal Truth v1
 
@@ -89,8 +89,8 @@ Initial measurement remains local-first. Aggregate sharing requires a separate o
 ## Distribution / release closeout
 
 - `0.1.0-internal.6` remains the prior runtime-readiness candidate.
-- `0.1.0-internal.7` through `0.1.0-internal.19` are frozen and must not be reused.
-- G0 uses `0.1.0-internal.20` because the package contents changed; its qualification evidence must map to one final SHA.
+- `0.1.0-internal.7` through `0.1.0-internal.20` are frozen and must not be reused.
+- G0 uses `0.1.0-internal.21` because the previous `internal.20` artifact was generated before the final contract-test correction; qualification evidence must map to one final SHA.
 - Public launch remains blocked until an exact candidate passes automated qualification plus manual UAT and explicit promotion.
 
 ## What not to do
@@ -110,7 +110,7 @@ Do not:
 
 ## Next bounded sequence
 
-1. Finish G0 and qualify/merge `internal.20`.
+1. Finish G0 and qualify/merge `internal.21`.
 2. Implement G1 Shared Goal Truth v1 only.
 3. Evaluate + merge G1 before touching the responsive Control Center.
 4. Implement/evaluate G2.
