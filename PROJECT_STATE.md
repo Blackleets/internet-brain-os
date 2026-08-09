@@ -62,6 +62,7 @@ Goal
 - Browser extension provides Forge, Missions, Finds and Models plus state-derived pixel-forge activity.
 - Replay Lab is authenticated/read-only and never gains memory authority.
 - Control Center is an authenticated loopback client with Goal-first Home, Investigation, Knowledge, Agent Hub, Opportunities, Automations, System and provider-neutral chat.
+- The Goal-first shell and living-forge visual layer are wired to existing Kernel contracts rather than decorative fake state.
 - Living-forge motion is derived only from observable queued/investigating/verifying/model-thinking state; offline/failed and reduced-motion behavior remain truthful.
 - Chromium/Playwright browser acceptance is a required gate.
 
@@ -121,7 +122,7 @@ Formal Product Design begins only after #191. It must refine the existing Goal-f
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md and AGENTS.md, run pnpm resume, inspect GitHub main/open PRs/CI, and treat live Git as newer than chat memory. Preserve Kernel authority, local-first secrecy, Evidence provenance, capability gates, exact replay and altered-replay rejection. Work on exactly one bounded branch and require architecture + CI + Chromium + Windows exact-package gates before merge. Treat the Goal-first shell plus living forge as the UI baseline and keep motion truthful to persisted or streaming state.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md and AGENTS.md, run pnpm resume, inspect GitHub main/open PRs/CI, and treat live Git as newer than chat memory. Preserve Kernel authority, local-first secrecy, Evidence provenance, capability gates, exact replay and altered-replay rejection. Work on exactly one bounded branch and require architecture + CI + Chromium + Windows exact-package gates before merge. Treat the Goal-first shell plus living-forge visual layer as the UI baseline and keep motion truthful to persisted or streaming state.
 ```
 
 ## Update rule
