@@ -57,6 +57,16 @@ describe('terminal memory recovery review repository', () => {
     }))).toThrowError(MemoryRecoveryReviewConflictError);
   });
 
+  it('rejects malformed runtime outcome and actor types instead of trusting TypeScript only', () => {
+    expect(() => new InMemoryMemoryRecoveryReviewRepository().append(request({
+      outcome: 'auto_restore' as never,
+    }))).toThrowError(MemoryRecoveryReviewConflictError);
+
+    expect(() => new InMemoryMemoryRecoveryReviewRepository().append(request({
+      requestedBy: { id: 'agent:1', type: 'agent' as never },
+    }))).toThrowError(MemoryRecoveryReviewConflictError);
+  });
+
   it('enforces founder approval when the governing review requires it', () => {
     expect(() => new InMemoryMemoryRecoveryReviewRepository().append(request({
       reviewer: { id: 'human:1', type: 'human' },
