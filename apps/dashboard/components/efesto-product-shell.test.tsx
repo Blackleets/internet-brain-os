@@ -64,6 +64,7 @@ describe('Efesto goal-first product shell', () => {
   it('prepares a Goal locally and mutates the Kernel only after explicit confirmation', async () => {
     render(<EfestoProductShell />);
     await connect();
+    fireEvent.click(screen.getByRole('button', { name: 'Inicio', exact: true }));
     const goal = 'Encuéntrame un taladro bueno por 18 a 25 euros';
     fireEvent.change(screen.getByLabelText('Goal'), { target: { value: goal } });
     fireEvent.click(screen.getByRole('button', { name: 'Preparar Goal' }));
