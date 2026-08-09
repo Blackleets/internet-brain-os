@@ -5,17 +5,17 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.29`
+- Candidate: `0.1.0-internal.30`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
-- `0.1.0-internal.7` through `0.1.0-internal.28` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
+- `0.1.0-internal.7` through `0.1.0-internal.29` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
 - Test only the artifact produced from the exact `main` commit under review.
 - Automated packaged-candidate qualification on Windows 2022 and Windows 2025 must be green before manual UAT begins.
 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Use only the `efesto-v0.1.0-internal.29-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
+2. Use only the `efesto-v0.1.0-internal.30-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -62,9 +62,10 @@ Pass only if:
 - keyboard Goal preparation retains visible focus and still creates no Kernel write before explicit confirmation;
 - `prefers-reduced-motion: reduce` collapses continuous/transition motion without removing state meaning;
 - mobile navigation uses the visible drawer controls before selecting a workspace, so acceptance exercises the user-reachable path rather than hidden off-viewport controls;
+- the extension includes a fail-closed Shared Goal Truth v1 wire-contract parser that accepts Kernel schema/source/work-state as-is and does not upgrade legacy Goals client-side;
+- the extension is **not yet claimed to fetch or render Shared Goal Truth v1**; authenticated transport and UI wiring remain later G3 layers;
 - `completed` without persisted `forged` state remains visually calm and is not presented as Evidence forjada;
 - existing Goal/Mission POST writers remain unchanged and still require explicit confirmation before mission creation;
-- the extension is **not yet claimed to consume Shared Goal Truth v1**; that wiring belongs to G3;
 - the Efesto pixel-smith/brain visual identity renders without obscuring controls or causing horizontal overflow;
 - work/data-flow motion appears only for observable active states such as queued, investigating, verifying or model thinking, and does not imply work while offline or failed;
 - reduced-motion mode remains usable without continuous decorative animation;
