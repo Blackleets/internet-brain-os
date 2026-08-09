@@ -11,11 +11,23 @@ describe('architecture boundary guard', () => {
     expect(inspectSource(source)).toEqual([]);
   });
 
+  it('does not reject unrelated package names that merely share a prefix', () => {
+    expect(inspectSource(`import { helper } from 'openair-tools';`)).toEqual([]);
+  });
+
   it('rejects provider SDK imports from protected authority code', () => {
     const source = `import OpenAI from 'openai';`;
 
     expect(inspectSource(source)).toEqual([
       expect.objectContaining({ specifier: 'openai' }),
+    ]);
+  });
+
+  it('rejects side-effect-only provider imports', () => {
+    const source = `import 'ollama/runtime';`;
+
+    expect(inspectSource(source)).toEqual([
+      expect.objectContaining({ specifier: 'ollama/runtime' }),
     ]);
   });
 
