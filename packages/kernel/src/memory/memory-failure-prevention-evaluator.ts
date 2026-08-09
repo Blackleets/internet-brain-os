@@ -81,8 +81,18 @@ const CATEGORY_ORDER: readonly MemoryFailureCategory[] = [
 export function evaluateRepeatedMemoryFailures(
   input: MemoryFailurePreventionEvaluationInput,
 ): MemoryFailurePreventionEvaluationResult {
+  if (!isRecord(input)) {
+    throw new MemoryFailurePreventionInputError('INVALID_FAILURE', 'evaluation input must be an object.');
+  }
+  if (!isRecord(input.policy)) {
+    throw new MemoryFailurePreventionInputError('INVALID_POLICY', 'policy must be an object.');
+  }
+  if (!Array.isArray(input.failures)) {
+    throw new MemoryFailurePreventionInputError('INVALID_FAILURE', 'failures must be an array.');
+  }
+
   const evaluatedAt = requireDate(input.evaluatedAt, 'evaluatedAt');
-  const policyVersion = required(input.policy.policyVersion, 'policyVersion');
+  const policyVersion = required(input.policy.policyVersion, 'policyVersion', 'INVALID_POLICY');
   if (!Number.isSafeInteger(input.policy.threshold) || input.policy.threshold < 2) {
     throw new MemoryFailurePreventionInputError(
       'INVALID_POLICY',
@@ -171,10 +181,19 @@ export function isMemoryFailurePreventionRecommendationStale(
     readonly activeFailureIds: readonly string[];
   },
 ): boolean {
-  const policyVersion = required(current.policyVersion, 'policyVersion');
+  if (!isRecord(recommendation) || !isRecord(current)) return true;
+  if (typeof current.policyVersion !== 'string' || !current.policyVersion.trim()) return true;
   if (!Number.isSafeInteger(current.threshold) || current.threshold < 2) return true;
   if (!Number.isSafeInteger(current.windowMs) || current.windowMs <= 0) return true;
-  const activeFailureIds = normalizeIds(current.activeFailureIds, 'failure id');
+  if (!Array.isArray(current.activeFailureIds)) return true;
+
+  let activeFailureIds: string[];
+  try {
+    activeFailureIds = normalizeIds(current.activeFailureIds, 'failure id');
+  } catch {
+    return true;
+  }
+  const policyVersion = current.policyVersion.trim();
   return recommendation.policyVersion !== policyVersion
     || recommendation.threshold !== current.threshold
     || recommendation.windowMs !== current.windowMs
@@ -182,24 +201,31 @@ export function isMemoryFailurePreventionRecommendationStale(
 }
 
 function normalizeFailure(raw: PersistedMemoryFailureRecord): PersistedMemoryFailureRecord {
+  if (!isRecord(raw)) {
+    throw new MemoryFailurePreventionInputError('INVALID_FAILURE', 'failure must be an object.');
+  }
   const failureId = required(raw.failureId, 'failureId');
   const memoryId = required(raw.memoryId, 'memoryId');
-  if (!CATEGORY_ORDER.includes(raw.category)) {
+  if (typeof raw.category !== 'string' || !CATEGORY_ORDER.includes(raw.category as MemoryFailureCategory)) {
     throw new MemoryFailurePreventionInputError('INVALID_FAILURE', 'Unsupported failure category.');
   }
-  const occurredAt = requireDate(raw.occurredAt, 'occurredAt');
-  const referenceIds = normalizeIds(raw.referenceIds, 'reference id');
+  const category = raw.category as MemoryFailureCategory;
+  const occurredAt = requireDate(raw.occurredAt as IsoDateTime, 'occurredAt');
+  const referenceIds = normalizeIds(raw.referenceIds as readonly string[], 'reference id');
   if (referenceIds.length === 0) {
     throw new MemoryFailurePreventionInputError(
       'INVALID_REFERENCE_ID',
       'Persisted failure requires at least one inspectable reference id.',
     );
   }
-  return { failureId, memoryId, category: raw.category, occurredAt: occurredAt as IsoDateTime, referenceIds };
+  return { failureId, memoryId, category, occurredAt: occurredAt as IsoDateTime, referenceIds };
 }
 
 function normalizeIds(values: readonly string[], field: string): string[] {
-  const result = values.map((value) => required(value, field));
+  if (!Array.isArray(values)) {
+    throw new MemoryFailurePreventionInputError('INVALID_REFERENCE_ID', `${field}s must be an array.`);
+  }
+  const result = values.map((value) => required(value, field, 'INVALID_REFERENCE_ID'));
   return [...new Set(result)].sort();
 }
 
@@ -208,16 +234,29 @@ function compareFailure(left: PersistedMemoryFailureRecord, right: PersistedMemo
     || left.failureId.localeCompare(right.failureId);
 }
 
-function required(value: string, field: string): string {
-  const normalized = String(value).trim();
-  if (!normalized) {
-    throw new MemoryFailurePreventionInputError('INVALID_FAILURE', `${field} is required.`);
+function required(
+  value: unknown,
+  field: string,
+  code: MemoryFailurePreventionInputError['code'] = 'INVALID_FAILURE',
+): string {
+  if (typeof value !== 'string') {
+    throw new MemoryFailurePreventionInputError(code, `${field} must be a string.`);
+  }
+  const normalized = value.trim();
+  if (!normalized || normalized.length > 240 || /[\u0000-\u001f\u007f]/.test(normalized)) {
+    throw new MemoryFailurePreventionInputError(code, `${field} is invalid.`);
   }
   return normalized;
 }
 
 function requireDate(value: IsoDateTime, field: string): string {
-  const normalized = String(value).trim();
+  if (typeof value !== 'string') {
+    throw new MemoryFailurePreventionInputError(
+      field === 'evaluatedAt' ? 'INVALID_EVALUATED_AT' : 'INVALID_FAILURE',
+      `${field} must be a string date-time.`,
+    );
+  }
+  const normalized = value.trim();
   if (!normalized || Number.isNaN(Date.parse(normalized))) {
     throw new MemoryFailurePreventionInputError(
       field === 'evaluatedAt' ? 'INVALID_EVALUATED_AT' : 'INVALID_FAILURE',
@@ -225,6 +264,10 @@ function requireDate(value: IsoDateTime, field: string): string {
     );
   }
   return normalized;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function digest(value: unknown): string {
