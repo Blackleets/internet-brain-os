@@ -116,6 +116,15 @@ export type MemoryRecoveryReviewFreshnessReason =
   | 'terminal_revision_changed'
   | 'policy_version_changed';
 
+const AUTHORITY_STATES: readonly MemoryAuthorityState[] = [
+  'proposed',
+  'quarantined',
+  'admitted',
+  'rejected',
+  'superseded',
+  'revoked',
+];
+
 export function assessMemoryRecoveryReviewFreshness(
   record: MemoryRecoveryReviewRecord,
   current: {
@@ -124,8 +133,14 @@ export function assessMemoryRecoveryReviewFreshness(
     readonly policyVersion: string;
   },
 ): { readonly status: 'fresh' | 'stale'; readonly staleReasons: readonly MemoryRecoveryReviewFreshnessReason[] } {
+  if (!isRecord(record) || !isRecord(current)) {
+    throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', 'record and current freshness context must be objects.');
+  }
   if (!Number.isSafeInteger(current.terminalRevision) || current.terminalRevision < 0) {
     throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', 'terminalRevision must be a non-negative safe integer.');
+  }
+  if (typeof current.terminalState !== 'string' || !AUTHORITY_STATES.includes(current.terminalState as MemoryAuthorityState)) {
+    throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', 'terminalState must be a supported memory authority state.');
   }
   const policyVersion = required(current.policyVersion, 'policyVersion');
   const reasons: MemoryRecoveryReviewFreshnessReason[] = [];
@@ -136,28 +151,37 @@ export function assessMemoryRecoveryReviewFreshness(
 }
 
 export function verifyMemoryRecoveryReviewIntegrity(record: MemoryRecoveryReviewRecord): boolean {
+  if (!isRecord(record) || typeof record.integrityDigest !== 'string') return false;
   const { integrityDigest, ...base } = record;
   return digest(base) === integrityDigest;
 }
 
 function normalizeRequest(request: MemoryRecoveryReviewRequest): MemoryRecoveryReviewRequest {
+  if (!isRecord(request)) {
+    throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', 'recovery review request must be an object.');
+  }
   const terminalMemoryId = required(request.terminalMemoryId, 'terminalMemoryId');
-  if (!isTerminalMemoryAuthorityState(request.terminalState)) {
+  if (typeof request.terminalState !== 'string' || !isTerminalMemoryAuthorityState(request.terminalState as MemoryAuthorityState)) {
     throw new MemoryRecoveryReviewConflictError('NON_TERMINAL_MEMORY', 'Recovery review is only valid for terminal memory.');
   }
+  const terminalState = request.terminalState as TerminalMemoryAuthorityState;
   if (!Number.isSafeInteger(request.terminalRevision) || request.terminalRevision < 0) {
     throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', 'terminalRevision must be a non-negative safe integer.');
   }
-  if (!['approved_new_candidate', 'denied'].includes(request.outcome)) {
+  if (typeof request.outcome !== 'string' || !['approved_new_candidate', 'denied'].includes(request.outcome)) {
     throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', 'Unsupported recovery review outcome.');
   }
-  const requestedBy = normalizeActor(request.requestedBy, 'requestedBy');
-  const reviewer = normalizeActor(request.reviewer, 'reviewer');
+  const outcome = request.outcome as MemoryRecoveryReviewOutcome;
+  const requestedBy = normalizeActor(request.requestedBy as MemoryAuthorityActor, 'requestedBy');
+  const reviewer = normalizeActor(request.reviewer as MemoryAuthorityActor, 'reviewer');
   if (!['human', 'founder'].includes(reviewer.type)) {
     throw new MemoryRecoveryReviewConflictError(
       'UNAUTHORIZED_REVIEWER',
       'Recovery review decisions require a human or founder reviewer.',
     );
+  }
+  if (request.requiresFounderApproval !== undefined && typeof request.requiresFounderApproval !== 'boolean') {
+    throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', 'requiresFounderApproval must be boolean when supplied.');
   }
   if (request.requiresFounderApproval === true && reviewer.type !== 'founder') {
     throw new MemoryRecoveryReviewConflictError(
@@ -168,13 +192,13 @@ function normalizeRequest(request: MemoryRecoveryReviewRequest): MemoryRecoveryR
   const policyVersion = required(request.policyVersion, 'policyVersion');
   const requestId = required(request.requestId, 'requestId');
   const reason = required(request.reason, 'reason');
-  const occurredAt = String(request.occurredAt).trim();
-  if (!occurredAt || Number.isNaN(Date.parse(occurredAt))) {
-    throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', 'occurredAt must be a valid date-time.');
-  }
+  const occurredAt = requireDateTime(request.occurredAt, 'occurredAt');
 
-  let replacementCandidateMemoryId = request.replacementCandidateMemoryId?.trim() || undefined;
-  if (request.outcome === 'approved_new_candidate') {
+  let replacementCandidateMemoryId: string | undefined;
+  if (request.replacementCandidateMemoryId !== undefined) {
+    replacementCandidateMemoryId = required(request.replacementCandidateMemoryId, 'replacementCandidateMemoryId');
+  }
+  if (outcome === 'approved_new_candidate') {
     if (!replacementCandidateMemoryId) {
       throw new MemoryRecoveryReviewConflictError(
         'MISSING_NEW_CANDIDATE',
@@ -193,14 +217,14 @@ function normalizeRequest(request: MemoryRecoveryReviewRequest): MemoryRecoveryR
 
   return {
     terminalMemoryId,
-    terminalState: request.terminalState,
-    terminalRevision: request.terminalRevision,
+    terminalState,
+    terminalRevision: request.terminalRevision as number,
     requestId,
     requestedBy,
     reviewer,
     policyVersion,
     requiresFounderApproval: request.requiresFounderApproval === true,
-    outcome: request.outcome,
+    outcome,
     replacementCandidateMemoryId,
     reason,
     occurredAt: occurredAt as IsoDateTime,
@@ -210,10 +234,10 @@ function normalizeRequest(request: MemoryRecoveryReviewRequest): MemoryRecoveryR
 const ACTOR_TYPES: readonly MemoryAuthorityActorType[] = ['kernel', 'human', 'founder', 'recovery'];
 
 function normalizeActor(actor: MemoryAuthorityActor, field: string): MemoryAuthorityActor {
-  if (!actor || !ACTOR_TYPES.includes(actor.type)) {
+  if (!isRecord(actor) || typeof actor.type !== 'string' || !ACTOR_TYPES.includes(actor.type as MemoryAuthorityActorType)) {
     throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', `${field}.type is invalid.`);
   }
-  return { id: required(actor.id, `${field}.id`), type: actor.type };
+  return { id: required(actor.id, `${field}.id`), type: actor.type as MemoryAuthorityActorType };
 }
 
 function cloneRecord(record: MemoryRecoveryReviewRecord): MemoryRecoveryReviewRecord {
@@ -224,10 +248,30 @@ function cloneRecord(record: MemoryRecoveryReviewRecord): MemoryRecoveryReviewRe
   };
 }
 
-function required(value: string, field: string): string {
-  const normalized = String(value).trim();
-  if (!normalized) throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', `${field} is required.`);
+function required(value: unknown, field: string): string {
+  if (typeof value !== 'string') {
+    throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', `${field} must be a string.`);
+  }
+  const normalized = value.trim();
+  if (!normalized || normalized.length > 500 || /[\u0000-\u001f\u007f]/.test(normalized)) {
+    throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', `${field} is invalid.`);
+  }
   return normalized;
+}
+
+function requireDateTime(value: unknown, field: string): string {
+  if (typeof value !== 'string') {
+    throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', `${field} must be a string date-time.`);
+  }
+  const normalized = value.trim();
+  if (!normalized || Number.isNaN(Date.parse(normalized))) {
+    throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', `${field} must be a valid date-time.`);
+  }
+  return normalized;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function digest(value: unknown): string {
