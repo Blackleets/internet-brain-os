@@ -1,11 +1,21 @@
 import { createHash } from 'node:crypto';
 import { AgentMissionExecutor as LegacyAgentMissionExecutor } from './agent-mission-executor-legacy.mjs';
+import { MissionSearchCandidateVerifier } from './mission-search-candidate-verifier.mjs';
 import { InboxError } from './page-context-inbox.mjs';
 
 const MAX_SEARCH_CANDIDATES = 20;
 
 export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
+  constructor(store, opportunityProjector, options = {}) {
+    super(store, opportunityProjector, options);
+    this.candidateVerifier = options.candidateVerifier ?? new MissionSearchCandidateVerifier(store, opportunityProjector, options.verifierOptions);
+  }
+
   async complete(missionId, input) {
+    if (input?.resultKind === 'verify_candidates') {
+      const verified = await this.candidateVerifier.verify(missionId);
+      return { ...verified, findings: verified.evidence ?? [] };
+    }
     if (input?.resultKind !== 'search_candidates') return super.complete(missionId, input);
     return this.#recordSearchCandidates(missionId, input);
   }
@@ -75,9 +85,7 @@ function normalizeCandidate(value, index) {
   const rawUrl = clean(value.url, 2048, `finding ${index} url`);
   let parsed;
   try { parsed = new URL(rawUrl); } catch { throw invalid(`finding ${index} URL is invalid`); }
-  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
-    throw invalid(`finding ${index} URL must be public HTTP(S)`);
-  }
+  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) throw invalid(`finding ${index} URL must be public HTTP(S)`);
   if (isPrivateLiteralHost(parsed.hostname)
     || [...parsed.searchParams.keys()].some((key) => /^(?:token|access_token|auth|authorization|api[_-]?key|code|session|signature|sig)$/i.test(key))) {
     throw invalid(`finding ${index} URL contains private or sensitive data`);
