@@ -29,13 +29,13 @@ describe('Shared Goal Truth Goal-list renderer', () => {
     expect(list.textContent).toContain('Legacy radar · Kernel compatibility');
   });
 
-  it('encodes per-Goal work state and authorization on each Research button', () => {
+  it('encodes per-Goal work state and makes the idle click visibly the authorization act', () => {
     const list = document.querySelector('#goals');
     renderGoalSurfaceList({ document, list, surfaces: [surface('goal:active', 'verifying'), surface('goal:idle', 'idle')] });
     const buttons = [...list.querySelectorAll('.goal-research')];
     expect(buttons[0]).toMatchObject({ disabled: true, textContent: 'Researching…' });
     expect(buttons[0].dataset).toMatchObject({ workState: 'verifying', researchAllowed: 'false' });
-    expect(buttons[1]).toMatchObject({ disabled: false, textContent: 'Research' });
+    expect(buttons[1]).toMatchObject({ disabled: false, textContent: 'Authorize research' });
     expect(buttons[1].dataset).toMatchObject({ workState: 'idle', researchAllowed: 'true' });
   });
 
@@ -48,7 +48,7 @@ describe('Shared Goal Truth Goal-list renderer', () => {
     expect(button.dataset.researchAllowed).toBe('false');
   });
 
-  it('delegates an explicitly clicked research action without owning the writer', () => {
+  it('delegates an explicitly clicked authorization action without owning the writer', () => {
     const list = document.querySelector('#goals');
     const onResearch = vi.fn();
     renderGoalSurfaceList({ document, list, surfaces: [surface('goal:1', 'idle')], onResearch });

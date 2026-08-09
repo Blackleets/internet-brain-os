@@ -48,6 +48,12 @@ export function renderGoalSurfaceList(options) {
 function applyInitialResearchState(button, goal) {
   const active = ['waiting_for_agent', 'queued', 'running', 'investigating', 'verifying'].includes(goal.workState);
   button.disabled = active || !goal.canResearch;
-  button.textContent = active ? 'Researching…' : !goal.canResearch ? 'Unavailable' : goal.workState === 'failed' ? 'Retry safely' : 'Research';
+  button.textContent = active
+    ? 'Researching…'
+    : !goal.canResearch
+      ? 'Unavailable'
+      : goal.workState === 'failed'
+        ? 'Retry safely'
+        : 'Authorize research';
   button.setAttribute('aria-busy', active ? 'true' : 'false');
 }

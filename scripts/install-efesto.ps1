@@ -25,79 +25,43 @@ function Test-Command([string]$Name) {
 
 function Get-NodeMajor {
   if (-not (Test-Command 'node')) { return 0 }
-  try {
-    return [int](& node -p "process.versions.node.split('.')[0]")
-  } catch {
-    return 0
-  }
+  try { return [int](& node -p "process.versions.node.split('.')[0]") } catch { return 0 }
 }
 
 function Ensure-Node {
   $major = Get-NodeMajor
-  if ($major -ge 22) {
-    Write-Step "Node.js detected (major $major)."
-    return
-  }
-
-  if ($SkipNodeInstall) {
-    throw 'Node.js 22 or newer is required and automatic installation was disabled.'
-  }
-
-  if (-not (Test-Command 'winget')) {
-    throw 'Node.js 22 or newer is required. Windows Package Manager (winget) was not found, so Efesto cannot install Node automatically on this machine.'
-  }
-
+  if ($major -ge 22) { Write-Step "Node.js detected (major $major)."; return }
+  if ($SkipNodeInstall) { throw 'Node.js 22 or newer is required and automatic installation was disabled.' }
+  if (-not (Test-Command 'winget')) { throw 'Node.js 22 or newer is required. Windows Package Manager (winget) was not found, so Efesto cannot install Node automatically on this machine.' }
   Write-Step 'Installing the current Node.js LTS with Windows Package Manager...'
   & winget install --id OpenJS.NodeJS.LTS --exact --accept-package-agreements --accept-source-agreements --silent
-  if ($LASTEXITCODE -ne 0) {
-    throw "winget could not install Node.js (exit $LASTEXITCODE)."
-  }
-
+  if ($LASTEXITCODE -ne 0) { throw "winget could not install Node.js (exit $LASTEXITCODE)." }
   Refresh-ProcessPath
-  $major = Get-NodeMajor
-  if ($major -lt 22) {
-    throw 'Node.js installation completed but Node 22+ is still not available in this process.'
-  }
+  if ((Get-NodeMajor) -lt 22) { throw 'Node.js installation completed but Node 22+ is still not available in this process.' }
 }
 
 function Ensure-Pnpm {
   if (Test-Command 'pnpm') {
     $version = (& pnpm --version).Trim()
-    if ($version -eq '11.11.0') {
-      Write-Step 'pnpm 11.11.0 detected.'
-      return
-    }
+    if ($version -eq '11.11.0') { Write-Step 'pnpm 11.11.0 detected.'; return }
   }
-
-  if (-not (Test-Command 'npm')) {
-    throw 'npm is unavailable even though Node.js is installed.'
-  }
-
+  if (-not (Test-Command 'npm')) { throw 'npm is unavailable even though Node.js is installed.' }
   Write-Step 'Installing the repository-pinned pnpm 11.11.0...'
   & npm install --global pnpm@11.11.0
-  if ($LASTEXITCODE -ne 0) {
-    throw "npm could not install pnpm 11.11.0 (exit $LASTEXITCODE)."
-  }
+  if ($LASTEXITCODE -ne 0) { throw "npm could not install pnpm 11.11.0 (exit $LASTEXITCODE)." }
   Refresh-ProcessPath
-
-  if (-not (Test-Command 'pnpm')) {
-    throw 'pnpm installation finished but pnpm is not available on PATH.'
-  }
+  if (-not (Test-Command 'pnpm')) { throw 'pnpm installation finished but pnpm is not available on PATH.' }
 }
 
 function Invoke-Pnpm([string[]]$Arguments, [string]$FailureMessage) {
   & pnpm @Arguments
-  if ($LASTEXITCODE -ne 0) {
-    throw "$FailureMessage (exit $LASTEXITCODE)."
-  }
+  if ($LASTEXITCODE -ne 0) { throw "$FailureMessage (exit $LASTEXITCODE)." }
 }
 
 function Install-DesktopShortcut {
   if ($SkipShortcut) { return }
-
   $desktop = [Environment]::GetFolderPath('Desktop')
   if ([string]::IsNullOrWhiteSpace($desktop)) { return }
-
   $shortcutPath = Join-Path $desktop 'Efesto.lnk'
   $launcherPath = Join-Path $RepoRoot 'Efesto Launcher.cmd'
   $shell = New-Object -ComObject WScript.Shell
@@ -121,14 +85,15 @@ try {
   Write-Step 'Building the trusted Kernel runtime and its internal project references...'
   Invoke-Pnpm @('exec', 'tsc', '-b', 'packages/kernel/tsconfig.json') 'Kernel runtime build failed'
 
+  Write-Step 'Building the trusted public-web connectors runtime...'
+  Invoke-Pnpm @('exec', 'tsc', '-b', 'packages/connectors/tsconfig.json') 'Connectors runtime build failed'
+
   $sharedRuntime = Join-Path $RepoRoot 'packages\shared\dist\index.js'
   $kernelRuntime = Join-Path $RepoRoot 'packages\kernel\dist\index.js'
-  if (-not (Test-Path $sharedRuntime)) {
-    throw 'Kernel dependency build completed but packages\shared\dist\index.js is missing.'
-  }
-  if (-not (Test-Path $kernelRuntime)) {
-    throw 'Kernel runtime build completed but packages\kernel\dist\index.js is missing.'
-  }
+  $connectorsRuntime = Join-Path $RepoRoot 'packages\connectors\dist\index.js'
+  if (-not (Test-Path $sharedRuntime)) { throw 'Kernel dependency build completed but packages\shared\dist\index.js is missing.' }
+  if (-not (Test-Path $kernelRuntime)) { throw 'Kernel runtime build completed but packages\kernel\dist\index.js is missing.' }
+  if (-not (Test-Path $connectorsRuntime)) { throw 'Connectors runtime build completed but packages\connectors\dist\index.js is missing.' }
 
   Write-Step 'Building the browser extension bundle...'
   Invoke-Pnpm @('build:extension') 'Extension build failed'

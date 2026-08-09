@@ -15,6 +15,7 @@ import { replayLabPageHtml } from './replay-lab-page.mjs';
 import { OpportunityProjector } from './opportunity-classifier.mjs';
 import { GoalManager } from './goals.mjs';
 import { AgentMissionManager } from './agent-missions.mjs';
+import { interactiveMissionConfirmationActor } from './mission-confirmation-boundary.mjs';
 import { GoalSurfaceReaderError, createGoalSurfaceReader } from './goal-surface-reader.mjs';
 import { PreferenceLearner } from './preference-learner.mjs';
 import { AgentMissionExecutor } from './agent-mission-executor.mjs';
@@ -427,7 +428,9 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
       try {
         const goalId = decodeURIComponent(request.url.slice('/api/goals/'.length, -'/missions'.length));
-        return send(response, 201, { ok: true, mission: await agentMissions.create(goalId, await readJson(request)) });
+        const input = await readJson(request);
+        const confirmationActor = interactiveMissionConfirmationActor(origin, allowedDashboardOrigins);
+        return send(response, 201, { ok: true, mission: await agentMissions.create(goalId, input, { confirmationActor }) });
       } catch (error) {
         if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
         return send(response, 500, { ok: false, code: 'AGENT_MISSION_CREATE_FAILED' });

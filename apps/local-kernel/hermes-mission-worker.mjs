@@ -25,14 +25,14 @@ export async function runHermesMissionWorker(options = {}) {
     let completed;
     try {
       completed = await request(fetchImpl, `${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, apiToken, {
-        method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, findings }),
+        method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, resultKind: 'search_candidates', findings }),
       });
     } catch (error) {
-      const reconciled = await reconcileCompletedMission(fetchImpl, baseUrl, apiToken, mission.id);
-      if (reconciled) return { status: 'completed', mission: reconciled };
+      const reconciled = await reconcileSettledMission(fetchImpl, baseUrl, apiToken, mission.id);
+      if (reconciled) return { status: missionWorkerStatus(reconciled), mission: reconciled };
       throw error;
     }
-    return { status: 'completed', mission: completed.mission };
+    return { status: missionWorkerStatus(completed.mission), mission: completed.mission };
   } catch (error) {
     const reason = sanitizeFailure(error);
     await request(fetchImpl, `${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/failures`, apiToken, {
@@ -72,16 +72,18 @@ async function request(fetchImpl, url, token, init, allowEmpty = false) {
   return body;
 }
 
-async function reconcileCompletedMission(fetchImpl, baseUrl, token, missionId) {
+async function reconcileSettledMission(fetchImpl, baseUrl, token, missionId) {
   try {
     const body = await request(fetchImpl, `${baseUrl}/api/agent-missions`, token, { method: 'GET' });
-    const mission = Array.isArray(body.missions)
-      ? body.missions.find((item) => item?.id === missionId)
-      : undefined;
-    return mission?.status === 'completed' ? mission : undefined;
+    const mission = Array.isArray(body.missions) ? body.missions.find((item) => item?.id === missionId) : undefined;
+    return mission && (mission.status === 'completed' || mission.executionPhase === 'verifying') ? mission : undefined;
   } catch {
     return undefined;
   }
+}
+
+function missionWorkerStatus(mission) {
+  return mission?.executionPhase === 'verifying' ? 'verifying' : 'completed';
 }
 
 function validateAdapterResult(value) {
@@ -97,9 +99,7 @@ function parseArgs(value) {
 function configuredTimeout(value, fallback) {
   if (value === undefined || value === '') return fallback;
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 60_000 || parsed > MAX_TIMEOUT_MS) {
-    throw new Error('HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS must be between 60000 and 1500000');
-  }
+  if (!Number.isInteger(parsed) || parsed < 60_000 || parsed > MAX_TIMEOUT_MS) throw new Error('HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS must be between 60000 and 1500000');
   return parsed;
 }
 function normalizeLoopback(value) {

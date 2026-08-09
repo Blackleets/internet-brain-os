@@ -2,24 +2,29 @@ import { describe, expect, it } from 'vitest';
 import { buildHermesArgs, buildHermesPrompt, parseHermesFindings } from './hermes-efesto-adapter.mjs';
 
 describe('Hermes Efesto adapter', () => {
-  it('builds a bounded public research prompt from an authorized mission', () => {
+  it('builds a bounded public discovery prompt from an authorized mission', () => {
     const prompt = buildHermesPrompt({
       schemaVersion: 'efesto.hermes-mission.v1',
       mission: { id: 'mission-1', goalTitle: 'Find grants in Madrid', cadence: 'once', scope: { categories: ['funding'], keywords: ['grant'], location: 'Madrid' } },
     });
     expect(prompt).toContain('Return ONLY one valid JSON object');
     expect(prompt).toContain('Find grants in Madrid');
-    expect(prompt).toContain('public-source research mission');
+    expect(prompt).toContain('public-source discovery mission');
+    expect(prompt).toContain('candidates, not verified Evidence');
   });
 
-  it('uses the Hermes v0.19 scripted one-shot CLI contract', () => {
+  it('forces safe-mode and the search-only Hermes toolset', () => {
     const prompt = 'Return JSON only';
-    expect(buildHermesArgs(prompt)).toEqual(['-z', prompt]);
+    const args = buildHermesArgs(prompt);
+    expect(args).toEqual(['--safe-mode', '--toolsets', 'search', '-z', prompt]);
+    expect(args).not.toContain('web');
+    expect(args).not.toContain('browser');
+    expect(args).not.toContain('terminal');
   });
 
-  it('accepts strict JSON and bounded findings', () => {
-    expect(parseHermesFindings('{"findings":[{"url":"https://example.com/a","title":"A","text":"Public evidence","summary":"Summary"}]}')).toEqual({
-      findings: [{ url: 'https://example.com/a', title: 'A', text: 'Public evidence', summary: 'Summary' }],
+  it('accepts strict JSON and bounded candidates', () => {
+    expect(parseHermesFindings('{"findings":[{"url":"https://example.com/a","title":"A","text":"Search snippet","summary":"Summary"}]}')).toEqual({
+      findings: [{ url: 'https://example.com/a', title: 'A', text: 'Search snippet', summary: 'Summary' }],
     });
   });
 
