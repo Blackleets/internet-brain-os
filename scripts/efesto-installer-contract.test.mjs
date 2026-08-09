@@ -13,16 +13,20 @@ describe('Efesto Windows one-click installer contract', () => {
     expect(installer).toContain("@('install', '--frozen-lockfile')");
   });
 
-  test('builds Kernel project references and extension before starting the trusted launcher path', () => {
+  test('builds Kernel, connectors and extension before starting the trusted launcher path', () => {
     const kernelBuild = "@('exec', 'tsc', '-b', 'packages/kernel/tsconfig.json')";
+    const connectorsBuild = "@('exec', 'tsc', '-b', 'packages/connectors/tsconfig.json')";
     const extensionBuild = "@('build:extension')";
     const launcherRepair = "@('efesto:launcher', 'repair')";
     expect(installer).toContain(kernelBuild);
+    expect(installer).toContain(connectorsBuild);
     expect(installer).toContain('packages\\shared\\dist\\index.js');
     expect(installer).toContain('packages\\kernel\\dist\\index.js');
+    expect(installer).toContain('packages\\connectors\\dist\\index.js');
     expect(installer).toContain(extensionBuild);
     expect(installer).toContain(launcherRepair);
     expect(installer.indexOf(kernelBuild)).toBeLessThan(installer.indexOf(launcherRepair));
+    expect(installer.indexOf(connectorsBuild)).toBeLessThan(installer.indexOf(launcherRepair));
     expect(installer.indexOf(extensionBuild)).toBeLessThan(installer.indexOf(launcherRepair));
     expect(installer).not.toMatch(/kernel-api-token\s*=|API_SECRET\s*=|HEPHAESTUS_API_TOKEN\s*=/i);
   });
@@ -32,6 +36,7 @@ describe('Efesto Windows one-click installer contract', () => {
     expect(launcherCmd).toContain('where node');
     expect(launcherCmd).toContain('where pnpm');
     expect(launcherCmd).toContain('packages\\kernel\\dist\\index.js');
+    expect(launcherCmd).toContain('packages\\connectors\\dist\\index.js');
     expect(launcherCmd).toContain('INSTALL_OR_REPAIR');
     expect(launcherCmd).toContain('install-efesto.ps1');
   });
