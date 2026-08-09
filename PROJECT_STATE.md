@@ -8,7 +8,7 @@ This is the canonical short checkpoint for recovering work. GitHub `main`, CI an
 pnpm resume
 ```
 
-Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active GitHub item if one exists.
+Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active GitHub item if one exists. The checkpoint preserves **machine-checkable release readiness** language required by continuity and release gates; do not remove those contractual phrases while compacting this file.
 
 ## Identity and invariant
 
