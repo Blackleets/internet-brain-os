@@ -5,17 +5,17 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.17`
+- Candidate: `0.1.0-internal.18`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
-- `0.1.0-internal.7` through `0.1.0-internal.16` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
+- `0.1.0-internal.7` through `0.1.0-internal.17` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
 - Test only the artifact produced from the exact `main` commit under review.
 - Automated packaged-candidate qualification on Windows 2022 and Windows 2025 must be green before manual UAT begins.
 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Use only the `efesto-v0.1.0-internal.17-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
+2. Use only the `efesto-v0.1.0-internal.18-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -51,7 +51,7 @@ Pass only if:
 - work/data-flow motion appears only for observable active states such as queued, investigating, verifying or model thinking, and does not imply work while offline or failed;
 - reduced-motion mode remains usable without continuous decorative animation;
 - Replay Lab is readable but cannot mutate durable-memory authority;
-- Memory Safety projections distinguish persisted Kernel records, deterministic interpretations, and human decisions, preserve exact references, and label stale items as historical rather than current authorization;
+- Memory Safety v1 projections distinguish persisted Kernel records, deterministic interpretations, and human decisions, preserve exact references, and label stale items as historical rather than current authorization;
 - no blank/white/black dead screen blocks the journey.
 
 ## UAT-3 — real public-web economic Goal
@@ -75,24 +75,29 @@ and:
 
 Record at least: Goal text, timestamp, number of search results, number of Evidence records, number of promoted Finds, top result URL/domain, and whether a notification was emitted.
 
-## UAT-4 — persistence and replay
+## UAT-4 — persistence, replay and Memory Safety v1
 
 1. Complete UAT-3.
 2. Close the extension/dashboard and stop Efesto normally.
 3. Restart using the Efesto desktop shortcut.
 4. Re-open the Goal/Mission/Find.
 5. Exercise an exact replay where the product exposes it, then attempt an altered replay in the supported forensic path.
+6. Exercise supported malformed/corrupt Memory Safety input fixtures or equivalent internal diagnostic paths without modifying production data.
 
 Pass only if:
 
 - persisted mission/evidence state survives restart;
 - durable memory-authority receipts reconstruct without corruption;
 - durable quarantine recommendations reconstruct without corruption or duplicate exact replays;
+- malformed, null, scalar or structurally invalid Memory Safety v1 inputs fail closed with controlled boundary errors rather than coercion or raw `TypeError` behavior;
+- corrupt quarantine/recovery integrity data is treated as invalid and never as current authorization;
 - stale quarantine recommendations remain historical records rather than being silently rewritten;
 - recovery reviews for terminal memory reconstruct with integrity and do not reopen the terminal memory id;
 - any approved recovery references a distinct new candidate memory identity under the recorded policy/reviewer;
-- repeated-failure prevention remains read-only and cites exact persisted failure/reference IDs;
+- an agent or automated reviewer cannot approve terminal-memory recovery;
+- repeated-failure prevention remains read-only and cites exact persisted failure/reference IDs without inferring hidden intent;
 - Replay Lab/operator Memory Safety query uses read/list dependencies only and exposes no memory-transition, recovery-approval, policy-mutation or capability-mutation command;
+- Memory Safety projection does not mix records belonging to a different memory identity;
 - exact replay is idempotent;
 - altered replay is rejected;
 - no duplicate Evidence/Notification side effects appear from the exact replay.
