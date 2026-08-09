@@ -5,15 +5,16 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.6`
+- Candidate: `0.1.0-internal.7`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
 - Test only the artifact produced from the exact `main` commit under review.
+- Automated packaged-candidate qualification on Windows 2022 and Windows 2025 must be green before manual UAT begins.
 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Download the `efesto-v0.1.0-internal.6-windows.zip` artifact from the successful `Internal Test Package` workflow on `main`.
+2. Use only the `efesto-v0.1.0-internal.7-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -110,7 +111,7 @@ Pass only if:
 
 ## Promotion decision
 
-Public launch remains blocked until UAT-1 through UAT-6 are all marked PASS on the same immutable internal candidate or on a newer candidate that has rerun all affected checks.
+Public launch remains blocked until automated packaged qualification is green and UAT-1 through UAT-6 are all marked PASS on the same immutable internal candidate or on a newer candidate that has rerun all affected checks.
 
 A candidate version must never be reused after a user-visible, installer, runtime or validation change lands. Advance the internal candidate number instead so test evidence always maps to one code state.
 
