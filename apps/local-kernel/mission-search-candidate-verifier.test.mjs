@@ -39,7 +39,7 @@ function verifiedPage() {
   return {
     url: 'https://shop.example/drill',
     title: 'Quality drill 24.99 EUR',
-    text: 'Limited offer. Discount deal. Quality cordless drill with warranty for 24.99 EUR. Offer ends on August 12 2026.',
+    text: 'Limited offer. Discount deal. Oferta limitada. Descuento y promoción. Quality cordless drill with warranty for 24.99 EUR. Offer ends on August 12 2026.',
     fetchedAt: '2026-08-09T22:19:00.000Z',
     contentType: 'text/html',
     status: 200,
