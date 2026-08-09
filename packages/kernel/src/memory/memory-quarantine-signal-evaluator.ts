@@ -68,6 +68,7 @@ export type MemoryQuarantineEvaluationInputErrorCode =
   | 'INVALID_MEMORY_ID'
   | 'INVALID_LIFECYCLE_REVISION'
   | 'INVALID_EVALUATOR_VERSION'
+  | 'INVALID_EVALUATED_AT'
   | 'INVALID_REFERENCE_ID';
 
 export class MemoryQuarantineEvaluationInputError extends Error {
@@ -86,56 +87,22 @@ const SIGNAL_DEFINITIONS: readonly {
   readonly severity: MemoryQuarantineSignalSeverity;
   readonly select: (references: MemoryQuarantineReferenceSet) => readonly string[] | undefined;
 }[] = [
-  {
-    type: 'unresolved_contradiction',
-    severity: 'high',
-    select: (references) => references.unresolvedContradictionDecisionIds,
-  },
-  {
-    type: 'evidence_invalidation',
-    severity: 'critical',
-    select: (references) => references.invalidEvidenceIds,
-  },
-  {
-    type: 'provenance_gap',
-    severity: 'high',
-    select: (references) => references.missingProvenanceReferenceIds,
-  },
-  {
-    type: 'source_integrity_risk',
-    severity: 'critical',
-    select: (references) => references.sourceIntegrityRiskRecordIds,
-  },
-  {
-    type: 'admission_inconsistency',
-    severity: 'critical',
-    select: (references) => references.admissionInconsistencyRecordIds,
-  },
-  {
-    type: 'policy_violation',
-    severity: 'critical',
-    select: (references) => references.policyViolationRecordIds,
-  },
-  {
-    type: 'supersession_conflict',
-    severity: 'high',
-    select: (references) => references.supersessionConflictRecordIds,
-  },
+  { type: 'unresolved_contradiction', severity: 'high', select: (references) => references.unresolvedContradictionDecisionIds },
+  { type: 'evidence_invalidation', severity: 'critical', select: (references) => references.invalidEvidenceIds },
+  { type: 'provenance_gap', severity: 'high', select: (references) => references.missingProvenanceReferenceIds },
+  { type: 'source_integrity_risk', severity: 'critical', select: (references) => references.sourceIntegrityRiskRecordIds },
+  { type: 'admission_inconsistency', severity: 'critical', select: (references) => references.admissionInconsistencyRecordIds },
+  { type: 'policy_violation', severity: 'critical', select: (references) => references.policyViolationRecordIds },
+  { type: 'supersession_conflict', severity: 'high', select: (references) => references.supersessionConflictRecordIds },
 ];
 
-/**
- * Converts already-persisted, inspectable risk references into a deterministic,
- * read-only quarantine recommendation. This function never changes memory state.
- */
+/** Converts persisted, inspectable risk references into a read-only recommendation. */
 export function evaluateMemoryQuarantineSignals(
   input: MemoryQuarantineEvaluationInput,
 ): MemoryQuarantineEvaluationResult {
   const memoryId = requireNonEmpty(input.memoryId, 'INVALID_MEMORY_ID', 'memoryId');
-  const evaluatorVersion = requireNonEmpty(
-    input.evaluatorVersion,
-    'INVALID_EVALUATOR_VERSION',
-    'evaluatorVersion',
-  );
+  const evaluatorVersion = requireNonEmpty(input.evaluatorVersion, 'INVALID_EVALUATOR_VERSION', 'evaluatorVersion');
+  requireIsoDateTime(input.evaluatedAt);
 
   if (!Number.isInteger(input.lifecycleRevision) || input.lifecycleRevision < 0) {
     throw new MemoryQuarantineEvaluationInputError(
@@ -147,38 +114,18 @@ export function evaluateMemoryQuarantineSignals(
   const signals = SIGNAL_DEFINITIONS.flatMap((definition) => {
     const referenceIds = normalizeReferenceIds(definition.select(input.references), definition.type);
     if (referenceIds.length === 0) return [];
-    return [{
-      type: definition.type,
-      severity: definition.severity,
-      referenceIds,
-    } satisfies MemoryQuarantineSignal];
+    return [{ type: definition.type, severity: definition.severity, referenceIds } satisfies MemoryQuarantineSignal];
   });
 
   if (isTerminalMemoryAuthorityState(input.state)) {
-    return {
-      decision: 'terminal_no_action',
-      signals: cloneSignals(signals),
-    };
+    return { decision: 'terminal_no_action', signals: cloneSignals(signals) };
   }
 
-  if (signals.length === 0) {
-    return {
-      decision: 'no_action',
-      signals: [],
-    };
-  }
+  if (signals.length === 0) return { decision: 'no_action', signals: [] };
 
-  const decision = input.state === 'quarantined'
-    ? 'retain_quarantine'
-    : 'recommend_quarantine';
-
+  const decision = input.state === 'quarantined' ? 'retain_quarantine' : 'recommend_quarantine';
   const recommendation: MemoryQuarantineRecommendation = {
-    recommendationId: buildRecommendationId(
-      memoryId,
-      input.lifecycleRevision,
-      evaluatorVersion,
-      signals,
-    ),
+    recommendationId: buildRecommendationId(memoryId, input.lifecycleRevision, evaluatorVersion, signals),
     memoryId,
     lifecycleRevision: input.lifecycleRevision,
     evaluatorVersion,
@@ -188,11 +135,7 @@ export function evaluateMemoryQuarantineSignals(
     signals: cloneSignals(signals),
   };
 
-  return {
-    decision,
-    signals: cloneSignals(signals),
-    recommendation,
-  };
+  return { decision, signals: cloneSignals(signals), recommendation };
 }
 
 function normalizeReferenceIds(
@@ -215,14 +158,22 @@ function normalizeReferenceIds(
 
 function requireNonEmpty(
   value: string,
-  code: Exclude<MemoryQuarantineEvaluationInputErrorCode, 'INVALID_LIFECYCLE_REVISION' | 'INVALID_REFERENCE_ID'>,
+  code: 'INVALID_MEMORY_ID' | 'INVALID_EVALUATOR_VERSION',
   field: string,
 ): string {
   const normalized = value.trim();
-  if (!normalized) {
-    throw new MemoryQuarantineEvaluationInputError(code, `${field} must be non-empty.`);
-  }
+  if (!normalized) throw new MemoryQuarantineEvaluationInputError(code, `${field} must be non-empty.`);
   return normalized;
+}
+
+function requireIsoDateTime(value: IsoDateTime): void {
+  const text = String(value).trim();
+  if (!text || Number.isNaN(Date.parse(text))) {
+    throw new MemoryQuarantineEvaluationInputError(
+      'INVALID_EVALUATED_AT',
+      'evaluatedAt must be a valid ISO date-time.',
+    );
+  }
 }
 
 function buildRecommendationId(
@@ -243,8 +194,5 @@ function buildRecommendationId(
 }
 
 function cloneSignals(signals: readonly MemoryQuarantineSignal[]): MemoryQuarantineSignal[] {
-  return signals.map((signal) => ({
-    ...signal,
-    referenceIds: [...signal.referenceIds],
-  }));
+  return signals.map((signal) => ({ ...signal, referenceIds: [...signal.referenceIds] }));
 }
