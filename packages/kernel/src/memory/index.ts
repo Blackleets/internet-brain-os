@@ -31,6 +31,13 @@ export {
   verifyMemoryQuarantineRecommendationIntegrity,
 } from './memory-quarantine-recommendation-repository';
 export { DurableMemoryQuarantineRecommendationRepository } from './durable-memory-quarantine-recommendation-repository';
+export {
+  InMemoryMemoryRecoveryReviewRepository,
+  MemoryRecoveryReviewConflictError,
+  assessMemoryRecoveryReviewFreshness,
+  verifyMemoryRecoveryReviewIntegrity,
+} from './memory-recovery-review-repository';
+export { DurableMemoryRecoveryReviewRepository } from './durable-memory-recovery-review-repository';
 export type { CreateMemoryInput } from './memory-manager';
 export type {
   MemoryLifecycleAction,
@@ -97,6 +104,15 @@ export type {
   MemoryQuarantineRecommendationStaleReason,
   StoredMemoryQuarantineRecommendation,
 } from './memory-quarantine-recommendation-repository';
+export type {
+  MemoryRecoveryReviewAppendResult,
+  MemoryRecoveryReviewFreshnessReason,
+  MemoryRecoveryReviewOutcome,
+  MemoryRecoveryReviewRecord,
+  MemoryRecoveryReviewRepository,
+  MemoryRecoveryReviewRequest,
+  TerminalMemoryAuthorityState,
+} from './memory-recovery-review-repository';
 export type { MemoryEventLog } from './memory-event-log';
 export type { MemoryConsolidationGroup } from './memory-consolidation';
 export type {
