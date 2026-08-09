@@ -37,9 +37,10 @@ describe('G4 final automatic read-only adversarial contract', () => {
     expect(verifier).toContain('PublicWebReadExecutionAdapter');
     expect(verifier).toContain("extractionMethod: 'kernel-web-read-v1'");
     expect(verifier).toContain('requireSameCandidateBatch');
-    expect(fetcher).toContain('isPrivateOrBlockedIp');
-    expect(fetcher).toContain('redirect: \'manual\'');
-    expect(fetcher).toContain('maximum redirects');
+    expect(fetcher).toContain('isPublicAddress');
+    expect(fetcher).toContain("redirect: 'manual'");
+    expect(fetcher).toContain('Too many redirects');
+    expect(fetcher).toContain('Private network URLs are not supported');
   });
 
   it('reconciles restart state through the same authenticated gates instead of inventing progress', () => {
