@@ -29,8 +29,9 @@ Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active Git
 - Authority receipts are durably persisted and reconstruct correctly after restart; malformed, tampered, corrupt, missing-reference and altered-replay states fail closed.
 - Only reconciled admitted memory may be reused by reasoning.
 - Protected Kernel authority modules are provider-neutral under the executable `pnpm architecture:check` CI gate.
-- Memory Safety E1 adds a pure Kernel-owned quarantine-signal evaluator that produces deterministic read-only recommendations only from normalized persisted reference IDs; it cannot execute a memory-authority transition, and terminal memory states stay outside the normal quarantine graph.
-- Memory Safety E2 persists those recommendations through separate in-memory and durable append-only repositories. Recommendation identity is revalidated before storage, exact basis replay is idempotent, durable history is integrity-bound and reconstructed through the same validation path after restart, and stale status is explicit when lifecycle revision, evaluator version or normalized signal basis changes. Recommendation persistence has no `MemoryAuthorityState` mutation path.
+- Memory Safety E1 provides deterministic read-only quarantine recommendations only from normalized persisted reference IDs; it cannot execute a memory-authority transition, and terminal memory states stay outside the normal quarantine graph.
+- Memory Safety E2 persists recommendations through separate append-only in-memory/durable repositories. Identity is revalidated before storage; exact basis replay is idempotent; durable history is integrity-bound and replay-validated on restart; stale status is explicit when revision, evaluator version or signal basis changes. Recommendation persistence has no authority-state mutation path.
+- Memory Safety E3 adds a separate terminal-memory recovery review record. `rejected`, `superseded` and `revoked` memory remain terminal; recovery decisions require human/founder review bound to a policy version. Founder-required reviews reject ordinary-human approval. An approved review must name a distinct new candidate memory identity and never reopens or reuses the terminal memory ID. Reviews are idempotent, integrity-bound, restart-safe and explicitly stale when governing policy or terminal-record context changes.
 
 ### Autonomous Goal execution foundation
 
@@ -40,8 +41,6 @@ Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active Git
 - External side effects remain policy/approval gated; the Golden path does not authorize purchases, logins, form submissions or direct memory admission.
 
 ### Golden economic journey
-
-The canonical Golden E2E proves this bounded user-value path in one test:
 
 ```text
 Goal
@@ -54,7 +53,7 @@ Goal
 → deduplicated Notification
 ```
 
-The drill scenario finds a quality candidate inside an €18–€25 budget fixture while preserving source provenance and explicitly performing no purchase. Exact notification replay is idempotent.
+The canonical drill scenario finds a quality candidate inside an €18–€25 budget fixture while preserving source provenance and explicitly performing no purchase. Exact notification replay is idempotent.
 
 ### Authentic Hermes boundary
 
@@ -74,111 +73,67 @@ The drill scenario finds a quality candidate inside an €18–€25 budget fixt
 - Browser extension provides Forge, Missions, Finds and Models workspaces plus state-derived pixel-forge activity.
 - Replay Lab is an authenticated forensic/read surface and never gains memory authority.
 - Control Center is an authenticated loopback client with Investigation, Knowledge, Agent Hub, Opportunity, Automation and System surfaces plus private multi-model chat.
-- PR #178 merged the Goal-first Efesto product shell: Home/Goal, Missions, Finds, Evidence, Models/chat, Agents, Automations and Settings are wired to existing Kernel contracts rather than decorative fake state.
-- The product shell is responsive and preserves explicit confirmation before Goal execution; chat remains separate from Evidence and durable memory.
-- The living-forge visual layer adds the Efesto pixel smith, central brain/forge staging, orange + restrained electric-blue intelligence accents and state-derived data-flow motion without adding synthetic product state.
+- The Goal-first product shell and living-forge visual layer are wired to existing Kernel contracts rather than decorative fake state.
 - Active forge motion is limited to observable queued, investigating, verifying and model-thinking phases; offline/failed states fail closed visually and reduced-motion preferences disable continuous animation.
-- The consolidated Control Center and Goal-first shell pass dedicated Chromium/Playwright browser acceptance on the current architecture.
+- The consolidated Control Center passes dedicated Chromium/Playwright browser acceptance.
 - The dashboard never receives provider credentials from the Kernel and remains presentation/client-only when hosted.
 
-### Distribution
+### Distribution and release qualification
 
-Windows has a non-technical double-click path:
-
-1. Double-click `Install Efesto.cmd`.
-2. The installer checks/repairs Node.js 22+, pinned pnpm 11.11.0 and frozen-lockfile workspace dependencies.
-3. It builds Shared, Kernel and the browser extension before launching the trusted local runtime.
-4. It starts/repairs the trusted local Efesto launcher and verifies the owned process truthfully.
-5. It creates an owner-local desktop shortcut.
-6. `Efesto Launcher.cmd` self-heals missing prerequisites instead of exposing raw package-manager errors.
-
-No Kernel token or boundary secret is embedded or printed by this installer.
-
-The release qualification layer requires the **exact generated ZIP**, rather than only a checkout of the same source, to be checksum-bound, extracted and tested through both a fresh unpaired installation and a paired repair before manual UAT can begin.
-
-### Supply chain and release qualification
-
-- CI performs `pnpm install --frozen-lockfile` and an unfiltered `pnpm audit --prod`.
-- The former temporary Nano ID GHSA exception is removed.
-- `nanoid@3.3.17` is locked through a workspace override; `nanoid@3.3.16` is forbidden by regression tests.
-- Dashboard Chromium acceptance runs as a separate required CI job.
+- Windows has a non-technical `Install Efesto.cmd` path with self-healing prerequisites, runtime builds, owned-process verification and a current-user desktop shortcut.
+- No Kernel token or boundary secret is embedded or printed by the installer.
+- CI uses frozen lockfile installation, production dependency audit, architecture boundary guard, typecheck, full Vitest, production build and first-run verification.
+- Dashboard Chromium acceptance runs as a separate required job.
 - Windows launcher smoke and first-run reproduction remain release-control gates.
-- The internal package is bound to its Git commit through `BUILD_INFO.txt` and SHA-256.
-- The packaged-candidate gate downloads that exact artifact, verifies its digest/commit, extracts it to a path containing spaces and tests it on Windows 2022 and Windows 2025.
-- Fresh qualification starts with no Kernel token and no authorized extension, discards the one-time pairing console output, and requires Kernel `alive`/`owned`/`verified`, Hermes readiness, pairing=`required`, runtime builds and a trusted desktop shortcut.
-- The owned Kernel is then stopped through the trusted Node launcher, a synthetic local extension identity is authorized, and the same package runs repair again with captured output.
-- Paired repair must preserve the original private Kernel-token digest, return Kernel `alive`/`owned`/`verified`, preserve pairing=`paired`, and expose neither the Kernel token nor Hermes boundary credential in captured repair output.
-- Failed packaged qualification retains only a sanitized diagnostic artifact.
+- Internal packages are bound to the exact Git commit through `BUILD_INFO.txt` and SHA-256.
+- The packaged-candidate gate downloads the exact artifact, verifies digest/commit, extracts it to a path containing spaces, and tests fresh install + paired repair on Windows 2022 and Windows 2025.
+- Fresh qualification requires Kernel `alive`/`owned`/`verified`, Hermes readiness and pairing=`required`; paired repair preserves the original private Kernel-token digest and exposes neither Kernel nor Hermes secrets.
+- Failed packaged qualification retains only sanitized diagnostics.
 
 ## Canonical CI gate
 
-Every PR and push to `main` must pass, when affected:
+Every affected PR/push must pass:
 
 1. frozen lockfile install;
 2. architecture boundary guard;
-3. production dependency audit with no GHSA ignore;
+3. strict production dependency audit;
 4. TypeScript typecheck;
 5. full Vitest suite;
 6. production build;
-7. `pnpm verify:first-run` including Hermes validation, replay and Replay Lab smoke;
-8. dedicated Chromium/Playwright dashboard acceptance;
+7. `pnpm verify:first-run`;
+8. Chromium/Playwright acceptance;
 9. Windows launcher smoke and first-run reproduction;
-10. exact internal-package generation and integrity binding;
+10. exact internal-package generation/integrity binding;
 11. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
 Never quote an old test count as current truth; use the exact current CI run.
 
 ## Current operating state
 
-- `main` is the implementation source of truth and includes exact packaged qualification from PR #182, architecture/forensic guardrails from PR #184 and deterministic quarantine evaluation from PR #193.
-- The Goal-first shell plus living-forge identity layer is the current product UI baseline.
+- `main` includes exact-package qualification (#182), architecture/forensic guardrails (#184), deterministic quarantine evaluation (#193), and durable quarantine recommendation persistence (#194).
+- E1/#185 and E2/#187 are merged baseline. E3/#188 is the active bounded change.
 - `0.1.0-internal.6` remains the immutable previous runtime-readiness candidate.
-- `0.1.0-internal.7` through `0.1.0-internal.12` are frozen non-promotable or superseded pre-UAT candidates and must not be reused.
-- The current qualification candidate is `0.1.0-internal.13`; it is not qualified until the exact ZIP passes the complete CI/Chromium/Windows packaged matrix for the final merged code state.
-- `publicLaunchApproved` remains `false`. Manual UAT-1 through UAT-6 may begin only after automated packaged qualification is green on the same immutable candidate.
-- Phase E is tracked through issues #185 and #187–#191. E1/#185 is merged; E2/#187 is the active bounded change. Issue #186 defines the enterprise product scorecard. Product Design issue #192 is blocked until Memory Safety contracts are frozen.
+- `0.1.0-internal.7` through `0.1.0-internal.13` are frozen non-promotable or superseded pre-UAT candidates and must not be reused.
+- The current qualification candidate is `0.1.0-internal.14`; it is not qualified until the exact ZIP passes the complete architecture/CI/Chromium/Windows matrix for the final E3 SHA.
+- `publicLaunchApproved` remains `false`; manual UAT begins only on the final exact candidate selected after affected Memory Safety work is frozen.
+- Phase E continues through #188–#191. Issue #186 defines the enterprise product scorecard. Product Design #192 is blocked until #191 freezes Memory Safety contracts.
 - Work directly on `main` is prohibited; use one bounded implementation branch/PR at a time.
-- Do not weaken Kernel authority, replay protection, consent, provenance, secrecy or qualification gates to make a test pass.
-
-## What “green” means here
-
-The agreed MVP implementation lights are green only when the current `main` proves:
-
-- durable memory authority;
-- authentic Hermes boundary;
-- native public web discovery/read capabilities;
-- bounded Goal/plan/capability/execution primitives;
-- Golden Goal-to-notification E2E;
-- consolidated browser-tested Goal-first Control Center;
-- one-click/self-healing Windows setup;
-- strict production dependency audit without exceptions;
-- provider-neutral architecture boundary enforcement;
-- exact packaged Windows candidate integrity;
-- exact packaged fresh-install + paired-repair qualification on the supported Windows matrix;
-- synchronized documentation and machine-checkable release readiness.
-
-The **public release light is separate**: it remains blocked until manual/internal UAT evidence for the same exact candidate is complete. Automated success alone is not public-launch approval.
-
-This does **not** mean every long-term idea is shipped. Automatic purchases, a public marketplace, multi-tenant cloud brain, broad connector catalog and native mobile application remain outside this MVP completion claim.
+- Never weaken Kernel authority, replay protection, consent, provenance, secrecy or qualification gates to make a test pass.
 
 ## Next bounded engineering phase
 
-Complete Memory Safety without changing the core authority model:
+1. #185 deterministic quarantine evaluator — **merged**;
+2. #187 durable recommendation persistence — **merged**;
+3. #188 terminal-memory recovery review records — **active**;
+4. #189 repeated-failure prevention recommendations;
+5. #190 read-only operator exposure;
+6. #191 adversarial contract freeze.
 
-1. #185 — deterministic quarantine-signal evaluator and read-only recommendation contract — **merged**;
-2. #187 — persist/read quarantine recommendations without transition authority — **active**;
-3. #188 — explicit terminal-memory recovery review records, separate from automatic state mutation;
-4. #189 — repeated-failure aggregation into read-only prevention recommendations;
-5. #190 — forensic/operator exposure with provenance and no Replay Lab write authority;
-6. #191 — contract freeze plus full adversarial regression and acceptance gates.
-
-Issue #186 defines the product/business measurement layer. Initial measurement must remain local-first; any collective analytics remain separately opt-in and privacy-reviewed.
+Issue #186 defines local-first product/business measurement. Any collective analytics remain separately opt-in and privacy-reviewed.
 
 ## Product Design gate
 
-Formal Product Design begins only after the engineering contracts above are stable. Issue #192 is intentionally blocked until #191 closes. The design work must refine the existing Goal-first surface, not invent a second product or fake backend state.
-
-The living forge should expose real Mission/Evidence activity around the central brain without duplicating Kernel state or turning the product into a dense admin dashboard. Visual direction remains: dark cyber-forge foundation, Efesto orange plus restrained electric-blue intelligence accents, central living brain/forge presence, pixel-smith identity, and motion that mirrors real persisted/streaming state. Mobile and reduced-motion behavior remain first-class acceptance constraints.
+Formal Product Design begins only after #191. It must refine the existing Goal-first surface, preserve real Kernel state, accessibility/mobile/reduced-motion behavior, and never invent backend state.
 
 ## Recovery prompt
 
