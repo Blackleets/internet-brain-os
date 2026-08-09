@@ -108,3 +108,11 @@ jobs:
             -CandidateDir candidate `
             -ReleaseVersion '${{ needs.package-internal-windows.outputs.release-version }}' `
             -ExpectedCommit '${{ github.sha }}'
+      - name: Upload sanitized qualification diagnostic
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: efesto-packaged-install-diagnostic-${{ matrix.os }}-${{ github.sha }}
+          path: candidate/qualification-diagnostic.txt
+          if-no-files-found: warn
+          retention-days: 7
