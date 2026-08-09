@@ -8,19 +8,25 @@ let lastSharedState;
 let syncQueued = false;
 let syncInFlight = false;
 
-export function applyResearchButtonState(button, status) {
+export function applyResearchButtonState(button, status, allowed = true) {
   const active = ACTIVE_MISSION_STATUSES.has(status);
   const failed = status === 'failed';
-  const nextText = active ? 'Researching…' : failed ? 'Retry safely' : 'Research';
+  const available = allowed !== false;
+  const nextText = active ? 'Researching…' : !available ? 'Unavailable' : failed ? 'Retry safely' : 'Research';
   const nextBusy = active ? 'true' : 'false';
-  if (button.disabled !== active) button.disabled = active;
+  const nextDisabled = active || !available;
+  if (button.disabled !== nextDisabled) button.disabled = nextDisabled;
   if (button.textContent !== nextText) button.textContent = nextText;
   if (button.getAttribute('aria-busy') !== nextBusy) button.setAttribute('aria-busy', nextBusy);
 }
 
 function syncResearchActions() {
-  const status = missionState?.dataset.status ?? 'idle';
-  for (const button of doc?.querySelectorAll?.('.goal-research') ?? []) applyResearchButtonState(button, status);
+  const fallbackStatus = missionState?.dataset.status ?? 'idle';
+  for (const button of doc?.querySelectorAll?.('.goal-research') ?? []) {
+    const workState = button.dataset.workState ?? fallbackStatus;
+    const allowed = button.dataset.researchAllowed === undefined ? true : button.dataset.researchAllowed === 'true';
+    applyResearchButtonState(button, workState, allowed);
+  }
 }
 
 async function syncSharedTruth() {
