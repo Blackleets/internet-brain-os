@@ -40,9 +40,9 @@ Status: **final contract-freeze gate active**.
 
 - [x] Exact ZIP is checksum/commit-bound and tested through fresh install + paired repair on Windows 2022/2025.
 - [x] `0.1.0-internal.6` preserved as prior runtime-readiness candidate.
-- [x] `0.1.0-internal.7` through `0.1.0-internal.17` frozen after qualification/supersession and must never be reused.
-- [ ] Qualify `0.1.0-internal.18` on the final #191 SHA through architecture, CI, Chromium, Windows launcher/first-run and both exact packaged-install jobs.
-- [ ] Run manual UAT only after #191 merges and the exact `internal.18` candidate is green.
+- [x] `0.1.0-internal.7` through `0.1.0-internal.18` frozen after qualification/supersession and must never be reused.
+- [ ] Qualify `0.1.0-internal.19` on the final #191 SHA through architecture, CI, Chromium, Windows launcher/first-run and both exact packaged-install jobs.
+- [ ] Run manual UAT only after #191 merges and the exact `internal.19` candidate is green.
 - [ ] Public release only after UAT and explicit `publicLaunchApproved=true` promotion.
 
 ## Enterprise measurement — #186
@@ -85,7 +85,7 @@ Do not:
 
 ## Next bounded sequence
 
-1. Finish #191 only after its final `internal.18` architecture/CI/Chromium/Windows exact-package matrix is green.
+1. Finish #191 only after its final `internal.19` architecture/CI/Chromium/Windows exact-package matrix is green.
 2. Re-read live #186/#192 and current Goal/API/UI contracts.
 3. Implement the smallest real Goal cross-surface slice, Kernel → web + extension, with desktop/mobile-width acceptance.
 4. Evaluate that slice before adding the next UX/automation layer.
