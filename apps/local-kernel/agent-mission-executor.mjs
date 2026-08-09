@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { createAutomaticMissionClaimGate } from './automatic-mission-claim-gate.mjs';
 import { InboxError } from './page-context-inbox.mjs';
 import { classifyOpportunity } from './opportunity-classifier.mjs';
 
@@ -12,6 +13,8 @@ export class AgentMissionExecutor {
     this.opportunityProjector = opportunityProjector;
     this.now = options.now ?? (() => new Date());
     this.leaseMs = options.leaseMs ?? DEFAULT_LEASE_MS;
+    const automaticClaims = options.automaticClaims ?? process.env.HEPHAESTUS_HERMES_READY === '1';
+    this.automaticClaimGate = options.automaticClaimGate ?? (automaticClaims ? createAutomaticMissionClaimGate() : undefined);
   }
 
   async claim(agent = 'hermes', missionId) {
@@ -23,6 +26,19 @@ export class AgentMissionExecutor {
         && isClaimable(item, claimedAt));
       if (index < 0) return { changed: false, data, result: undefined };
       const current = missions[index];
+
+      if (this.automaticClaimGate) {
+        const goal = (data.goals ?? []).find((item) => item?.id === current.goalId);
+        const decision = await this.automaticClaimGate.evaluate(goal, current);
+        if (!decision?.allowed) {
+          const blocked = automaticBlock(current, decision?.reason ?? 'policy_denied');
+          if (sameAutomaticBlock(current, blocked)) return { changed: false, data, result: undefined };
+          const updated = [...missions];
+          updated[index] = blocked;
+          return { changed: true, data: { ...data, agentMissions: updated }, result: undefined };
+        }
+      }
+
       const attempt = Number(current.attempt ?? 0) + 1;
       if (attempt > MAX_ATTEMPTS) return { changed: false, data, result: undefined };
       const leaseId = randomUUID();
@@ -37,6 +53,7 @@ export class AgentMissionExecutor {
         leaseId,
         limitation: 'Public-source discovery only; return bounded findings for Kernel validation',
       };
+      delete mission.automaticBlock;
       const updated = [...missions];
       updated[index] = mission;
       return {
@@ -206,6 +223,19 @@ export class AgentMissionExecutor {
       result: { ...evidence, sourceUrl: finding.url, opportunity: opportunity.result },
     };
   }
+}
+
+function automaticBlock(mission, reason) {
+  return {
+    ...mission,
+    automaticBlock: { reason },
+    limitation: `Automatic read-only continuation blocked: ${reason}`,
+  };
+}
+
+function sameAutomaticBlock(current, next) {
+  return current.automaticBlock?.reason === next.automaticBlock?.reason
+    && current.limitation === next.limitation;
 }
 
 function isClaimable(mission, now) {
