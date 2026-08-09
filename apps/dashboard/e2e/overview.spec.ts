@@ -138,6 +138,7 @@ test.describe('mobile Efesto product shell', () => {
     await expect.poll(async () => (await sidebar.boundingBox())?.x ?? 0).toBeLessThan(-100);
 
     await connect(page);
+    await page.getByRole('button', { name: 'Abrir menú', exact: true }).click();
     await page.getByRole('button', { name: 'Inicio', exact: true }).click();
     await expect(page.getByRole('img', { name: /Investigando/ })).toBeVisible();
     await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Busca oportunidades reales');
