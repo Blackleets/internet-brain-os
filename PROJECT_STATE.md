@@ -116,6 +116,7 @@ Never quote an old test count as current truth; use the exact current CI run.
 - `0.1.0-internal.7` through `0.1.0-internal.13` are frozen non-promotable or superseded pre-UAT candidates and must not be reused.
 - The current qualification candidate is `0.1.0-internal.14`; it is not qualified until the exact ZIP passes the complete architecture/CI/Chromium/Windows matrix for the final E3 SHA.
 - `publicLaunchApproved` remains `false`; manual UAT begins only on the final exact candidate selected after affected Memory Safety work is frozen.
+- **The public release light is separate** from implementation readiness: automated qualification can be green while public launch remains blocked until manual UAT passes on the same immutable candidate and approval is explicitly promoted.
 - Phase E continues through #188–#191. Issue #186 defines the enterprise product scorecard. Product Design #192 is blocked until #191 freezes Memory Safety contracts.
 - Work directly on `main` is prohibited; use one bounded implementation branch/PR at a time.
 - Never weaken Kernel authority, replay protection, consent, provenance, secrecy or qualification gates to make a test pass.
