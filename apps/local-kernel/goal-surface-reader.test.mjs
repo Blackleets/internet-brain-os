@@ -84,7 +84,25 @@ describe('GoalSurfaceReader', () => {
     expect(project).toHaveBeenCalledTimes(1);
   });
 
-  it('fails closed when its required read or Kernel projection boundary is unavailable', async () => {
+  it('does not require the built Kernel runtime merely to start the local server composition', async () => {
+    const store = { read: vi.fn(async () => ({ goals: [], agentMissions: [] })) };
+    const reader = await createGoalSurfaceReader(store, { now: () => now });
+
+    expect(reader).toBeDefined();
+    expect(typeof reader.list).toBe('function');
+    expect(typeof reader.get).toBe('function');
+    expect(store.read).not.toHaveBeenCalled();
+  });
+
+  it('validates Goal identity before lazy-loading the built Kernel runtime', async () => {
+    const store = { read: vi.fn(async () => ({ goals: [], agentMissions: [] })) };
+    const reader = await createGoalSurfaceReader(store, { now: () => now });
+
+    await expect(reader.get(42)).rejects.toThrowError(GoalSurfaceReaderError);
+    expect(store.read).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when its required read or explicit Kernel projection boundary is unavailable', async () => {
     expect(() => new GoalSurfaceReader({}, () => [], { now: () => now })).toThrowError(GoalSurfaceReaderError);
     expect(() => new GoalSurfaceReader({ read: async () => ({}) }, undefined, { now: () => now })).toThrowError(GoalSurfaceReaderError);
     await expect(createGoalSurfaceReader({ read: async () => ({}) }, { kernel: {} }))
