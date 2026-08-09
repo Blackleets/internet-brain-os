@@ -38,6 +38,11 @@ export {
   verifyMemoryRecoveryReviewIntegrity,
 } from './memory-recovery-review-repository';
 export { DurableMemoryRecoveryReviewRepository } from './durable-memory-recovery-review-repository';
+export {
+  MemoryFailurePreventionInputError,
+  evaluateRepeatedMemoryFailures,
+  isMemoryFailurePreventionRecommendationStale,
+} from './memory-failure-prevention-evaluator';
 export type { CreateMemoryInput } from './memory-manager';
 export type {
   MemoryLifecycleAction,
@@ -113,6 +118,14 @@ export type {
   MemoryRecoveryReviewRequest,
   TerminalMemoryAuthorityState,
 } from './memory-recovery-review-repository';
+export type {
+  MemoryFailureCategory,
+  MemoryFailurePreventionEvaluationInput,
+  MemoryFailurePreventionEvaluationResult,
+  MemoryFailurePreventionPolicy,
+  MemoryFailurePreventionRecommendation,
+  PersistedMemoryFailureRecord,
+} from './memory-failure-prevention-evaluator';
 export type { MemoryEventLog } from './memory-event-log';
 export type { MemoryConsolidationGroup } from './memory-consolidation';
 export type {
