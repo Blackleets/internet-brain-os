@@ -33,6 +33,26 @@ describe('internal Efesto release package', () => {
     expect(workflow).not.toMatch(/permissions:\s*[\s\S]*contents:\s*write/);
   });
 
+  it('qualifies the exact packaged candidate on two supported Windows generations', async () => {
+    const workflow = await text('.github/workflows/internal-test-package.yml');
+    const harness = await text('scripts/qualify-packaged-windows-install.ps1');
+
+    expect(workflow).toContain('qualify-packaged-windows-install:');
+    expect(workflow).toContain('os: [windows-2022, windows-2025]');
+    expect(workflow).toContain('actions/download-artifact@v4');
+    expect(workflow).toContain('qualify-packaged-windows-install.ps1');
+    expect(harness).toContain('Get-FileHash -Algorithm SHA256');
+    expect(harness).toContain('Efesto Candidate With Spaces');
+    expect(harness).toContain('Efesto Data With Spaces');
+    expect(harness).toContain('publicLaunchApproved');
+    expect(harness).toContain("'Install Efesto.cmd'");
+    expect(harness).toContain('apps\\extension\\dist\\manifest.json');
+    expect(harness).toContain('Efesto.lnk');
+    expect(harness).toContain('tokenDigestAfter');
+    expect(harness).toContain('owned');
+    expect(harness).toContain('verified');
+  });
+
   it('requires one immutable candidate plus corrected clean-install, real-web, replay and failure UAT before launch', async () => {
     const release = JSON.parse(await text('INTERNAL_RELEASE.json'));
     const uat = await text('docs/internal-uat-v0.1.0.md');
