@@ -5,17 +5,17 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.21`
+- Candidate: `0.1.0-internal.22`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
-- `0.1.0-internal.7` through `0.1.0-internal.20` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
+- `0.1.0-internal.7` through `0.1.0-internal.21` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
 - Test only the artifact produced from the exact `main` commit under review.
 - Automated packaged-candidate qualification on Windows 2022 and Windows 2025 must be green before manual UAT begins.
 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Use only the `efesto-v0.1.0-internal.21-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
+2. Use only the `efesto-v0.1.0-internal.22-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -40,6 +40,7 @@ Pass only if:
 5. Open Forge, Missions, Finds and Models.
 6. Open the Control Center and Replay Lab from the local product flow.
 7. Observe the Home/Goal surface while offline, ready and during one real mission.
+8. Using an authenticated internal client, inspect `GET /api/goal-surfaces` and one `GET /api/goal-surfaces/:goalId` response.
 
 Pass only if:
 
@@ -48,6 +49,13 @@ Pass only if:
 - all four extension workspaces render;
 - the Goal-first Control Center loads as an authenticated local client on desktop and mobile-width layouts;
 - Goal-first cross-surface G0 remains the design contract: Kernel-owned persisted Goal truth, Mission state kept distinct, and no fabricated cross-device authority;
+- Shared Goal Truth v1 returns schema `efesto.goal-surface.v1` with `sourceOfTruth: kernel`;
+- the Shared Goal Truth list/detail routes require the existing Kernel token and preserve extension identity authorization;
+- Goal lifecycle and Mission work state remain separate fields in the projection;
+- legacy radar Goals are explicitly labelled `legacy_radar` compatibility rather than being misrepresented as UniversalGoal v2;
+- an unknown Goal returns not found instead of fabricated state;
+- no POST/write route exists under `/api/goal-surfaces`;
+- the current Control Center and extension are **not yet claimed to consume Shared Goal Truth v1**; that wiring belongs to G2 and G3 respectively;
 - the Efesto pixel-smith/brain visual identity renders without obscuring controls or causing horizontal overflow;
 - work/data-flow motion appears only for observable active states such as queued, investigating, verifying or model thinking, and does not imply work while offline or failed;
 - reduced-motion mode remains usable without continuous decorative animation;
