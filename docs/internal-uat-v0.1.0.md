@@ -5,17 +5,17 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.15`
+- Candidate: `0.1.0-internal.16`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
-- `0.1.0-internal.7` through `0.1.0-internal.14` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
+- `0.1.0-internal.7` through `0.1.0-internal.15` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
 - Test only the artifact produced from the exact `main` commit under review.
 - Automated packaged-candidate qualification on Windows 2022 and Windows 2025 must be green before manual UAT begins.
 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Use only the `efesto-v0.1.0-internal.15-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
+2. Use only the `efesto-v0.1.0-internal.16-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -51,6 +51,7 @@ Pass only if:
 - work/data-flow motion appears only for observable active states such as queued, investigating, verifying or model thinking, and does not imply work while offline or failed;
 - reduced-motion mode remains usable without continuous decorative animation;
 - Replay Lab is readable but cannot mutate durable-memory authority;
+- Memory Safety views visibly distinguish persisted Kernel records, deterministic interpretations, and human decisions, and stale records are not presented as current authorization;
 - no blank/white/black dead screen blocks the journey.
 
 ## UAT-3 — real public-web economic Goal
@@ -91,6 +92,7 @@ Pass only if:
 - recovery reviews for terminal memory reconstruct with integrity and do not reopen the terminal memory id;
 - any approved recovery references a distinct new candidate memory identity under the recorded policy/reviewer;
 - repeated-failure prevention remains read-only and cites exact persisted failure/reference IDs;
+- Replay Lab/operator Memory Safety projection exposes those records only through read/list contracts and contains no memory-transition, recovery-approval, policy-mutation or capability-mutation command;
 - exact replay is idempotent;
 - altered replay is rejected;
 - no duplicate Evidence/Notification side effects appear from the exact replay.
