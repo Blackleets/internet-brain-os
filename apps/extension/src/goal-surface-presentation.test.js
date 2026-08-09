@@ -13,7 +13,7 @@ function surface(workState = 'investigating', overrides = {}) {
       policySummary: { autonomyLevel: 'assisted', approvalPolicy: 'none', source: 'legacy_compatibility' },
       ...overrides.goal,
     },
-    mission: workState === undefined ? undefined : {
+    mission: workState === null ? undefined : {
       id: 'mission:1', status: workState === 'failed' ? 'failed' : workState === 'completed' || workState === 'forged' ? 'completed' : 'running',
       executionPhase: ['investigating', 'verifying', 'forged', 'failed'].includes(workState) ? workState : undefined,
       workState,
@@ -40,7 +40,7 @@ describe('extension Shared Goal Truth presentation', () => {
   });
 
   it('allows a new research request only when the active Goal has no active persisted work', () => {
-    expect(presentGoalSurface(surface(undefined)).canResearch).toBe(true);
+    expect(presentGoalSurface(surface(null)).canResearch).toBe(true);
     expect(presentGoalSurface(surface('completed')).canResearch).toBe(true);
     expect(presentGoalSurface(surface('verifying')).canResearch).toBe(false);
     expect(presentGoalSurface(surface('queued')).canResearch).toBe(false);
