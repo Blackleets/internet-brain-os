@@ -19,6 +19,18 @@ export { projectMemoryAuthorityState } from './memory-authority-projector';
 export { reconcileMemoryAuthorityAtStartup } from './memory-authority-reconciliation';
 export { gateMemoryRetrieval } from './memory-retrieval-gate';
 export { planLegacyMemoryMigration } from './memory-legacy-migration-plan';
+export {
+  MemoryQuarantineRecommendationError,
+  cloneMemoryQuarantineRecommendation,
+  evaluateMemoryQuarantineRecommendation,
+  isMemoryQuarantineRecommendationStale,
+  verifyMemoryQuarantineRecommendationIntegrity,
+} from './memory-quarantine-recommendation';
+export {
+  InMemoryMemoryQuarantineRecommendationRepository,
+  MemoryQuarantineRecommendationRepositoryError,
+} from './memory-quarantine-recommendation-repository';
+export { DurableMemoryQuarantineRecommendationRepository } from './durable-memory-quarantine-recommendation-repository';
 export type { CreateMemoryInput } from './memory-manager';
 export type {
   MemoryLifecycleAction,
@@ -66,6 +78,18 @@ export type {
   LegacyMemoryMigrationPlan,
   LegacyMemoryMigrationPlanEntry,
 } from './memory-legacy-migration-plan';
+export type {
+  EvaluateMemoryQuarantineRecommendationInput,
+  MemoryQuarantineEvaluationResult,
+  MemoryQuarantineRecommendation,
+  MemoryQuarantineSignalSeverity,
+  MemoryQuarantineSignalType,
+  PersistedMemoryQuarantineSignal,
+} from './memory-quarantine-recommendation';
+export type {
+  MemoryQuarantineRecommendationAppendResult,
+  MemoryQuarantineRecommendationRepository,
+} from './memory-quarantine-recommendation-repository';
 export type { MemoryEventLog } from './memory-event-log';
 export type { MemoryConsolidationGroup } from './memory-consolidation';
 export type {
