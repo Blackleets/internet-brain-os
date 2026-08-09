@@ -73,6 +73,8 @@ The drill scenario finds a quality candidate inside an €18–€25 budget fixt
 - Control Center is an authenticated loopback client with Investigation, Knowledge, Agent Hub, Opportunity, Automation and System surfaces plus private multi-model chat.
 - PR #178 merged the Goal-first Efesto product shell: Home/Goal, Missions, Finds, Evidence, Models/chat, Agents, Automations and Settings are wired to existing Kernel contracts rather than decorative fake state.
 - The product shell is responsive and preserves explicit confirmation before Goal execution; chat remains separate from Evidence and durable memory.
+- The living-forge visual layer adds the Efesto pixel smith, central brain/forge staging, orange + restrained electric-blue intelligence accents and state-derived data-flow motion without adding synthetic product state.
+- Active forge motion is limited to observable queued, investigating, verifying and model-thinking phases; offline/failed states fail closed visually and reduced-motion preferences disable continuous animation.
 - The consolidated Control Center and Goal-first shell pass dedicated Chromium/Playwright browser acceptance on the current architecture.
 - The dashboard never receives provider credentials from the Kernel and remains presentation/client-only when hosted.
 
@@ -115,8 +117,8 @@ Never quote an old test count as current truth; use the exact current CI run.
 ## Current operating state
 
 - `main` is the sole implementation source of truth.
-- PR #178 is merged; the Goal-first shell is now the product UI baseline, not a pending draft.
-- The internal Windows candidate is `0.1.0-internal.4` after the post-`internal.3` user-visible UI changes. Internal candidate identifiers are immutable and must not be reused for a different code state.
+- The Goal-first shell is the product UI baseline; the living-forge identity layer is the current visual baseline once its bounded PR is merged green.
+- The internal Windows candidate is `0.1.0-internal.5` because the living-forge UI is user-visible. Internal candidate identifiers are immutable and must not be reused for a different code state.
 - `publicLaunchApproved` remains `false` until UAT-1 through UAT-6 pass on the same immutable candidate: clean Windows install, browser pairing/surfaces, real public-web economic Goal, persistence/replay, second value Goal and truthful failure recovery.
 - Work directly on `main` is prohibited; use one bounded implementation branch/PR at a time.
 - Do not weaken Kernel authority, replay protection, consent, provenance or local-first secrecy to make a test pass.
@@ -139,16 +141,16 @@ The **public release light is separate**: it remains blocked until the manual/in
 
 This does **not** mean every long-term idea is shipped. Automatic purchases, a public marketplace, multi-tenant cloud brain, broad connector catalog and native mobile application remain outside this MVP completion claim.
 
-## Next direction after candidate control
+## Next UI direction
 
-Do not add another broad platform subsystem. Product work should refine the existing Goal-first surface and extend the proven Goal → Evidence → Notification loop without changing authority semantics.
+Continue refining the existing Goal-first surface instead of adding another broad platform subsystem. The living forge should progressively expose real Mission/Evidence activity around the central brain without duplicating backend state or turning the product into a dense admin dashboard.
 
-The current visual direction is a modern, living Efesto forge rather than a generic admin dashboard: dark cyber-forge foundation, Efesto orange plus restrained electric-blue intelligence accents, a central living brain/forge presence, truthful state motion, and a pixel-smith identity that visually transfers work into the brain. These visuals must remain subordinate to real Goal, Mission, Evidence and Kernel state and must respect reduced-motion/accessibility settings.
+Visual direction remains: dark cyber-forge foundation, Efesto orange plus restrained electric-blue intelligence accents, central living brain/forge presence, pixel-smith identity, and motion that mirrors real persisted/streaming state. Mobile and reduced-motion behavior remain first-class acceptance constraints.
 
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Do not mix any other project. Read PROJECT_STATE.md and AGENTS.md, run pnpm resume, inspect GitHub main/open PRs/CI, and treat live Git as newer than chat memory. Preserve Kernel authority, local-first secrecy, Evidence provenance, capability gates, exact replay and altered-replay rejection. Work on exactly one bounded branch and require the full CI + Chromium gate before merge. Treat the Goal-first shell as the UI baseline and keep visual motion truthful to persisted or streaming state.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Do not mix any other project. Read PROJECT_STATE.md and AGENTS.md, run pnpm resume, inspect GitHub main/open PRs/CI, and treat live Git as newer than chat memory. Preserve Kernel authority, local-first secrecy, Evidence provenance, capability gates, exact replay and altered-replay rejection. Work on exactly one bounded branch and require the full CI + Chromium gate before merge. Treat the Goal-first shell plus living-forge visual layer as the UI baseline and keep visual motion truthful to persisted or streaming state.
 ```
 
 ## Update rule
