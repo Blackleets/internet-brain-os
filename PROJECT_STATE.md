@@ -69,7 +69,8 @@ PR #203 / branch `agent/shared-goal-truth-g1` is the only active bounded change.
 - It delegates all Goal/Mission semantics to the Kernel projector.
 - It never calls the store project/write path.
 - Goal identity is validated before disk read.
-- Production composition loads the already-built trusted Kernel runtime.
+- Production composition **lazy-loads** the trusted Kernel projector at the first Goal-surface read instead of requiring `packages/kernel/dist` at source-tree server startup.
+- Packaged/installer paths still build the trusted Kernel runtime before normal product launch; if the runtime is genuinely unavailable at read time, the reader fails closed.
 
 ### G1.3 — authenticated local HTTP read boundary — validated
 
@@ -79,6 +80,7 @@ PR #203 / branch `agent/shared-goal-truth-g1` is the only active bounded change.
 - Invalid Goal identity is mapped to a controlled reader error.
 - There is no POST/write route under `/api/goal-surfaces`.
 - Existing `/api/goals` and Mission write routes remain unchanged and separate.
+- The first final candidate exposed a Windows source-tree launcher regression caused by eager Kernel runtime loading; that composition regression is fixed by the lazy-read boundary and `internal.22` is frozen/superseded.
 
 ### Important product truth
 
@@ -110,15 +112,15 @@ Never quote an old test count as current truth; use the exact current CI run.
 ## Distribution state
 
 - `0.1.0-internal.6` remains the prior runtime-readiness milestone.
-- `0.1.0-internal.7` through `0.1.0-internal.21` are frozen and must not be reused.
-- G1 uses immutable candidate `0.1.0-internal.22`; it is not qualified until the complete final matrix passes on the same final #203 SHA.
+- `0.1.0-internal.7` through `0.1.0-internal.22` are frozen and must not be reused.
+- G1 uses immutable candidate `0.1.0-internal.23`; it is not qualified until the complete final matrix passes on the same final #203 SHA.
 - `publicLaunchApproved` remains `false`.
 - The **public release light is separate** from implementation readiness: automated qualification may be green while public launch remains blocked pending manual UAT on one exact candidate.
 
 ## Next bounded sequence
 
-1. G1 Shared Goal Truth v1 — **active; functional layers validated, final freeze/qualification pending**.
-2. Merge G1 only after final `internal.22` architecture/CI/Chromium/Windows exact-package matrix is green.
+1. G1 Shared Goal Truth v1 — **active; functional layers + startup fix implemented, final `internal.23` qualification pending**.
+2. Merge G1 only after final `internal.23` architecture/CI/Chromium/Windows exact-package matrix is green.
 3. G2 — responsive Control Center consumes `/api/goal-surfaces`; prove desktop + 390×844 + keyboard/focus/reduced motion.
 4. Evaluate and merge G2 before touching extension consumption.
 5. G3 — extension consumes the same projection and removes duplicated Goal-state interpretation.
