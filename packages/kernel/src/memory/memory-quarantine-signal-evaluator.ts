@@ -65,10 +65,13 @@ export interface MemoryQuarantineEvaluationResult {
 }
 
 export type MemoryQuarantineEvaluationInputErrorCode =
+  | 'INVALID_INPUT'
   | 'INVALID_MEMORY_ID'
   | 'INVALID_LIFECYCLE_REVISION'
+  | 'INVALID_STATE'
   | 'INVALID_EVALUATOR_VERSION'
   | 'INVALID_EVALUATED_AT'
+  | 'INVALID_REFERENCES'
   | 'INVALID_REFERENCE_ID';
 
 export class MemoryQuarantineEvaluationInputError extends Error {
@@ -81,6 +84,15 @@ export class MemoryQuarantineEvaluationInputError extends Error {
     super(message);
   }
 }
+
+const AUTHORITY_STATES: readonly MemoryAuthorityState[] = [
+  'proposed',
+  'quarantined',
+  'admitted',
+  'rejected',
+  'superseded',
+  'revoked',
+];
 
 const SIGNAL_DEFINITIONS: readonly {
   readonly type: MemoryQuarantineSignalType;
@@ -100,30 +112,42 @@ const SIGNAL_DEFINITIONS: readonly {
 export function evaluateMemoryQuarantineSignals(
   input: MemoryQuarantineEvaluationInput,
 ): MemoryQuarantineEvaluationResult {
+  if (!isRecord(input)) {
+    throw new MemoryQuarantineEvaluationInputError('INVALID_INPUT', 'evaluation input must be an object.');
+  }
+
   const memoryId = requireNonEmpty(input.memoryId, 'INVALID_MEMORY_ID', 'memoryId');
   const evaluatorVersion = requireNonEmpty(input.evaluatorVersion, 'INVALID_EVALUATOR_VERSION', 'evaluatorVersion');
   requireIsoDateTime(input.evaluatedAt);
 
-  if (!Number.isInteger(input.lifecycleRevision) || input.lifecycleRevision < 0) {
+  if (!Number.isSafeInteger(input.lifecycleRevision) || input.lifecycleRevision < 0) {
     throw new MemoryQuarantineEvaluationInputError(
       'INVALID_LIFECYCLE_REVISION',
-      'lifecycleRevision must be a non-negative integer.',
+      'lifecycleRevision must be a non-negative safe integer.',
     );
   }
+  if (typeof input.state !== 'string' || !AUTHORITY_STATES.includes(input.state as MemoryAuthorityState)) {
+    throw new MemoryQuarantineEvaluationInputError('INVALID_STATE', 'state must be a supported memory authority state.');
+  }
+  if (!isRecord(input.references)) {
+    throw new MemoryQuarantineEvaluationInputError('INVALID_REFERENCES', 'references must be an object.');
+  }
 
+  const state = input.state as MemoryAuthorityState;
+  const references = input.references as MemoryQuarantineReferenceSet;
   const signals = SIGNAL_DEFINITIONS.flatMap((definition) => {
-    const referenceIds = normalizeReferenceIds(definition.select(input.references), definition.type);
+    const referenceIds = normalizeReferenceIds(definition.select(references), definition.type);
     if (referenceIds.length === 0) return [];
     return [{ type: definition.type, severity: definition.severity, referenceIds } satisfies MemoryQuarantineSignal];
   });
 
-  if (isTerminalMemoryAuthorityState(input.state)) {
+  if (isTerminalMemoryAuthorityState(state)) {
     return { decision: 'terminal_no_action', signals: cloneSignals(signals) };
   }
 
   if (signals.length === 0) return { decision: 'no_action', signals: [] };
 
-  const decision = input.state === 'quarantined' ? 'retain_quarantine' : 'recommend_quarantine';
+  const decision = state === 'quarantined' ? 'retain_quarantine' : 'recommend_quarantine';
   const recommendation: MemoryQuarantineRecommendation = {
     recommendationId: deriveMemoryQuarantineRecommendationId(
       memoryId,
@@ -165,13 +189,25 @@ function normalizeReferenceIds(
   values: readonly string[] | undefined,
   signalType: MemoryQuarantineSignalType,
 ): string[] {
-  if (!values) return [];
+  if (values === undefined) return [];
+  if (!Array.isArray(values)) {
+    throw new MemoryQuarantineEvaluationInputError(
+      'INVALID_REFERENCE_ID',
+      `Signal ${signalType} reference ids must be an array.`,
+    );
+  }
   const normalized = values.map((value) => {
-    const trimmed = value.trim();
-    if (!trimmed) {
+    if (typeof value !== 'string') {
       throw new MemoryQuarantineEvaluationInputError(
         'INVALID_REFERENCE_ID',
-        `Signal ${signalType} contains an empty persisted reference id.`,
+        `Signal ${signalType} reference ids must be strings.`,
+      );
+    }
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.length > 240 || /[\u0000-\u001f\u007f]/.test(trimmed)) {
+      throw new MemoryQuarantineEvaluationInputError(
+        'INVALID_REFERENCE_ID',
+        `Signal ${signalType} contains an invalid persisted reference id.`,
       );
     }
     return trimmed;
@@ -180,17 +216,28 @@ function normalizeReferenceIds(
 }
 
 function requireNonEmpty(
-  value: string,
+  value: unknown,
   code: 'INVALID_MEMORY_ID' | 'INVALID_EVALUATOR_VERSION',
   field: string,
 ): string {
+  if (typeof value !== 'string') {
+    throw new MemoryQuarantineEvaluationInputError(code, `${field} must be a string.`);
+  }
   const normalized = value.trim();
-  if (!normalized) throw new MemoryQuarantineEvaluationInputError(code, `${field} must be non-empty.`);
+  if (!normalized || normalized.length > 240 || /[\u0000-\u001f\u007f]/.test(normalized)) {
+    throw new MemoryQuarantineEvaluationInputError(code, `${field} is invalid.`);
+  }
   return normalized;
 }
 
-function requireIsoDateTime(value: IsoDateTime): void {
-  const text = String(value).trim();
+function requireIsoDateTime(value: unknown): void {
+  if (typeof value !== 'string') {
+    throw new MemoryQuarantineEvaluationInputError(
+      'INVALID_EVALUATED_AT',
+      'evaluatedAt must be a string date-time.',
+    );
+  }
+  const text = value.trim();
   if (!text || Number.isNaN(Date.parse(text))) {
     throw new MemoryQuarantineEvaluationInputError(
       'INVALID_EVALUATED_AT',
@@ -201,4 +248,8 @@ function requireIsoDateTime(value: IsoDateTime): void {
 
 function cloneSignals(signals: readonly MemoryQuarantineSignal[]): MemoryQuarantineSignal[] {
   return signals.map((signal) => ({ ...signal, referenceIds: [...signal.referenceIds] }));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
