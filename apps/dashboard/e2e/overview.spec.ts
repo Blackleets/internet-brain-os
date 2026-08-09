@@ -103,14 +103,16 @@ test.describe('mobile Efesto product shell', () => {
     expect(initial.documentWidth).toBe(initial.viewportWidth);
 
     await page.getByRole('button', { name: 'Abrir menú', exact: true }).click();
-    await expect(page.locator('aside[aria-label="Navegación principal"]')).toBeVisible();
-    const sidebarBox = await page.locator('.efesto-sidebar').boundingBox();
+    const sidebar = page.locator('.efesto-sidebar');
+    await expect(sidebar).toBeVisible();
+    await expect.poll(async () => (await sidebar.boundingBox())?.x ?? -999).toBeGreaterThanOrEqual(-1);
+    const sidebarBox = await sidebar.boundingBox();
     expect(sidebarBox).not.toBeNull();
     if (!sidebarBox) throw new Error('Mobile sidebar has no layout box');
-    expect(sidebarBox.x).toBeGreaterThanOrEqual(-1);
     expect(sidebarBox.x + sidebarBox.width).toBeLessThanOrEqual(391);
 
     await page.getByRole('button', { name: 'Cerrar menú', exact: true }).first().click();
+    await expect.poll(async () => (await sidebar.boundingBox())?.x ?? 0).toBeLessThan(-100);
     await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Busca oportunidades reales');
     const composerBox = await page.locator('.goal-dock').boundingBox();
     expect(composerBox).not.toBeNull();
