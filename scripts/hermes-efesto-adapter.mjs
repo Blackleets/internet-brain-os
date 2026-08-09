@@ -13,9 +13,10 @@ export function buildHermesPrompt(payload) {
   const mission = payload.mission;
   const scope = mission.scope ?? {};
   return [
-    'You are executing one bounded public-source research mission for Efesto.',
-    'Use only public web sources. Do not access local files, private networks, credentials, messaging history, or private sessions.',
-    'Do not perform purchases, submissions, logins, outreach, downloads, or destructive actions.',
+    'You are executing one bounded public-source discovery mission for Efesto.',
+    'Use only public web search. The returned snippets are candidates, not verified Evidence.',
+    'Do not access local files, private networks, credentials, messaging history, private sessions, browser automation or computer-use.',
+    'Do not perform purchases, submissions, logins, outreach, downloads or destructive actions.',
     'Return ONLY one valid JSON object with this exact top-level shape: {"findings":[...]}.',
     'Each finding may contain only url, title, text, summary, and discoveredAt.',
     'Use at most 20 findings. URLs must be public http or https. Do not include markdown fences or commentary.',
@@ -31,7 +32,7 @@ export function buildHermesPrompt(payload) {
 
 export function buildHermesArgs(prompt) {
   if (typeof prompt !== 'string' || !prompt.trim()) throw new Error('Hermes prompt is required');
-  return ['-z', prompt];
+  return ['--safe-mode', '--toolsets', 'search', '-z', prompt];
 }
 
 export function parseHermesFindings(text) {
@@ -84,7 +85,12 @@ export async function runHermesOneShot(payload, options = {}) {
   const args = buildHermesArgs(prompt);
   const timeoutMs = options.timeoutMs ?? configuredTimeout(process.env.HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
   return new Promise((resolve, reject) => {
-    const child = spawn(executable, args, { shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(executable, args, {
+      shell: false,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, HERMES_ALLOW_PRIVATE_URLS: 'false' },
+    });
     let stdout = ''; let stderr = ''; let bytes = 0; let settled = false;
     const finish = (error, value) => { if (settled) return; settled = true; clearTimeout(timer); error ? reject(error) : resolve(value); };
     const timer = setTimeout(() => { child.kill(); finish(new Error('Hermes one-shot timed out')); }, timeoutMs);
