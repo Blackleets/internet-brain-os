@@ -87,27 +87,38 @@ function Write-SanitizedDiagnostic([string]$FailureMessage) {
 
 function Invoke-QualifiedInstall([string]$LogName, [switch]$SkipShortcut) {
   $logPath = Join-Path $env:RUNNER_TEMP $LogName
-  Remove-Item -Force $logPath -ErrorAction SilentlyContinue
-  Push-Location $extractRoot
-  try {
-    $arguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $extractRoot 'scripts\install-efesto.ps1'), '-SkipNodeInstall')
-    if ($SkipShortcut) { $arguments += '-SkipShortcut' }
-    & powershell.exe @arguments *> $logPath
-    $installExit = $LASTEXITCODE
-  } finally {
-    Pop-Location
-  }
+  $stdoutPath = "$logPath.stdout"
+  $stderrPath = "$logPath.stderr"
+  Remove-Item -Force $logPath, $stdoutPath, $stderrPath -ErrorAction SilentlyContinue
 
-  $logText = if (Test-Path $logPath) { Get-Content $logPath -Raw } else { '' }
+  $scriptPath = Join-Path $extractRoot 'scripts\install-efesto.ps1'
+  $argumentLine = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -SkipNodeInstall"
+  if ($SkipShortcut) { $argumentLine += ' -SkipShortcut' }
+
+  $process = Start-Process `
+    -FilePath 'powershell.exe' `
+    -ArgumentList $argumentLine `
+    -WorkingDirectory $extractRoot `
+    -RedirectStandardOutput $stdoutPath `
+    -RedirectStandardError $stderrPath `
+    -Wait `
+    -PassThru `
+    -NoNewWindow
+
+  $stdout = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw } else { '' }
+  $stderr = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw } else { '' }
+  $logText = @($stdout, $stderr) -join [Environment]::NewLine
+  Set-Content -Path $logPath -Value $logText -Encoding utf8
+
   if ($logText.Contains($testToken) -or $logText.Contains($testBoundaryKey)) {
     throw 'Installer exposed a private runtime credential in its output.'
   }
-  if ($installExit -ne 0) {
+  if ($process.ExitCode -ne 0) {
     $sanitizedTail = Get-SanitizedLogTail $logPath
     Write-Host '--- sanitized installer tail ---'
     Write-Host $sanitizedTail
     Write-Host '--- end sanitized installer tail ---'
-    throw "Packaged installer failed with exit $installExit."
+    throw "Packaged installer failed with exit $($process.ExitCode)."
   }
 }
 
