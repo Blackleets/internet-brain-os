@@ -1,276 +1,184 @@
 # Product Star Roadmap
 
-This document turns the current Hermes → Kernel foundation into an execution checklist for making Internet Brain OS / Hephaestus feel like a product, not only a secure backend.
+This roadmap turns the verified HEPHAESTUS / Efesto foundation into a focused release and product plan. It must follow `PROJECT_STATE.md` and live CI when newer than this file.
 
-The goal is not to add random features. The goal is to make the implemented AI Forensics loop visible, trustworthy, and easy to demonstrate.
+The goal is not to add random features. The goal is to make the evidence-first intelligence loop useful, trustworthy, easy to install, and easy to demonstrate without weakening Kernel authority.
 
-## Current foundation
+## Current foundation — verified 2026-08-09
 
-Already implemented and merged:
+Implemented:
 
-- Signed local Hermes ingestion boundary.
-- Loopback-only local Kernel route.
-- HMAC headers and body binding.
-- Idempotency receipts.
-- Replay-safe ingestion.
-- Conflict rejection for altered payloads using the same idempotency key.
-- Interrupted ingestion recovery.
-- Startup reconciliation.
-- Bounded Hermes Agent output adapter.
-- Native JSONL extractor.
-- Agent-output ingestion CLI.
-- Offline agent-output validator.
-- Smoke and attack smoke tests.
-- Demo quickstart.
-- Real Hermes validation guide.
-- Product-facing AI Forensics case study.
-- Replay Lab contract.
+- Signed, loopback-only Hermes ingestion with HMAC binding and idempotency.
+- Exact replay safety and altered-replay conflict rejection.
+- Kernel-owned Evidence, contradiction, admission, authority receipts and durable-memory gates.
+- Authentic Hermes runtime proof through the bounded Agent Hub boundary.
+- Native public `web.search` and `web.read` through capability/risk gates.
+- Goal → Evidence → Opportunity → Trigger/Notification Golden E2E.
+- Opportunity classification, Goal matching, ranking, dedupe, dismissal and private preference learning.
+- Replay Lab read-only forensic surface.
+- Goal-first Control Center plus living Efesto forge UI.
+- Browser extension workspaces for Forge, Missions, Finds and Models.
+- One-click/self-healing Windows setup and immutable internal release packaging.
+- Frozen-lockfile install, production dependency audit, typecheck, Vitest, build, first-run verification, Chromium acceptance and Windows smoke/reproduction gates.
 
-Current status:
+Status legend:
 
-```text
-Secure demo-capable foundation: strong.
-Product experience: still early.
-```
-
-Status legend for the execution sections below:
-
-- `[x]` verified in the repository and current validation baseline.
-- `[ ]` not yet proven or intentionally deferred.
-- A phase is complete only when every required item is checked; partial implementation is stated explicitly.
+- `[x]` verified in the repository/current baseline.
+- `[ ]` intentionally deferred or still requiring proof.
 
 ## North star
 
-A user should install Efesto, authorize a public site, and see useful opportunity Evidence reach their private local intelligence system without handling JSON or opening Replay Lab.
-
-The primary experience is now:
+A user should install Efesto, define a Goal, and receive useful public-web findings backed by local Evidence without handling JSON or giving an agent authority over trusted memory.
 
 ```text
-user browses an authorized public site
-→ Efesto captures safely in the background
-→ local Kernel preserves Evidence and provenance
-→ local model classifies useful opportunities
-→ Hermes or another connected agent investigates promising findings
-→ Obsidian receives curated knowledge
-→ Replay Lab explains decisions only when advanced detail is needed
+Goal
+→ authorized research
+→ Case + Evidence
+→ Kernel verification
+→ Opportunity ranking
+→ Trigger / notification
+→ controlled memory only after Kernel gates
 ```
 
-The ideal experience:
+## Phase A — Authentic Hermes boundary
 
-```text
-clone repo
-→ run demo commands
-→ see a forensic case created
-→ inspect evidence and claim proposal
-→ replay the same run safely
-→ alter the run and see conflict rejection
-→ understand why this prevents contaminated memory
-```
+Purpose: prove the system is not synthetic-only.
 
-## Phase A — Real Hermes validation
+Status: **complete**.
 
-Purpose: prove this is not synthetic-only.
+- [x] Capture and sanitize authentic Hermes runtime output.
+- [x] Validate the real runtime through the bounded adapter path.
+- [x] Prove exact replay idempotency.
+- [x] Prove altered replay rejection.
+- [x] Prove Kernel-owned authority fields cannot be injected by Hermes.
+- [x] Prove the Agent Hub worker against the authentic runtime.
+- [x] Close Issue #57 and Issue #101 after the acceptance evidence was recorded.
 
-Status: **blocked on one sanitized output from the user's real Hermes runtime**. Synthetic fixtures and smoke tests do not complete this phase.
+Invariant: do not weaken the Kernel contract to make an external agent fit.
 
-Checklist:
+## Phase B — Replay Lab
 
-- [ ] Capture one real Hermes runtime output.
-- [ ] Redact secrets and private data.
-- [ ] Validate it with `pnpm hermes:validate-agent` or `--native-jsonl`.
-- [ ] Ingest it through `/hermes/ingestions`.
-- [ ] Confirm exact replay returns the same record id.
-- [ ] Confirm altered replay returns `409 HERMES_IDEMPOTENCY_CONFLICT`.
-- [ ] Confirm forbidden Kernel authority fields fail before ingestion.
-- [ ] Close Issue #57 only after the above is proven.
-
-If Hermes emits an unsupported structure:
-
-- [ ] Save a sanitized fixture under `examples/`.
-- [ ] Add a thin extractor.
-- [ ] Add tests for valid extraction.
-- [ ] Add tests for authority-field rejection.
-- [ ] Add tests for unknown evidence references.
-
-Do not weaken the Kernel contract to make real Hermes fit.
-
-## Phase B — Visible Replay Lab
-
-Purpose: make the forensic record understandable without reading JSON.
+Purpose: make the forensic record understandable without reading raw logs.
 
 Status: **complete for the current read-only operator scope**.
 
-Primary contract:
+- [x] Case/cognitive record identity.
+- [x] Evidence records and claim proposal.
+- [x] Kernel validation/admission state.
+- [x] Idempotency/replay state.
+- [x] Authority-boundary explanation.
+- [x] Deterministic causality and AI-autopsy views derived from persisted state.
+- [x] Read-only prevention proposals.
+- [x] No durable-memory mutation authority in Replay Lab.
 
-- `docs/replay-lab-contract.md`
+## Phase C — Goal-first product experience
 
-Minimum UI should show:
+Purpose: expose useful intelligence rather than a generic admin/log dashboard.
 
-- [x] Case / cognitive record id.
-- [x] Mission id.
-- [x] Task id.
-- [x] Timeline of Hermes events.
-- [x] Evidence records.
-- [x] Claim proposal.
-- [x] Validation/admission state owned by Kernel.
-- [x] Idempotency receipt status.
-- [x] Replay result derived from the persisted receipt state.
-- [x] Authority boundary status and forbidden fields, with an honest non-persistence explanation for rejected attempts.
-- [x] Deterministic Causality Map derived only from persisted evidence, claim, gate, contradiction, and admission links.
-- [x] Evidence-backed AI Autopsy separating observed facts from deterministic interpretation.
-- [x] Read-only Prevention Rule proposals that require human approval and never mutate Kernel policy.
+Status: **implemented and browser-tested**.
 
-Evidence: `ReplayLabQueryService`, the authenticated read-only `/api/replay-lab/*` API, `apps/local-kernel/replay-lab-page.mjs`, read-model/API coverage, the explicit pre-ingestion authority-boundary projection, persisted-record-only causality edges, deterministic autopsy findings, and non-enforced prevention proposals.
+- [x] Home/Goal surface.
+- [x] Missions.
+- [x] Finds/Opportunities.
+- [x] Evidence.
+- [x] Models/chat.
+- [x] Agents.
+- [x] Automations.
+- [x] Settings.
+- [x] Living Efesto pixel-smith/brain identity driven by observable state.
+- [x] Mobile containment and reduced-motion behavior.
+- [x] Explicit confirmation before Goal execution.
 
-Design principle:
+## Phase D — Opportunity intelligence
 
-```text
-Do not show logs first. Show the investigation first.
-```
+Purpose: restore the original promise: Efesto should find useful public opportunities while preserving provenance and privacy.
 
-Suggested product labels:
+Status: **MVP loop implemented**.
 
-- Case
-- Evidence
-- Claim Proposal
-- Replay
-- Conflict
-- Prevention Rule
-- Kernel Decision
+- [x] Explicit public-origin authorization and sensitive-route protections.
+- [x] Local Goal matching and relevance scoring.
+- [x] Exact/fuzzy deduplication.
+- [x] Kernel-owned Evidence preservation.
+- [x] Opportunity ranking with provenance.
+- [x] Trigger/notification path with replay-safe deduplication.
+- [x] Private, erasable preference learning from explicit feedback.
+- [x] Obsidian-compatible projection.
+- [ ] Broader connector catalog beyond the current MVP boundaries.
+- [ ] Opt-in collective signals/privacy design for future network effects.
 
-## Phase C — Operator demo mode
+## Phase E — Memory-safety expansion
 
-Purpose: make demos repeatable and safe.
+Purpose: extend the existing authority foundation without turning agents into the Kernel.
 
-Status: **complete through the documented local flow and deterministic smoke commands**.
+Status: **partially implemented; advanced controls remain future work**.
 
-Checklist:
+- [x] Kernel-owned contradiction/admission explanations.
+- [x] Durable authority receipts and restart reconciliation.
+- [x] Conservative prevention proposals from forensic outcomes.
+- [ ] Richer quarantine/toxic-memory operator controls.
+- [ ] Reversible memory-management workflows beyond the current lifecycle gates.
+- [ ] Repeated-failure aggregation for prevention-rule recommendations.
 
-- [x] Add a local-only demo command or documented two-terminal flow.
-- [x] Seed a known sample case.
-- [x] Show safe replay.
-- [x] Show altered replay blocked.
-- [x] Show authority injection blocked.
-- [x] Keep secrets out of commits and output.
-- [x] Ensure demo works without external paid APIs.
+## Phase F — Distribution and release closeout
 
-Evidence: `docs/hermes-demo-quickstart.md`, `pnpm hermes:smoke`, `pnpm hermes:attack-smoke`, both sanitized fixtures under `examples/`, and offline authority-field rejection in the Hermes output adapters.
+Purpose: ship an internally testable Windows candidate without confusing CI success with public approval.
 
-Potential command shape:
+Status: **current active release gate**.
 
-```bash
-pnpm demo:hermes-forensics
-```
+- [x] Non-technical `Install Efesto.cmd` path.
+- [x] Self-healing launcher prerequisites.
+- [x] Immutable internal artifact packaging with SHA-256 manifest.
+- [x] Production dependency audit without a GHSA ignore.
+- [x] Windows launcher, first-run and pairing recovery automation.
+- [x] Advance runtime-changing candidate to `0.1.0-internal.6`.
+- [x] Add extension background runtime regression + Gherkin coverage.
+- [ ] Full PR/main CI green for the exact `internal.6` code state.
+- [ ] UAT-1 through UAT-6 on the same generated Windows artifact.
+- [ ] Public-release PR/tag only after UAT passes and `publicLaunchApproved` is explicitly promoted.
 
-Do not add this until the command can manage local server lifecycle safely.
+## Phase G — Product narrative and evidence
 
-## Phase D — Product narrative polish
+Purpose: make the product understandable to users, contributors and investors without overclaiming.
 
-Purpose: make the repo understandable to users, contributors, and investors.
-
-Status: **narrative package complete; real interface screenshots remain**.
-
-Checklist:
-
-- [x] Improve README first screen.
-- [x] Add a simple architecture diagram in Markdown.
-- [x] Add a short “What this is / What this is not” section.
-- [x] Add a one-minute demo script.
-- [ ] Add screenshots once UI exists.
-- [x] Add a short X/Twitter launch post draft.
-- [x] Add a founder-facing pitch paragraph.
-
-Evidence: the README product opening and architecture view plus `docs/launch-kit.md`. Screenshots must depict the real local interface and must not be replaced with generated mockups presented as product evidence.
-
-Core message:
-
-```text
-Internet Brain OS is an AI Forensics and memory-safety layer for autonomous agents.
-It turns agent runs into evidence-backed cases before anything becomes durable memory.
-```
-
-## Phase E — Kernel memory safety expansion
-
-Purpose: move from ingestion safety to long-term cognitive safety.
-
-Status: **not started as a dedicated expansion phase**. Existing validation, contradiction, and admission primitives are the foundation, not completion of these operator-facing capabilities.
-
-Checklist:
-
-- [ ] Add clearer memory admission reports.
-- [ ] Add contradiction summaries.
-- [x] Add conservative prevention-rule proposals from recorded forensic outcomes. Repeated-failure aggregation remains future work.
-- [ ] Add toxic-memory flags.
-- [ ] Add reversible memory writes or quarantine state.
-- [x] Add explicit “why this was not admitted” explanations in AI Autopsy.
-
-Invariant:
-
-```text
-Hermes proposes. Kernel verifies. Contradiction checks. Admission decides. Memory persists only after gates pass.
-```
-
-## Phase F — Packaging and release readiness
-
-Purpose: make external review safe.
-
-Status: **local validation passes** with 58 test files / 290 tests plus typecheck and build. The forensic UI and authenticated real-capture importer are merged; the Efesto automatic browser radar is implemented locally and awaits review/CI. A real Hermes proof remains required before a pre-alpha tag.
-
-## Phase G — Efesto Opportunity Radar
-
-Purpose: restore the original product promise: navigate normally while Efesto finds and preserves useful public information in parallel.
-
-- [x] Redesign the extension as the primary Efesto surface.
-- [x] Require explicit authorization per public origin.
-- [x] Automatically block sensitive routes, query keys, selections, and rapid repeat captures.
-- [x] Keep every automatic capture inside the user's loopback Kernel and Obsidian destination.
-- [x] Show truthful readiness for Kernel, Hermes, local model, and Obsidian.
-- [ ] Classify opportunities and suppress ordinary low-value pages.
-- [ ] Add a simple Opportunity inbox and notifications.
-- [ ] Add one-click Agent Hub onboarding, beginning with Hermes.
-- [ ] Add guided Model Forge setup for audited local models.
-- [ ] Specify opt-in collective signals without transferring private browsing or vault content.
-
-Checklist:
-
-- [x] Confirm `pnpm install --frozen-lockfile` and `pnpm verify:first-run` pass from a clean Git clone.
-- [x] Confirm demo commands pass from clean clone.
-- [ ] Remove or document stale references.
-- [ ] Check docs for overclaiming.
-- [x] Check all public Hermes examples pass the sensitive-data preflight.
-- [x] Confirm tracked secret-pattern matches are limited to deliberate negative-test fixtures.
-- [x] Confirm local server rejects non-loopback hosts before binding publicly.
-- [ ] Tag a pre-alpha release only when demo and docs are coherent.
+- [x] Clear AI-forensics / intelligence-forge narrative.
+- [x] Architecture and authority-boundary documentation.
+- [x] Deterministic demo quickstart.
+- [x] Authentic-runtime acceptance documented separately from fixtures.
+- [x] Founder-facing launch kit.
+- [ ] Capture/update real product screenshots from the exact release candidate where needed.
+- [ ] Publish public launch materials only after the UAT promotion gate.
 
 ## What not to do
 
 Do not:
 
-- Turn the project back into a generic observability dashboard.
-- Allow Hermes or any external agent to write durable memory directly.
-- Accept validation/admission fields from agent output.
-- Add network-exposed ingestion routes without a new security design.
-- Add UI that shows pretty logs but hides forensic causality.
-- Add broad dependencies before the local-first foundation is stable.
+- turn the project back into a generic scraper or observability dashboard;
+- allow Hermes or any external agent to write durable memory directly;
+- accept validation/admission authority from agent output;
+- expose trusted Kernel routes publicly without a new security design;
+- add fake UI state or animation that implies work not present in persisted/streaming state;
+- authorize purchases, logins or form submissions as part of the current Golden path;
+- reuse an internal candidate number after shipped behavior changes.
 
-## Recommended next PRs
+## Next bounded sequence
 
-1. Real Hermes runtime fixture or thin extractor, once the external capture is available.
-2. Capture sanitized screenshots from the real local Replay Lab interface.
-3. Memory quarantine / prevention-rule design note.
-4. Clean-clone packaging and release-readiness audit.
+1. Make the `internal.6` runtime-readiness PR fully green.
+2. Merge only after required CI, Chromium and affected Windows gates pass.
+3. Generate the immutable `internal.6` Windows artifact from merged `main`.
+4. Run UAT-1 through UAT-6 on that exact artifact.
+5. If every UAT passes, create a separate public-release promotion change.
+6. Then resume product expansion from real user feedback rather than adding another broad subsystem.
 
 ## Definition of “project star”
 
-The project becomes a star when it can prove this loop end to end:
+The project is a star when the user-value and safety loops are both visible:
 
 ```text
-An autonomous agent produced a risky run.
-Internet Brain OS captured it as a case.
-The system preserved evidence.
-The Kernel blocked forged authority.
-Replay was safe.
-Altered replay was rejected.
-Memory admission remained controlled.
-The operator could understand what happened and what rule prevents recurrence.
+A user gives Efesto a Goal.
+An agent or native capability researches bounded public sources.
+The Kernel preserves Evidence and provenance.
+The Kernel blocks forged authority and altered history.
+Useful Opportunities are ranked and surfaced.
+Exact replay is safe and side effects remain controlled.
+The operator can understand why a result was trusted, rejected or retained.
 ```
