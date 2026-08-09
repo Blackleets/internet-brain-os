@@ -11,7 +11,7 @@ describe('internal Efesto release package', () => {
   it('is explicitly internal and blocks public promotion by default', async () => {
     const release = JSON.parse(await text('INTERNAL_RELEASE.json'));
     expect(release.schema).toBe('efesto.internal-release.v1');
-    expect(release.version).toBe('0.1.0-internal.19');
+    expect(release.version).toBe('0.1.0-internal.20');
     expect(release.channel).toBe('internal');
     expect(release.publicLaunchApproved).toBe(false);
     expect(release.entrypoint).toBe('Install Efesto.cmd');
@@ -84,6 +84,7 @@ describe('internal Efesto release package', () => {
     expect(uat).toContain('UAT-4 — persistence and replay');
     expect(uat).toContain('UAT-6 — failure handling');
     expect(uat).toContain('Memory Safety v1');
+    expect(uat).toContain('Goal-first cross-surface G0');
     expect(uat).toContain('same immutable internal candidate');
     expect(uat).toContain('must never be reused');
     expect(uat).toContain('Public launch remains blocked');
