@@ -105,14 +105,18 @@ test.describe('mobile Efesto product shell', () => {
     await page.getByRole('button', { name: 'Abrir menú', exact: true }).click();
     await expect(page.locator('aside[aria-label="Navegación principal"]')).toBeVisible();
     const sidebarBox = await page.locator('.efesto-sidebar').boundingBox();
-    expect(sidebarBox?.left).toBeGreaterThanOrEqual(-1);
-    expect(sidebarBox?.right).toBeLessThanOrEqual(391);
+    expect(sidebarBox).not.toBeNull();
+    if (!sidebarBox) throw new Error('Mobile sidebar has no layout box');
+    expect(sidebarBox.x).toBeGreaterThanOrEqual(-1);
+    expect(sidebarBox.x + sidebarBox.width).toBeLessThanOrEqual(391);
 
     await page.getByRole('button', { name: 'Cerrar menú', exact: true }).first().click();
     await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Busca oportunidades reales');
     const composerBox = await page.locator('.goal-dock').boundingBox();
-    expect(composerBox?.left).toBeGreaterThanOrEqual(0);
-    expect(composerBox?.right).toBeLessThanOrEqual(390);
+    expect(composerBox).not.toBeNull();
+    if (!composerBox) throw new Error('Mobile composer has no layout box');
+    expect(composerBox.x).toBeGreaterThanOrEqual(0);
+    expect(composerBox.x + composerBox.width).toBeLessThanOrEqual(390);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
   });
 });
