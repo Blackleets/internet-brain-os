@@ -5,17 +5,17 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.40`
+- Candidate: `0.1.0-internal.42`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
-- `0.1.0-internal.7` through `0.1.0-internal.39` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
+- `0.1.0-internal.7` through `0.1.0-internal.41` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
 - Test only the artifact produced from the exact `main` commit under review.
 - Automated packaged-candidate qualification on Windows 2022 and Windows 2025 must be green before manual UAT begins.
 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Use only the `efesto-v0.1.0-internal.40-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
+2. Use only the `efesto-v0.1.0-internal.42-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -86,7 +86,11 @@ Pass only if:
 - a live pre-G4 Mission may receive a receipt only after a new trusted interactive confirmation, without creating a duplicate Mission;
 - an idempotent repeat confirmation preserves an existing receipt, while an explicit terminal retry receives a fresh receipt;
 - lease reconciliation preserves authorization provenance and never widens its scope;
-- G4.1b still does not broaden or gate the automatic Hermes worker; worker enforcement remains G4.1c;
+- G4.1c1a requires current Goal/Mission identity and exact revision-bound authorization before automatic discovery eligibility;
+- G4.1c1a authorizes the registered `web.search` capability through CapabilityRegistry before automatic-read-only policy evaluation;
+- `public_web_research` remains a compatibility planning alias and is never treated as a separate executable capability;
+- pending search candidates deny another automatic discovery pass until verification completes;
+- the G4.1c1a eligibility decision itself creates no lease, no Evidence, no side effect and no memory authority;
 - no blank/white/black dead screen blocks the journey.
 
 ## UAT-3 — real public-web economic Goal
