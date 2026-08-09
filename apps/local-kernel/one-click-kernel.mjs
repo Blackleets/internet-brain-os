@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
-import { detectHermesRuntime } from './hermes-runtime.mjs';
+import { detectHermesRuntime, probeHermesReadOnlyRuntime } from './hermes-runtime.mjs';
 import { selectInternalPort } from './internal-port.mjs';
 import { runHermesMissionWorker } from './hermes-mission-worker.mjs';
 
@@ -13,20 +13,14 @@ const activeRuns = new Map();
 let shuttingDown = false;
 let proxy;
 
-if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(String(host).toLowerCase())) {
-  throw new Error('HEPHAESTUS_HOST must be a loopback address');
-}
-if (!Number.isInteger(port) || port < 1 || port > 65535) {
-  throw new Error('Kernel port must be a valid TCP port');
-}
+if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(String(host).toLowerCase())) throw new Error('HEPHAESTUS_HOST must be a loopback address');
+if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Kernel port must be a valid TCP port');
 
-const internalPort = await selectInternalPort({
-  externalPort: port,
-  requestedPort: process.env.HEPHAESTUS_INTERNAL_PORT,
-});
+const internalPort = await selectInternalPort({ externalPort: port, requestedPort: process.env.HEPHAESTUS_INTERNAL_PORT });
 const internalBaseUrl = `http://127.0.0.1:${internalPort}`;
 
 const hermesRuntime = await detectHermesRuntime();
+const hermesReadOnlyRuntime = await probeHermesReadOnlyRuntime(hermesRuntime);
 if (hermesRuntime.available) process.env.HEPHAESTUS_HERMES_EXECUTABLE = hermesRuntime.executable;
 
 const kernel = spawn(process.execPath, [resolve('apps/local-kernel/server.mjs')], {
@@ -38,6 +32,7 @@ const kernel = spawn(process.execPath, [resolve('apps/local-kernel/server.mjs')]
     HEPHAESTUS_HOST: '127.0.0.1',
     HEPHAESTUS_PORT: String(internalPort),
     HEPHAESTUS_HERMES_READY: hermesRuntime.available ? '1' : '0',
+    HEPHAESTUS_HERMES_READ_ONLY_READY: hermesReadOnlyRuntime.ready ? '1' : '0',
   },
 });
 
@@ -85,8 +80,10 @@ proxy = createServer(async (request, response) => {
 proxy.listen(port, host, () => {
   console.log(`Hephaestus one-click Kernel listening on http://${host}:${port}`);
   console.log(`Efesto internal Kernel bound to loopback port ${internalPort}.`);
-  if (hermesRuntime.available) {
-    console.log('Efesto Research starts the detected Hermes runtime automatically.');
+  if (hermesReadOnlyRuntime.ready) {
+    console.log('Efesto automatic research is restricted to certified Hermes safe search-only discovery.');
+  } else if (hermesRuntime.available) {
+    console.log(`Hermes is installed, but automatic research is blocked until read-only runtime certification passes (${hermesReadOnlyRuntime.reason ?? 'unknown'}).`);
   } else {
     console.log('Hermes runtime was not found. Install Hermes or configure HEPHAESTUS_HERMES_EXECUTABLE.');
   }
@@ -141,9 +138,7 @@ async function waitForKernel() {
 }
 
 function isMissionStart(request, status) {
-  return request.method === 'POST'
-    && status >= 200 && status < 300
-    && /^\/api\/goals\/[^/]+\/missions$/.test(request.url ?? '');
+  return request.method === 'POST' && status >= 200 && status < 300 && /^\/api\/goals\/[^/]+\/missions$/.test(request.url ?? '');
 }
 
 function forwardHeaders(headers) {
