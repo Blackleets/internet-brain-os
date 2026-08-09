@@ -106,8 +106,8 @@ Never quote an old test count as current truth; use the exact current CI run.
 ## Distribution state
 
 - `0.1.0-internal.6` remains the prior runtime-readiness milestone.
-- `0.1.0-internal.7` through `0.1.0-internal.19` are frozen and must not be reused.
-- G0 uses immutable candidate `0.1.0-internal.20`; it is not qualified until the complete final matrix passes on the same SHA.
+- `0.1.0-internal.7` through `0.1.0-internal.20` are frozen and must not be reused.
+- G0 uses immutable candidate `0.1.0-internal.21`; it is not qualified until the complete final matrix passes on the same SHA.
 - `publicLaunchApproved` remains `false`.
 - The **public release light is separate** from implementation readiness: automated qualification may be green while public launch remains blocked pending manual UAT on one exact candidate.
 
