@@ -17,12 +17,13 @@ const fixtures = {
   missions: { ok: true, missions: [{ id: 'mission-1', goalId: 'goal-1', goalTitle: 'Find AI clients', status: 'running', executionPhase: 'investigating', attempt: 1, createdAt: '2026-07-26T10:00:00.000Z' }] },
   opportunities: { ok: true, opportunities: [{ id: 'opportunity-1', category: 'client', categoryLabel: 'Potential client', benefitType: 'income', title: 'AI automation project', sourceHost: 'clients.example', relevance: 72, nextAction: 'Qualify the need before contacting', status: 'new', detectedAt: '2026-07-26T10:00:00.000Z' }] },
   providers: { ok: true, providers: [{ id: 'fixture-local', type: 'ollama', label: 'Ollama local', baseUrl: 'http://127.0.0.1:11434', models: ['qwen3:4b'], hasCredential: true, managedBy: 'environment' }] },
+  modelForge: { ok: true, forge: { runtime: 'available', hardware: { ramGiB: 32, cpuCores: 12, tier: 'powerful' }, activeModel: 'qwen3:4b', recommended: 'qwen3:4b', models: [{ id: 'qwen3:4b', label: 'Qwen 3 4B', minRamGiB: 8, tier: 'light', uses: ['chat'], multilingual: true, compatible: true, installed: true, active: true }], setup: { action: 'configure', command: null, setting: null, restartRequired: false } } },
 };
 
 const routes = new Map([
   ['/health', fixtures.health], ['/status', fixtures.status], ['/bootstrap/status', fixtures.bootstrap],
   ['/api/cases', fixtures.cases], ['/api/goals', fixtures.goals], ['/api/agent-missions', fixtures.missions],
-  ['/api/opportunities', fixtures.opportunities], ['/api/chat/providers', fixtures.providers],
+  ['/api/opportunities', fixtures.opportunities], ['/api/chat/providers', fixtures.providers], ['/api/model-forge', fixtures.modelForge],
 ]);
 
 const server = createServer((request, response) => {
@@ -60,7 +61,6 @@ const server = createServer((request, response) => {
   }
   if (request.method !== 'GET') { response.writeHead(405, headers).end(); return; }
 
-  if (path === '/api/model-forge') { response.writeHead(404, headers).end(JSON.stringify({ ok: false, code: 'MODEL_FORGE_UNAVAILABLE' })); return; }
   if (path === '/api/browser/case/case-1') {
     response.writeHead(200, headers).end(JSON.stringify({ ok: true, case: { id: 'case-1', title: 'Supplier research' }, evidence: [{ id: 'evidence-1', summary: 'Public supplier evidence', sourceUrl: 'https://supplier.example/source', confidence: 0.93, capturedAt: '2026-07-26T10:02:00.000Z', tags: ['public'] }] })); return;
   }
