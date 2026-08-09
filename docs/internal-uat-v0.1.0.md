@@ -5,17 +5,17 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.35`
+- Candidate: `0.1.0-internal.36`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
-- `0.1.0-internal.7` through `0.1.0-internal.34` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
+- `0.1.0-internal.7` through `0.1.0-internal.35` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
 - Test only the artifact produced from the exact `main` commit under review.
 - Automated packaged-candidate qualification on Windows 2022 and Windows 2025 must be green before manual UAT begins.
 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Use only the `efesto-v0.1.0-internal.35-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
+2. Use only the `efesto-v0.1.0-internal.36-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -72,8 +72,13 @@ Pass only if:
 - the Shared Goal Truth popup binder introduces no Goal write, Mission write, approval, capability or memory-authority path;
 - `.34` is frozen because the first binder observer broadened to subtree/text observation and violated the existing anti-loop UI contract; `.35` restores scoped observation to direct `mission-state` attributes/text plus Goal-list child additions only;
 - the observer never watches a subtree or its own research-button text mutations, preserving the established no-loop contract while still re-reading Shared Goal Truth after a legacy visual overwrite;
+- extension Goal chips now render from Shared Goal Truth v1 instead of the legacy `/api/goals` list, preserve Kernel ordering, and expose compatibility/autonomy/work-state copy without client-side authority upgrades;
+- each Goal Research control is driven by that Goal's own persisted `workState` and projected `canResearch`, so active, paused or otherwise unavailable Goals cannot be enabled by another Goal's focused state;
+- the existing `startGoalResearch(goal.id, ...)` writer remains the only Research action path and still requires the existing explicit `Authorize Hermes to research this Goal once?` confirmation;
+- Shared Goal Truth read failure clears Goal chips into an explicit unavailable state and does not fall back to stale legacy Goal data;
+- Goal chips refresh when the observable Mission revision changes rather than adding an independent unbounded polling loop;
 - legacy Mission history/ledger remains a read-only compatibility view in this layer and is not promoted to Shared Goal Truth authority;
-- Goal chips are **not yet claimed to consume Shared Goal Truth v1**; that remains G3.2c;
+- no POST/write route is introduced for `/api/goal-surfaces` and the Goal-chip renderer itself owns no writer;
 - existing Goal/Mission POST writers remain unchanged and still require explicit confirmation before mission creation;
 - the Efesto pixel-smith/brain visual identity renders without obscuring controls or causing horizontal overflow;
 - work/data-flow motion appears only for observable active states such as queued, investigating, verifying or model thinking, and does not imply work while offline or failed;
