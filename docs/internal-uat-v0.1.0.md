@@ -5,17 +5,17 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.25`
+- Candidate: `0.1.0-internal.26`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
-- `0.1.0-internal.7` through `0.1.0-internal.24` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
+- `0.1.0-internal.7` through `0.1.0-internal.25` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
 - Test only the artifact produced from the exact `main` commit under review.
 - Automated packaged-candidate qualification on Windows 2022 and Windows 2025 must be green before manual UAT begins.
 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Use only the `efesto-v0.1.0-internal.25-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
+2. Use only the `efesto-v0.1.0-internal.26-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -56,7 +56,10 @@ Pass only if:
 - an unknown Goal returns not found instead of fabricated state;
 - no POST/write route exists under `/api/goal-surfaces`;
 - source-tree launcher startup does not require `packages/kernel/dist` before the first Goal-surface read; packaged installs still build the trusted Kernel runtime before launch;
-- the dashboard web client/parser can consume Shared Goal Truth v1, while the Home/Forge React surface and extension are **not yet claimed to consume it**; that wiring belongs to G2.2 and G3 respectively;
+- the Control Center Home/Living Forge consumes Shared Goal Truth v1 for persisted work-state presentation and does not override it with conflicting legacy Mission interpretation;
+- `completed` without persisted `forged` state remains visually calm and is not presented as Evidence forjada;
+- existing Goal/Mission POST writers remain unchanged and still require explicit confirmation before mission creation;
+- the extension is **not yet claimed to consume Shared Goal Truth v1**; that wiring belongs to G3;
 - the Efesto pixel-smith/brain visual identity renders without obscuring controls or causing horizontal overflow;
 - work/data-flow motion appears only for observable active states such as queued, investigating, verifying or model thinking, and does not imply work while offline or failed;
 - reduced-motion mode remains usable without continuous decorative animation;
