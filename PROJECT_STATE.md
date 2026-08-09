@@ -99,8 +99,8 @@ Never quote an old test count as current truth; use the exact current CI run.
 - `main` includes exact-package qualification (#182), architecture/forensic guardrails (#184), E1 (#193), E2 (#194), E3 (#195), E4 (#196), E4 runtime hardening (#199), and E5 read-only operator exposure (#200).
 - E1–E5 are merged baseline. **PR #201 / E6 Memory Safety v1 adversarial contract freeze is the only active bounded change.**
 - `0.1.0-internal.6` remains the immutable previous runtime-readiness candidate.
-- `0.1.0-internal.7` through `0.1.0-internal.17` are frozen non-promotable, qualified or superseded pre-UAT candidates and must not be reused.
-- The current qualification candidate is `0.1.0-internal.18`; it is not qualified until the exact ZIP passes the complete architecture/CI/Chromium/Windows matrix for the final #201 SHA.
+- `0.1.0-internal.7` through `0.1.0-internal.18` are frozen non-promotable, qualified or superseded pre-UAT candidates and must not be reused.
+- The current qualification candidate is `0.1.0-internal.19`; it is not qualified until the exact ZIP passes the complete architecture/CI/Chromium/Windows matrix for the final #201 SHA.
 - `publicLaunchApproved` remains `false`; manual UAT begins only on the final exact candidate selected after Memory Safety v1 is frozen.
 - The **public release light is separate** from implementation readiness: automated qualification can be green while public launch remains blocked until manual UAT passes on the same immutable candidate and approval is explicitly promoted.
 - Product/business scorecard is #186. Product Design #192 remains downstream of the Memory Safety freeze; live GitHub must be inspected again before choosing the next bounded implementation.
