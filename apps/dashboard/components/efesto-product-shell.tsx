@@ -52,7 +52,7 @@ export default function EfestoProductShell() {
   const [toast, setToast] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [rememberSession, setRememberSession] = useState(false);
-  const chatAbortRef = useRef<AbortController>();
+  const chatAbortRef = useRef<AbortController | undefined>(undefined);
 
   const selectedProvider = providers.find((item) => item.id === selectedProviderId);
   const activeMission = snapshot?.missions.find(isActiveMission);
