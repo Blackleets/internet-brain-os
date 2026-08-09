@@ -1,5 +1,6 @@
 import {
   buildReplayLabMemorySafetyView,
+  ReplayLabMemorySafetyInputError,
   type ReplayLabMemorySafetyView,
   type ReplayLabPreventionSafetyInput,
   type ReplayLabQuarantineSafetyInput,
@@ -29,8 +30,15 @@ export class ReplayLabMemorySafetyQueryService {
   constructor(private readonly dependencies: ReplayLabMemorySafetyQueryDependencies) {}
 
   async getMemorySafety(memoryId: string): Promise<ReplayLabMemorySafetyView> {
+    if (typeof memoryId !== 'string') {
+      throw new ReplayLabMemorySafetyInputError('memoryId must be a string.');
+    }
     const normalizedMemoryId = memoryId.trim();
-    if (!normalizedMemoryId) throw new Error('memoryId is required.');
+    if (!normalizedMemoryId
+      || normalizedMemoryId.length > 240
+      || /[\u0000-\u001f\u007f]/.test(normalizedMemoryId)) {
+      throw new ReplayLabMemorySafetyInputError('memoryId is invalid.');
+    }
 
     const [quarantine, recoveryReviews, prevention] = await Promise.all([
       this.dependencies.quarantine.list(normalizedMemoryId),
