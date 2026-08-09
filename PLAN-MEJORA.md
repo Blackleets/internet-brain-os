@@ -23,11 +23,12 @@
 - [x] Reject installer output that exposes synthetic private runtime credentials.
 - [x] Persist only sanitized failure diagnostics for CI investigation.
 - [x] Add Gherkin and machine-checked release-contract coverage for packaged installation.
-- [x] Advance the immutable hardened candidate to `0.1.0-internal.7`; never reuse `internal.6` for this code state.
+- [x] Freeze `0.1.0-internal.7` and `0.1.0-internal.8` as failed automated-qualification candidates rather than reusing their identities.
+- [x] Advance the isolated packaged-candidate qualification state to `0.1.0-internal.9`.
 - [ ] Make the exact packaged-candidate qualification green on both Windows generations for the final PR SHA.
 - [ ] Merge only after the complete CI, Chromium, legacy Windows and packaged-candidate gates are green for the same SHA.
 - [ ] Re-run the same required gates on the merged `main` commit.
-- [ ] Only then begin manual UAT-1 through UAT-6 on that exact `internal.7` artifact.
+- [ ] Only then begin manual UAT-1 through UAT-6 on that exact `internal.9` artifact.
 - [ ] Set `publicLaunchApproved=true` only after UAT passes on the same immutable candidate.
 
 ## Engineering sequence after release qualification
