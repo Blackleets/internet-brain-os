@@ -11,7 +11,7 @@ describe('internal Efesto release package', () => {
   it('is explicitly internal and blocks public promotion by default', async () => {
     const release = JSON.parse(await text('INTERNAL_RELEASE.json'));
     expect(release.schema).toBe('efesto.internal-release.v1');
-    expect(release.version).toBe('0.1.0-internal.7');
+    expect(release.version).toBe('0.1.0-internal.8');
     expect(release.channel).toBe('internal');
     expect(release.publicLaunchApproved).toBe(false);
     expect(release.entrypoint).toBe('Install Efesto.cmd');
@@ -52,12 +52,14 @@ describe('internal Efesto release package', () => {
     expect(harness).toContain('owned');
     expect(harness).toContain('verified');
     expect(harness).toContain('Get-SanitizedLogTail');
-    expect(harness).toContain('Start-Process');
-    expect(harness).toContain('-RedirectStandardOutput $stdoutPath');
-    expect(harness).toContain('-RedirectStandardError $stderrPath');
+    expect(harness).toContain('System.Diagnostics.ProcessStartInfo');
+    expect(harness).toContain('$startInfo.UseShellExecute = $false');
+    expect(harness).toContain('$startInfo.RedirectStandardOutput = $true');
+    expect(harness).toContain('$startInfo.RedirectStandardError = $true');
     expect(harness).toContain('$process.WaitForExit()');
-    expect(harness).toContain('$process.ExitCode');
-    expect(harness).not.toContain('    -Wait `');
+    expect(harness).toContain('$installExitCode = [int]$process.ExitCode');
+    expect(harness).toContain('ReadToEndAsync()');
+    expect(harness).not.toContain('Start-Process');
     expect(harness).not.toContain('& powershell.exe @arguments *> $logPath');
   });
 
