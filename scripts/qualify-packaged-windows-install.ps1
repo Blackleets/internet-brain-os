@@ -54,6 +54,15 @@ Remove-Item Env:HEPHAESTUS_INTERNAL_PORT -ErrorAction SilentlyContinue
 Remove-Item Env:HEPHAESTUS_PORT -ErrorAction SilentlyContinue
 Remove-Item Env:IBOS_HERMES_SECRET -ErrorAction SilentlyContinue
 
+function Get-SanitizedLogTail([string]$LogPath) {
+  if (-not (Test-Path $LogPath)) { return '<installer log missing>' }
+  $text = Get-Content $LogPath -Raw
+  $text = $text.Replace($testToken, '<redacted-kernel-token>')
+  $text = $text.Replace($testBoundaryKey, '<redacted-boundary-key>')
+  $lines = $text -split "`r?`n"
+  return (($lines | Select-Object -Last 60) -join [Environment]::NewLine)
+}
+
 function Invoke-QualifiedInstall([string]$LogName, [switch]$SkipShortcut) {
   $logPath = Join-Path $env:RUNNER_TEMP $LogName
   Remove-Item -Force $logPath -ErrorAction SilentlyContinue
@@ -66,11 +75,17 @@ function Invoke-QualifiedInstall([string]$LogName, [switch]$SkipShortcut) {
   } finally {
     Pop-Location
   }
-  if ($installExit -ne 0) { throw "Packaged installer failed with exit $installExit." }
 
-  $logText = Get-Content $logPath -Raw
+  $logText = if (Test-Path $logPath) { Get-Content $logPath -Raw } else { '' }
   if ($logText.Contains($testToken) -or $logText.Contains($testBoundaryKey)) {
     throw 'Installer exposed a private runtime credential in its output.'
+  }
+  if ($installExit -ne 0) {
+    $sanitizedTail = Get-SanitizedLogTail $logPath
+    Write-Host '--- sanitized installer tail ---'
+    Write-Host $sanitizedTail
+    Write-Host '--- end sanitized installer tail ---'
+    throw "Packaged installer failed with exit $installExit."
   }
 }
 
