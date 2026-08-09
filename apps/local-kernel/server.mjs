@@ -15,6 +15,7 @@ import { replayLabPageHtml } from './replay-lab-page.mjs';
 import { OpportunityProjector } from './opportunity-classifier.mjs';
 import { GoalManager } from './goals.mjs';
 import { AgentMissionManager } from './agent-missions.mjs';
+import { GoalSurfaceReaderError, createGoalSurfaceReader } from './goal-surface-reader.mjs';
 import { PreferenceLearner } from './preference-learner.mjs';
 import { AgentMissionExecutor } from './agent-mission-executor.mjs';
 import { ModelForge } from './model-forge.mjs';
@@ -64,6 +65,7 @@ const hermes = isMain
   : undefined;
 const hermesWorkerReady = process.env.HEPHAESTUS_HERMES_READY === '1';
 const agentMissionManager = new AgentMissionManager(knowledgeStore, { isAgentReady: (agent) => agent === 'hermes' && (hermesWorkerReady || Boolean(hermes)) });
+const goalSurfaceReader = isMain ? await createGoalSurfaceReader(knowledgeStore) : undefined;
 const preferenceLearner = new PreferenceLearner(knowledgeStore);
 const agentMissionExecutor = new AgentMissionExecutor(knowledgeStore, opportunityProjector);
 const modelForge = new ModelForge({
@@ -112,6 +114,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const opportunities = options.opportunityProjector;
   const goals = options.goalManager;
   const agentMissions = options.agentMissionManager;
+  const goalSurfaces = options.goalSurfaceReader;
   const preferences = options.preferenceLearner;
   const missionExecutor = options.agentMissionExecutor;
   const models = options.modelForge;
@@ -376,6 +379,26 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       try { return send(response, 200, { ok: true, ...(await preferences.reset()) }); }
       catch { return send(response, 500, { ok: false, code: 'PREFERENCE_RESET_FAILED' }); }
     }
+    if (request.method === 'GET' && request.url === '/api/goal-surfaces') {
+      if (!goalSurfaces) return send(response, 404, { ok: false, code: 'GOAL_SURFACES_UNAVAILABLE' });
+      try { return send(response, 200, { ok: true, surfaces: await goalSurfaces.list() }); }
+      catch { return send(response, 500, { ok: false, code: 'GOAL_SURFACES_FAILED' }); }
+    }
+    if (request.method === 'GET' && request.url?.startsWith('/api/goal-surfaces/')) {
+      if (!goalSurfaces) return send(response, 404, { ok: false, code: 'GOAL_SURFACES_UNAVAILABLE' });
+      try {
+        const goalId = decodeURIComponent(request.url.slice('/api/goal-surfaces/'.length));
+        const surface = await goalSurfaces.get(goalId);
+        return surface
+          ? send(response, 200, { ok: true, surface })
+          : send(response, 404, { ok: false, code: 'GOAL_SURFACE_NOT_FOUND' });
+      } catch (error) {
+        if (error instanceof GoalSurfaceReaderError) {
+          return send(response, 400, { ok: false, code: error.code, error: error.message });
+        }
+        return send(response, 500, { ok: false, code: 'GOAL_SURFACE_FAILED' });
+      }
+    }
     if (request.url === '/api/goals' && request.method === 'GET') {
       if (!goals) return send(response, 404, { ok: false, code: 'GOALS_UNAVAILABLE' });
       try { return send(response, 200, { ok: true, goals: await goals.list() }); }
@@ -527,6 +550,7 @@ export const server = createLocalKernelServer(inbox, projector, obsidian, summar
   opportunityProjector,
   goalManager,
   agentMissionManager,
+  goalSurfaceReader,
   preferenceLearner,
   agentMissionExecutor,
   modelForge,

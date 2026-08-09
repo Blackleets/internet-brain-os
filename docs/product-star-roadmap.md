@@ -25,54 +25,81 @@ Goal
 - One-click/self-healing Windows setup and exact immutable package qualification.
 - Architecture guard, strict dependency audit, typecheck, Vitest, build, first-run, Chromium and Windows release gates.
 - Memory Safety v1 adversarial contract freeze merged in #201.
+- Goal-first cross-surface G0 / #202 merged with **Forge Focus** selected.
 
 ## Phase E — Memory Safety v1
 
 Status: **complete**.
 
-- [x] #185 deterministic quarantine signals.
-- [x] #187 append-only quarantine persistence and stale detection.
-- [x] #188 terminal recovery review with human/founder governance.
-- [x] #189 repeated-failure read-only prevention guidance.
-- [x] #199 runtime hardening for repeated-failure inputs.
-- [x] #190 read-only Replay Lab Memory Safety projection.
-- [x] #191 / PR #201 adversarial freeze across malformed input, integrity, replay, terminal recovery, cross-memory isolation and read-only authority.
+- [x] deterministic quarantine signals;
+- [x] append-only quarantine persistence and stale detection;
+- [x] terminal recovery review with human/founder governance;
+- [x] repeated-failure read-only prevention guidance;
+- [x] runtime hardening for malformed failure inputs;
+- [x] read-only Replay Lab Memory Safety projection;
+- [x] adversarial freeze across malformed input, integrity, replay, terminal recovery, cross-memory isolation and read-only authority.
 
 ## Phase G — Goal-first product convergence
 
-Status: **G0 active**.
-
 ### G0 / #192 — cross-surface design contract
 
-- [x] product brief tied to real Kernel/local/product capabilities;
-- [x] information hierarchy: Goal → Work → Finds → Action → progressive trust detail;
-- [x] Goal lifecycle separated from Mission execution and client-only draft/prepared states;
-- [x] automatic behavior defined as automatic only inside previously authorized read-only boundaries;
-- [x] dashboard desktop + 390×844 responsive rules;
-- [x] extension compact-companion rules;
-- [x] public landing separated from private runtime state;
-- [x] existing forge design tokens preserved;
-- [x] exactly three visual directions documented;
-- [x] **Forge Focus selected** for Home implementation;
+Status: **complete**.
+
+- [x] one Kernel-owned persisted Goal truth chosen;
+- [x] Goal lifecycle / Mission work / client draft states separated;
+- [x] automatic behavior bounded by confirmed policy;
+- [x] desktop + 390×844 responsive rules;
+- [x] extension companion rules;
+- [x] public landing isolated from private runtime state;
 - [x] accessibility/reduced-motion/no-horizontal-overflow requirements;
-- [x] machine-checkable contract test + stakeholder Gherkin;
-- [ ] qualify immutable `0.1.0-internal.21` on the final G0 SHA and merge.
+- [x] exactly three visual directions documented;
+- [x] **Forge Focus selected**;
+- [x] bounded G1→G4 sequence frozen.
 
 ### G1 — Shared Goal Truth v1
 
-Add only an additive Kernel/local-api read projection for persisted Goal + current Mission truth. Keep `UniversalGoal` v2 as the domain target and treat the current radar Goal as compatibility input. No dashboard/extension redesign in G1.
+Status: **active; functional layers + startup fix complete, final qualification pending**.
+
+- [x] **G1.1 Kernel projection:** `efesto.goal-surface.v1`, `sourceOfTruth: kernel`, UniversalGoal v2 and explicit `legacy_radar` compatibility, separate Goal lifecycle and Mission work state, deterministic current Mission selection, runtime fail-closed validation.
+- [x] **G1.2 local read adapter:** uses `LocalKnowledgeStore.read()` only, delegates semantics to Kernel, validates Goal identity before read, exposes no store project/write path.
+- [x] **G1.3 authenticated HTTP read boundary:** `GET /api/goal-surfaces` + `GET /api/goal-surfaces/:goalId`, existing token/extension identity gates, deterministic not-found/invalid-id behavior, no Goal-surface write route.
+- [x] source-tree startup hardening: Goal-surface production composition lazy-loads the trusted Kernel projector at first read so launcher startup does not require `packages/kernel/dist` before a Goal-surface request; packaged installs still build the Kernel runtime before launch.
+- [x] contract/unit/adapter/HTTP/Gherkin coverage.
+- [ ] qualify immutable `0.1.0-internal.23` on the final #203 SHA and merge.
+
+`internal.22` is frozen/superseded because its first final matrix exposed the eager Kernel-runtime startup regression on Windows launcher/pairing smoke. The regression was fixed without weakening G1.1/G1.2 semantics or modifying the launcher.
+
+Important: G1 is backend/shared truth only. The current Control Center and extension are not yet claimed to consume it.
 
 ### G2 — responsive Control Center consumption
 
-Consume G1 in the web app. Prove desktop, 390×844, keyboard/focus, reduced motion, offline/failed truthfulness and no duplicate Goal database.
+Next after G1 merge.
+
+- consume `/api/goal-surfaces` instead of interpreting Goal/Mission state independently;
+- preserve Forge Focus hierarchy;
+- prove desktop + 390×844;
+- preserve keyboard/focus/reduced motion;
+- derive living-forge activity only from real Goal/Mission truth;
+- do not touch extension consumption in G2.
 
 ### G3 — extension consumption
 
-Consume the same G1 projection in the browser extension. Remove duplicated Goal-status interpretation and redundant read-only “Research” authorization where the persisted Goal policy already permits the work.
+After G2 merge:
+
+- consume the same Shared Goal Truth v1 projection;
+- remove duplicated Goal-status interpretation;
+- keep extension identity/pairing gates;
+- remove redundant read-only Research confirmation only when the persisted Goal policy already permits that work;
+- preserve current-page radar/capture as a separate explicit workflow.
 
 ### G4 — automation parity
 
-Prove automatic read-only work, scheduler/refresh behavior and Finds updates are consistent across clients. Any remote phone → PC Kernel access requires a separate secure cross-device transport threat model; responsive mobile-width support must not be misrepresented as remote control.
+After G3 merge:
+
+- prove automatic authorized read-only work, scheduler/refresh behavior and Finds updates are consistent across clients;
+- preserve approval gates for external side effects;
+- do not infer activity from timers/animation;
+- any remote phone → PC Kernel access requires a separate secure cross-device transport threat model.
 
 ## Enterprise measurement — #186
 
@@ -89,8 +116,8 @@ Initial measurement remains local-first. Aggregate sharing requires a separate o
 ## Distribution / release closeout
 
 - `0.1.0-internal.6` remains the prior runtime-readiness candidate.
-- `0.1.0-internal.7` through `0.1.0-internal.20` are frozen and must not be reused.
-- G0 uses `0.1.0-internal.21` because the previous `internal.20` artifact was generated before the final contract-test correction; qualification evidence must map to one final SHA.
+- `0.1.0-internal.7` through `0.1.0-internal.22` are frozen and must not be reused.
+- G1 uses final candidate `0.1.0-internal.23`; its evidence must map to one final SHA.
 - Public launch remains blocked until an exact candidate passes automated qualification plus manual UAT and explicit promotion.
 
 ## What not to do
@@ -102,6 +129,8 @@ Do not:
 - let Goal confirmation bypass side-effect approvals;
 - collapse Goal status and Mission phase into one invented state machine;
 - keep separate persisted Goal truth in dashboard and extension;
+- add a Goal-surface write route just because a read projection exists;
+- make source-tree launcher startup depend eagerly on a built Goal projection runtime;
 - display fake activity or animate work that was not observed;
 - push private Goals or Kernel tokens into the public landing;
 - claim arbitrary mobile remote-PC control while the trust boundary is loopback;
@@ -110,12 +139,12 @@ Do not:
 
 ## Next bounded sequence
 
-1. Finish G0 and qualify/merge `internal.21`.
-2. Implement G1 Shared Goal Truth v1 only.
-3. Evaluate + merge G1 before touching the responsive Control Center.
-4. Implement/evaluate G2.
-5. Implement/evaluate G3.
-6. Implement/evaluate G4.
+1. Finish G1 and qualify/merge `internal.23`.
+2. Open a new G2 branch from the merged G1 main commit.
+3. Wire responsive Control Center only to Shared Goal Truth v1 and prove desktop/mobile-width accessibility.
+4. Evaluate + merge G2 before touching extension consumption.
+5. Implement/evaluate G3 extension consumption.
+6. Implement/evaluate G4 automatic-work parity.
 7. Wire #186 measurements only through explicit local-first contracts.
 8. Freeze exact candidate → manual UAT → public promotion decision.
 
@@ -126,8 +155,9 @@ Install exact qualified package
 → local Kernel proves readiness
 → one confirmed Goal policy
 → one Kernel-owned persisted Goal truth
+→ Shared Goal Truth v1 read projection
+→ responsive Control Center + extension consume the same truth in later bounded slices
 → automatic authorized read-only work
-→ same truthful state in responsive Control Center + extension
 → Evidence + provenance
 → useful Finds
 → approval-gated side effects
