@@ -91,7 +91,7 @@ Windows has a non-technical double-click path:
 
 No Kernel token or boundary secret is embedded or printed by this installer.
 
-The release qualification layer requires the **exact generated ZIP**, rather than only a checkout of the same source, to be checksum-bound, extracted and installed/repaired on Windows before manual UAT can begin.
+The release qualification layer requires the **exact generated ZIP**, rather than only a checkout of the same source, to be checksum-bound, extracted and tested through both a fresh unpaired installation and a paired repair before manual UAT can begin.
 
 ### Supply chain and release qualification
 
@@ -101,12 +101,11 @@ The release qualification layer requires the **exact generated ZIP**, rather tha
 - Dashboard Chromium acceptance runs as a separate required CI job.
 - Windows launcher smoke and first-run reproduction remain release-control gates.
 - The internal package is bound to its Git commit through `BUILD_INFO.txt` and SHA-256.
-- The packaged-candidate gate downloads that exact artifact, verifies its digest/commit, extracts it to a path containing spaces and installs it on Windows 2022 and Windows 2025.
-- Qualification requires Shared, Kernel and extension builds, Kernel `alive`/`owned`/`verified`, Hermes readiness, a trusted desktop shortcut and an idempotent second repair pass.
-- The existing private Kernel token digest must survive repair unchanged.
-- Synthetic private credentials must never appear in captured installer output.
+- The packaged-candidate gate downloads that exact artifact, verifies its digest/commit, extracts it to a path containing spaces and tests it on Windows 2022 and Windows 2025.
+- Fresh qualification starts with no Kernel token and no authorized extension, discards the one-time pairing console output, and requires Kernel `alive`/`owned`/`verified`, Hermes readiness, pairing=`required`, runtime builds and a trusted desktop shortcut.
+- The owned Kernel is then stopped, a synthetic local extension identity is authorized, and the same package runs repair again with captured output.
+- Paired repair must preserve the original private Kernel-token digest, return Kernel `alive`/`owned`/`verified`, preserve pairing=`paired`, and expose neither the Kernel token nor Hermes boundary credential in captured repair output.
 - Failed packaged qualification retains only a sanitized diagnostic artifact.
-- Installer output capture is isolated from the long-lived launcher/Kernel so qualification observes installer exit status without inheriting daemon pipes.
 
 ## Canonical CI gate
 
@@ -121,7 +120,7 @@ Every PR and push to `main` must pass, when affected:
 7. dedicated Chromium/Playwright dashboard acceptance;
 8. Windows launcher smoke and first-run reproduction;
 9. exact internal-package generation and integrity binding;
-10. exact packaged-candidate install/repair qualification on Windows 2022 and Windows 2025.
+10. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
 Never quote an old test count as current truth; use the exact current CI run.
 
@@ -130,8 +129,8 @@ Never quote an old test count as current truth; use the exact current CI run.
 - `main` remains the implementation source of truth; PR #182 is the bounded release-qualification change until merged.
 - The Goal-first shell plus living-forge identity layer is the current product UI baseline.
 - `0.1.0-internal.6` remains the immutable previous runtime-readiness candidate.
-- `0.1.0-internal.7` and `0.1.0-internal.8` are frozen failed automated-qualification candidates and must not be reused.
-- The current qualification candidate is `0.1.0-internal.9`. It must not be treated as qualified until the exact ZIP passes both packaged Windows jobs and the complete PR/main gate for the same code state.
+- `0.1.0-internal.7`, `0.1.0-internal.8`, and `0.1.0-internal.9` are frozen non-promotable automated-qualification candidates and must not be reused.
+- The current qualification candidate is `0.1.0-internal.10`. It must not be treated as qualified until the exact ZIP passes both packaged Windows jobs and the complete PR/main gate for the same code state.
 - `publicLaunchApproved` remains `false`. Manual UAT-1 through UAT-6 may begin only after automated packaged qualification is green on the same immutable candidate.
 - Work directly on `main` is prohibited; use one bounded implementation branch/PR at a time.
 - Do not weaken Kernel authority, replay protection, consent, provenance, secrecy or qualification gates to make a test pass.
@@ -149,7 +148,7 @@ The agreed MVP implementation lights are green only when the current `main` prov
 - one-click/self-healing Windows setup;
 - strict production dependency audit without exceptions;
 - exact packaged Windows candidate integrity;
-- exact packaged first-install + repair qualification on the supported Windows matrix;
+- exact packaged fresh-install + paired-repair qualification on the supported Windows matrix;
 - synchronized documentation and machine-checkable release readiness.
 
 The **public release light is separate**: it remains blocked until manual/internal UAT evidence for the same exact candidate is complete. Automated success alone is not public-launch approval.

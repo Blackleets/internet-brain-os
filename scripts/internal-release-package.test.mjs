@@ -11,7 +11,7 @@ describe('internal Efesto release package', () => {
   it('is explicitly internal and blocks public promotion by default', async () => {
     const release = JSON.parse(await text('INTERNAL_RELEASE.json'));
     expect(release.schema).toBe('efesto.internal-release.v1');
-    expect(release.version).toBe('0.1.0-internal.9');
+    expect(release.version).toBe('0.1.0-internal.10');
     expect(release.channel).toBe('internal');
     expect(release.publicLaunchApproved).toBe(false);
     expect(release.entrypoint).toBe('Install Efesto.cmd');
@@ -46,21 +46,24 @@ describe('internal Efesto release package', () => {
     expect(harness).toContain('Efesto Data With Spaces');
     expect(harness).toContain('publicLaunchApproved');
     expect(harness).toContain("'Install Efesto.cmd'");
+    expect(harness).toContain('Invoke-FreshInstall');
+    expect(harness).toContain("-StdoutTarget 'NUL' -StderrTarget 'NUL'");
+    expect(harness).toContain("$freshBootstrap.pairing -ne 'required'");
+    expect(harness).toContain('authorized-extensions.json');
+    expect(harness).toContain('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    expect(harness).toContain('Invoke-CapturedRepair');
+    expect(harness).toContain("$afterRepair.pairing -ne 'paired'");
     expect(harness).toContain('apps\\extension\\dist\\manifest.json');
     expect(harness).toContain('Efesto.lnk');
     expect(harness).toContain('tokenDigestAfter');
     expect(harness).toContain('owned');
     expect(harness).toContain('verified');
-    expect(harness).toContain('Get-SanitizedLogTail');
-    expect(harness).toContain('Set-Content -Path $commandPath');
-    expect(harness).toContain('$env:ComSpec');
-    expect(harness).toContain('$LASTEXITCODE');
-    expect(harness).toContain('exit /b %ERRORLEVEL%');
-    expect(harness).toContain('1>`"$stdoutPath`" 2>`"$stderrPath`"');
-    expect(harness).not.toContain('System.Diagnostics.ProcessStartInfo');
+    expect(harness).toContain('System.Diagnostics.ProcessStartInfo');
+    expect(harness).toContain('$process.WaitForExit($TimeoutMs)');
+    expect(harness).not.toContain('RedirectStandardOutput = $true');
     expect(harness).not.toContain('ReadToEndAsync()');
     expect(harness).not.toContain('Start-Process');
-    expect(harness).not.toContain('& powershell.exe @arguments *> $logPath');
+    expect(harness).toContain('captured repair output');
   });
 
   it('requires one immutable candidate plus corrected clean-install, real-web, replay and failure UAT before launch', async () => {

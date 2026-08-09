@@ -19,16 +19,18 @@
 - [x] Require packaged first install on Windows 2022 and Windows 2025.
 - [x] Require Shared, Kernel and extension runtimes to be built from the extracted candidate.
 - [x] Require Kernel `alive`, `owned`, `verified` and Hermes readiness after installation.
-- [x] Require a second repair pass and prove the private Kernel token digest is unchanged.
-- [x] Reject installer output that exposes synthetic private runtime credentials.
+- [x] Separate fresh unpaired installation from paired repair so first-run daemon handles are not misclassified as a batch-process failure.
+- [x] Require first install to create the local private Kernel token and report pairing as required.
+- [x] Require a second paired repair pass and prove the private Kernel token digest is unchanged.
+- [x] Audit captured repair output for Kernel-token or Hermes-boundary credential leakage.
 - [x] Persist only sanitized failure diagnostics for CI investigation.
 - [x] Add Gherkin and machine-checked release-contract coverage for packaged installation.
-- [x] Freeze `0.1.0-internal.7` and `0.1.0-internal.8` as failed automated-qualification candidates rather than reusing their identities.
-- [x] Advance the isolated packaged-candidate qualification state to `0.1.0-internal.9`.
+- [x] Freeze `0.1.0-internal.7`, `0.1.0-internal.8`, and `0.1.0-internal.9` as non-promotable qualification attempts rather than reusing their identities.
+- [x] Advance the corrected two-phase qualification state to `0.1.0-internal.10`.
 - [ ] Make the exact packaged-candidate qualification green on both Windows generations for the final PR SHA.
 - [ ] Merge only after the complete CI, Chromium, legacy Windows and packaged-candidate gates are green for the same SHA.
 - [ ] Re-run the same required gates on the merged `main` commit.
-- [ ] Only then begin manual UAT-1 through UAT-6 on that exact `internal.9` artifact.
+- [ ] Only then begin manual UAT-1 through UAT-6 on that exact `internal.10` artifact.
 - [ ] Set `publicLaunchApproved=true` only after UAT passes on the same immutable candidate.
 
 ## Engineering sequence after release qualification
