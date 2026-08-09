@@ -11,7 +11,7 @@ describe('internal Efesto release package', () => {
   it('is explicitly internal and blocks public promotion by default', async () => {
     const release = JSON.parse(await text('INTERNAL_RELEASE.json'));
     expect(release.schema).toBe('efesto.internal-release.v1');
-    expect(release.version).toBe('0.1.0-internal.3');
+    expect(release.version).toBe('0.1.0-internal.4');
     expect(release.channel).toBe('internal');
     expect(release.publicLaunchApproved).toBe(false);
     expect(release.entrypoint).toBe('Install Efesto.cmd');
@@ -33,18 +33,21 @@ describe('internal Efesto release package', () => {
     expect(workflow).not.toMatch(/permissions:\s*[\s\S]*contents:\s*write/);
   });
 
-  it('requires the corrected clean-install path plus real-web, replay and failure UAT before launch', async () => {
+  it('requires one immutable candidate plus corrected clean-install, real-web, replay and failure UAT before launch', async () => {
     const release = JSON.parse(await text('INTERNAL_RELEASE.json'));
     const uat = await text('docs/internal-uat-v0.1.0.md');
     expect(uat).toContain(`Candidate: \`${release.version}\``);
     expect(uat).toContain(`efesto-v${release.version}-windows.zip`);
-    expect(uat).not.toContain('Candidate: `0.1.0-internal.2`');
+    expect(uat).not.toContain('Candidate: `0.1.0-internal.3`');
     expect(uat).toContain('builds the internal Shared runtime and trusted Kernel runtime');
     expect(uat).toContain('`alive: true`, `owned: true` and `verified: true`');
+    expect(uat).toContain('Goal-first Control Center');
     expect(uat).toContain('UAT-1 — clean Windows install');
     expect(uat).toContain('UAT-3 — real public-web economic Goal');
     expect(uat).toContain('UAT-4 — persistence and replay');
     expect(uat).toContain('UAT-6 — failure handling');
+    expect(uat).toContain('same immutable internal candidate');
+    expect(uat).toContain('must never be reused');
     expect(uat).toContain('Public launch remains blocked');
   });
 });
