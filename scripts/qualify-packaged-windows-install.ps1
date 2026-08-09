@@ -87,38 +87,38 @@ function Write-SanitizedDiagnostic([string]$FailureMessage) {
 
 function Invoke-QualifiedInstall([string]$LogName, [switch]$SkipShortcut) {
   $logPath = Join-Path $env:RUNNER_TEMP $LogName
-  Remove-Item -Force $logPath -ErrorAction SilentlyContinue
+  $stdoutPath = "$logPath.stdout"
+  $stderrPath = "$logPath.stderr"
+  $commandPath = "$logPath.cmd"
+  Remove-Item -Force $logPath, $stdoutPath, $stderrPath, $commandPath -ErrorAction SilentlyContinue
 
   $scriptPath = Join-Path $extractRoot 'scripts\install-efesto.ps1'
-  $argumentLine = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -SkipNodeInstall"
-  if ($SkipShortcut) { $argumentLine += ' -SkipShortcut' }
+  $skipArgument = if ($SkipShortcut) { ' -SkipShortcut' } else { '' }
+  $command = @(
+    '@echo off',
+    "cd /d `"$extractRoot`"",
+    "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -SkipNodeInstall$skipArgument 1>`"$stdoutPath`" 2>`"$stderrPath`"",
+    'exit /b %ERRORLEVEL%'
+  ) -join "`r`n"
+  Set-Content -Path $commandPath -Value $command -Encoding ascii
 
-  $startInfo = New-Object System.Diagnostics.ProcessStartInfo
-  $startInfo.FileName = 'powershell.exe'
-  $startInfo.Arguments = $argumentLine
-  $startInfo.WorkingDirectory = $extractRoot
-  $startInfo.UseShellExecute = $false
-  $startInfo.CreateNoWindow = $true
-  $startInfo.RedirectStandardOutput = $true
-  $startInfo.RedirectStandardError = $true
+  # Redirect inside cmd.exe to ordinary files. The installer may leave the trusted
+  # launcher/Kernel alive, so the qualification harness must not own pipes inherited
+  # by that daemon. cmd.exe returns only the installer batch exit status.
+  $previousErrorActionPreference = $ErrorActionPreference
+  try {
+    $ErrorActionPreference = 'Continue'
+    & $env:ComSpec /d /s /c "`"$commandPath`"" *> $null
+    $installExitCode = [int]$LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
 
-  $process = New-Object System.Diagnostics.Process
-  $process.StartInfo = $startInfo
-  if (-not $process.Start()) { throw 'Unable to start packaged installer process.' }
-
-  # Consume both redirected streams asynchronously so a verbose build cannot block on
-  # full stdout/stderr buffers. Wait only for the installer shell; the trusted Efesto
-  # launcher/Kernel intentionally remains alive after installation.
-  $stdoutTask = $process.StandardOutput.ReadToEndAsync()
-  $stderrTask = $process.StandardError.ReadToEndAsync()
-  $process.WaitForExit()
-  $stdout = $stdoutTask.GetAwaiter().GetResult()
-  $stderr = $stderrTask.GetAwaiter().GetResult()
-  $installExitCode = [int]$process.ExitCode
-  $process.Dispose()
-
+  $stdout = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw } else { '' }
+  $stderr = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw } else { '' }
   $logText = @($stdout, $stderr) -join [Environment]::NewLine
   Set-Content -Path $logPath -Value $logText -Encoding utf8
+  Remove-Item -Force $stdoutPath, $stderrPath, $commandPath -ErrorAction SilentlyContinue
 
   if ($logText.Contains($testToken) -or $logText.Contains($testBoundaryKey)) {
     throw 'Installer exposed a private runtime credential in its output.'
