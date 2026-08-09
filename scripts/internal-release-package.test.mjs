@@ -52,6 +52,11 @@ describe('internal Efesto release package', () => {
     expect(harness).toContain('owned');
     expect(harness).toContain('verified');
     expect(harness).toContain('Get-SanitizedLogTail');
+    expect(harness).toContain('Start-Process');
+    expect(harness).toContain('-RedirectStandardOutput $stdoutPath');
+    expect(harness).toContain('-RedirectStandardError $stderrPath');
+    expect(harness).toContain('$process.ExitCode');
+    expect(harness).not.toContain('& powershell.exe @arguments *> $logPath');
   });
 
   it('requires one immutable candidate plus corrected clean-install, real-web, replay and failure UAT before launch', async () => {
