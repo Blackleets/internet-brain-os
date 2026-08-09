@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { InboxError } from './page-context-inbox.mjs';
+import { createGoalExecutionAuthorizationReceipt } from './goal-execution-authorization.mjs';
 
 const AGENTS = new Set(['hermes']);
 const ACTIVE_STATUSES = new Set(['waiting_for_agent', 'queued']);
@@ -12,7 +13,7 @@ export class AgentMissionManager {
     this.now = options.now ?? (() => new Date());
   }
 
-  async create(goalId, input) {
+  async create(goalId, input, context = {}) {
     if (!input || input.confirmed !== true) throw invalid('Mission requires explicit confirmation');
     const agent = clean(input.agent ?? 'hermes', 32).toLowerCase();
     if (!AGENTS.has(agent)) throw invalid('Agent is not supported');
@@ -28,11 +29,18 @@ export class AgentMissionManager {
       const existingIndex = missions.findIndex((item) => item.id === id);
       const ready = this.isAgentReady(agent) === true;
       const now = this.now();
+      const confirmationActor = context?.confirmationActor;
 
       if (existingIndex >= 0) {
         const existing = missions[existingIndex];
-        if (isActive(existing, now)) return { changed: false, data, result: existing };
-        const restarted = restartMission(existing, goal, ready, now);
+        if (isActive(existing, now)) {
+          if (existing.authorization || !confirmationActor) return { changed: false, data, result: existing };
+          const authorized = { ...existing, authorization: createGoalExecutionAuthorizationReceipt(goal, now, confirmationActor) };
+          const updated = [...missions];
+          updated[existingIndex] = authorized;
+          return { changed: true, data: { ...data, agentMissions: updated }, result: authorized };
+        }
+        const restarted = restartMission(existing, goal, ready, now, confirmationActor);
         const updated = [...missions];
         updated[existingIndex] = restarted;
         return { changed: true, data: { ...data, agentMissions: updated }, result: restarted };
@@ -42,6 +50,7 @@ export class AgentMissionManager {
         id, goalId, goalTitle: goal.title, agent, cadence,
         status: ready ? 'queued' : 'waiting_for_agent',
         scope: { categories: goal.categories, keywords: goal.keywords, location: goal.location },
+        ...authorizationFields(goal, now, confirmationActor),
         createdAt: now.toISOString(),
         limitation: ready ? 'Awaiting bounded external-agent execution' : `${agent} is not connected`,
       };
@@ -67,6 +76,12 @@ export class AgentMissionManager {
       };
     });
   }
+}
+
+function authorizationFields(goal, now, confirmationActor) {
+  return confirmationActor
+    ? { authorization: createGoalExecutionAuthorizationReceipt(goal, now, confirmationActor) }
+    : {};
 }
 
 function isActive(mission, now) {
@@ -98,7 +113,7 @@ function reconcileExpiredMission(mission, now) {
   return next;
 }
 
-function restartMission(existing, goal, ready, now) {
+function restartMission(existing, goal, ready, now, confirmationActor) {
   return {
     id: existing.id,
     goalId: existing.goalId,
@@ -107,6 +122,7 @@ function restartMission(existing, goal, ready, now) {
     cadence: existing.cadence,
     status: ready ? 'queued' : 'waiting_for_agent',
     scope: { categories: goal.categories, keywords: goal.keywords, location: goal.location },
+    ...authorizationFields(goal, now, confirmationActor),
     createdAt: now.toISOString(),
     attempt: 0,
     limitation: ready ? 'Awaiting bounded external-agent execution' : `${existing.agent} is not connected`,

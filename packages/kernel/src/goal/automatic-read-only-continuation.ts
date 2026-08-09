@@ -12,7 +12,7 @@ export const GOAL_EXECUTION_AUTHORIZATION_SCHEMA_VERSION = 'efesto.goal-executio
 export const GOAL_EXECUTION_AUTHORIZATION_SCOPES = ['read_only_continuation', 'single_action'] as const;
 export type GoalExecutionAuthorizationScope = (typeof GOAL_EXECUTION_AUTHORIZATION_SCOPES)[number];
 
-export const GOAL_EXECUTION_AUTHORIZATION_ACTORS = ['human', 'founder', 'agent', 'system'] as const;
+export const GOAL_EXECUTION_AUTHORIZATION_ACTORS = ['interactive_user', 'founder', 'agent', 'system'] as const;
 export type GoalExecutionAuthorizationActor = (typeof GOAL_EXECUTION_AUTHORIZATION_ACTORS)[number];
 
 export interface GoalExecutionAuthorizationReceipt {
@@ -45,7 +45,7 @@ export const AUTOMATIC_READ_ONLY_DENIAL_REASONS = [
   'goal_not_active',
   'authorization_missing',
   'authorization_rejected',
-  'authorization_actor_not_human',
+  'authorization_actor_not_user',
   'authorization_goal_mismatch',
   'authorization_revision_mismatch',
   'authorization_scope_mismatch',
@@ -84,7 +84,7 @@ export function evaluateAutomaticReadOnlyContinuation(input: unknown): Automatic
   const receipt = parsed.authorization;
   if (!receipt) return deny('authorization_missing');
   if (receipt.decision !== 'approved') return deny('authorization_rejected');
-  if (receipt.actorType !== 'human' && receipt.actorType !== 'founder') return deny('authorization_actor_not_human');
+  if (receipt.actorType !== 'interactive_user' && receipt.actorType !== 'founder') return deny('authorization_actor_not_user');
   if (receipt.goalId !== parsed.goal.id) return deny('authorization_goal_mismatch');
   if (receipt.goalRevision !== parsed.goal.revision) return deny('authorization_revision_mismatch');
   if (receipt.scope !== 'read_only_continuation') return deny('authorization_scope_mismatch');

@@ -16,8 +16,8 @@ function input(overrides: Record<string, unknown> = {}): AutomaticReadOnlyContin
       goalRevision: 3,
       decision: 'approved',
       scope: 'read_only_continuation',
-      actorType: 'human',
-      decidedBy: 'user:1',
+      actorType: 'interactive_user',
+      decidedBy: 'dashboard-ui',
       decidedAt: '2026-08-09T19:40:00.000Z',
     },
     capability: {
@@ -57,7 +57,7 @@ function withCapability(patch: Partial<AutomaticReadOnlyContinuationInput['capab
 }
 
 describe('automatic read-only continuation policy', () => {
-  it('allows revision-bound R0 continuation after explicit human Goal authorization', () => {
+  it('allows revision-bound R0 continuation after trusted interactive-user authorization', () => {
     expect(evaluateAutomaticReadOnlyContinuation(input())).toEqual({
       policyVersion: AUTOMATIC_READ_ONLY_POLICY_VERSION,
       allowed: true,
@@ -66,6 +66,11 @@ describe('automatic read-only continuation policy', () => {
       capabilityId: 'web.search',
       authorizationRef: 'goal-auth:1',
     });
+  });
+
+  it('allows a founder authorization receipt as a separately trusted user authority', () => {
+    expect(evaluateAutomaticReadOnlyContinuation(withAuthorization({ actorType: 'founder', decidedBy: 'founder:local' })))
+      .toMatchObject({ allowed: true, reason: 'eligible' });
   });
 
   it('allows policy-level consent only when the matching Goal authorization receipt already exists', () => {
@@ -100,7 +105,8 @@ describe('automatic read-only continuation policy', () => {
 
   it('rejects rejected, automated, and single-action receipts', () => {
     expect(evaluateAutomaticReadOnlyContinuation(withAuthorization({ decision: 'rejected' }))).toMatchObject({ allowed: false, reason: 'authorization_rejected' });
-    expect(evaluateAutomaticReadOnlyContinuation(withAuthorization({ actorType: 'agent' }))).toMatchObject({ allowed: false, reason: 'authorization_actor_not_human' });
+    expect(evaluateAutomaticReadOnlyContinuation(withAuthorization({ actorType: 'agent' }))).toMatchObject({ allowed: false, reason: 'authorization_actor_not_user' });
+    expect(evaluateAutomaticReadOnlyContinuation(withAuthorization({ actorType: 'system' }))).toMatchObject({ allowed: false, reason: 'authorization_actor_not_user' });
     expect(evaluateAutomaticReadOnlyContinuation(withAuthorization({ scope: 'single_action' }))).toMatchObject({ allowed: false, reason: 'authorization_scope_mismatch' });
   });
 
@@ -130,9 +136,7 @@ describe('automatic read-only continuation policy', () => {
       allowed: false,
       reason: 'capability_unavailable',
     });
-    const contradictory = input({
-      capability: { ...input().capability, requiresConsent: true },
-    });
+    const contradictory = input({ capability: { ...input().capability, requiresConsent: true } });
     expect(evaluateAutomaticReadOnlyContinuation(contradictory)).toMatchObject({ allowed: false, reason: 'invalid_input' });
   });
 
