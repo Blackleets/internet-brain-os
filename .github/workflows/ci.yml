@@ -26,6 +26,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Architecture boundary guard
+        run: pnpm architecture:check
       - name: Production dependency audit
         run: pnpm audit --prod
       - name: MVP release readiness contract
