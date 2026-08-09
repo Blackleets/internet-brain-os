@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
+import { requestMissionCandidateVerification } from './automatic-mission-verification-client.mjs';
 import { detectHermesRuntime, probeHermesReadOnlyRuntime } from './hermes-runtime.mjs';
 import { selectInternalPort } from './internal-port.mjs';
 import { runHermesMissionWorker } from './hermes-mission-worker.mjs';
@@ -80,13 +81,9 @@ proxy = createServer(async (request, response) => {
 proxy.listen(port, host, () => {
   console.log(`Hephaestus one-click Kernel listening on http://${host}:${port}`);
   console.log(`Efesto internal Kernel bound to loopback port ${internalPort}.`);
-  if (hermesReadOnlyRuntime.ready) {
-    console.log('Efesto automatic research is restricted to certified Hermes safe search-only discovery.');
-  } else if (hermesRuntime.available) {
-    console.log(`Hermes is installed, but automatic research is blocked until read-only runtime certification passes (${hermesReadOnlyRuntime.reason ?? 'unknown'}).`);
-  } else {
-    console.log('Hermes runtime was not found. Install Hermes or configure HEPHAESTUS_HERMES_EXECUTABLE.');
-  }
+  if (hermesReadOnlyRuntime.ready) console.log('Efesto automatic research is restricted to certified Hermes safe search-only discovery.');
+  else if (hermesRuntime.available) console.log(`Hermes is installed, but automatic research is blocked until read-only runtime certification passes (${hermesReadOnlyRuntime.reason ?? 'unknown'}).`);
+  else console.log('Hermes runtime was not found. Install Hermes or configure HEPHAESTUS_HERMES_EXECUTABLE.');
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
@@ -119,6 +116,11 @@ async function runMissionUntilTerminal(missionId, apiToken) {
       args: [resolve('scripts/hermes-efesto-adapter.mjs')],
     });
     console.log(`Hermes mission ${missionId}: ${result.status}`);
+    if (result.status === 'verifying') {
+      const verified = await requestMissionCandidateVerification({ baseUrl: internalBaseUrl, apiToken, missionId });
+      console.log(`Kernel verification ${missionId}: ${verified.executionPhase ?? verified.status}`);
+      break;
+    }
     if (result.status !== 'failed') break;
   }
 }
