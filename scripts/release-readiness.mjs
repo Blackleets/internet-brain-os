@@ -29,6 +29,7 @@ const executionIndex = await text('packages/kernel/src/execution/index.ts');
 const searchAdapter = await text('packages/kernel/src/execution/public-web-search-adapter.ts');
 const connectorsIndex = await text('packages/connectors/src/index.ts');
 const projectState = await text('PROJECT_STATE.md');
+const internalRelease = JSON.parse(await text('INTERNAL_RELEASE.json'));
 
 requireCondition(!workspace.includes('ignoreGhsas'), 'production audit contains a GHSA ignore');
 requireCondition(workspace.includes("nanoid: '3.3.17'"), 'patched Nano ID override is missing');
@@ -61,14 +62,19 @@ requireCondition(ci.includes('@internet-brain-os/dashboard e2e'), 'dashboard bro
 requireCondition(ci.includes('pnpm verify:first-run'), 'first-run verification is missing from CI');
 
 requireCondition(projectState.includes('Authentic Hermes v0.19.0 runtime acceptance was proven'), 'canonical state does not record authentic Hermes proof');
-requireCondition(projectState.includes('no open GitHub issues and no open pull requests'), 'canonical state does not record repository cleanup');
+requireCondition(projectState.includes('PR #178 is merged; the Goal-first shell is now the product UI baseline'), 'canonical state does not record the current Goal-first UI baseline');
+requireCondition(projectState.includes('The **public release light is separate**'), 'canonical state does not separate implementation readiness from public-launch approval');
+requireCondition(internalRelease.channel === 'internal', 'release channel is not internal');
+requireCondition(internalRelease.publicLaunchApproved === false, 'public launch must remain blocked during internal qualification');
 
 console.log('Efesto MVP release readiness: GREEN');
 console.log('durable-memory-authority: green');
 console.log('authentic-hermes-boundary: green');
 console.log('native-web-search-read: green');
 console.log('golden-goal-e2e: green');
+console.log('goal-first-ui-baseline: green');
 console.log('dashboard-chromium-gate: green');
 console.log('windows-one-click-installer: green');
 console.log('strict-supply-chain-audit: green');
+console.log('public-launch-approval: blocked-pending-uat');
 console.log('canonical-project-state: green');
