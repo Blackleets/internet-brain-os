@@ -33,6 +33,7 @@ Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active Git
 - Memory Safety E2 persists recommendations through separate append-only in-memory/durable repositories. Identity is revalidated before storage; exact basis replay is idempotent; durable history is integrity-bound and replay-validated on restart; stale status is explicit when revision, evaluator version or signal basis changes. Recommendation persistence has no authority-state mutation path.
 - Memory Safety E3 records terminal-memory recovery reviews separately. `rejected`, `superseded` and `revoked` memory remain terminal; human/founder review is policy-bound; founder-required decisions fail closed for ordinary humans; approved review must point to a distinct new candidate memory identity. Runtime enum/actor validation, idempotency, integrity, restart and stale-policy checks are enforced.
 - Memory Safety E4 derives repeated-failure prevention recommendations only from persisted failure/reference IDs inside a deterministic policy window. Thresholds, failure categories and memory identities remain separated; exact failure replay is deduplicated; conflicting failure identities fail closed; output is explicitly `read_only` and cannot change memory, capabilities, policies or approvals.
+- E4 runtime input hardening rejects malformed/non-string IDs, non-array references, null failure records and malformed top-level payloads instead of coercing them into apparently valid identifiers; stale assessment fails closed on malformed current basis.
 
 ### Autonomous Goal execution foundation
 
@@ -111,14 +112,14 @@ Never quote an old test count as current truth; use the exact current CI run.
 
 ## Current operating state
 
-- `main` includes exact-package qualification (#182), architecture/forensic guardrails (#184), deterministic quarantine evaluation (#193), durable quarantine persistence (#194), and terminal recovery review (#195).
-- E1/#185, E2/#187 and E3/#188 are merged baseline. E4/#189 is the active bounded change.
+- `main` includes exact-package qualification (#182), architecture/forensic guardrails (#184), deterministic quarantine evaluation (#193), durable quarantine persistence (#194), terminal recovery review (#195), and repeated-failure prevention (#196/#189).
+- E1/#185, E2/#187, E3/#188 and E4/#189 are merged baseline. The current bounded change is E4 runtime input hardening before operator exposure.
 - `0.1.0-internal.6` remains the immutable previous runtime-readiness candidate.
-- `0.1.0-internal.7` through `0.1.0-internal.14` are frozen non-promotable or superseded pre-UAT candidates and must not be reused.
-- The current qualification candidate is `0.1.0-internal.15`; it is not qualified until the exact ZIP passes the complete architecture/CI/Chromium/Windows matrix for the final E4 SHA.
+- `0.1.0-internal.7` through `0.1.0-internal.15` are frozen non-promotable, qualified or superseded pre-UAT candidates and must not be reused.
+- The current qualification candidate is `0.1.0-internal.16`; it is not qualified until the exact ZIP passes the complete architecture/CI/Chromium/Windows matrix for the final runtime-hardening SHA.
 - `publicLaunchApproved` remains `false`; manual UAT begins only on the final exact candidate selected after affected Memory Safety work is frozen.
 - The **public release light is separate** from implementation readiness: automated qualification can be green while public launch remains blocked until manual UAT passes on the same immutable candidate and approval is explicitly promoted.
-- Phase E continues through #189–#191. Issue #186 defines the enterprise product scorecard. Product Design #192 is blocked until #191 freezes Memory Safety contracts.
+- Phase E continues through #190–#191. Issue #186 defines the enterprise product scorecard. Product Design #192 is blocked until #191 freezes Memory Safety contracts.
 - Work directly on `main` is prohibited; use one bounded implementation branch/PR at a time.
 - Never weaken Kernel authority, replay protection, consent, provenance, secrecy or qualification gates to make a test pass.
 
@@ -127,9 +128,10 @@ Never quote an old test count as current truth; use the exact current CI run.
 1. #185 deterministic quarantine evaluator — **merged**;
 2. #187 durable recommendation persistence — **merged**;
 3. #188 terminal-memory recovery review records — **merged**;
-4. #189 repeated-failure prevention recommendations — **active**;
-5. #190 read-only operator exposure;
-6. #191 adversarial contract freeze.
+4. #189 repeated-failure prevention recommendations — **merged**;
+5. E4 runtime input hardening — **active**;
+6. #190 read-only operator exposure;
+7. #191 adversarial contract freeze.
 
 Issue #186 defines local-first product/business measurement. Any collective analytics remain separately opt-in and privacy-reviewed.
 

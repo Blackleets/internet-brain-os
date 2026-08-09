@@ -103,6 +103,45 @@ describe('evaluateRepeatedMemoryFailures', () => {
       .toThrowError(MemoryFailurePreventionInputError);
   });
 
+  it('rejects missing or non-string runtime identifiers instead of coercing them', () => {
+    const malformedFailure = failure('f1', '2026-08-09T14:10:00.000Z') as unknown as Record<string, unknown>;
+    malformedFailure.failureId = undefined;
+    expect(() => evaluate([malformedFailure as unknown as PersistedMemoryFailureRecord]))
+      .toThrowError(MemoryFailurePreventionInputError);
+
+    const malformedMemory = failure('f2', '2026-08-09T14:20:00.000Z') as unknown as Record<string, unknown>;
+    malformedMemory.memoryId = 42;
+    expect(() => evaluate([malformedMemory as unknown as PersistedMemoryFailureRecord]))
+      .toThrowError(MemoryFailurePreventionInputError);
+
+    expect(() => evaluateRepeatedMemoryFailures({
+      evaluatedAt,
+      failures: [null as unknown as PersistedMemoryFailureRecord],
+      policy: { policyVersion: 'prevention-v1', threshold: 3, windowMs: 60 * 60 * 1000 },
+    })).toThrowError(MemoryFailurePreventionInputError);
+
+    expect(() => evaluateRepeatedMemoryFailures({
+      evaluatedAt,
+      failures: [failure('f3', '2026-08-09T14:30:00.000Z', { referenceIds: undefined as never })],
+      policy: { policyVersion: 'prevention-v1', threshold: 3, windowMs: 60 * 60 * 1000 },
+    })).toThrowError(MemoryFailurePreventionInputError);
+  });
+
+  it('fails closed on malformed top-level runtime payloads', () => {
+    expect(() => evaluateRepeatedMemoryFailures(null as unknown as Parameters<typeof evaluateRepeatedMemoryFailures>[0]))
+      .toThrowError(MemoryFailurePreventionInputError);
+    expect(() => evaluateRepeatedMemoryFailures({
+      evaluatedAt,
+      failures: [] as never,
+      policy: null as never,
+    })).toThrowError(MemoryFailurePreventionInputError);
+    expect(() => evaluateRepeatedMemoryFailures({
+      evaluatedAt,
+      failures: null as never,
+      policy: { policyVersion: 'prevention-v1', threshold: 3, windowMs: 60 * 60 * 1000 },
+    })).toThrowError(MemoryFailurePreventionInputError);
+  });
+
   it('marks recommendations stale when policy or active failure basis changes', () => {
     const recommendation = evaluate([
       failure('f1', '2026-08-09T14:10:00.000Z'),
@@ -121,6 +160,14 @@ describe('evaluateRepeatedMemoryFailures', () => {
     expect(isMemoryFailurePreventionRecommendationStale(recommendation, {
       policyVersion: 'prevention-v1', threshold: 3, windowMs: 60 * 60 * 1000,
       activeFailureIds: ['f1', 'f2'],
+    })).toBe(true);
+    expect(isMemoryFailurePreventionRecommendationStale(recommendation, {
+      policyVersion: undefined as never, threshold: 3, windowMs: 60 * 60 * 1000,
+      activeFailureIds: ['f1', 'f2', 'f3'],
+    })).toBe(true);
+    expect(isMemoryFailurePreventionRecommendationStale(recommendation, {
+      policyVersion: 'prevention-v1', threshold: 3, windowMs: 60 * 60 * 1000,
+      activeFailureIds: [undefined as never],
     })).toBe(true);
   });
 });
