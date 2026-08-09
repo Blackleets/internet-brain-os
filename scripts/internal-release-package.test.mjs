@@ -11,7 +11,7 @@ describe('internal Efesto release package', () => {
   it('is explicitly internal and blocks public promotion by default', async () => {
     const release = JSON.parse(await text('INTERNAL_RELEASE.json'));
     expect(release.schema).toBe('efesto.internal-release.v1');
-    expect(release.version).toBe('0.1.0-internal.4');
+    expect(release.version).toBe('0.1.0-internal.5');
     expect(release.channel).toBe('internal');
     expect(release.publicLaunchApproved).toBe(false);
     expect(release.entrypoint).toBe('Install Efesto.cmd');
@@ -38,10 +38,13 @@ describe('internal Efesto release package', () => {
     const uat = await text('docs/internal-uat-v0.1.0.md');
     expect(uat).toContain(`Candidate: \`${release.version}\``);
     expect(uat).toContain(`efesto-v${release.version}-windows.zip`);
-    expect(uat).not.toContain('Candidate: `0.1.0-internal.3`');
+    expect(uat).not.toContain('Candidate: `0.1.0-internal.4`');
     expect(uat).toContain('builds the internal Shared runtime and trusted Kernel runtime');
     expect(uat).toContain('`alive: true`, `owned: true` and `verified: true`');
     expect(uat).toContain('Goal-first Control Center');
+    expect(uat).toContain('pixel-smith/brain visual identity');
+    expect(uat).toContain('work/data-flow motion appears only for observable active states');
+    expect(uat).toContain('reduced-motion mode');
     expect(uat).toContain('UAT-1 — clean Windows install');
     expect(uat).toContain('UAT-3 — real public-web economic Goal');
     expect(uat).toContain('UAT-4 — persistence and replay');
