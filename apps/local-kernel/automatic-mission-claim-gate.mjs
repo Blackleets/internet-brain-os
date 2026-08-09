@@ -13,12 +13,15 @@ export class AutomaticMissionClaimGate {
   constructor(options = {}) {
     this.kernel = options.kernel;
     this.loadKernel = options.loadKernel ?? loadBuiltKernel;
+    this.enforceRuntimeReadiness = options.enforceRuntimeReadiness ?? !options.kernel;
+    this.readOnlyRuntimeReady = options.readOnlyRuntimeReady ?? (() => process.env.HEPHAESTUS_HERMES_READ_ONLY_READY === '1');
   }
 
   async evaluate(goal, mission) {
     if (!goal || typeof goal !== 'object' || !mission || typeof mission !== 'object') return deny('invalid_input');
     if (typeof goal.id !== 'string' || !goal.id || mission.goalId !== goal.id) return deny('mission_goal_mismatch');
     if (Array.isArray(mission.searchCandidates) && mission.searchCandidates.length > 0) return deny('verification_pending');
+    if (this.enforceRuntimeReadiness && this.readOnlyRuntimeReady() !== true) return deny('runtime_read_only_unverified');
 
     const kernel = await this.#kernel();
     const required = requiredKernelExports(kernel);
