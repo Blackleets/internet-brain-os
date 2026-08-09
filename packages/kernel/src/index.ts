@@ -13,6 +13,7 @@ export * from './memory';
 export * from './mission';
 export * from './notification';
 export * from './orchestration';
+export * from './prevention';
 export * from './proposed-plan';
 export * from './relationship';
 export * from './replay-lab';
