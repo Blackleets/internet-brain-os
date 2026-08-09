@@ -2,9 +2,9 @@
 
 Internet Brain OS / Hephaestus grows in controlled phases. Do not bypass Kernel authority to accelerate product work.
 
-## MVP completion status — 2026-08-08
+## MVP completion status — 2026-08-09
 
-The core local-first Efesto MVP completion gate is now focused on a bounded autonomous value loop:
+The core local-first Efesto MVP completion gate is focused on a bounded autonomous value loop:
 
 ```text
 Goal → Plan → Capability/Risk Gate → Execution → Evidence → Opportunity/Knowledge → Trigger → Notification
@@ -40,47 +40,31 @@ with durable controlled-memory authority behind the same Kernel boundary.
 - Entity and relationship domain support.
 - Knowledge Graph service and evidence links exist in the Kernel.
 - Goal-relevant opportunity/context reuse is implemented.
+- The graph remains a local Kernel projection; UI must not invent graph data.
 
-The graph remains a local Kernel projection; do not invent graph data in UI. A richer product graph browser is future UX, not a prerequisite for the current MVP release gate.
+### Phase 3.5 — Memory Safety v1 ✅
 
-### Phase 3.5 — Memory Safety and Quarantine ✅ core authority
-
-Goal: prevent unsupported, contradicted, corrupt or revoked durable memory from silently re-entering reasoning.
-
-Verified core authority:
-
-- [x] Deterministic quarantine/toxic-memory lifecycle design.
-- [x] Observed records separated from interpretation, recommendations and human decisions.
-- [x] Approval-gated transitions bound to approval/policy context.
-- [x] Rejected, superseded and revoked authority states remain terminal.
-- [x] Pure lifecycle types and transition validation.
-- [x] Append-only authority receipts with request binding, replay semantics and integrity checks.
-- [x] Fail-closed transactional transition service.
-- [x] Deterministic authority-state projection.
-- [x] Startup reconciliation and reasoning retrieval gate.
-- [x] Durable on-disk authority receipt repository with restart reconstruction.
-- [x] Corrupt/tampered/gapped/missing-reference authority histories fail closed.
-- [x] Exact replay is safe and altered replay is rejected.
-- [x] Legacy migration is explicit/reviewed rather than automatic admission.
-
-Additional specialized recovery-review UX can evolve later without weakening the completed core authority boundary.
+- Deterministic quarantine/recovery/prevention contracts.
+- Append-only authority receipts and deterministic projection.
+- Fail-closed startup reconciliation and reasoning retrieval gate.
+- Exact replay safe; altered replay rejected.
+- Terminal authority states remain terminal.
+- Replay Lab Memory Safety views remain read-only and provenance-backed.
 
 ### Phase 4 — Monitoring, scheduling and alerts ✅ foundation
 
-- Scheduler Engine exists as a Kernel primitive.
-- Trigger Engine supports bounded conditions including new-match flows.
-- Notification Gateway provides deduplication and Evidence linkage.
+- Scheduler Engine, Trigger Engine and Notification Gateway exist behind Kernel authority.
 - Golden E2E proves Goal → discovery → Evidence → Opportunity → Trigger → Notification.
+- Future recurring UX extends this model; it does not grant direct side-effect authority.
 
-Future work may add richer recurring product UX and additional condition types; these are extensions of the existing authority model, not permission for direct agent side effects.
+### Phase 5 — Goal-first operator experience ✅
 
-### Phase 5 — AI overlay and operator experience ✅ MVP surface
-
-- Opportunity ranking and explainable relevance.
-- Evidence-first Find details.
-- Control Center with authenticated local workspaces and private multi-model chat.
-- Pixel forge activity driven only from persisted/observable states.
-- Dedicated Chromium/Playwright acceptance is part of CI.
+- G0 Forge Focus contract with one Kernel-owned persisted Goal truth.
+- G1 Shared Goal Truth v1 read model and authenticated loopback GET routes.
+- G2 responsive Control Center consumes Shared Goal Truth and is verified on desktop + 390×844 + keyboard/focus + reduced motion.
+- G3 extension parser/transport/Living Forge/Goal chips consume the same projection while preserving explicit Research authorization.
+- Legacy Mission history remains compatibility telemetry, not Goal authority.
+- No separate browser-side persisted Goal state machine.
 
 ### Distribution ✅ Windows MVP
 
@@ -89,26 +73,35 @@ Future work may add richer recurring product UX and additional condition types; 
 - Frozen-lockfile dependency install, extension build and trusted Kernel launcher repair/start.
 - Owner-local desktop shortcut and self-healing daily launcher.
 - No embedded or printed Kernel secrets.
+- Exact packaged-candidate qualification runs on Windows 2022 and Windows 2025.
 
-### Supply-chain gate ✅
+### Supply-chain and release gate ✅
 
 - Frozen lockfile required.
-- `pnpm audit --prod` runs without GHSA ignores.
-- Patched `nanoid@3.3.17` is locked; vulnerable `3.3.16` is regression-blocked.
-- Typecheck, tests, production build, first-run verification and Chromium acceptance are mandatory.
+- `pnpm audit --prod` without GHSA ignores.
+- Typecheck, full tests, production build, `verify:first-run`, Chromium acceptance, Windows launcher/fresh-install and exact-package qualification are mandatory.
+- `publicLaunchApproved` stays false until one immutable candidate passes manual internal UAT.
 
-## Deliberately outside the MVP completion claim
+## Next product phase — G4 automatic authorized parity
 
-These are possible later phases, not missing “yellow lights” in the current release:
+Goal: prove the converged clients automatically reflect authorized read-only work without duplicated state or fabricated progress.
+
+Bounded G4 sequence:
+
+1. prove confirmed Goals can continue authorized read-only execution under existing capability/risk policy without extra UI clicks;
+2. prove web + extension refresh from the same persisted Goal/Mission changes;
+3. prove truthful Finds/notifications update after Evidence-backed promotion;
+4. prove offline/restart/retry does not fabricate activity or duplicate irreversible effects;
+5. measure local-first Goal → Useful Find, time-to-first-useful-find and repeat-Goal signals before setting product targets.
+
+## Deliberately separate future slices
 
 - automatic purchases or irreversible financial actions;
 - broad email/calendar/commerce connector catalog;
-- public Skill/agent marketplace;
 - multi-tenant cloud brain or central telemetry;
 - native mobile application;
-- social/feed/token/blockchain layers;
-- a decorative graph UI without real Kernel-backed data.
+- arbitrary phone → PC remote Kernel authority;
+- public Skill/agent marketplace;
+- decorative graph UI without Kernel-backed data.
 
-## Next product phase — evidence-led expansion
-
-Choose the next bounded workflow from real user value. Preferred candidates extend the proven local loop, for example freelance opportunity discovery or another read-only research connector. Every new capability must declare risk, scope, consent, credentials, rate limits and execution policy in the Kernel Capability Registry.
+Any cross-device transport must receive its own authentication, secret-handling and threat-model work before it can change the local-first authority boundary.

@@ -8,9 +8,9 @@ This is the canonical short checkpoint for recovering work. GitHub `main`, CI an
 pnpm resume
 ```
 
-Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active GitHub item if one exists. The checkpoint preserves **machine-checkable release readiness** language required by continuity and release gates; do not remove those contractual phrases while compacting this file.
+Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active GitHub item if one exists. This checkpoint preserves **machine-checkable release readiness** language required by continuity and release gates.
 
-## Identity and invariant
+## Identity and authority invariant
 
 - Product: **HEPHAESTUS / Efesto — The Intelligence Forge**.
 - Repository: `Blackleets/internet-brain-os` only. Never mix AEGIS, Genesis HQ, APO, Hermes Agent or another project into this tree.
@@ -18,78 +18,55 @@ Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active Git
 - The Hephaestus Kernel owns Evidence, validation, contradiction handling, capability/risk gates, replay, durable-memory authority and controlled persistence.
 - **An agent is never the Kernel.**
 - Dashboard, extension and Replay Lab are clients/read models; private authority stays local-first.
+- Exact replay is safe; altered replay is rejected.
 
 ## Verified baseline — 2026-08-09
 
 ### Memory Safety v1
 
-- Signed ingestion, idempotency, exact replay and altered-replay rejection are implemented.
-- Memory authority lifecycle, immutable receipts, deterministic projection, startup reconciliation and retrieval gating are fail-closed.
-- Memory Safety E1–E5 plus E4 runtime hardening are merged.
-- PR #201 adversarially froze malformed-input, integrity, terminal-recovery, replay, cross-memory and read-only-authority contracts.
-- **Memory Safety v1 is frozen in `main` at `dff2c2167fd16ad609dd5042ca61ee588d1f7de2`.**
+- PR #201 froze adversarial Memory Safety v1 at `dff2c2167fd16ad609dd5042ca61ee588d1f7de2`.
 - Terminal memory remains terminal; recovery may authorize only a distinct new candidate identity.
-- Prevention and Replay Lab remain read-only and never infer hidden agent intent as authority.
+- Quarantine, recovery review, prevention and Replay Lab projections remain read-only where specified and fail closed on malformed runtime input.
 
-### Goal-first product contract
+### Goal-first cross-surface contract
 
 - PR #202 / G0 merged at `792f5ec128e534a1a5c52fc6fbd304ff9f8762ea`.
-- `docs/product-design/goal-first-cross-surface-g0.md` freezes **Forge Focus** and one Kernel-owned persisted Goal truth as the product direction.
-- `UniversalGoal` v2 remains the canonical domain target.
-- The existing local radar Goal is an explicit compatibility representation until migration is performed additively.
-- Goal lifecycle, Mission execution and client-only draft/prepared state remain distinct.
-- Automatic behavior means automatic only inside previously confirmed read-only/capability boundaries; side effects and memory authority remain separately gated.
-- Existing browser acceptance proves the Goal-first shell on desktop and a 390×844 mobile-width layout without horizontal overflow.
-- The Goal-first shell plus living-forge visual layer remain the UI baseline; motion must reflect observable state only and reduced-motion must remain usable.
-- `apps/web/landing` remains public acquisition/education only and never receives private Goal or Kernel authority state.
+- Forge Focus, one Kernel-owned persisted Goal truth, truthful motion, explicit authority and responsive 390×844 behavior are frozen product requirements.
+- Mobile-width support does not imply arbitrary phone → PC Kernel remote control; secure cross-device transport requires its own threat-modelled slice.
+
+### Shared Goal Truth v1 backend
+
+- PR #203 / G1 merged at `48f949a0de3eb6cff5b579ebeba3ad9ef8995a43`.
+- Schema is `efesto.goal-surface.v1`; `sourceOfTruth` is always `kernel`.
+- `GET /api/goal-surfaces` and `GET /api/goal-surfaces/:goalId` are authenticated read-only routes.
+- Goal lifecycle and Mission work state remain separate.
+- `UniversalGoal` v2 is the canonical target; current radar Goals remain explicit `legacy_radar` compatibility records.
+- No POST/write route exists under `/api/goal-surfaces`.
+
+### Responsive Control Center — G2
+
+- PR #204 merged at `2a7ca903f8e2d686f19ec3402149651d9adcec08`.
+- Web client parsing is fail-closed and Home/Living Forge uses Shared Goal Truth instead of duplicated Mission interpretation.
+- Desktop, 390×844 mobile-width, keyboard/focus and reduced-motion Chromium acceptance are green.
+- Goal/Mission writers remain unchanged and explicit confirmation remains required.
+
+### Extension Shared Goal Truth — G3
+
+- PR #205 is the bounded extension convergence slice represented by this checkpoint; live Git determines whether it is still under review or already merged.
+- Extension parser validates the same Shared Goal Truth schema/source fail-closed.
+- Extension list/detail transport is authenticated HTTP loopback GET-only and rejects invalid tokens, endpoints and Goal IDs before network access.
+- Living Forge and `mission-state` are read-only Shared Goal Truth projections; read failure becomes an explicit unavailable/error presentation rather than stale legacy success.
+- Goal chips render from Shared Goal Truth, preserve Kernel ordering and display explicit compatibility/autonomy/work-state labels.
+- Every Research control uses its own Goal `workState` and projected `canResearch`.
+- The existing `startGoalResearch` path remains the writer and still requires the explicit user authorization prompt.
+- Legacy Mission history remains a read-only compatibility ledger; it is not Goal authority.
+- Shared Goal Truth refresh follows observable Mission revision changes; no independent unbounded Goal polling loop was added.
+- Reduced-motion remains available for the extension forge.
 
 ### Authentic agent boundary
 
-- Authentic Hermes v0.19.0 runtime acceptance was proven through the bounded Agent Hub boundary, not simulation.
+- **Authentic Hermes v0.19.0 runtime acceptance was proven** through the bounded Agent Hub boundary, not simulation.
 - Agents may execute authorized work but do not own Goal authority, Evidence truth or memory authority.
-
-## Active bounded phase — G1 Shared Goal Truth v1
-
-PR #203 / branch `agent/shared-goal-truth-g1` is the only active bounded change.
-
-### G1.1 — Kernel projection — validated
-
-- `GoalSurfaceSnapshot v1` schema: `efesto.goal-surface.v1`.
-- `sourceOfTruth` is always `kernel`.
-- UniversalGoal v2 projects as `universal_v2` with real revision/autonomy/approval policy.
-- Current radar Goal projects as explicit `legacy_radar` compatibility with labelled compatibility defaults.
-- Goal status and Mission work state remain separate fields.
-- Current Mission selection is deterministic and cross-Goal Mission records are excluded.
-- Runtime malformed Goal/Mission input fails closed.
-- Projection is read-only and grants no capability, approval, external-side-effect or memory authority.
-
-### G1.2 — local read adapter — validated
-
-- `apps/local-kernel/goal-surface-reader.mjs` reads `goals` and `agentMissions` using `LocalKnowledgeStore.read()` only.
-- It delegates all Goal/Mission semantics to the Kernel projector.
-- It never calls the store project/write path.
-- Goal identity is validated before disk read.
-- Production composition **lazy-loads** the trusted Kernel projector at the first Goal-surface read instead of requiring `packages/kernel/dist` at source-tree server startup.
-- Packaged/installer paths still build the trusted Kernel runtime before normal product launch; if the runtime is genuinely unavailable at read time, the reader fails closed.
-
-### G1.3 — authenticated local HTTP read boundary — validated
-
-- `GET /api/goal-surfaces` returns the Kernel-owned list projection.
-- `GET /api/goal-surfaces/:goalId` returns one exact projection or deterministic not-found.
-- Routes sit behind the existing `/api/*` token gate and extension identity gate.
-- Invalid Goal identity is mapped to a controlled reader error.
-- There is no POST/write route under `/api/goal-surfaces`.
-- Existing `/api/goals` and Mission write routes remain unchanged and separate.
-- The first final candidate exposed a Windows source-tree launcher regression caused by eager Kernel runtime loading; that composition regression is fixed by the lazy-read boundary and `internal.22` is frozen/superseded.
-
-### Important product truth
-
-G1 creates the shared read contract only. **The responsive Control Center does not yet consume it; the extension does not yet consume it.**
-
-- G2 will wire the responsive Control Center to Shared Goal Truth v1.
-- G3 will wire the extension to the same projection.
-- G4 will prove automatic read-only execution/refresh parity across both clients.
-- Mobile-width support does not imply arbitrary phone → PC Kernel remote control; secure cross-device transport requires a separate threat-modelled slice.
 
 ## Canonical CI gate
 
@@ -111,29 +88,25 @@ Never quote an old test count as current truth; use the exact current CI run.
 
 ## Distribution state
 
-- `0.1.0-internal.6` remains the prior runtime-readiness milestone.
-- `0.1.0-internal.7` through `0.1.0-internal.22` are frozen and must not be reused.
-- G1 uses immutable candidate `0.1.0-internal.23`; it is not qualified until the complete final matrix passes on the same final #203 SHA.
+- `0.1.0-internal.7` through `0.1.0-internal.36` are frozen after use and must never be reused.
+- G3 final cross-surface freeze uses immutable candidate `0.1.0-internal.37`; live CI decides qualification.
 - `publicLaunchApproved` remains `false`.
 - The **public release light is separate** from implementation readiness: automated qualification may be green while public launch remains blocked pending manual UAT on one exact candidate.
 
 ## Next bounded sequence
 
-1. G1 Shared Goal Truth v1 — **active; functional layers + startup fix implemented, final `internal.23` qualification pending**.
-2. Merge G1 only after final `internal.23` architecture/CI/Chromium/Windows exact-package matrix is green.
-3. G2 — responsive Control Center consumes `/api/goal-surfaces`; prove desktop + 390×844 + keyboard/focus/reduced motion.
-4. Evaluate and merge G2 before touching extension consumption.
-5. G3 — extension consumes the same projection and removes duplicated Goal-state interpretation.
-6. Evaluate and merge G3.
-7. G4 — prove automatic authorized read-only execution/refresh parity and truthful Finds updates.
-8. Cross-device transport, if needed, receives its own security/threat-model slice.
+1. Finish/merge G3 only if final `internal.37` architecture/CI/Chromium/Windows exact-package matrix is green on the same HEAD.
+2. G4 — prove automatic authorized read-only execution/refresh parity and truthful Finds updates across the converged web + extension surfaces.
+3. Evaluate Goal → Useful Find, time-to-first-useful-find and repeat-Goal signals from local-first measured data; do not invent product targets before a real baseline.
+4. Cross-device transport, if needed, gets its own security/threat-model slice before any phone → PC remote authority claim.
+5. Public promotion remains a separate exact-candidate UAT decision.
 
-Issue #186 remains the local-first business scorecard and does not block this UX sequence.
+Issue #186 remains the local-first business scorecard and does not weaken this UX/security sequence.
 
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, local-first secrecy, Evidence provenance, exact replay, approval gates and Memory Safety v1. Work on one bounded branch at a time. G1 Shared Goal Truth is the current backend truth contract; do not claim web/extension parity until G2/G3. After G1 merge, wire G2 responsive Control Center first, evaluate/merge it, then G3 extension, then G4 automation parity. Never create separate client Goal truth, fake activity, or remote-PC claims without a separately secured transport contract.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, local-first secrecy, Evidence provenance, exact replay, approval gates and Memory Safety v1. Shared Goal Truth v1 is the single persisted Goal read model for responsive web and extension. Finish G3 only through its exact green candidate, then execute G4 automatic authorized read-only parity. Never create separate client Goal truth, fake activity, automatic side effects, or remote-PC claims without a separately secured transport contract.
 ```
 
 ## Update rule
