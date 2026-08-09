@@ -53,7 +53,7 @@ Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active Git
 
 ### Extension Shared Goal Truth — G3
 
-- PR #205 is the bounded extension convergence slice represented by this checkpoint; live Git determines whether it is still under review or already merged.
+- PR #205 merged at `4f45d1ad0710d0d2100f3f0a577679bc05062f3d`.
 - Extension parser validates the same Shared Goal Truth schema/source fail-closed.
 - Extension list/detail transport is authenticated HTTP loopback GET-only and rejects invalid tokens, endpoints and Goal IDs before network access.
 - Living Forge and `mission-state` are read-only Shared Goal Truth projections; read failure becomes an explicit unavailable/error presentation rather than stale legacy success.
@@ -62,12 +62,28 @@ Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active Git
 - The existing `startGoalResearch` path remains the writer and still requires the explicit user authorization prompt.
 - Legacy Mission history remains a read-only compatibility ledger; it is not Goal authority.
 - Shared Goal Truth refresh follows observable Mission revision changes; no independent unbounded Goal polling loop was added.
-- Reduced-motion remains available for the extension forge.
+- G3 final immutable candidate `0.1.0-internal.38` passed architecture, strict production audit, release readiness, 921/921 tests, build, first-run, Chromium, Windows launcher/pairing/port-conflict/fresh-install and exact packaged qualification on Windows 2022/2025.
 
 ### Authentic agent boundary
 
 - **Authentic Hermes v0.19.0 runtime acceptance was proven** through the bounded Agent Hub boundary, not simulation.
 - Agents may execute authorized work but do not own Goal authority, Evidence truth or memory authority.
+
+## Active bounded phase — G4 automatic authorized read-only parity
+
+Branch: `agent/automatic-read-only-g4`.
+
+### G4.1a — policy contract
+
+- Introduces pure Kernel policy `efesto.automatic-read-only-policy.v1`.
+- An active Goal alone is never automatic authority.
+- Automatic continuation requires an approved `efesto.goal-execution-authorization.v1` receipt bound to the exact Goal id and revision, scoped to `read_only_continuation`, and decided by a human/founder actor.
+- Any Goal revision invalidates the previous receipt.
+- Paused/completed/failed/cancelled Goals deny automatic continuation.
+- Only available `r0_observe` capabilities whose consent policy is not `always` may be eligible.
+- R1/R2/R3, `all_actions`, unresolved `custom`, agent/system approvals and single-action receipts remain denied.
+- The policy is a second read-only eligibility gate: it does not authorize a capability, create/claim a Mission, approve side effects, or mutate memory authority.
+- Existing one-click Mission/Hermes runtime is not broadened in G4.1a.
 
 ## Canonical CI gate
 
@@ -89,26 +105,28 @@ Never quote an old test count as current truth; use the exact current CI run.
 
 ## Distribution state
 
-- `0.1.0-internal.7` through `0.1.0-internal.37` are frozen after use and must never be reused.
-- G3 final cross-surface freeze uses candidate `0.1.0-internal.38`; it is qualified only if the complete final matrix passes on one unchanged HEAD.
-- `0.1.0-internal.37` produced a Windows package and is frozen; it is not promotable because the full CI suite exposed a missing UAT contract literal after package qualification.
+- `0.1.0-internal.7` through `0.1.0-internal.38` are frozen after use and must never be reused.
+- G4.1a uses candidate `0.1.0-internal.39`; it is qualified only if the complete final matrix passes on one unchanged HEAD.
 - `publicLaunchApproved` remains `false`.
 - The **public release light is separate** from implementation readiness: automated qualification may be green while public launch remains blocked pending manual UAT on one exact candidate.
 
 ## Next bounded sequence
 
-1. Finish/merge G3 only if final `internal.38` architecture/CI/Chromium/Windows exact-package matrix is green on the same HEAD.
-2. G4 — prove automatic authorized read-only execution/refresh parity and truthful Finds updates across the converged web + extension surfaces.
-3. Evaluate Goal → Useful Find, time-to-first-useful-find and repeat-Goal signals from local-first measured data; do not invent product targets before a real baseline.
-4. Cross-device transport, if needed, gets its own security/threat-model slice before any phone → PC remote authority claim.
-5. Public promotion remains a separate exact-candidate UAT decision.
+1. G4.1a pure automatic-read-only policy contract → evaluate.
+2. G4.1b persist the revision-bound authorization receipt at the existing explicit user-confirmation boundary → evaluate.
+3. G4.1c require that policy before automatic worker continuation while preserving normal Capability Registry/Execution Engine gates → evaluate.
+4. G4.1d prove retry/crash/idempotency safety for Evidence, Finds and notifications → evaluate.
+5. G4.1e prove web + extension refresh the same persisted Goal/Mission/Find truth without another harmless-read prompt → evaluate.
+6. G4.1f adversarial freeze + exact-package qualification.
+7. Establish local-first baselines for Goal → Useful Find Rate, Time to First Useful Find and Repeat Goal Usage before setting growth targets.
+8. Cross-device transport, if needed, gets its own security/threat-model slice before any phone → PC remote authority claim.
 
 Issue #186 remains the local-first business scorecard and does not weaken this UX/security sequence.
 
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, local-first secrecy, Evidence provenance, exact replay, approval gates and Memory Safety v1. Shared Goal Truth v1 is the single persisted Goal read model for responsive web and extension. Finish G3 only through its exact green internal.38 candidate, then execute G4 automatic authorized read-only parity. Never create separate client Goal truth, fake activity, automatic side effects, or remote-PC claims without a separately secured transport contract.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, local-first secrecy, Evidence provenance, exact replay, approval gates and Memory Safety v1. G0-G3 are merged. Work G4 layer-by-layer: first freeze the revision-bound human authorization policy for automatic R0 continuation, then persist its receipt, then gate the existing one-click worker, then prove idempotency and cross-surface refresh. Never infer automation authority from Goal presence or agent intent, and never auto-promote R1/R2/R3 side effects.
 ```
 
 ## Update rule

@@ -5,17 +5,17 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.38`
+- Candidate: `0.1.0-internal.39`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
-- `0.1.0-internal.7` through `0.1.0-internal.37` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
+- `0.1.0-internal.7` through `0.1.0-internal.38` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
 - Test only the artifact produced from the exact `main` commit under review.
 - Automated packaged-candidate qualification on Windows 2022 and Windows 2025 must be green before manual UAT begins.
 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Use only the `efesto-v0.1.0-internal.38-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
+2. Use only the `efesto-v0.1.0-internal.39-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -59,7 +59,7 @@ Pass only if:
 - the Control Center Home/Living Forge consumes Shared Goal Truth v1 for persisted work-state presentation and does not override it with conflicting legacy Mission interpretation;
 - the extension parser, transport, Living Forge and Goal chips consume the same Kernel-owned Shared Goal Truth contract;
 - extension Goal chips preserve Kernel ordering, explicit compatibility labels, per-Goal `workState` and projected `canResearch`;
-- the existing explicit `Authorize Hermes to research this Goal once?` confirmation and existing `startGoalResearch` writer remain unchanged;
+- the existing explicit `Authorize Hermes to research this Goal once?` confirmation and existing `startGoalResearch` writer remain unchanged in G4.1a;
 - Shared Goal Truth read failure becomes an explicit unavailable/error state instead of stale legacy success or an empty fabricated success list;
 - legacy Mission history remains a read-only compatibility ledger, not Goal authority;
 - `completed` without persisted `forged` remains visually calm and is not presented as forged Evidence;
@@ -72,6 +72,12 @@ Pass only if:
 - the Efesto pixel-smith/brain visual identity renders without obscuring controls;
 - Replay Lab remains readable but cannot mutate durable-memory authority;
 - Memory Safety v1 projections preserve exact references and distinguish persisted records, deterministic interpretations and human decisions;
+- G4.1a automatic read-only policy never treats an active Goal alone as authorization;
+- G4.1a requires an approved human/founder `efesto.goal-execution-authorization.v1` receipt bound to the exact Goal id and revision with `read_only_continuation` scope;
+- changing the Goal revision, pausing/terminating the Goal, using an agent/system approval actor, or presenting a single-action receipt denies automatic continuation;
+- automatic continuation is eligible only for an available `r0_observe` capability whose consent policy is not `always`;
+- R1/R2/R3 capabilities and Goal policies that require every action or unresolved custom approval remain separately approval-gated;
+- an eligible G4.1a decision does not itself authorize a capability, create/claim a Mission, approve side effects, or mutate memory authority;
 - no blank/white/black dead screen blocks the journey.
 
 ## UAT-3 — real public-web economic Goal
