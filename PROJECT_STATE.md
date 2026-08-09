@@ -29,7 +29,8 @@ Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active Git
 - Authority receipts are durably persisted and reconstruct correctly after restart; malformed, tampered, corrupt, missing-reference and altered-replay states fail closed.
 - Only reconciled admitted memory may be reused by reasoning.
 - Protected Kernel authority modules are provider-neutral under the executable `pnpm architecture:check` CI gate.
-- Memory Safety E1 adds a pure Kernel-owned quarantine-signal evaluator. It can produce deterministic read-only recommendations only from normalized persisted reference IDs; it cannot execute a memory-authority transition, and terminal memory states stay outside the normal quarantine graph.
+- Memory Safety E1 adds a pure Kernel-owned quarantine-signal evaluator that produces deterministic read-only recommendations only from normalized persisted reference IDs; it cannot execute a memory-authority transition, and terminal memory states stay outside the normal quarantine graph.
+- Memory Safety E2 persists those recommendations through separate in-memory and durable append-only repositories. Recommendation identity is revalidated before storage, exact basis replay is idempotent, durable history is integrity-bound and reconstructed through the same validation path after restart, and stale status is explicit when lifecycle revision, evaluator version or normalized signal basis changes. Recommendation persistence has no `MemoryAuthorityState` mutation path.
 
 ### Autonomous Goal execution foundation
 
@@ -129,13 +130,13 @@ Never quote an old test count as current truth; use the exact current CI run.
 
 ## Current operating state
 
-- `main` is the implementation source of truth and includes exact packaged qualification from PR #182 plus the architecture/forensic guardrails from PR #184.
+- `main` is the implementation source of truth and includes exact packaged qualification from PR #182, architecture/forensic guardrails from PR #184 and deterministic quarantine evaluation from PR #193.
 - The Goal-first shell plus living-forge identity layer is the current product UI baseline.
 - `0.1.0-internal.6` remains the immutable previous runtime-readiness candidate.
-- `0.1.0-internal.7` through `0.1.0-internal.11` are frozen non-promotable or superseded pre-UAT candidates and must not be reused.
-- The current qualification candidate is `0.1.0-internal.12`; it is not qualified until the exact ZIP passes the complete CI/Chromium/Windows packaged matrix for the final merged code state.
+- `0.1.0-internal.7` through `0.1.0-internal.12` are frozen non-promotable or superseded pre-UAT candidates and must not be reused.
+- The current qualification candidate is `0.1.0-internal.13`; it is not qualified until the exact ZIP passes the complete CI/Chromium/Windows packaged matrix for the final merged code state.
 - `publicLaunchApproved` remains `false`. Manual UAT-1 through UAT-6 may begin only after automated packaged qualification is green on the same immutable candidate.
-- Phase E is tracked through issues #185 and #187–#191. Issue #186 defines the enterprise product scorecard. Product Design issue #192 is blocked until Memory Safety contracts are frozen.
+- Phase E is tracked through issues #185 and #187–#191. E1/#185 is merged; E2/#187 is the active bounded change. Issue #186 defines the enterprise product scorecard. Product Design issue #192 is blocked until Memory Safety contracts are frozen.
 - Work directly on `main` is prohibited; use one bounded implementation branch/PR at a time.
 - Do not weaken Kernel authority, replay protection, consent, provenance, secrecy or qualification gates to make a test pass.
 
@@ -164,8 +165,8 @@ This does **not** mean every long-term idea is shipped. Automatic purchases, a p
 
 Complete Memory Safety without changing the core authority model:
 
-1. #185 — deterministic quarantine-signal evaluator and read-only recommendation contract;
-2. #187 — persist/read quarantine recommendations without transition authority;
+1. #185 — deterministic quarantine-signal evaluator and read-only recommendation contract — **merged**;
+2. #187 — persist/read quarantine recommendations without transition authority — **active**;
 3. #188 — explicit terminal-memory recovery review records, separate from automatic state mutation;
 4. #189 — repeated-failure aggregation into read-only prevention recommendations;
 5. #190 — forensic/operator exposure with provenance and no Replay Lab write authority;

@@ -125,7 +125,12 @@ export function evaluateMemoryQuarantineSignals(
 
   const decision = input.state === 'quarantined' ? 'retain_quarantine' : 'recommend_quarantine';
   const recommendation: MemoryQuarantineRecommendation = {
-    recommendationId: buildRecommendationId(memoryId, input.lifecycleRevision, evaluatorVersion, signals),
+    recommendationId: deriveMemoryQuarantineRecommendationId(
+      memoryId,
+      input.lifecycleRevision,
+      evaluatorVersion,
+      signals,
+    ),
     memoryId,
     lifecycleRevision: input.lifecycleRevision,
     evaluatorVersion,
@@ -136,6 +141,24 @@ export function evaluateMemoryQuarantineSignals(
   };
 
   return { decision, signals: cloneSignals(signals), recommendation };
+}
+
+/** Stable identity for one memory revision + evaluator version + normalized signal basis. */
+export function deriveMemoryQuarantineRecommendationId(
+  memoryId: string,
+  lifecycleRevision: number,
+  evaluatorVersion: string,
+  signals: readonly MemoryQuarantineSignal[],
+): string {
+  const canonicalSignals = signals.map((signal) => ({
+    type: signal.type,
+    severity: signal.severity,
+    referenceIds: [...signal.referenceIds],
+  }));
+  const digest = createHash('sha256')
+    .update(JSON.stringify({ memoryId, lifecycleRevision, evaluatorVersion, signals: canonicalSignals }))
+    .digest('hex');
+  return `memory-quarantine:${digest.slice(0, 32)}`;
 }
 
 function normalizeReferenceIds(
@@ -174,23 +197,6 @@ function requireIsoDateTime(value: IsoDateTime): void {
       'evaluatedAt must be a valid ISO date-time.',
     );
   }
-}
-
-function buildRecommendationId(
-  memoryId: string,
-  lifecycleRevision: number,
-  evaluatorVersion: string,
-  signals: readonly MemoryQuarantineSignal[],
-): string {
-  const canonicalSignals = signals.map((signal) => ({
-    type: signal.type,
-    severity: signal.severity,
-    referenceIds: [...signal.referenceIds],
-  }));
-  const digest = createHash('sha256')
-    .update(JSON.stringify({ memoryId, lifecycleRevision, evaluatorVersion, signals: canonicalSignals }))
-    .digest('hex');
-  return `memory-quarantine:${digest.slice(0, 32)}`;
 }
 
 function cloneSignals(signals: readonly MemoryQuarantineSignal[]): MemoryQuarantineSignal[] {

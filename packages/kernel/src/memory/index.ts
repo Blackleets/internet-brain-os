@@ -21,8 +21,16 @@ export { gateMemoryRetrieval } from './memory-retrieval-gate';
 export { planLegacyMemoryMigration } from './memory-legacy-migration-plan';
 export {
   MemoryQuarantineEvaluationInputError,
+  deriveMemoryQuarantineRecommendationId,
   evaluateMemoryQuarantineSignals,
 } from './memory-quarantine-signal-evaluator';
+export {
+  InMemoryMemoryQuarantineRecommendationRepository,
+  MemoryQuarantineRecommendationConflictError,
+  assessMemoryQuarantineRecommendationFreshness,
+  verifyMemoryQuarantineRecommendationIntegrity,
+} from './memory-quarantine-recommendation-repository';
+export { DurableMemoryQuarantineRecommendationRepository } from './durable-memory-quarantine-recommendation-repository';
 export type { CreateMemoryInput } from './memory-manager';
 export type {
   MemoryLifecycleAction,
@@ -81,6 +89,14 @@ export type {
   MemoryQuarantineSignalSeverity,
   MemoryQuarantineSignalType,
 } from './memory-quarantine-signal-evaluator';
+export type {
+  MemoryQuarantineRecommendationAppendResult,
+  MemoryQuarantineRecommendationFreshness,
+  MemoryQuarantineRecommendationFreshnessContext,
+  MemoryQuarantineRecommendationRepository,
+  MemoryQuarantineRecommendationStaleReason,
+  StoredMemoryQuarantineRecommendation,
+} from './memory-quarantine-recommendation-repository';
 export type { MemoryEventLog } from './memory-event-log';
 export type { MemoryConsolidationGroup } from './memory-consolidation';
 export type {
