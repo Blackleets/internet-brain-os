@@ -2,7 +2,7 @@
 
 This roadmap turns the verified HEPHAESTUS / Efesto foundation into a focused release and product plan. It must follow `PROJECT_STATE.md` and live CI when newer than this file.
 
-The goal is not to add random features. The goal is to make the evidence-first intelligence loop useful, trustworthy, easy to install, and easy to demonstrate without weakening Kernel authority.
+The goal is not to add random features. The goal is to make the evidence-first intelligence loop useful, trustworthy, easy to install, measurable, and easy to demonstrate without weakening Kernel authority.
 
 ## Current foundation — verified 2026-08-09
 
@@ -19,12 +19,12 @@ Implemented:
 - Goal-first Control Center plus living Efesto forge UI.
 - Browser extension workspaces for Forge, Missions, Finds and Models.
 - One-click/self-healing Windows setup and immutable internal release packaging.
-- Frozen-lockfile install, production dependency audit, typecheck, Vitest, build, first-run verification, Chromium acceptance and Windows smoke/reproduction gates.
-- Exact packaged-candidate qualification is now a required release-control layer before manual UAT.
+- Frozen-lockfile install, provider-neutral architecture guard, production dependency audit, typecheck, Vitest, build, first-run verification, Chromium acceptance and Windows smoke/reproduction gates.
+- Exact packaged-candidate qualification is a required release-control layer before manual UAT.
 
 Status legend:
 
-- `[x]` implemented or contractually added in the current repository/active release-hardening branch.
+- `[x]` implemented or contractually added in the current repository/active bounded branch.
 - `[ ]` still requiring green proof or intentionally deferred.
 
 ## North star
@@ -111,7 +111,7 @@ Status: **MVP loop implemented**.
 
 Purpose: complete the advanced operator/safety layer without turning agents into the Kernel.
 
-Status: **next bounded engineering phase after release qualification**.
+Status: **active bounded engineering phase**.
 
 Already present:
 
@@ -120,21 +120,22 @@ Already present:
 - [x] Conservative prevention proposals from forensic outcomes.
 - [x] Retrieval reuse gate that only admits reconciled `admitted` memory.
 - [x] Fail-closed lifecycle/transition authorization.
+- [x] Provider-neutral architecture guard on protected authority modules.
 
-Next implementation sequence:
+Implementation sequence:
 
-- [ ] Kernel-owned quarantine-signal evaluator producing deterministic recommendations from persisted references.
-- [ ] Persist/read quarantine recommendations without granting them transition authority.
-- [ ] Explicit terminal-memory recovery review records with founder/policy approval requirements.
-- [ ] Repeated-failure aggregation into read-only prevention recommendations.
-- [ ] Replay Lab/operator read model for these recommendations with provenance and no mutation authority.
-- [ ] Full unit, negative, replay, corruption, Gherkin and integration coverage for the new contracts.
+- [x] #185 — Kernel-owned quarantine-signal evaluator producing deterministic read-only recommendations from normalized persisted references; terminal states stay outside the normal quarantine graph.
+- [ ] #187 — Persist/read quarantine recommendations without granting them transition authority.
+- [ ] #188 — Explicit terminal-memory recovery review records with founder/policy approval requirements.
+- [ ] #189 — Repeated-failure aggregation into read-only prevention recommendations.
+- [ ] #190 — Replay Lab/operator read model for these recommendations with provenance and no mutation authority.
+- [ ] #191 — Contract freeze with full unit, negative, replay, corruption, Gherkin and integration/adversarial coverage.
 
 ## Phase F — Distribution and release closeout
 
 Purpose: prove that the exact package we would hand to a person is installable before asking that person to test it.
 
-Status: **current active release gate**.
+Status: **automated qualification implemented; immutable candidate must advance whenever code changes**.
 
 - [x] Non-technical `Install Efesto.cmd` path.
 - [x] Self-healing launcher prerequisites.
@@ -143,7 +144,7 @@ Status: **current active release gate**.
 - [x] Windows launcher, first-run and pairing recovery automation.
 - [x] `0.1.0-internal.6` preserved as the immutable previous runtime-readiness candidate.
 - [x] `0.1.0-internal.7` through `0.1.0-internal.10` frozen as non-promotable automated-qualification candidates.
-- [x] Advance the corrected qualification state to `0.1.0-internal.11`.
+- [x] `0.1.0-internal.11` qualified the exact-package automation and is now frozen after subsequent source/runtime work.
 - [x] Add exact-ZIP download, checksum/commit verification and extraction to a path containing spaces.
 - [x] Add Windows 2022 + Windows 2025 packaged-install qualification.
 - [x] Exercise a real fresh unpaired install from the ZIP with pairing truthfully required.
@@ -152,17 +153,30 @@ Status: **current active release gate**.
 - [x] Add credential-leak detection against captured repair output and sanitized diagnostic artifacts.
 - [x] Isolate qualification shutdown from PowerShell/pnpm stderr semantics and verify the trusted launcher exit code directly.
 - [x] Add Gherkin + machine-checked release-contract regression coverage.
-- [ ] Both packaged-install matrix jobs green for the final PR SHA.
-- [ ] Full PR CI/Chromium/Windows gates green for the same SHA.
+- [ ] Qualify `0.1.0-internal.12` through both packaged-install matrix jobs and full CI/Chromium/Windows gates for the final Memory Safety E1 SHA.
 - [ ] Merge and prove the merged `main` SHA through the same affected gates.
-- [ ] UAT-1 through UAT-6 on the exact resulting `internal.11` artifact.
+- [ ] UAT-1 through UAT-6 on the exact resulting `internal.12` artifact.
 - [ ] Public-release PR/tag only after UAT passes and `publicLaunchApproved` is explicitly promoted.
+
+## Enterprise measurement — Issue #186
+
+Purpose: measure Efesto as a product/business, not only as a repository.
+
+Primary KPIs:
+
+- Goal → Useful Find Rate;
+- Time to First Useful Find;
+- Repeat Goal Usage.
+
+Drivers/guardrails include mission completion/failure rate, installation-to-first-Goal activation, Find usefulness/dismissal, notification delivery, altered-replay acceptance = 0, unauthorized memory admission = 0, credential/privacy leakage = 0, and exact packaged install/repair success.
+
+Initial measurement must remain local-first. No central telemetry is introduced merely to obtain business metrics; aggregate sharing requires a separate opt-in privacy design.
 
 ## Phase G — Product Design formalization
 
 Purpose: turn the stable Goal-first product into a coherent product system rather than decorating unstable contracts.
 
-Status: **starts only after Phase E contracts are stable and Phase F automated qualification is green**.
+Status: **Issue #192 is blocked until #191 freezes Memory Safety contracts**.
 
 Planned design deliverables:
 
@@ -194,7 +208,7 @@ Do not:
 
 - turn the project back into a generic scraper or observability dashboard;
 - allow Hermes or any external agent to write durable memory directly;
-- accept validation/admission authority from agent output;
+- accept validation/admission/quarantine authority from agent output;
 - expose trusted Kernel routes publicly without a new security design;
 - add fake UI state or animation that implies work not present in persisted/streaming state;
 - authorize purchases, logins or form submissions as part of the current Golden path;
@@ -203,18 +217,17 @@ Do not:
 
 ## Next bounded sequence
 
-1. Make PR #182 exact packaged Windows qualification green on both Windows generations.
-2. Require the full CI, Chromium and Windows suite to be green for that same PR head.
-3. Merge and re-prove the resulting `main` SHA.
-4. Complete Phase E Memory Safety in separate bounded PRs with no agent authority expansion.
-5. Freeze the product/state contracts.
-6. Begin formal Product Design exploration with the stable Goal-first product as the baseline.
-7. Only after automated qualification is green, run UAT-1 through UAT-6 on the exact immutable candidate.
-8. Promote publicly only after the UAT evidence is complete.
+1. Merge #185 only after architecture, full CI, Chromium and exact Windows packaged qualification are green.
+2. Execute #187, #188, #189 and #190 one bounded PR at a time.
+3. Close #191 only after adversarial contract-freeze coverage is green.
+4. Complete #186 local-first product measurement instrumentation.
+5. Begin #192 Product Design against the frozen Goal-first product.
+6. Run UAT-1 through UAT-6 on the exact immutable candidate selected after affected engineering work.
+7. Promote publicly only after the UAT evidence is complete.
 
 ## Definition of “project star”
 
-The product reaches the intended engineering bar when the user-value, safety and distribution loops are all demonstrable:
+The product reaches the intended engineering and product bar when the user-value, safety, measurement and distribution loops are demonstrable:
 
 ```text
 A user installs the exact qualified package.
@@ -227,5 +240,6 @@ Useful Opportunities are ranked and surfaced.
 Exact replay is safe and side effects remain controlled.
 Unsafe or questionable memory can be quarantined/reviewed without agent authority.
 The operator can understand why a result was trusted, rejected, retained or isolated.
-The product UI mirrors those real states faithfully.
+The product measures whether Goals actually produce useful Finds while preserving privacy.
+The product UI mirrors real states faithfully.
 ```
