@@ -1,4 +1,4 @@
-import { createGoal, DEFAULT_KERNEL_BASE_URL, getCaseVerdict, getKernelStatus, inspectModelForge, listAgentMissions, listCases, listGoals, listOpportunities, pairKernel, sendOpportunityFeedback, startGoalResearch } from './local-transport.js';
+import { createGoal, DEFAULT_KERNEL_BASE_URL, getCaseVerdict, getKernelStatus, inspectModelForge, listAgentMissions, listCases, listOpportunities, pairKernel, sendOpportunityFeedback, startGoalResearch } from './local-transport.js';
 import { presentFind } from './find-presentation.js';
 import { buildOpportunityCommandCenter } from './opportunity-command-center.js';
 import { buildOpportunityActionPlan, normalizeOpportunityReviewState, updateOpportunityReviewState } from './opportunity-action-workspace.js';
@@ -9,6 +9,8 @@ import { missionJourney, newestMission, onboardingJourney } from './product-jour
 import { presentMission } from './mission-presentation.js';
 import { createAgentHubRefresher, missionRevision } from './agent-hub-refresh.js';
 import { markWatchtowerEventsRead, unreadWatchtowerCount } from './mission-watchtower.js';
+import { listGoalSurfaces } from './goal-surface-transport.js';
+import { renderGoalSurfaceList } from './goal-surface-goal-list.js';
 
 const $ = (selector) => document.querySelector(selector);
 const select = $('#case-target');
@@ -153,7 +155,10 @@ function startAgentHubRefresh(stored, initialMissions) {
       const missions = await loadAgentHub(stored);
       const nextRevision = missionRevision(missions);
       const latest = newestMission(missions);
-      if (nextRevision !== observedRevision && latest?.status === 'completed') await loadOpportunities(stored);
+      if (nextRevision !== observedRevision) {
+        await loadGoals(stored);
+        if (latest?.status === 'completed') await loadOpportunities(stored);
+      }
       observedRevision = nextRevision;
       return missions;
     },
@@ -250,34 +255,41 @@ function renderMissionProgress(mission) {
 
 async function loadGoals(stored) {
   if (!stored.kernelApiToken) return;
-  const goals = await listGoals({ baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL, apiToken: stored.kernelApiToken });
-  $('#goal-count').textContent = String(goals.length);
-  $('#mission-nav-count').textContent = String(goals.length);
-  productState.goalCount = goals.length;
-  renderGuide();
   const list = $('#goal-list');
-  list.replaceChildren();
-  if (!goals.length) { const empty = document.createElement('p'); empty.className = 'empty'; empty.textContent = 'Add a goal to personalize your radar.'; list.append(empty); return; }
-  for (const goal of goals.slice(0, 3)) {
-    const chip = document.createElement('span'); chip.className = 'goal-chip';
-    const copy = document.createElement('span'); copy.className = 'goal-copy';
-    const meta = document.createElement('small'); meta.textContent = `${goal.categories?.[0] ?? 'mission'} · priority ${goal.priority ?? 2}`;
-    const label = document.createElement('b'); label.textContent = `${goal.priority === 3 ? '🔥 ' : ''}${goal.title}`;
-    const location = document.createElement('small'); location.textContent = goal.location ? `◎ ${goal.location}` : 'Private mission';
-    copy.append(meta, label, location);
-    const research = document.createElement('button'); research.type = 'button'; research.className = 'goal-research'; research.textContent = 'Research';
-    research.addEventListener('click', async () => {
+  let surfaces;
+  try {
+    surfaces = await listGoalSurfaces({ baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL, apiToken: stored.kernelApiToken });
+  } catch (error) {
+    const unavailable = document.createElement('p');
+    unavailable.className = 'empty';
+    unavailable.textContent = 'Shared Goal Truth unavailable. Reconnect the private Kernel.';
+    list.replaceChildren(unavailable);
+    $('#goal-count').textContent = '—';
+    $('#mission-nav-count').textContent = '—';
+    throw error;
+  }
+
+  const presentation = renderGoalSurfaceList({
+    document,
+    list,
+    surfaces,
+    onResearch: async (goal, research) => {
+      if (!goal.canResearch) return;
       if (!globalThis.confirm('Authorize Hermes to research this Goal once?')) return;
       research.disabled = true;
       try {
         const mission = await startGoalResearch(goal.id, { baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL, apiToken: stored.kernelApiToken });
         setStatus(mission.status === 'queued' ? 'Mission queued for Hermes.' : 'Mission saved. Connect Hermes in Agent Hub to run it.');
-        await loadAgentHub(stored);
+        await Promise.allSettled([loadAgentHub(stored), loadGoals(stored)]);
       } catch (error) { setStatus(error instanceof Error ? error.message : 'Unable to start research', true); }
       finally { research.disabled = false; }
-    });
-    chip.append(copy, research); list.append(chip);
-  }
+    },
+  });
+
+  $('#goal-count').textContent = String(presentation.goalCount);
+  $('#mission-nav-count').textContent = String(presentation.goalCount);
+  productState.goalCount = presentation.goalCount;
+  renderGuide();
 }
 
 async function addGoal() {

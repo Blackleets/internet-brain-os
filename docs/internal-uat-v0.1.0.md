@@ -5,17 +5,17 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.29`
+- Candidate: `0.1.0-internal.38`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
-- `0.1.0-internal.7` through `0.1.0-internal.28` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
+- `0.1.0-internal.7` through `0.1.0-internal.37` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
 - Test only the artifact produced from the exact `main` commit under review.
 - Automated packaged-candidate qualification on Windows 2022 and Windows 2025 must be green before manual UAT begins.
 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Use only the `efesto-v0.1.0-internal.29-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
+2. Use only the `efesto-v0.1.0-internal.38-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -57,19 +57,21 @@ Pass only if:
 - no POST/write route exists under `/api/goal-surfaces`;
 - source-tree launcher startup does not require `packages/kernel/dist` before the first Goal-surface read; packaged installs still build the trusted Kernel runtime before launch;
 - the Control Center Home/Living Forge consumes Shared Goal Truth v1 for persisted work-state presentation and does not override it with conflicting legacy Mission interpretation;
-- browser acceptance serves the same authenticated Shared Goal Truth contract rather than bypassing it with a legacy-only fixture;
-- desktop and 390×844 mobile-width acceptance both preserve Shared Goal Truth work state without horizontal overflow;
-- keyboard Goal preparation retains visible focus and still creates no Kernel write before explicit confirmation;
-- `prefers-reduced-motion: reduce` collapses continuous/transition motion without removing state meaning;
-- mobile navigation uses the visible drawer controls before selecting a workspace, so acceptance exercises the user-reachable path rather than hidden off-viewport controls;
-- `completed` without persisted `forged` state remains visually calm and is not presented as Evidence forjada;
-- existing Goal/Mission POST writers remain unchanged and still require explicit confirmation before mission creation;
-- the extension is **not yet claimed to consume Shared Goal Truth v1**; that wiring belongs to G3;
-- the Efesto pixel-smith/brain visual identity renders without obscuring controls or causing horizontal overflow;
-- work/data-flow motion appears only for observable active states such as queued, investigating, verifying or model thinking, and does not imply work while offline or failed;
-- reduced-motion mode remains usable without continuous decorative animation;
-- Replay Lab is readable but cannot mutate durable-memory authority;
-- Memory Safety v1 projections distinguish persisted Kernel records, deterministic interpretations, and human decisions, preserve exact references, and label stale items as historical rather than current authorization;
+- the extension parser, transport, Living Forge and Goal chips consume the same Kernel-owned Shared Goal Truth contract;
+- extension Goal chips preserve Kernel ordering, explicit compatibility labels, per-Goal `workState` and projected `canResearch`;
+- the existing explicit `Authorize Hermes to research this Goal once?` confirmation and existing `startGoalResearch` writer remain unchanged;
+- Shared Goal Truth read failure becomes an explicit unavailable/error state instead of stale legacy success or an empty fabricated success list;
+- legacy Mission history remains a read-only compatibility ledger, not Goal authority;
+- `completed` without persisted `forged` remains visually calm and is not presented as forged Evidence;
+- work/data-flow motion appears only for observable active states;
+- reduced-motion mode remains usable without continuous decorative animation and preserves textual state meaning;
+- desktop and 390×844 mobile-width web acceptance remain green with no horizontal overflow;
+- mobile-width support does not imply arbitrary phone → PC Kernel remote authority;
+- automatic Goal-chip refresh follows persisted Mission revision changes without adding an independent unbounded polling loop;
+- no new Goal, Mission, approval, capability or memory-authority writer was introduced by G3;
+- the Efesto pixel-smith/brain visual identity renders without obscuring controls;
+- Replay Lab remains readable but cannot mutate durable-memory authority;
+- Memory Safety v1 projections preserve exact references and distinguish persisted records, deterministic interpretations and human decisions;
 - no blank/white/black dead screen blocks the journey.
 
 ## UAT-3 — real public-web economic Goal
@@ -130,7 +132,7 @@ Pass only if real public results are sourced, ranked and notified with provenanc
 
 ## UAT-6 — failure handling
 
-During an internal test, deliberately exercise at least one safe failure such as disconnecting the network before a read/search or stopping the Kernel before opening the extension.
+During an internal test, deliberately exercise at least one safe failure such as disconnecting the network before opening the extension or stopping the Kernel before a Shared Goal Truth read.
 
 Pass only if:
 
