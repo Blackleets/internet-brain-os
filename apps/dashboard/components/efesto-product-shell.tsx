@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { KernelClient, KernelClientError } from '../lib/kernel/client';
-import type { CaseSummary, MissionSummary } from '../lib/kernel/contracts';
+import type { CaseSummary } from '../lib/kernel/contracts';
+import { loadGoalSurfaces, type GoalSurface, type GoalSurfaceWorkState } from '../lib/kernel/goal-surfaces';
 import { loadOverview, type OverviewSnapshot } from '../lib/kernel/overview';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { connectionStore } from '../lib/session/connection-store';
@@ -37,6 +38,7 @@ export default function EfestoProductShell() {
   const [navOpen, setNavOpen] = useState(false);
   const [connection, setConnection] = useState<Connection>();
   const [snapshot, setSnapshot] = useState<OverviewSnapshot>();
+  const [goalSurfaces, setGoalSurfaces] = useState<GoalSurface[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [selectedProviderId, setSelectedProviderId] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
@@ -55,18 +57,12 @@ export default function EfestoProductShell() {
   const chatAbortRef = useRef<AbortController | undefined>(undefined);
 
   const selectedProvider = providers.find((item) => item.id === selectedProviderId);
-  const activeMission = snapshot?.missions.find(isActiveMission);
+  const focusedGoalSurface = goalSurfaces[0];
   const brainPhase = useMemo<BrainPhase>(() => {
     if (!connection || snapshot?.readiness.kernel !== 'online') return 'offline';
     if (chatPending) return 'thinking';
-    if (activeMission?.executionPhase === 'verifying') return 'verifying';
-    if (activeMission?.executionPhase === 'investigating' || activeMission?.status === 'running') return 'investigating';
-    if (activeMission) return 'queued';
-    const latest = snapshot?.missions[0];
-    if (latest?.executionPhase === 'failed' || latest?.status === 'failed') return 'failed';
-    if (latest?.executionPhase === 'forged' || latest?.status === 'completed') return 'forged';
-    return 'ready';
-  }, [activeMission, chatPending, connection, snapshot]);
+    return brainPhaseFromWorkState(focusedGoalSurface?.mission?.workState);
+  }, [chatPending, connection, focusedGoalSurface?.mission?.workState, snapshot?.readiness.kernel]);
 
   useEffect(() => {
     try {
@@ -114,20 +110,22 @@ export default function EfestoProductShell() {
     try {
       const verified = { baseUrl: normalizeKernelBaseUrl(input.baseUrl), token: input.token };
       const client = new KernelClient(verified);
-      const [nextSnapshot, nextProviders] = await Promise.all([
+      const [nextSnapshot, nextProviders, nextGoalSurfaces] = await Promise.all([
         loadOverview(client),
         client.get('/api/chat/providers', parseProviders),
+        loadGoalSurfaces(client),
       ]);
       if (nextSnapshot.readiness.kernel !== 'online') throw new KernelClientError('OFFLINE');
       setConnection(verified);
       setSnapshot(nextSnapshot);
       setProviders(nextProviders);
+      setGoalSurfaces(nextGoalSurfaces);
       connectionStore.set(verified);
       if (remember) window.sessionStorage.setItem(SESSION_CONNECTION_KEY, JSON.stringify(verified));
       else window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
       setToast('Kernel conectado. La interfaz muestra estado persistido real.');
     } catch (error) {
-      setConnection(undefined); setSnapshot(undefined); setProviders([]); connectionStore.clear();
+      setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); connectionStore.clear();
       window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
       setToast(connectionMessage(error));
     } finally { setConnecting(false); }
@@ -135,7 +133,7 @@ export default function EfestoProductShell() {
 
   function disconnect() {
     chatAbortRef.current?.abort();
-    setConnection(undefined); setSnapshot(undefined); setProviders([]); setCaseDetails({}); setSelectedCaseId(''); setChatMessages([]);
+    setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); setCaseDetails({}); setSelectedCaseId(''); setChatMessages([]);
     connectionStore.clear(); window.sessionStorage.removeItem(SESSION_CONNECTION_KEY); setRememberSession(false);
     setToast('Dispositivo desconectado. El token ya no está en esta sesión.');
   }
@@ -144,8 +142,12 @@ export default function EfestoProductShell() {
     if (!connection) return navigate('settings');
     try {
       const client = new KernelClient(connection);
-      const [nextSnapshot, nextProviders] = await Promise.all([loadOverview(client), client.get('/api/chat/providers', parseProviders)]);
-      setSnapshot(nextSnapshot); setProviders(nextProviders); setToast('Estado actualizado desde el Kernel.');
+      const [nextSnapshot, nextProviders, nextGoalSurfaces] = await Promise.all([
+        loadOverview(client),
+        client.get('/api/chat/providers', parseProviders),
+        loadGoalSurfaces(client),
+      ]);
+      setSnapshot(nextSnapshot); setProviders(nextProviders); setGoalSurfaces(nextGoalSurfaces); setToast('Estado actualizado desde el Kernel.');
     } catch (error) { setToast(connectionMessage(error)); }
   }
 
@@ -274,7 +276,14 @@ export default function EfestoProductShell() {
   </div>;
 }
 
-function isActiveMission(mission: MissionSummary) { return ['waiting_for_agent', 'queued', 'running'].includes(mission.status) || ['queued', 'investigating', 'verifying'].includes(mission.executionPhase ?? ''); }
+function brainPhaseFromWorkState(workState: GoalSurfaceWorkState | undefined): BrainPhase {
+  if (workState === 'verifying') return 'verifying';
+  if (workState === 'investigating' || workState === 'running') return 'investigating';
+  if (workState === 'waiting_for_agent' || workState === 'queued') return 'queued';
+  if (workState === 'forged') return 'forged';
+  if (workState === 'failed') return 'failed';
+  return 'ready';
+}
 function keywordsFromGoal(value: string) { return Array.from(new Set(value.toLocaleLowerCase('es').replace(/[^\p{L}\p{N}]+/gu, ' ').split(/\s+/).filter((word) => word.length > 2))).slice(0, 8); }
 function slug(value: string) { return value.toLocaleLowerCase('en').replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || `provider-${Date.now()}`; }
 function viewLabel(view: View) { return nav.find((item) => item.id === view)?.label ?? 'Inicio'; }

@@ -88,6 +88,29 @@ test('disconnect removes the session credential and returns truthful offline sta
   expect(await page.evaluate(() => sessionStorage.getItem('hephaestus.owner.connection.session.v1'))).toBeNull();
 });
 
+test('supports keyboard Goal preparation with visible focus and reduced motion', async ({ page }) => {
+  const writes: string[] = [];
+  page.on('request', (request) => { if (request.method() === 'POST') writes.push(new URL(request.url()).pathname); });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+
+  const goal = page.getByRole('textbox', { name: 'Goal', exact: true });
+  await goal.focus();
+  await expect(goal).toBeFocused();
+  expect(await goal.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none');
+  await goal.fill('Busca una oportunidad pública y verificable');
+  await goal.press('Enter');
+  await expect(page.getByText('PLAN PROPUESTO · AÚN NO EJECUTADO', { exact: true })).toBeVisible();
+  expect(writes).toEqual([]);
+
+  const motion = await page.locator('.brain-stage > img').evaluate((element) => ({
+    transitionDuration: getComputedStyle(element).transitionDuration,
+    animationDuration: getComputedStyle(element).animationDuration,
+  }));
+  expect(parseFloat(motion.transitionDuration)).toBeLessThanOrEqual(0.001);
+  expect(parseFloat(motion.animationDuration)).toBeLessThanOrEqual(0.001);
+});
+
 test.describe('mobile Efesto product shell', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
@@ -113,6 +136,11 @@ test.describe('mobile Efesto product shell', () => {
 
     await page.getByRole('button', { name: 'Cerrar menú', exact: true }).first().click();
     await expect.poll(async () => (await sidebar.boundingBox())?.x ?? 0).toBeLessThan(-100);
+
+    await connect(page);
+    await page.getByRole('button', { name: 'Abrir menú', exact: true }).click();
+    await page.getByRole('button', { name: 'Inicio', exact: true }).click();
+    await expect(page.getByRole('img', { name: /Investigando/ })).toBeVisible();
     await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Busca oportunidades reales');
     const composerBox = await page.locator('.goal-dock').boundingBox();
     expect(composerBox).not.toBeNull();

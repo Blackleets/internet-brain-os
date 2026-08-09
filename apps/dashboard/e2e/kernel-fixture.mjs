@@ -15,6 +15,18 @@ const fixtures = {
   cases: { ok: true, cases: [{ id: 'case-1', title: 'Supplier research', status: 'active' }] },
   goals: { ok: true, goals: [{ id: 'goal-1', title: 'Find AI clients', priority: 3, status: 'active', createdAt: '2026-07-26T10:00:00.000Z' }] },
   missions: { ok: true, missions: [{ id: 'mission-1', goalId: 'goal-1', goalTitle: 'Find AI clients', status: 'running', executionPhase: 'investigating', attempt: 1, createdAt: '2026-07-26T10:00:00.000Z' }] },
+  goalSurfaces: { ok: true, surfaces: [{
+    schemaVersion: 'efesto.goal-surface.v1', sourceOfTruth: 'kernel', observedAt: '2026-07-26T10:03:00.000Z',
+    goal: {
+      id: 'goal-1', title: 'Find AI clients', status: 'active', revision: 1,
+      createdAt: '2026-07-26T10:00:00.000Z', updatedAt: '2026-07-26T10:00:00.000Z', compatibility: 'legacy_radar',
+      policySummary: { autonomyLevel: 'assisted', approvalPolicy: 'none', source: 'legacy_compatibility' },
+    },
+    mission: {
+      id: 'mission-1', status: 'running', executionPhase: 'investigating', workState: 'investigating',
+      createdAt: '2026-07-26T10:00:00.000Z', updatedAt: '2026-07-26T10:03:00.000Z', attempt: 1,
+    },
+  }] },
   opportunities: { ok: true, opportunities: [{ id: 'opportunity-1', category: 'client', categoryLabel: 'Potential client', benefitType: 'income', title: 'AI automation project', sourceHost: 'clients.example', relevance: 72, nextAction: 'Qualify the need before contacting', status: 'new', detectedAt: '2026-07-26T10:00:00.000Z' }] },
   providers: { ok: true, providers: [{ id: 'fixture-local', type: 'ollama', label: 'Ollama local', baseUrl: 'http://127.0.0.1:11434', models: ['qwen3:4b'], hasCredential: true, managedBy: 'environment' }] },
   modelForge: { ok: true, forge: { runtime: 'available', hardware: { ramGiB: 32, cpuCores: 12, tier: 'powerful' }, activeModel: 'qwen3:4b', recommended: 'qwen3:4b', models: [{ id: 'qwen3:4b', label: 'Qwen 3 4B', minRamGiB: 8, tier: 'light', uses: ['chat'], multilingual: true, compatible: true, installed: true, active: true }], setup: { action: 'configure', command: null, setting: null, restartRequired: false } } },
@@ -22,7 +34,7 @@ const fixtures = {
 
 const routes = new Map([
   ['/health', fixtures.health], ['/status', fixtures.status], ['/bootstrap/status', fixtures.bootstrap],
-  ['/api/cases', fixtures.cases], ['/api/goals', fixtures.goals], ['/api/agent-missions', fixtures.missions],
+  ['/api/cases', fixtures.cases], ['/api/goals', fixtures.goals], ['/api/agent-missions', fixtures.missions], ['/api/goal-surfaces', fixtures.goalSurfaces],
   ['/api/opportunities', fixtures.opportunities], ['/api/chat/providers', fixtures.providers], ['/api/model-forge', fixtures.modelForge],
 ]);
 
