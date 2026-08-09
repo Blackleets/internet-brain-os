@@ -77,7 +77,7 @@ Critical epistemic rule: **search snippet ≠ Evidence**. Agent text never becom
 
 ## G4 final freeze
 
-`internal.53` is the final G4 implementation candidate once the final adversarial composition contract, canonical state, roadmap and UAT are committed on one unchanged SHA and the complete matrix passes. No additional behavior belongs in the freeze.
+`internal.53` is frozen and non-promotable because its final adversarial freeze test referenced an obsolete source filename after the package artifact had already been produced. The runtime behavior was unchanged. `internal.54` is the corrected final G4 implementation candidate: only the freeze test source path, candidate identity and this checkpoint changed. No additional behavior belongs in the freeze.
 
 ## Canonical CI/release gate
 
@@ -95,7 +95,7 @@ Every affected candidate must pass on one unchanged SHA:
 10. exact internal-package generation and SHA binding;
 11. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
-Candidate versions are immutable after use. `.41` and `.43` remain frozen failures and must never be reused.
+Candidate versions are immutable after use. `.41`, `.43` and `.53` remain frozen failures and must never be reused.
 
 ## Distribution and public launch
 
