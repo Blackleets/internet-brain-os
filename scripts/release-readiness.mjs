@@ -62,7 +62,10 @@ requireCondition(ci.includes('@internet-brain-os/dashboard e2e'), 'dashboard bro
 requireCondition(ci.includes('pnpm verify:first-run'), 'first-run verification is missing from CI');
 
 requireCondition(projectState.includes('Authentic Hermes v0.19.0 runtime acceptance was proven'), 'canonical state does not record authentic Hermes proof');
-requireCondition(projectState.includes('PR #178 is merged; the Goal-first shell is now the product UI baseline'), 'canonical state does not record the current Goal-first UI baseline');
+requireCondition(projectState.includes('Goal-first shell'), 'canonical state does not record the Goal-first UI baseline');
+requireCondition(projectState.includes('living-forge'), 'canonical state does not record the living-forge visual baseline');
+requireCondition(await exists('apps/dashboard/app/efesto-forge-visual.css'), 'living-forge visual layer is missing');
+requireCondition(await exists('apps/dashboard/public/efesto-smith.svg'), 'Efesto pixel-smith identity is missing');
 requireCondition(projectState.includes('The **public release light is separate**'), 'canonical state does not separate implementation readiness from public-launch approval');
 requireCondition(internalRelease.channel === 'internal', 'release channel is not internal');
 requireCondition(internalRelease.publicLaunchApproved === false, 'public launch must remain blocked during internal qualification');
@@ -73,6 +76,7 @@ console.log('authentic-hermes-boundary: green');
 console.log('native-web-search-read: green');
 console.log('golden-goal-e2e: green');
 console.log('goal-first-ui-baseline: green');
+console.log('living-forge-visual-baseline: green');
 console.log('dashboard-chromium-gate: green');
 console.log('windows-one-click-installer: green');
 console.log('strict-supply-chain-audit: green');

@@ -5,7 +5,7 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.4`
+- Candidate: `0.1.0-internal.5`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
 - Test only the artifact produced from the exact `main` commit under review.
@@ -13,7 +13,7 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Download the `efesto-v0.1.0-internal.4-windows.zip` artifact from the successful `Internal Test Package` workflow on `main`.
+2. Download the `efesto-v0.1.0-internal.5-windows.zip` artifact from the successful `Internal Test Package` workflow on `main`.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -29,7 +29,7 @@ Pass only if:
 - no Kernel token, provider credential or Hermes boundary secret is printed or embedded;
 - the user does not need to type package-manager commands manually.
 
-## UAT-2 — browser pairing and surfaces
+## UAT-2 — browser pairing, identity and surfaces
 
 1. Open `chrome://extensions` in Chrome/Chromium.
 2. Enable Developer mode.
@@ -37,6 +37,7 @@ Pass only if:
 4. Pair/connect the extension to the local Kernel when prompted.
 5. Open Forge, Missions, Finds and Models.
 6. Open the Control Center and Replay Lab from the local product flow.
+7. Observe the Home/Goal surface while offline, ready and during one real mission.
 
 Pass only if:
 
@@ -44,6 +45,9 @@ Pass only if:
 - pairing succeeds without exposing secrets;
 - all four extension workspaces render;
 - the Goal-first Control Center loads as an authenticated local client on desktop and mobile-width layouts;
+- the Efesto pixel-smith/brain visual identity renders without obscuring controls or causing horizontal overflow;
+- work/data-flow motion appears only for observable active states such as queued, investigating, verifying or model thinking, and does not imply work while offline or failed;
+- reduced-motion mode remains usable without continuous decorative animation;
 - Replay Lab is readable but cannot mutate durable-memory authority;
 - no blank/white/black dead screen blocks the journey.
 
@@ -101,6 +105,7 @@ Pass only if:
 - the product reports a recoverable failure instead of fabricating success;
 - retry does not duplicate irreversible work;
 - the UI does not claim agent activity that was not persisted;
+- the forge visual returns to a truthful offline/failed state rather than continuing active-work motion;
 - after recovery the Kernel returns to a truthful ready state.
 
 ## Promotion decision
