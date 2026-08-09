@@ -118,7 +118,7 @@ Never quote an old test count as current truth; use the exact current CI run.
 
 - `main` is the sole implementation source of truth.
 - The Goal-first shell plus living-forge identity layer is the current product UI baseline.
-- The internal Windows candidate is `0.1.0-internal.5` because the living-forge UI is user-visible. Internal candidate identifiers are immutable and must not be reused for a different code state.
+- The internal Windows candidate is `0.1.0-internal.6` because extension background runtime fixes change shipped behavior after `internal.5`. Internal candidate identifiers are immutable and must not be reused for a different code state.
 - `publicLaunchApproved` remains `false` until UAT-1 through UAT-6 pass on the same immutable candidate: clean Windows install, browser pairing/surfaces, real public-web economic Goal, persistence/replay, second value Goal and truthful failure recovery.
 - Work directly on `main` is prohibited; use one bounded implementation branch/PR at a time.
 - Do not weaken Kernel authority, replay protection, consent, provenance or local-first secrecy to make a test pass.

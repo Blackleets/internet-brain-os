@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { AutoRadar, AUTO_RADAR_STATES } from './auto-radar.js';
 
 // Helper: crea una instancia sin disparar el constructor (que toca chrome.storage).
@@ -98,9 +98,6 @@ describe('AutoRadar fuzzy deduplication', () => {
   it('flags a near-identical page (fuzzy) as duplicate on second capture', () => {
     const radar = makeRadar();
     expect(radar.isDuplicate(page()).duplicate).toBe(false);
-    // Mismo cuerpo sustancial pero publicado en otro host con título distinto:
-    // el hash exacto y domain-title no coinciden, pero la similitud de contenido
-    // (Jaccard sobre título+texto) debe disparar la rama fuzzy.
     const similar = page({
       url: 'https://mirror.other-site.net/p/123',
       title: 'AI hiring update',
@@ -126,5 +123,30 @@ describe('AutoRadar fuzzy deduplication', () => {
     const radar = makeRadar();
     radar.isDuplicate(page());
     expect(radar.fuzzyHistory.size).toBe(1);
+  });
+});
+
+describe('AutoRadar.updateUI', () => {
+  it('uses the Manifest V3 action badge-text API', async () => {
+    const originalChrome = globalThis.chrome;
+    const setBadgeText = vi.fn().mockResolvedValue(undefined);
+    const setBadgeBackgroundColor = vi.fn().mockResolvedValue(undefined);
+    const setTitle = vi.fn().mockResolvedValue(undefined);
+    globalThis.chrome = {
+      action: { setBadgeText, setBadgeBackgroundColor, setTitle },
+    };
+
+    try {
+      const radar = makeRadar();
+      radar.state = AUTO_RADAR_STATES.OBSERVING;
+      await radar.updateUI();
+
+      expect(setBadgeText).toHaveBeenCalledWith({ text: '👁' });
+      expect(setBadgeBackgroundColor).toHaveBeenCalledOnce();
+      expect(setTitle).toHaveBeenCalledWith({ title: 'Efesto Opportunity Radar - Observando' });
+    } finally {
+      if (originalChrome === undefined) delete globalThis.chrome;
+      else globalThis.chrome = originalChrome;
+    }
   });
 });
