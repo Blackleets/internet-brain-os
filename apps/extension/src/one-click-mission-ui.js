@@ -54,12 +54,12 @@ const stateObserver = typeof MutationObserver === 'function' && missionState
       if (!syncInFlight && legacyStateOverrodeSharedTruth()) scheduleSharedTruthSync();
     })
   : undefined;
-stateObserver?.observe(missionState, { attributes: true, attributeFilter: ['data-status'], childList: true, characterData: true, subtree: true });
+if (stateObserver) stateObserver.observe(missionState, { attributes: true, attributeFilter: ['data-status'], childList: true });
 
 const goalObserver = typeof MutationObserver === 'function' && goals
   ? new MutationObserver(syncResearchActions)
   : undefined;
-goalObserver?.observe(goals, { childList: true });
+if (goalObserver) goalObserver.observe(goals, { childList: true });
 
 doc?.addEventListener?.('visibilitychange', () => {
   if (doc.visibilityState === 'visible') scheduleSharedTruthSync();

@@ -5,17 +5,17 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.34`
+- Candidate: `0.1.0-internal.35`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
-- `0.1.0-internal.7` through `0.1.0-internal.33` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
+- `0.1.0-internal.7` through `0.1.0-internal.34` are frozen as non-promotable automated-qualification or superseded pre-UAT candidates and must not be reused.
 - Test only the artifact produced from the exact `main` commit under review.
 - Automated packaged-candidate qualification on Windows 2022 and Windows 2025 must be green before manual UAT begins.
 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Use only the `efesto-v0.1.0-internal.34-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
+2. Use only the `efesto-v0.1.0-internal.35-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -67,9 +67,11 @@ Pass only if:
 - the extension Shared Goal Truth presentation preserves Kernel ordering, labels legacy compatibility explicitly, and derives Forge activity only from persisted `mission.workState`;
 - `completed` without persisted `forged` remains visually calm and is not presented as a forged-success state;
 - `.32` is frozen because its presentation-test fixture accidentally applied the helper default instead of constructing the intended no-Mission case; production presentation semantics were not changed by the `.33` correction;
-- the extension Living Forge and `mission-state` are now read-only projections of Shared Goal Truth v1; periodic legacy Mission refresh cannot remain the visual authority when it conflicts with the Kernel projection;
+- the extension Living Forge and `mission-state` are read-only projections of Shared Goal Truth v1; periodic legacy Mission refresh cannot remain the visual authority when it conflicts with the Kernel projection;
 - if Shared Goal Truth cannot be read, the extension visually fails closed with an unavailable/error state rather than retaining a legacy success claim;
 - the Shared Goal Truth popup binder introduces no Goal write, Mission write, approval, capability or memory-authority path;
+- `.34` is frozen because the first binder observer broadened to subtree/text observation and violated the existing anti-loop UI contract; `.35` restores scoped observation to direct `mission-state` attributes/text plus Goal-list child additions only;
+- the observer never watches a subtree or its own research-button text mutations, preserving the established no-loop contract while still re-reading Shared Goal Truth after a legacy visual overwrite;
 - legacy Mission history/ledger remains a read-only compatibility view in this layer and is not promoted to Shared Goal Truth authority;
 - Goal chips are **not yet claimed to consume Shared Goal Truth v1**; that remains G3.2c;
 - existing Goal/Mission POST writers remain unchanged and still require explicit confirmation before mission creation;
