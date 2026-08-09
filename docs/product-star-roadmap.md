@@ -24,26 +24,55 @@ Goal
 - Goal-first Control Center, browser extension, Replay Lab and living Efesto forge.
 - One-click/self-healing Windows setup and exact immutable package qualification.
 - Architecture guard, strict dependency audit, typecheck, Vitest, build, first-run, Chromium and Windows release gates.
+- Memory Safety v1 adversarial contract freeze merged in #201.
 
 ## Phase E — Memory Safety v1
 
-Status: **final contract-freeze gate active**.
+Status: **complete**.
 
-- [x] #185 — deterministic quarantine-signal evaluation and read-only recommendation identity.
-- [x] #187 — append-only durable recommendation persistence, integrity reconstruction, exact replay and fresh/stale assessment without transition authority.
-- [x] #188 — terminal-memory recovery review records requiring human/founder decisions under policy version; approved recovery names a distinct new candidate and never reopens the terminal memory ID.
-- [x] #189 — repeated persisted failures produce deterministic `read_only` prevention guidance with exact failure/reference provenance; PR #199 additionally hardened malformed runtime inputs fail-closed.
-- [x] #190 — Replay Lab/operator Memory Safety projection separates persisted records, deterministic interpretations and human decisions, preserves exact references/current-vs-stale status, and consumes only read/list dependencies.
-- [ ] #191 — **active** adversarial contract freeze. E1, E2, E3 and E5 now have explicit runtime fail-closed validation; E4 retains the equivalent hardening from #199. The freeze adds cross-layer malformed-input, integrity, replay, terminal-recovery, cross-memory isolation and read-only authority coverage plus stakeholder Gherkin.
+- [x] #185 deterministic quarantine signals.
+- [x] #187 append-only quarantine persistence and stale detection.
+- [x] #188 terminal recovery review with human/founder governance.
+- [x] #189 repeated-failure read-only prevention guidance.
+- [x] #199 runtime hardening for repeated-failure inputs.
+- [x] #190 read-only Replay Lab Memory Safety projection.
+- [x] #191 / PR #201 adversarial freeze across malformed input, integrity, replay, terminal recovery, cross-memory isolation and read-only authority.
 
-## Distribution / release closeout
+## Phase G — Goal-first product convergence
 
-- [x] Exact ZIP is checksum/commit-bound and tested through fresh install + paired repair on Windows 2022/2025.
-- [x] `0.1.0-internal.6` preserved as prior runtime-readiness candidate.
-- [x] `0.1.0-internal.7` through `0.1.0-internal.18` frozen after qualification/supersession and must never be reused.
-- [ ] Qualify `0.1.0-internal.19` on the final #191 SHA through architecture, CI, Chromium, Windows launcher/first-run and both exact packaged-install jobs.
-- [ ] Run manual UAT only after #191 merges and the exact `internal.19` candidate is green.
-- [ ] Public release only after UAT and explicit `publicLaunchApproved=true` promotion.
+Status: **G0 active**.
+
+### G0 / #192 — cross-surface design contract
+
+- [x] product brief tied to real Kernel/local/product capabilities;
+- [x] information hierarchy: Goal → Work → Finds → Action → progressive trust detail;
+- [x] Goal lifecycle separated from Mission execution and client-only draft/prepared states;
+- [x] automatic behavior defined as automatic only inside previously authorized read-only boundaries;
+- [x] dashboard desktop + 390×844 responsive rules;
+- [x] extension compact-companion rules;
+- [x] public landing separated from private runtime state;
+- [x] existing forge design tokens preserved;
+- [x] exactly three visual directions documented;
+- [x] **Forge Focus selected** for Home implementation;
+- [x] accessibility/reduced-motion/no-horizontal-overflow requirements;
+- [x] machine-checkable contract test + stakeholder Gherkin;
+- [ ] qualify immutable `0.1.0-internal.21` on the final G0 SHA and merge.
+
+### G1 — Shared Goal Truth v1
+
+Add only an additive Kernel/local-api read projection for persisted Goal + current Mission truth. Keep `UniversalGoal` v2 as the domain target and treat the current radar Goal as compatibility input. No dashboard/extension redesign in G1.
+
+### G2 — responsive Control Center consumption
+
+Consume G1 in the web app. Prove desktop, 390×844, keyboard/focus, reduced motion, offline/failed truthfulness and no duplicate Goal database.
+
+### G3 — extension consumption
+
+Consume the same G1 projection in the browser extension. Remove duplicated Goal-status interpretation and redundant read-only “Research” authorization where the persisted Goal policy already permits the work.
+
+### G4 — automation parity
+
+Prove automatic read-only work, scheduler/refresh behavior and Finds updates are consistent across clients. Any remote phone → PC Kernel access requires a separate secure cross-device transport threat model; responsive mobile-width support must not be misrepresented as remote control.
 
 ## Enterprise measurement — #186
 
@@ -57,58 +86,52 @@ Drivers/guardrails include mission completion/failure, install-to-first-Goal act
 
 Initial measurement remains local-first. Aggregate sharing requires a separate opt-in privacy design.
 
-## Product experience after #191
+## Distribution / release closeout
 
-After the Memory Safety v1 freeze, inspect live #186/#192 and current Goal contracts before implementation. The next product work must remain bounded and cross-surface:
-
-1. one real Goal truth contract from the Kernel/local API;
-2. wire that same truth into the web Control Center and browser extension;
-3. verify desktop and mobile-width layouts plus reduced-motion/accessibility behavior;
-4. prove automatic state transitions from real queued/investigating/verifying/completed/failed data;
-5. only then advance to the next UI/product layer.
-
-Do not redesign several surfaces at once. The web, extension and mobile-width experience must converge on the same persisted Kernel truth rather than duplicate or fabricated state.
+- `0.1.0-internal.6` remains the prior runtime-readiness candidate.
+- `0.1.0-internal.7` through `0.1.0-internal.20` are frozen and must not be reused.
+- G0 uses `0.1.0-internal.21` because the previous `internal.20` artifact was generated before the final contract-test correction; qualification evidence must map to one final SHA.
+- Public launch remains blocked until an exact candidate passes automated qualification plus manual UAT and explicit promotion.
 
 ## What not to do
 
 Do not:
 
 - turn Efesto into a generic scraper/admin dashboard;
-- let Hermes/agents write durable memory, approve recovery, change prevention policy, or mutate through Replay Lab;
-- reopen terminal memory IDs;
-- infer hidden agent intent from repeated failures;
-- collapse persisted facts, deterministic interpretations and human decisions into one trust label;
-- silently rewrite stale safety records;
-- add fake UI state, fake autonomous activity or unproven progress;
-- build separate contradictory state machines for web, extension and mobile-width UI;
-- reuse an immutable internal candidate identity after behavior changes.
+- let Hermes/agents write durable memory or Goal authority;
+- let Goal confirmation bypass side-effect approvals;
+- collapse Goal status and Mission phase into one invented state machine;
+- keep separate persisted Goal truth in dashboard and extension;
+- display fake activity or animate work that was not observed;
+- push private Goals or Kernel tokens into the public landing;
+- claim arbitrary mobile remote-PC control while the trust boundary is loopback;
+- redesign Kernel, dashboard and extension in one PR;
+- reuse an immutable internal candidate identity after package contents change.
 
 ## Next bounded sequence
 
-1. Finish #191 only after its final `internal.19` architecture/CI/Chromium/Windows exact-package matrix is green.
-2. Re-read live #186/#192 and current Goal/API/UI contracts.
-3. Implement the smallest real Goal cross-surface slice, Kernel → web + extension, with desktop/mobile-width acceptance.
-4. Evaluate that slice before adding the next UX/automation layer.
-5. Keep value measurement local-first and wire it only when the bounded product contract requires it.
-6. Freeze the next exact candidate → UAT → public promotion decision.
+1. Finish G0 and qualify/merge `internal.21`.
+2. Implement G1 Shared Goal Truth v1 only.
+3. Evaluate + merge G1 before touching the responsive Control Center.
+4. Implement/evaluate G2.
+5. Implement/evaluate G3.
+6. Implement/evaluate G4.
+7. Wire #186 measurements only through explicit local-first contracts.
+8. Freeze exact candidate → manual UAT → public promotion decision.
 
 ## Definition of “project star”
 
 ```text
 Install exact qualified package
 → local Kernel proves readiness
-→ user gives Goal from web or extension
-→ one shared persisted Goal truth
-→ bounded autonomous research
+→ one confirmed Goal policy
+→ one Kernel-owned persisted Goal truth
+→ automatic authorized read-only work
+→ same truthful state in responsive Control Center + extension
 → Evidence + provenance
-→ Kernel authority gates
 → useful Finds
+→ approval-gated side effects
 → replay-safe controlled memory
-→ deterministic quarantine + durable reviews
-→ terminal disputes require governed new-candidate recovery
-→ repeated persisted failures become read-only prevention guidance
-→ operator sees current/stale safety state with epistemic source labels
-→ Replay Lab remains incapable of mutating authority
-→ desktop/mobile-width surfaces remain truthful and consistent
-→ product measures user value while preserving privacy
+→ mobile-width usability without fake remote authority
+→ measurable user value while preserving privacy
 ```

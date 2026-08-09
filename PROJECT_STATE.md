@@ -17,64 +17,73 @@ Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active Git
 - Hermes and other agents may discover, research and propose.
 - The Hephaestus Kernel owns Evidence, validation, contradiction handling, capability/risk gates, replay, durable-memory authority and controlled persistence.
 - **An agent is never the Kernel.**
-- Hosted/dashboard/Replay Lab surfaces are clients/read models only; Kernel authority, secrets, Evidence and controlled memory remain local-first.
+- Dashboard, extension and Replay Lab are clients/read models; private authority stays local-first.
 
-## Verified completion baseline — 2026-08-09
+## Verified baseline — 2026-08-09
 
-### Evidence, replay and Memory Safety
+### Memory Safety v1
 
-- Signed local ingestion, HMAC binding, idempotency, exact replay and altered-replay rejection are implemented.
-- Cases, Evidence, claims, contradictions, admission and cognitive-pipeline storage are Kernel-owned.
-- Memory authority has explicit lifecycle validation, immutable authority receipts, fail-closed transition service, deterministic projection, startup reconciliation and retrieval gating.
-- Authority receipts are durable and fail closed on malformed, tampered, corrupt, missing-reference or altered-replay states.
-- Only reconciled admitted memory may be reused by reasoning.
-- Protected Kernel authority modules are provider-neutral under `pnpm architecture:check`.
-- **E1 / #185:** deterministic read-only quarantine recommendations from normalized persisted references; terminal states stay outside the normal quarantine graph.
-- **E2 / #187:** append-only durable quarantine recommendation history with identity/integrity checks, exact replay idempotency and explicit stale detection; no authority mutation path.
-- **E3 / #188:** terminal recovery review records require human/founder decisions bound to policy/revision; approved recovery names a distinct new candidate and never reopens a terminal ID.
-- **E4 / #189:** repeated persisted failures are grouped by exact memory/category inside bounded policy windows and produce deterministic `read_only` prevention guidance with exact failure/reference provenance; no inferred hidden intent or automatic policy/capability/memory changes.
-- E4 runtime hardening from PR #199 rejects malformed/non-string IDs, non-array references, null failure records and malformed top-level payloads instead of coercing them; stale assessment fails closed on malformed current basis.
-- **E5 / #190:** Replay Lab Memory Safety projection separates `persisted_record`, `human_decision`, and `deterministic_projection` bases, labels current/stale state, preserves exact references, and is queried only through read/list dependencies. It exposes no memory transition, recovery approval, policy mutation or capability mutation command.
-- **E6 / #191 is the active freeze:** runtime boundaries for E1, E2, E3 and E5 now reject malformed/null/scalar/nested data fail-closed; E4 already has equivalent hardening from #199. Durable integrity verification treats malformed safety data as invalid, and Replay Lab validates queries before any reader call. The adversarial freeze must remain green before Memory Safety v1 is declared stable.
+- Signed ingestion, idempotency, exact replay and altered-replay rejection are implemented.
+- Memory authority lifecycle, immutable receipts, deterministic projection, startup reconciliation and retrieval gating are fail-closed.
+- E1 quarantine evaluation, E2 durable recommendation persistence, E3 terminal recovery review, E4 repeated-failure prevention and E5 Replay Lab Memory Safety projection are merged.
+- PR #199 hardened E4 runtime boundaries.
+- PR #201 adversarially froze E1–E5 with malformed-input, integrity, terminal-recovery, replay, cross-memory and read-only-authority coverage.
+- **Memory Safety v1 is frozen in `main` at `dff2c2167fd16ad609dd5042ca61ee588d1f7de2`.**
+- Terminal memory remains terminal; recovery may authorize only a distinct new candidate identity.
+- Prevention and Replay Lab remain read-only and never infer hidden agent intent as authority.
 
-### Autonomous Goal execution and user value
+### Autonomous Goal execution foundation
 
-- Goal and Proposed Plan contracts are capability-bound and deny by default.
-- Capability Registry, approval/risk policy, Execution Engine, Scheduler, Trigger Engine, Notification Gateway, Goal Evaluator and Knowledge Graph service are Kernel-owned primitives.
-- Native public `web.search` and `web.read` execute through capability/risk gates.
-- External side effects remain approval-gated; the Golden path authorizes no purchase, login, form submission or direct memory admission.
+- Goal/plan contracts, capability/risk policy, Execution Engine, Scheduler, Trigger Engine, Notification Gateway, Goal Evaluator and Knowledge Graph primitives exist.
+- Native public `web.search` and `web.read` execute through Kernel-owned capability gates.
+- External side effects remain approval-gated; Goal confirmation never grants direct memory authority.
+- Existing economic Golden path remains:
 
 ```text
 Goal
-→ authorized web.search
-→ authorized web.read
-→ Case
-→ Evidence
+→ authorized public research
+→ Case + Evidence
 → Opportunity ranking
-→ new-match Trigger
-→ deduplicated Notification
+→ Trigger / Notification
 ```
 
-- Opportunity Radar, local classification, Goal matching, ranking, dedupe, dismissal, private preference learning and Obsidian projection are implemented.
-- Finds retain Case/Evidence provenance and remain unverified leads until independently validated.
-- Authentic Hermes v0.19.0 runtime acceptance was proven through the bounded Agent Hub boundary; agent authority fields remain rejected/sanitized.
+- `packages/kernel/src/goal/goal-contract.ts` defines the long-term `UniversalGoal` v2 domain contract.
+- `apps/local-kernel/goals.mjs` still persists a smaller radar-oriented compatibility Goal used by current product routes.
+- The dashboard and extension therefore must not independently invent Goal lifecycle meaning while that migration is unfinished.
 
-### Operator and product surfaces
+### Authentic agent boundary
 
-- Browser extension provides Forge, Missions, Finds and Models plus state-derived pixel-forge activity.
-- Replay Lab is authenticated/read-only and never gains memory authority.
-- Control Center is an authenticated loopback client with Goal-first Home, Investigation, Knowledge, Agent Hub, Opportunities, Automations, System and provider-neutral chat.
-- The Goal-first shell and living-forge visual layer are wired to existing Kernel contracts rather than decorative fake state.
-- Living-forge motion is derived only from observable queued/investigating/verifying/model-thinking state; offline/failed and reduced-motion behavior remain truthful.
-- Chromium/Playwright browser acceptance is a required gate.
+- Authentic Hermes v0.19.0 runtime acceptance was proven through the bounded Agent Hub boundary, not simulation.
+- Agents may execute authorized work but do not own Goal authority, Evidence truth or memory authority.
 
-### Distribution and release qualification
+### Current product surfaces
 
-- Windows uses `Install Efesto.cmd` with self-healing prerequisites, runtime builds, owned-process verification and a current-user shortcut.
-- No Kernel token or boundary secret is embedded or printed.
-- Internal packages bind the exact Git commit through `BUILD_INFO.txt` and SHA-256.
-- Exact package qualification downloads the produced artifact, verifies digest/commit, extracts to a path containing spaces, then tests fresh install + paired repair on Windows 2022 and Windows 2025.
-- Fresh qualification requires Kernel `alive`/`owned`/`verified`, Hermes readiness and pairing=`required`; paired repair must preserve the original private token digest and leak no Kernel/Hermes secret.
+- Browser extension: Forge, Missions, Finds, Models, Goal/radar controls and state-derived living forge.
+- Responsive Control Center: Goal-first Home, Missions, Finds, Evidence, Models, Agents, Automations and Settings.
+- Existing browser acceptance proves the Goal-first flow on desktop and a 390×844 mobile-width shell without horizontal overflow.
+- The Goal-first shell and living-forge visual layer remain the baseline; motion must reflect observable state only.
+- `apps/web/landing` is public acquisition/education only, not a private runtime client.
+
+## Active bounded phase — G0 / #192
+
+**Goal-first cross-surface design contract** is the only active bounded change.
+
+The contract is `docs/product-design/goal-first-cross-surface-g0.md`.
+
+G0 decisions:
+
+- one persisted Goal truth owned by the Kernel;
+- `UniversalGoal` v2 is the canonical domain target;
+- the current radar Goal is an explicit compatibility representation, not a second authority model;
+- Goal lifecycle, Mission execution and client-only draft/prepared states stay distinct;
+- after one explicit Goal-policy confirmation, allowed read-only work may continue automatically while side effects remain approval-gated;
+- responsive Control Center and extension must eventually consume the same read projection;
+- public landing never receives Kernel tokens/private Goals;
+- 390×844, keyboard, focus, reduced-motion and no-horizontal-overflow requirements are part of the contract;
+- mobile-width support does not falsely imply remote control of a PC Kernel across devices;
+- exactly three visual directions are documented and **Forge Focus** is selected.
+
+No runtime Goal storage, route or client implementation changes are included in G0.
 
 ## Canonical CI gate
 
@@ -94,39 +103,31 @@ Every affected PR/push must pass:
 
 Never quote an old test count as current truth; use the exact current CI run.
 
-## Current operating state
+## Distribution state
 
-- `main` includes exact-package qualification (#182), architecture/forensic guardrails (#184), E1 (#193), E2 (#194), E3 (#195), E4 (#196), E4 runtime hardening (#199), and E5 read-only operator exposure (#200).
-- E1–E5 are merged baseline. **PR #201 / E6 Memory Safety v1 adversarial contract freeze is the only active bounded change.**
-- `0.1.0-internal.6` remains the immutable previous runtime-readiness candidate.
-- `0.1.0-internal.7` through `0.1.0-internal.18` are frozen non-promotable, qualified or superseded pre-UAT candidates and must not be reused.
-- The current qualification candidate is `0.1.0-internal.19`; it is not qualified until the exact ZIP passes the complete architecture/CI/Chromium/Windows matrix for the final #201 SHA.
-- `publicLaunchApproved` remains `false`; manual UAT begins only on the final exact candidate selected after Memory Safety v1 is frozen.
-- The **public release light is separate** from implementation readiness: automated qualification can be green while public launch remains blocked until manual UAT passes on the same immutable candidate and approval is explicitly promoted.
-- Product/business scorecard is #186. Product Design #192 remains downstream of the Memory Safety freeze; live GitHub must be inspected again before choosing the next bounded implementation.
-- Work directly on `main` is prohibited; use one bounded implementation branch/PR at a time.
-- Never weaken Kernel authority, replay protection, consent, provenance, secrecy, responsive product truthfulness or qualification gates to make a test pass.
+- `0.1.0-internal.6` remains the prior runtime-readiness milestone.
+- `0.1.0-internal.7` through `0.1.0-internal.20` are frozen and must not be reused.
+- G0 uses immutable candidate `0.1.0-internal.21`; it is not qualified until the complete final matrix passes on the same SHA.
+- `publicLaunchApproved` remains `false`.
+- The **public release light is separate** from implementation readiness: automated qualification may be green while public launch remains blocked pending manual UAT on one exact candidate.
 
-## Next bounded engineering sequence
+## Next bounded sequence
 
-1. #185 quarantine evaluator — **merged**;
-2. #187 durable quarantine persistence — **merged**;
-3. #188 terminal recovery reviews — **merged**;
-4. #189 repeated-failure prevention — **merged + runtime-hardened**;
-5. #190 read-only operator Memory Safety projection — **merged**;
-6. #191 Memory Safety v1 adversarial contract freeze — **active**;
-7. after #191 merges, inspect live #186/#192 plus current Goal contracts and begin the smallest real cross-surface Goal slice, wired from Kernel truth to web and extension with desktop/mobile-width acceptance before advancing to the next UI layer.
+1. G0 / #192 — Goal-first cross-surface design contract — **active**.
+2. G1 — Shared Goal Truth v1: Kernel/local-api read projection only; no UI redesign.
+3. Evaluate and merge G1.
+4. G2 — consume that projection in responsive Control Center; prove desktop + 390×844 + reduced motion.
+5. Evaluate and merge G2.
+6. G3 — consume the same projection in extension and remove duplicated Goal-state interpretation.
+7. Evaluate and merge G3.
+8. G4 — prove automatic read-only execution/refresh parity; cross-device transport, if needed, receives its own threat-modelled slice.
 
-Any collective analytics remain separately opt-in and privacy-reviewed.
-
-## Product Design gate
-
-Formal Product Design or UX restructuring begins only after #191. It must refine the existing Goal-first product, preserve real Kernel state, extension/web parity, accessibility, desktop/mobile-width/reduced-motion behavior, and never invent backend state or fake autonomous activity.
+Issue #186 remains the local-first business scorecard and does not block this UX sequence.
 
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md and AGENTS.md, run pnpm resume, inspect GitHub main/open PRs/CI, and treat live Git as newer than chat memory. Preserve Kernel authority, local-first secrecy, Evidence provenance, capability gates, exact replay and altered-replay rejection. Work on exactly one bounded branch and require architecture + CI + Chromium + Windows exact-package gates before merge. Treat the Goal-first shell plus living-forge visual layer as the UI baseline and keep motion truthful to persisted or streaming state. After Memory Safety v1 freezes, improve Goal execution one cross-surface layer at a time and prove web + extension + desktop/mobile-width behavior before proceeding.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, local-first secrecy, Evidence provenance, exact replay, approval gates and Memory Safety v1. Work on one bounded branch at a time. The active product direction is Forge Focus. Build Goal truth in order: G1 Kernel read projection, then G2 responsive Control Center, then G3 extension, then G4 automation parity. Never create separate client Goal truth, fake activity, or remote-PC claims without a separately secured transport contract.
 ```
 
 ## Update rule
