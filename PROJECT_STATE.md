@@ -89,14 +89,15 @@ Never quote an old test count as current truth; use the exact current CI run.
 
 ## Distribution state
 
-- `0.1.0-internal.7` through `0.1.0-internal.36` are frozen after use and must never be reused.
-- G3 final cross-surface freeze uses immutable candidate `0.1.0-internal.37`; live CI decides qualification.
+- `0.1.0-internal.7` through `0.1.0-internal.37` are frozen after use and must never be reused.
+- G3 final cross-surface freeze uses candidate `0.1.0-internal.38`; it is qualified only if the complete final matrix passes on one unchanged HEAD.
+- `0.1.0-internal.37` produced a Windows package and is frozen; it is not promotable because the full CI suite exposed a missing UAT contract literal after package qualification.
 - `publicLaunchApproved` remains `false`.
 - The **public release light is separate** from implementation readiness: automated qualification may be green while public launch remains blocked pending manual UAT on one exact candidate.
 
 ## Next bounded sequence
 
-1. Finish/merge G3 only if final `internal.37` architecture/CI/Chromium/Windows exact-package matrix is green on the same HEAD.
+1. Finish/merge G3 only if final `internal.38` architecture/CI/Chromium/Windows exact-package matrix is green on the same HEAD.
 2. G4 — prove automatic authorized read-only execution/refresh parity and truthful Finds updates across the converged web + extension surfaces.
 3. Evaluate Goal → Useful Find, time-to-first-useful-find and repeat-Goal signals from local-first measured data; do not invent product targets before a real baseline.
 4. Cross-device transport, if needed, gets its own security/threat-model slice before any phone → PC remote authority claim.
@@ -107,7 +108,7 @@ Issue #186 remains the local-first business scorecard and does not weaken this U
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, local-first secrecy, Evidence provenance, exact replay, approval gates and Memory Safety v1. Shared Goal Truth v1 is the single persisted Goal read model for responsive web and extension. Finish G3 only through its exact green candidate, then execute G4 automatic authorized read-only parity. Never create separate client Goal truth, fake activity, automatic side effects, or remote-PC claims without a separately secured transport contract.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, local-first secrecy, Evidence provenance, exact replay, approval gates and Memory Safety v1. Shared Goal Truth v1 is the single persisted Goal read model for responsive web and extension. Finish G3 only through its exact green internal.38 candidate, then execute G4 automatic authorized read-only parity. Never create separate client Goal truth, fake activity, automatic side effects, or remote-PC claims without a separately secured transport contract.
 ```
 
 ## Update rule
