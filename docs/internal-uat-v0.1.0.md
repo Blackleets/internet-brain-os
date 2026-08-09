@@ -5,18 +5,19 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.12`
+- Candidate: `0.1.0-internal.13`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
-- `0.1.0-internal.7` through `0.1.0-internal.10` remain frozen non-promotable qualification attempts.
-- `0.1.0-internal.11` is frozen as the previously qualified pre-Memory-Safety candidate and must not be reused for this changed Kernel state.
+- `0.1.0-internal.7` through `0.1.0-internal.10` remain frozen non-promotable release-qualification attempts.
+- `0.1.0-internal.11` is the frozen, fully automated-qualified pre-Memory-Safety baseline.
+- `0.1.0-internal.12` is frozen as a non-promotable CI candidate because its release-contract test referenced the pre-Memory-Safety UAT heading.
 - Test only the artifact produced from the exact `main` commit under review.
 - Automated packaged-candidate qualification on Windows 2022 and Windows 2025 must be green before manual UAT begins.
 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Use only the `efesto-v0.1.0-internal.12-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
+2. Use only the `efesto-v0.1.0-internal.13-windows.zip` artifact from the successful `Internal Test Package` workflow on `main` after both packaged-install qualification jobs pass.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.

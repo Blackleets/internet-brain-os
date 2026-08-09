@@ -1,231 +1,116 @@
 # Product Star Roadmap
 
-This roadmap turns the verified HEPHAESTUS / Efesto foundation into a focused release and product plan. It must follow `PROJECT_STATE.md` and live CI when newer than this file.
-
-The goal is not to add random features. The goal is to make the evidence-first intelligence loop useful, trustworthy, easy to install, and easy to demonstrate without weakening Kernel authority.
-
-## Current foundation — verified 2026-08-09
-
-Implemented:
-
-- Signed, loopback-only Hermes ingestion with HMAC binding and idempotency.
-- Exact replay safety and altered-replay conflict rejection.
-- Kernel-owned Evidence, contradiction, admission, authority receipts and durable-memory gates.
-- Authentic Hermes runtime proof through the bounded Agent Hub boundary.
-- Native public `web.search` and `web.read` through capability/risk gates.
-- Goal → Evidence → Opportunity → Trigger/Notification Golden E2E.
-- Opportunity classification, Goal matching, ranking, dedupe, dismissal and private preference learning.
-- Replay Lab read-only forensic surface.
-- Goal-first Control Center plus living Efesto forge UI.
-- Browser extension workspaces for Forge, Missions, Finds and Models.
-- One-click/self-healing Windows setup and immutable internal release packaging.
-- Frozen-lockfile install, production dependency audit, typecheck, Vitest, build, first-run verification, Chromium acceptance and Windows smoke/reproduction gates.
-- Exact packaged-candidate qualification is now a required release-control layer before manual UAT.
-
-Status legend:
-
-- `[x]` implemented or contractually added in the current repository/active release-hardening branch.
-- `[ ]` still requiring green proof or intentionally deferred.
+This roadmap follows `PROJECT_STATE.md` and live CI when newer than this file. The objective is a useful, trustworthy, installable intelligence product — not feature accumulation.
 
 ## North star
-
-A user should install Efesto, define a Goal, and receive useful public-web findings backed by local Evidence without handling JSON or giving an agent authority over trusted memory.
 
 ```text
 Goal
 → authorized research
 → Case + Evidence
 → Kernel verification
-→ Opportunity ranking
-→ Trigger / notification
-→ controlled memory only after Kernel gates
+→ useful Opportunity / decision support
+→ controlled persistence
 ```
 
-## Phase A — Authentic Hermes boundary
+The user should get useful intelligence while the authority mechanics remain secure, local-first and explainable when needed.
 
-Purpose: prove the system is not synthetic-only.
+## A — Authentic agent boundary ✅
 
-Status: **complete**.
+- [x] Signed bounded Hermes ingestion.
+- [x] Exact replay idempotency.
+- [x] Altered replay rejection.
+- [x] Kernel-owned authority fields cannot be injected by the agent.
+- [x] Authentic Hermes runtime proof through Agent Hub.
 
-- [x] Capture and sanitize authentic Hermes runtime output.
-- [x] Validate the real runtime through the bounded adapter path.
-- [x] Prove exact replay idempotency.
-- [x] Prove altered replay rejection.
-- [x] Prove Kernel-owned authority fields cannot be injected by Hermes.
-- [x] Prove the Agent Hub worker against the authentic runtime.
-- [x] Close Issue #57 and Issue #101 after the acceptance evidence was recorded.
+## B — Evidence / replay / durable memory authority ✅
 
-Invariant: do not weaken the Kernel contract to make an external agent fit.
+- [x] Cases, Evidence, claims, contradiction/admission gates.
+- [x] Authority receipts and restart reconciliation.
+- [x] Retrieval only from reconciled admitted memory.
+- [x] Replay Lab forensic/read surface with no mutation authority.
 
-## Phase B — Replay Lab
+## C — Goal-first product + Opportunity intelligence ✅ MVP
 
-Purpose: make the forensic record understandable without reading raw logs.
+- [x] Goal, Missions, Finds, Evidence, Models, Agents, Automations and Settings surfaces.
+- [x] Public `web.search` / `web.read` through Kernel capability gates.
+- [x] Goal → Evidence → Opportunity → Trigger/Notification E2E.
+- [x] Ranking, dedupe, dismissal, private preference learning and Obsidian projection.
+- [x] State-truthful living Efesto forge, mobile containment and reduced-motion behavior.
 
-Status: **complete for the current read-only operator scope**.
+## D — Windows distribution qualification ✅ automated
 
-- [x] Case/cognitive record identity.
-- [x] Evidence records and claim proposal.
-- [x] Kernel validation/admission state.
-- [x] Idempotency/replay state.
-- [x] Authority-boundary explanation.
-- [x] Deterministic causality and AI-autopsy views derived from persisted state.
-- [x] Read-only prevention proposals.
-- [x] No durable-memory mutation authority in Replay Lab.
+- [x] One-click/self-healing Windows path.
+- [x] Immutable package + SHA/commit binding.
+- [x] Exact-package fresh install and paired repair on Windows 2022 + 2025.
+- [x] Kernel ownership/readiness, Hermes readiness, pairing truth and shortcut checks.
+- [x] Token preservation + captured-repair credential leak check.
+- [x] PR #182 and merged `main` both passed the complete gate.
 
-## Phase C — Goal-first product experience
+`internal.11` is the frozen automated-qualified baseline before Memory Safety expansion. Manual/public promotion remains separate.
 
-Purpose: expose useful intelligence rather than a generic admin/log dashboard.
-
-Status: **implemented and browser-tested**.
-
-- [x] Home/Goal surface.
-- [x] Missions.
-- [x] Finds/Opportunities.
-- [x] Evidence.
-- [x] Models/chat.
-- [x] Agents.
-- [x] Automations.
-- [x] Settings.
-- [x] Living Efesto pixel-smith/brain identity driven by observable state.
-- [x] Mobile containment and reduced-motion behavior.
-- [x] Explicit confirmation before Goal execution.
-
-## Phase D — Opportunity intelligence
-
-Purpose: restore the original promise: Efesto should find useful public opportunities while preserving provenance and privacy.
-
-Status: **MVP loop implemented**.
-
-- [x] Explicit public-origin authorization and sensitive-route protections.
-- [x] Local Goal matching and relevance scoring.
-- [x] Exact/fuzzy deduplication.
-- [x] Kernel-owned Evidence preservation.
-- [x] Opportunity ranking with provenance.
-- [x] Trigger/notification path with replay-safe deduplication.
-- [x] Private, erasable preference learning from explicit feedback.
-- [x] Obsidian-compatible projection.
-- [ ] Broader connector catalog beyond the current MVP boundaries.
-- [ ] Opt-in collective signals/privacy design for future network effects.
-
-## Phase E — Memory-safety expansion
-
-Purpose: complete the advanced operator/safety layer without turning agents into the Kernel.
-
-Status: **next bounded engineering phase after release qualification**.
+## E — Memory Safety expansion 🚧 active
 
 Already present:
 
-- [x] Kernel-owned contradiction/admission explanations.
-- [x] Durable authority receipts and restart reconciliation.
-- [x] Conservative prevention proposals from forensic outcomes.
-- [x] Retrieval reuse gate that only admits reconciled `admitted` memory.
-- [x] Fail-closed lifecycle/transition authorization.
+- [x] fail-closed lifecycle/transition authorization;
+- [x] terminal rejected/superseded/revoked states;
+- [x] deterministic projection/reconciliation;
+- [x] conservative forensic prevention proposals;
+- [x] Wolfram-checked authority model for the next contracts.
 
-Next implementation sequence:
+PR #183 — quarantine recommendations:
 
-- [ ] Kernel-owned quarantine-signal evaluator producing deterministic recommendations from persisted references.
-- [ ] Persist/read quarantine recommendations without granting them transition authority.
-- [ ] Explicit terminal-memory recovery review records with founder/policy approval requirements.
-- [ ] Repeated-failure aggregation into read-only prevention recommendations.
-- [ ] Replay Lab/operator read model for these recommendations with provenance and no mutation authority.
-- [ ] Full unit, negative, replay, corruption, Gherkin and integration coverage for the new contracts.
+- [x] deterministic persisted-reference-only evaluator;
+- [x] signal normalization + altered replay rejection;
+- [x] integrity-bound immutable recommendation identity;
+- [x] stale revision/state detection;
+- [x] append-only in-memory and durable repositories;
+- [x] tamper/corruption fail-closed behavior;
+- [x] recommendation cannot substitute for Kernel quarantine-signal authority;
+- [ ] full `internal.13` CI/Chromium/Windows package gate;
+- [ ] merge + `main` re-proof.
 
-## Phase F — Distribution and release closeout
+Next:
 
-Purpose: prove that the exact package we would hand to a person is installable before asking that person to test it.
+- [ ] terminal-memory recovery review records with no terminal mutation;
+- [ ] repeated-failure aggregation into read-only prevention recommendations;
+- [ ] Replay Lab/operator read model with provenance and zero write authority;
+- [ ] full unit/negative/replay/corruption/Gherkin/integration contract freeze.
 
-Status: **current active release gate**.
+## F — Product Design formalization ⏭ after E
 
-- [x] Non-technical `Install Efesto.cmd` path.
-- [x] Self-healing launcher prerequisites.
-- [x] Immutable internal artifact packaging with SHA-256 manifest and BUILD_INFO commit binding.
-- [x] Production dependency audit without a GHSA ignore.
-- [x] Windows launcher, first-run and pairing recovery automation.
-- [x] `0.1.0-internal.6` preserved as the immutable previous runtime-readiness candidate.
-- [x] `0.1.0-internal.7` through `0.1.0-internal.10` frozen as non-promotable automated-qualification candidates.
-- [x] Advance the corrected qualification state to `0.1.0-internal.11`.
-- [x] Add exact-ZIP download, checksum/commit verification and extraction to a path containing spaces.
-- [x] Add Windows 2022 + Windows 2025 packaged-install qualification.
-- [x] Exercise a real fresh unpaired install from the ZIP with pairing truthfully required.
-- [x] Require runtime builds, Kernel ownership verification, Hermes readiness and trusted shortcut from the extracted ZIP.
-- [x] Add a separate paired repair with private Kernel-token digest preservation.
-- [x] Add credential-leak detection against captured repair output and sanitized diagnostic artifacts.
-- [x] Isolate qualification shutdown from PowerShell/pnpm stderr semantics and verify the trusted launcher exit code directly.
-- [x] Add Gherkin + machine-checked release-contract regression coverage.
-- [ ] Both packaged-install matrix jobs green for the final PR SHA.
-- [ ] Full PR CI/Chromium/Windows gates green for the same SHA.
-- [ ] Merge and prove the merged `main` SHA through the same affected gates.
-- [ ] UAT-1 through UAT-6 on the exact resulting `internal.11` artifact.
-- [ ] Public-release PR/tag only after UAT passes and `publicLaunchApproved` is explicitly promoted.
+The Product Design phase begins only once the state contracts above stop moving.
 
-## Phase G — Product Design formalization
+Deliverables:
 
-Purpose: turn the stable Goal-first product into a coherent product system rather than decorating unstable contracts.
+- [ ] formal product/design brief grounded in real Kernel capabilities;
+- [ ] information architecture and priority hierarchy;
+- [ ] Efesto design tokens/component language;
+- [ ] exact visual mapping for offline, ready, queued, investigating, verifying, completed, failed and memory-safety review states;
+- [ ] exactly three visual directions for selection;
+- [ ] selected direction translated faithfully to responsive frontend;
+- [ ] accessibility, mobile and reduced-motion acceptance;
+- [ ] design QA against rendered implementation;
+- [ ] real release-candidate screenshots only after validation.
 
-Status: **starts only after Phase E contracts are stable and Phase F automated qualification is green**.
+Visual direction stays anchored in the existing product: dark cyber-forge, Efesto orange, restrained electric-blue intelligence accents, central living brain/forge and pixel-smith identity. Motion must mirror real persisted/streaming state.
 
-Planned design deliverables:
+## G — Manual UAT and public release
 
-- [ ] formal product/design brief tied to real Kernel capabilities and user journeys;
-- [ ] information architecture and priority hierarchy for Goal, Missions, Finds, Evidence, Models, Agents, Automations and Settings;
-- [ ] design tokens and component/system language for the Efesto cyber-forge identity;
-- [ ] exact visual mapping for offline, ready, queued, investigating, verifying, completed and failed states;
-- [ ] three distinct visual directions for selection before implementation;
-- [ ] selected direction translated faithfully into responsive frontend code;
-- [ ] accessibility, reduced-motion and mobile acceptance;
-- [ ] design QA against the rendered implementation and source target;
-- [ ] real release-candidate screenshots only after the implementation is validated.
+- [ ] clean Windows user install on the exact current candidate;
+- [ ] real browser pairing and surfaces;
+- [ ] real public-web economic Goal;
+- [ ] persistence + memory-safety + replay checks;
+- [ ] second value Goal;
+- [ ] truthful failure/recovery exercise;
+- [ ] explicit public-release promotion change only after all evidence passes.
 
-## Phase H — Product narrative and evidence
+## Never do
 
-Purpose: make the product understandable to users, contributors and investors without overclaiming.
-
-- [x] Clear AI-forensics / intelligence-forge narrative.
-- [x] Architecture and authority-boundary documentation.
-- [x] Deterministic demo quickstart.
-- [x] Authentic-runtime acceptance documented separately from fixtures.
-- [x] Founder-facing launch kit.
-- [ ] Capture/update real product screenshots from the exact release candidate where needed.
-- [ ] Publish public launch materials only after the UAT promotion gate.
-
-## What not to do
-
-Do not:
-
-- turn the project back into a generic scraper or observability dashboard;
-- allow Hermes or any external agent to write durable memory directly;
-- accept validation/admission authority from agent output;
-- expose trusted Kernel routes publicly without a new security design;
-- add fake UI state or animation that implies work not present in persisted/streaming state;
-- authorize purchases, logins or form submissions as part of the current Golden path;
-- reuse an internal candidate number after shipped behavior or release-validation changes;
-- start visual redesign work against contracts that are still moving.
-
-## Next bounded sequence
-
-1. Make PR #182 exact packaged Windows qualification green on both Windows generations.
-2. Require the full CI, Chromium and Windows suite to be green for that same PR head.
-3. Merge and re-prove the resulting `main` SHA.
-4. Complete Phase E Memory Safety in separate bounded PRs with no agent authority expansion.
-5. Freeze the product/state contracts.
-6. Begin formal Product Design exploration with the stable Goal-first product as the baseline.
-7. Only after automated qualification is green, run UAT-1 through UAT-6 on the exact immutable candidate.
-8. Promote publicly only after the UAT evidence is complete.
-
-## Definition of “project star”
-
-The product reaches the intended engineering bar when the user-value, safety and distribution loops are all demonstrable:
-
-```text
-A user installs the exact qualified package.
-The local Kernel proves ownership and readiness.
-The user gives Efesto a Goal.
-An agent or native capability researches bounded public sources.
-The Kernel preserves Evidence and provenance.
-The Kernel blocks forged authority and altered history.
-Useful Opportunities are ranked and surfaced.
-Exact replay is safe and side effects remain controlled.
-Unsafe or questionable memory can be quarantined/reviewed without agent authority.
-The operator can understand why a result was trusted, rejected, retained or isolated.
-The product UI mirrors those real states faithfully.
-```
+- no agent direct durable-memory authority;
+- no recommendation/review as a lifecycle mutation capability;
+- no fake UI/backend state;
+- no broad automatic purchases/logins/form submissions in the current product path;
+- no visual redesign against unstable state contracts;
+- no reuse of an immutable candidate identity after a code/validation change.
