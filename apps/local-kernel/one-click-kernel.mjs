@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
+import { loadExistingApiToken, validateApiToken } from './api-token-store.mjs';
+import { recoverAutomaticMissions } from './automatic-mission-recovery.mjs';
 import { requestMissionCandidateVerification } from './automatic-mission-verification-client.mjs';
 import { detectHermesRuntime, probeHermesReadOnlyRuntime } from './hermes-runtime.mjs';
 import { selectInternalPort } from './internal-port.mjs';
@@ -47,6 +49,21 @@ kernel.on('exit', (code, signal) => {
 });
 
 await waitForKernel();
+const recoveryToken = await readRecoveryToken();
+if (recoveryToken) {
+  try {
+    const recovered = await recoverAutomaticMissions({
+      baseUrl: internalBaseUrl,
+      apiToken: recoveryToken,
+      startMission: startMissionRuntime,
+    });
+    if (recovered.queued || recovered.verifying || recovered.scheduled) {
+      console.log(`Efesto recovery: queued=${recovered.queued}, verifying=${recovered.verifying}, scheduled=${recovered.scheduled}.`);
+    }
+  } catch (error) {
+    console.error(`Efesto recovery check failed safely: ${safeMessage(error)}`);
+  }
+}
 
 proxy = createServer(async (request, response) => {
   try {
@@ -122,6 +139,16 @@ async function runMissionUntilTerminal(missionId, apiToken) {
       break;
     }
     if (result.status !== 'failed') break;
+  }
+}
+
+async function readRecoveryToken() {
+  try {
+    if (process.env.HEPHAESTUS_API_TOKEN) return validateApiToken(process.env.HEPHAESTUS_API_TOKEN);
+    const dataDir = resolve(process.env.HEPHAESTUS_DATA_DIR ?? '.hephaestus');
+    return (await loadExistingApiToken(resolve(dataDir, 'kernel-api-token'))).token;
+  } catch {
+    return undefined;
   }
 }
 
