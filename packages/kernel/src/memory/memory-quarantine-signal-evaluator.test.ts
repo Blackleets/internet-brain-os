@@ -24,10 +24,7 @@ function makeInput(
 
 describe('evaluateMemoryQuarantineSignals', () => {
   it('returns no action when persisted risk references are absent', () => {
-    expect(evaluateMemoryQuarantineSignals(makeInput())).toEqual({
-      decision: 'no_action',
-      signals: [],
-    });
+    expect(evaluateMemoryQuarantineSignals(makeInput())).toEqual({ decision: 'no_action', signals: [] });
   });
 
   it('produces deterministic sorted signals and recommendation identity', () => {
@@ -49,21 +46,9 @@ describe('evaluateMemoryQuarantineSignals', () => {
     expect(first.decision).toBe('recommend_quarantine');
     expect(first.recommendation?.recommendationId).toBe(second.recommendation?.recommendationId);
     expect(first.signals).toEqual([
-      {
-        type: 'unresolved_contradiction',
-        severity: 'high',
-        referenceIds: ['contradiction:1', 'contradiction:2'],
-      },
-      {
-        type: 'evidence_invalidation',
-        severity: 'critical',
-        referenceIds: ['evidence:1', 'evidence:2'],
-      },
-      {
-        type: 'policy_violation',
-        severity: 'critical',
-        referenceIds: ['policy:1'],
-      },
+      { type: 'unresolved_contradiction', severity: 'high', referenceIds: ['contradiction:1', 'contradiction:2'] },
+      { type: 'evidence_invalidation', severity: 'critical', referenceIds: ['evidence:1', 'evidence:2'] },
+      { type: 'policy_violation', severity: 'critical', referenceIds: ['policy:1'] },
     ]);
   });
 
@@ -89,7 +74,6 @@ describe('evaluateMemoryQuarantineSignals', () => {
         state,
         references: { admissionInconsistencyRecordIds: ['admission:bad'] },
       }));
-
       expect(result.decision).toBe('terminal_no_action');
       expect(result.recommendation).toBeUndefined();
       expect(result.signals).toHaveLength(1);
@@ -126,21 +110,26 @@ describe('evaluateMemoryQuarantineSignals', () => {
     }))).toThrowError(MemoryQuarantineEvaluationInputError);
 
     try {
-      evaluateMemoryQuarantineSignals(makeInput({
-        references: { invalidEvidenceIds: [''] },
-      }));
+      evaluateMemoryQuarantineSignals(makeInput({ references: { invalidEvidenceIds: [''] } }));
     } catch (error) {
       expect(error).toBeInstanceOf(MemoryQuarantineEvaluationInputError);
       expect((error as MemoryQuarantineEvaluationInputError).code).toBe('INVALID_REFERENCE_ID');
     }
   });
 
-  it('rejects invalid identity, revision and evaluator metadata', () => {
+  it('rejects invalid identity, revision, evaluator and evaluation time metadata', () => {
     expect(() => evaluateMemoryQuarantineSignals(makeInput({ memoryId: '  ' })))
       .toThrowError(MemoryQuarantineEvaluationInputError);
     expect(() => evaluateMemoryQuarantineSignals(makeInput({ lifecycleRevision: -1 })))
       .toThrowError(MemoryQuarantineEvaluationInputError);
     expect(() => evaluateMemoryQuarantineSignals(makeInput({ evaluatorVersion: '' })))
       .toThrowError(MemoryQuarantineEvaluationInputError);
+
+    try {
+      evaluateMemoryQuarantineSignals(makeInput({ evaluatedAt: 'not-a-date' as IsoDateTime }));
+    } catch (error) {
+      expect(error).toBeInstanceOf(MemoryQuarantineEvaluationInputError);
+      expect((error as MemoryQuarantineEvaluationInputError).code).toBe('INVALID_EVALUATED_AT');
+    }
   });
 });
