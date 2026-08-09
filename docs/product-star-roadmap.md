@@ -142,19 +142,20 @@ Status: **current active release gate**.
 - [x] Production dependency audit without a GHSA ignore.
 - [x] Windows launcher, first-run and pairing recovery automation.
 - [x] `0.1.0-internal.6` preserved as the immutable previous runtime-readiness candidate.
-- [x] `0.1.0-internal.7`, `0.1.0-internal.8`, and `0.1.0-internal.9` frozen as non-promotable automated-qualification candidates.
-- [x] Advance the corrected two-phase qualification state to `0.1.0-internal.10`.
+- [x] `0.1.0-internal.7` through `0.1.0-internal.10` frozen as non-promotable automated-qualification candidates.
+- [x] Advance the corrected qualification state to `0.1.0-internal.11`.
 - [x] Add exact-ZIP download, checksum/commit verification and extraction to a path containing spaces.
 - [x] Add Windows 2022 + Windows 2025 packaged-install qualification.
 - [x] Exercise a real fresh unpaired install from the ZIP with pairing truthfully required.
 - [x] Require runtime builds, Kernel ownership verification, Hermes readiness and trusted shortcut from the extracted ZIP.
 - [x] Add a separate paired repair with private Kernel-token digest preservation.
 - [x] Add credential-leak detection against captured repair output and sanitized diagnostic artifacts.
+- [x] Isolate qualification shutdown from PowerShell/pnpm stderr semantics and verify the trusted launcher exit code directly.
 - [x] Add Gherkin + machine-checked release-contract regression coverage.
 - [ ] Both packaged-install matrix jobs green for the final PR SHA.
 - [ ] Full PR CI/Chromium/Windows gates green for the same SHA.
 - [ ] Merge and prove the merged `main` SHA through the same affected gates.
-- [ ] UAT-1 through UAT-6 on the exact resulting `internal.10` artifact.
+- [ ] UAT-1 through UAT-6 on the exact resulting `internal.11` artifact.
 - [ ] Public-release PR/tag only after UAT passes and `publicLaunchApproved` is explicitly promoted.
 
 ## Phase G — Product Design formalization

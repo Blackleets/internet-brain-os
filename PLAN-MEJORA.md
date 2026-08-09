@@ -23,14 +23,15 @@
 - [x] Require first install to create the local private Kernel token and report pairing as required.
 - [x] Require a second paired repair pass and prove the private Kernel token digest is unchanged.
 - [x] Audit captured repair output for Kernel-token or Hermes-boundary credential leakage.
+- [x] Make qualification shutdown use the trusted Node launcher directly through an isolated command rather than PowerShell-interpreted pnpm stderr.
 - [x] Persist only sanitized failure diagnostics for CI investigation.
 - [x] Add Gherkin and machine-checked release-contract coverage for packaged installation.
-- [x] Freeze `0.1.0-internal.7`, `0.1.0-internal.8`, and `0.1.0-internal.9` as non-promotable qualification attempts rather than reusing their identities.
-- [x] Advance the corrected two-phase qualification state to `0.1.0-internal.10`.
+- [x] Freeze `0.1.0-internal.7` through `0.1.0-internal.10` as non-promotable qualification attempts rather than reusing their identities.
+- [x] Advance the corrected qualification state to `0.1.0-internal.11`.
 - [ ] Make the exact packaged-candidate qualification green on both Windows generations for the final PR SHA.
 - [ ] Merge only after the complete CI, Chromium, legacy Windows and packaged-candidate gates are green for the same SHA.
 - [ ] Re-run the same required gates on the merged `main` commit.
-- [ ] Only then begin manual UAT-1 through UAT-6 on that exact `internal.10` artifact.
+- [ ] Only then begin manual UAT-1 through UAT-6 on that exact `internal.11` artifact.
 - [ ] Set `publicLaunchApproved=true` only after UAT passes on the same immutable candidate.
 
 ## Engineering sequence after release qualification

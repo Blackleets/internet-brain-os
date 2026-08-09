@@ -194,12 +194,19 @@ function Get-Bootstrap {
 }
 
 function Stop-OwnedKernel {
-  Push-Location $extractRoot
+  $commandPath = Join-Path $env:RUNNER_TEMP 'efesto-packaged-shutdown.cmd'
+  Remove-Item -Force $commandPath -ErrorAction SilentlyContinue
+  $command = @(
+    '@echo off',
+    "cd /d `"$extractRoot`"",
+    'node scripts\efesto-launcher.mjs shutdown >NUL 2>NUL',
+    'exit /b %ERRORLEVEL%'
+  ) -join "`r`n"
+  Set-Content -Path $commandPath -Value $command -Encoding ascii
   try {
-    pnpm efesto:launcher shutdown 2>$null | Out-Null
-    $shutdownExit = $LASTEXITCODE
+    $shutdownExit = Invoke-CommandFile -CommandPath $commandPath -TimeoutMs 30000
   } finally {
-    Pop-Location
+    Remove-Item -Force $commandPath -ErrorAction SilentlyContinue
   }
   if ($shutdownExit -ne 0) { throw "Unable to stop the owned Efesto Kernel (exit $shutdownExit)." }
 }

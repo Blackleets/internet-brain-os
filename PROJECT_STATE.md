@@ -103,7 +103,7 @@ The release qualification layer requires the **exact generated ZIP**, rather tha
 - The internal package is bound to its Git commit through `BUILD_INFO.txt` and SHA-256.
 - The packaged-candidate gate downloads that exact artifact, verifies its digest/commit, extracts it to a path containing spaces and tests it on Windows 2022 and Windows 2025.
 - Fresh qualification starts with no Kernel token and no authorized extension, discards the one-time pairing console output, and requires Kernel `alive`/`owned`/`verified`, Hermes readiness, pairing=`required`, runtime builds and a trusted desktop shortcut.
-- The owned Kernel is then stopped, a synthetic local extension identity is authorized, and the same package runs repair again with captured output.
+- The owned Kernel is then stopped through the trusted Node launcher, a synthetic local extension identity is authorized, and the same package runs repair again with captured output.
 - Paired repair must preserve the original private Kernel-token digest, return Kernel `alive`/`owned`/`verified`, preserve pairing=`paired`, and expose neither the Kernel token nor Hermes boundary credential in captured repair output.
 - Failed packaged qualification retains only a sanitized diagnostic artifact.
 
@@ -129,8 +129,8 @@ Never quote an old test count as current truth; use the exact current CI run.
 - `main` remains the implementation source of truth; PR #182 is the bounded release-qualification change until merged.
 - The Goal-first shell plus living-forge identity layer is the current product UI baseline.
 - `0.1.0-internal.6` remains the immutable previous runtime-readiness candidate.
-- `0.1.0-internal.7`, `0.1.0-internal.8`, and `0.1.0-internal.9` are frozen non-promotable automated-qualification candidates and must not be reused.
-- The current qualification candidate is `0.1.0-internal.10`. It must not be treated as qualified until the exact ZIP passes both packaged Windows jobs and the complete PR/main gate for the same code state.
+- `0.1.0-internal.7` through `0.1.0-internal.10` are frozen non-promotable automated-qualification candidates and must not be reused.
+- The current qualification candidate is `0.1.0-internal.11`. It must not be treated as qualified until the exact ZIP passes both packaged Windows jobs and the complete PR/main gate for the same code state.
 - `publicLaunchApproved` remains `false`. Manual UAT-1 through UAT-6 may begin only after automated packaged qualification is green on the same immutable candidate.
 - Work directly on `main` is prohibited; use one bounded implementation branch/PR at a time.
 - Do not weaken Kernel authority, replay protection, consent, provenance, secrecy or qualification gates to make a test pass.

@@ -11,7 +11,7 @@ describe('internal Efesto release package', () => {
   it('is explicitly internal and blocks public promotion by default', async () => {
     const release = JSON.parse(await text('INTERNAL_RELEASE.json'));
     expect(release.schema).toBe('efesto.internal-release.v1');
-    expect(release.version).toBe('0.1.0-internal.10');
+    expect(release.version).toBe('0.1.0-internal.11');
     expect(release.channel).toBe('internal');
     expect(release.publicLaunchApproved).toBe(false);
     expect(release.entrypoint).toBe('Install Efesto.cmd');
@@ -60,6 +60,8 @@ describe('internal Efesto release package', () => {
     expect(harness).toContain('verified');
     expect(harness).toContain('System.Diagnostics.ProcessStartInfo');
     expect(harness).toContain('$process.WaitForExit($TimeoutMs)');
+    expect(harness).toContain('node scripts\\efesto-launcher.mjs shutdown >NUL 2>NUL');
+    expect(harness).not.toContain('pnpm efesto:launcher shutdown');
     expect(harness).not.toContain('RedirectStandardOutput = $true');
     expect(harness).not.toContain('ReadToEndAsync()');
     expect(harness).not.toContain('Start-Process');
