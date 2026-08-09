@@ -35,11 +35,16 @@ export const FORBIDDEN_EXTERNAL_PREFIXES = Object.freeze([
 ]);
 
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
-const IMPORT_SPECIFIER_PATTERN = /(?:\bfrom\s+|\bimport\s*\(\s*|\brequire\s*\(\s*)['"]([^'"]+)['"]/g;
+const IMPORT_SPECIFIER_PATTERN = /(?:\bfrom\s+|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s*)['"]([^'"]+)['"]/g;
+
+function matchesForbiddenPrefix(specifier, prefix) {
+  if (prefix.endsWith('/')) return specifier.startsWith(prefix);
+  return specifier === prefix || specifier.startsWith(`${prefix}/`);
+}
 
 function isForbiddenExternal(specifier) {
   return FORBIDDEN_EXTERNAL_PREFIXES.some((prefix) =>
-    specifier === prefix.replace(/\/$/, '') || specifier.startsWith(prefix),
+    matchesForbiddenPrefix(specifier, prefix),
   );
 }
 
