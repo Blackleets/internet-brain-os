@@ -5,7 +5,7 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## Release identity
 
 - Channel: internal
-- Candidate: `0.1.0-internal.2`
+- Candidate: `0.1.0-internal.3`
 - Windows entrypoint: `Install Efesto.cmd`
 - Public launch approved: **no**
 - Test only the artifact produced from the exact `main` commit under review.
@@ -13,7 +13,7 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 ## UAT-1 — clean Windows install
 
 1. Use a clean Windows user profile or a machine where Efesto has not been configured.
-2. Download the `efesto-v0.1.0-internal.2-windows.zip` artifact from the successful `Internal Test Package` workflow on `main`.
+2. Download the `efesto-v0.1.0-internal.3-windows.zip` artifact from the successful `Internal Test Package` workflow on `main`.
 3. Verify the artifact SHA-256 against `SHA256SUMS.txt` from the same workflow run.
 4. Extract the ZIP to a normal user-writable folder.
 5. Double-click `Install Efesto.cmd`.
@@ -21,8 +21,10 @@ This checklist is for founder/internal validation only. Passing CI is necessary 
 Pass only if:
 
 - the installer self-checks/repairs Node.js 22+, pnpm 11.11.0 and frozen-lockfile dependencies;
+- the installer builds the internal Shared runtime and trusted Kernel runtime from the source package before launch;
 - the extension build completes;
 - the trusted local launcher starts or repairs Efesto;
+- the Kernel reports `alive: true`, `owned: true` and `verified: true` after startup;
 - a desktop shortcut is created for the current user;
 - no Kernel token, provider credential or Hermes boundary secret is printed or embedded;
 - the user does not need to type package-manager commands manually.

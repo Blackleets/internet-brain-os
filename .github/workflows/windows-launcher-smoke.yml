@@ -10,6 +10,7 @@ on:
       - 'scripts/install-efesto.ps1'
       - 'Efesto Launcher.cmd'
       - 'Install Efesto.cmd'
+      - 'INTERNAL_RELEASE.json'
       - '.github/workflows/windows-launcher-smoke.yml'
   pull_request:
     paths:
@@ -18,6 +19,7 @@ on:
       - 'scripts/install-efesto.ps1'
       - 'Efesto Launcher.cmd'
       - 'Install Efesto.cmd'
+      - 'INTERNAL_RELEASE.json'
       - '.github/workflows/windows-launcher-smoke.yml'
   workflow_dispatch:
 
