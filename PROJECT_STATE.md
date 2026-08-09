@@ -31,7 +31,8 @@ Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active Git
 - Protected Kernel authority modules are provider-neutral under the executable `pnpm architecture:check` CI gate.
 - Memory Safety E1 provides deterministic read-only quarantine recommendations only from normalized persisted reference IDs; it cannot execute a memory-authority transition, and terminal memory states stay outside the normal quarantine graph.
 - Memory Safety E2 persists recommendations through separate append-only in-memory/durable repositories. Identity is revalidated before storage; exact basis replay is idempotent; durable history is integrity-bound and replay-validated on restart; stale status is explicit when revision, evaluator version or signal basis changes. Recommendation persistence has no authority-state mutation path.
-- Memory Safety E3 adds a separate terminal-memory recovery review record. `rejected`, `superseded` and `revoked` memory remain terminal; recovery decisions require human/founder review bound to a policy version. Founder-required reviews reject ordinary-human approval. An approved review must name a distinct new candidate memory identity and never reopens or reuses the terminal memory ID. Reviews are idempotent, integrity-bound, restart-safe and explicitly stale when governing policy or terminal-record context changes.
+- Memory Safety E3 records terminal-memory recovery reviews separately. `rejected`, `superseded` and `revoked` memory remain terminal; human/founder review is policy-bound; founder-required decisions fail closed for ordinary humans; approved review must point to a distinct new candidate memory identity. Runtime enum/actor validation, idempotency, integrity, restart and stale-policy checks are enforced.
+- Memory Safety E4 derives repeated-failure prevention recommendations only from persisted failure/reference IDs inside a deterministic policy window. Thresholds, failure categories and memory identities remain separated; exact failure replay is deduplicated; conflicting failure identities fail closed; output is explicitly `read_only` and cannot change memory, capabilities, policies or approvals.
 
 ### Autonomous Goal execution foundation
 
@@ -110,14 +111,14 @@ Never quote an old test count as current truth; use the exact current CI run.
 
 ## Current operating state
 
-- `main` includes exact-package qualification (#182), architecture/forensic guardrails (#184), deterministic quarantine evaluation (#193), and durable quarantine recommendation persistence (#194).
-- E1/#185 and E2/#187 are merged baseline. E3/#188 is the active bounded change.
+- `main` includes exact-package qualification (#182), architecture/forensic guardrails (#184), deterministic quarantine evaluation (#193), durable quarantine persistence (#194), and terminal recovery review (#195).
+- E1/#185, E2/#187 and E3/#188 are merged baseline. E4/#189 is the active bounded change.
 - `0.1.0-internal.6` remains the immutable previous runtime-readiness candidate.
-- `0.1.0-internal.7` through `0.1.0-internal.13` are frozen non-promotable or superseded pre-UAT candidates and must not be reused.
-- The current qualification candidate is `0.1.0-internal.14`; it is not qualified until the exact ZIP passes the complete architecture/CI/Chromium/Windows matrix for the final E3 SHA.
+- `0.1.0-internal.7` through `0.1.0-internal.14` are frozen non-promotable or superseded pre-UAT candidates and must not be reused.
+- The current qualification candidate is `0.1.0-internal.15`; it is not qualified until the exact ZIP passes the complete architecture/CI/Chromium/Windows matrix for the final E4 SHA.
 - `publicLaunchApproved` remains `false`; manual UAT begins only on the final exact candidate selected after affected Memory Safety work is frozen.
 - The **public release light is separate** from implementation readiness: automated qualification can be green while public launch remains blocked until manual UAT passes on the same immutable candidate and approval is explicitly promoted.
-- Phase E continues through #188–#191. Issue #186 defines the enterprise product scorecard. Product Design #192 is blocked until #191 freezes Memory Safety contracts.
+- Phase E continues through #189–#191. Issue #186 defines the enterprise product scorecard. Product Design #192 is blocked until #191 freezes Memory Safety contracts.
 - Work directly on `main` is prohibited; use one bounded implementation branch/PR at a time.
 - Never weaken Kernel authority, replay protection, consent, provenance, secrecy or qualification gates to make a test pass.
 
@@ -125,8 +126,8 @@ Never quote an old test count as current truth; use the exact current CI run.
 
 1. #185 deterministic quarantine evaluator — **merged**;
 2. #187 durable recommendation persistence — **merged**;
-3. #188 terminal-memory recovery review records — **active**;
-4. #189 repeated-failure prevention recommendations;
+3. #188 terminal-memory recovery review records — **merged**;
+4. #189 repeated-failure prevention recommendations — **active**;
 5. #190 read-only operator exposure;
 6. #191 adversarial contract freeze.
 
