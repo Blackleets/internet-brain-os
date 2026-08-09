@@ -64,24 +64,18 @@ export class AgentMissionManager {
       const missions = Array.isArray(data.agentMissions) ? data.agentMissions : [];
       let changed = false;
       const reconciled = missions.map((mission) => {
-        const next = reconcileExpiredMission(mission, now);
+        const next = reconcileMission(mission, now, this.isAgentReady);
         if (next !== mission) changed = true;
         return next;
       });
       const sorted = [...reconciled].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
-      return {
-        changed,
-        data: changed ? { ...data, agentMissions: reconciled } : data,
-        result: sorted,
-      };
+      return { changed, data: changed ? { ...data, agentMissions: reconciled } : data, result: sorted };
     });
   }
 }
 
 function authorizationFields(goal, now, confirmationActor) {
-  return confirmationActor
-    ? { authorization: createGoalExecutionAuthorizationReceipt(goal, now, confirmationActor) }
-    : {};
+  return confirmationActor ? { authorization: createGoalExecutionAuthorizationReceipt(goal, now, confirmationActor) } : {};
 }
 
 function isActive(mission, now) {
@@ -89,6 +83,18 @@ function isActive(mission, now) {
   return mission.status === 'running'
     && Number.isFinite(Date.parse(mission.leaseExpiresAt))
     && Date.parse(mission.leaseExpiresAt) > now.getTime();
+}
+
+function reconcileMission(mission, now, isAgentReady) {
+  if (mission.status === 'waiting_for_agent' && isAgentReady(mission.agent) === true) {
+    return {
+      ...mission,
+      status: 'queued',
+      executionPhase: 'queued',
+      limitation: 'Agent became ready; recovered and queued for authorized execution',
+    };
+  }
+  return reconcileExpiredMission(mission, now);
 }
 
 function reconcileExpiredMission(mission, now) {
