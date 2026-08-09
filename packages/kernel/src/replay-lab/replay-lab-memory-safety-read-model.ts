@@ -9,6 +9,13 @@ import type {
 export type ReplayLabMemorySafetyFreshness = 'current' | 'stale';
 export type ReplayLabMemorySafetyBasis = 'persisted_record' | 'deterministic_projection' | 'human_decision';
 
+export class ReplayLabMemorySafetyInputError extends Error {
+  readonly name = 'ReplayLabMemorySafetyInputError';
+  constructor(message: string) {
+    super(message);
+  }
+}
+
 export interface ReplayLabQuarantineSafetyInput {
   readonly record: StoredMemoryQuarantineRecommendation;
   readonly freshness: MemoryQuarantineRecommendationFreshness;
@@ -113,9 +120,16 @@ export interface ReplayLabMemorySafetyView {
 export function buildReplayLabMemorySafetyView(
   input: ReplayLabMemorySafetyViewInput,
 ): ReplayLabMemorySafetyView {
+  if (!isRecord(input)) {
+    throw new ReplayLabMemorySafetyInputError('Memory Safety view input must be an object.');
+  }
   const memoryId = required(input.memoryId, 'memoryId');
+  const quarantineInput = requiredArray(input.quarantine, 'quarantine');
+  const recoveryInput = requiredArray(input.recoveryReviews, 'recoveryReviews');
+  const preventionInput = requiredArray(input.prevention, 'prevention');
 
-  const quarantine = input.quarantine
+  const quarantine = quarantineInput
+    .map((entry, index) => requireQuarantineEntry(entry, index))
     .filter((entry) => entry.record.memoryId === memoryId)
     .map((entry): ReplayLabMemoryQuarantineView => ({
       kind: 'quarantine_recommendation',
@@ -137,7 +151,8 @@ export function buildReplayLabMemorySafetyView(
     }))
     .sort(compareObserved);
 
-  const recoveryReviews = input.recoveryReviews
+  const recoveryReviews = recoveryInput
+    .map((entry, index) => requireRecoveryEntry(entry, index))
     .filter((entry) => entry.record.terminalMemoryId === memoryId)
     .map((entry): ReplayLabMemoryRecoveryView => ({
       kind: 'recovery_review',
@@ -165,7 +180,8 @@ export function buildReplayLabMemorySafetyView(
     }))
     .sort(compareObserved);
 
-  const prevention = input.prevention
+  const prevention = preventionInput
+    .map((entry, index) => requirePreventionEntry(entry, index))
     .filter((entry) => entry.recommendation.memoryId === memoryId)
     .map((entry): ReplayLabMemoryPreventionView => ({
       kind: 'prevention_recommendation',
@@ -207,12 +223,71 @@ export function buildReplayLabMemorySafetyView(
   };
 }
 
+function requireQuarantineEntry(value: unknown, index: number): ReplayLabQuarantineSafetyInput {
+  if (!isRecord(value) || !isRecord(value.record) || !isRecord(value.freshness)) {
+    throw new ReplayLabMemorySafetyInputError(`quarantine[${index}] must contain record and freshness objects.`);
+  }
+  if (typeof value.record.memoryId !== 'string' || !Array.isArray(value.record.signals)) {
+    throw new ReplayLabMemorySafetyInputError(`quarantine[${index}] contains malformed persisted record data.`);
+  }
+  if (!['fresh', 'stale'].includes(String(value.freshness.status)) || !Array.isArray(value.freshness.staleReasons)) {
+    throw new ReplayLabMemorySafetyInputError(`quarantine[${index}] contains malformed freshness data.`);
+  }
+  for (const signal of value.record.signals) {
+    if (!isRecord(signal) || !Array.isArray(signal.referenceIds)) {
+      throw new ReplayLabMemorySafetyInputError(`quarantine[${index}] contains malformed signal data.`);
+    }
+  }
+  return value as unknown as ReplayLabQuarantineSafetyInput;
+}
+
+function requireRecoveryEntry(value: unknown, index: number): ReplayLabRecoverySafetyInput {
+  if (!isRecord(value) || !isRecord(value.record) || !isRecord(value.freshness)) {
+    throw new ReplayLabMemorySafetyInputError(`recoveryReviews[${index}] must contain record and freshness objects.`);
+  }
+  if (typeof value.record.terminalMemoryId !== 'string' || !isRecord(value.record.reviewer)) {
+    throw new ReplayLabMemorySafetyInputError(`recoveryReviews[${index}] contains malformed persisted review data.`);
+  }
+  if (!['fresh', 'stale'].includes(String(value.freshness.status)) || !Array.isArray(value.freshness.staleReasons)) {
+    throw new ReplayLabMemorySafetyInputError(`recoveryReviews[${index}] contains malformed freshness data.`);
+  }
+  return value as unknown as ReplayLabRecoverySafetyInput;
+}
+
+function requirePreventionEntry(value: unknown, index: number): ReplayLabPreventionSafetyInput {
+  if (!isRecord(value) || !isRecord(value.recommendation) || typeof value.stale !== 'boolean') {
+    throw new ReplayLabMemorySafetyInputError(`prevention[${index}] must contain a recommendation object and boolean stale flag.`);
+  }
+  if (typeof value.recommendation.memoryId !== 'string'
+    || !Array.isArray(value.recommendation.failureIds)
+    || !Array.isArray(value.recommendation.referenceIds)) {
+    throw new ReplayLabMemorySafetyInputError(`prevention[${index}] contains malformed recommendation data.`);
+  }
+  return value as unknown as ReplayLabPreventionSafetyInput;
+}
+
 function compareObserved(left: { readonly observedAt: string; readonly id: string }, right: { readonly observedAt: string; readonly id: string }): number {
   return right.observedAt.localeCompare(left.observedAt) || left.id.localeCompare(right.id);
 }
 
-function required(value: string, field: string): string {
-  const normalized = String(value).trim();
-  if (!normalized) throw new Error(`${field} is required.`);
+function required(value: unknown, field: string): string {
+  if (typeof value !== 'string') {
+    throw new ReplayLabMemorySafetyInputError(`${field} must be a string.`);
+  }
+  const normalized = value.trim();
+  if (!normalized || normalized.length > 240 || /[\u0000-\u001f\u007f]/.test(normalized)) {
+    throw new ReplayLabMemorySafetyInputError(`${field} is invalid.`);
+  }
   return normalized;
+}
+
+function requiredArray<T>(value: readonly T[] | unknown, field: string): readonly T[] {
+  if (!Array.isArray(value)) {
+    throw new ReplayLabMemorySafetyInputError(`${field} must be an array.`);
+  }
+  return value as readonly T[];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
