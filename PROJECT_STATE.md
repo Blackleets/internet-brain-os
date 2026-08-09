@@ -35,6 +35,7 @@ Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md`, and the active Git
 - **E4 / #189:** repeated persisted failures are grouped by exact memory/category inside bounded policy windows and produce deterministic `read_only` prevention guidance with exact failure/reference provenance; no inferred hidden intent or automatic policy/capability/memory changes.
 - E4 runtime hardening from PR #199 rejects malformed/non-string IDs, non-array references, null failure records and malformed top-level payloads instead of coercing them; stale assessment fails closed on malformed current basis.
 - **E5 / #190:** Replay Lab Memory Safety projection separates `persisted_record`, `human_decision`, and `deterministic_projection` bases, labels current/stale state, preserves exact references, and is queried only through read/list dependencies. It exposes no memory transition, recovery approval, policy mutation or capability mutation command.
+- **E6 / #191 is the active freeze:** runtime boundaries for E1, E2, E3 and E5 now reject malformed/null/scalar/nested data fail-closed; E4 already has equivalent hardening from #199. Durable integrity verification treats malformed safety data as invalid, and Replay Lab validates queries before any reader call. The adversarial freeze must remain green before Memory Safety v1 is declared stable.
 
 ### Autonomous Goal execution and user value
 
@@ -95,35 +96,37 @@ Never quote an old test count as current truth; use the exact current CI run.
 
 ## Current operating state
 
-- `main` includes exact-package qualification (#182), architecture/forensic guardrails (#184), E1 (#193), E2 (#194), E3 (#195), E4 (#196), and E4 runtime hardening (#199).
-- E1–E4 plus runtime hardening are merged baseline. E5/#190 is the active bounded change.
+- `main` includes exact-package qualification (#182), architecture/forensic guardrails (#184), E1 (#193), E2 (#194), E3 (#195), E4 (#196), E4 runtime hardening (#199), and E5 read-only operator exposure (#200).
+- E1–E5 are merged baseline. **PR #201 / E6 Memory Safety v1 adversarial contract freeze is the only active bounded change.**
 - `0.1.0-internal.6` remains the immutable previous runtime-readiness candidate.
-- `0.1.0-internal.7` through `0.1.0-internal.16` are frozen non-promotable, qualified or superseded pre-UAT candidates and must not be reused.
-- The current qualification candidate is `0.1.0-internal.17`; it is not qualified until the exact ZIP passes the complete architecture/CI/Chromium/Windows matrix for the final E5 SHA.
-- `publicLaunchApproved` remains `false`; manual UAT begins only on the final exact candidate selected after Memory Safety is frozen.
+- `0.1.0-internal.7` through `0.1.0-internal.18` are frozen non-promotable, qualified or superseded pre-UAT candidates and must not be reused.
+- The current qualification candidate is `0.1.0-internal.19`; it is not qualified until the exact ZIP passes the complete architecture/CI/Chromium/Windows matrix for the final #201 SHA.
+- `publicLaunchApproved` remains `false`; manual UAT begins only on the final exact candidate selected after Memory Safety v1 is frozen.
 - The **public release light is separate** from implementation readiness: automated qualification can be green while public launch remains blocked until manual UAT passes on the same immutable candidate and approval is explicitly promoted.
-- Product/business scorecard is #186. Product Design #192 remains blocked until #191 freezes Memory Safety contracts.
+- Product/business scorecard is #186. Product Design #192 remains downstream of the Memory Safety freeze; live GitHub must be inspected again before choosing the next bounded implementation.
 - Work directly on `main` is prohibited; use one bounded implementation branch/PR at a time.
+- Never weaken Kernel authority, replay protection, consent, provenance, secrecy, responsive product truthfulness or qualification gates to make a test pass.
 
-## Next bounded engineering phase
+## Next bounded engineering sequence
 
 1. #185 quarantine evaluator — **merged**;
 2. #187 durable quarantine persistence — **merged**;
 3. #188 terminal recovery reviews — **merged**;
 4. #189 repeated-failure prevention — **merged + runtime-hardened**;
-5. #190 read-only operator Memory Safety projection — **active**;
-6. #191 adversarial contract freeze — **next**.
+5. #190 read-only operator Memory Safety projection — **merged**;
+6. #191 Memory Safety v1 adversarial contract freeze — **active**;
+7. after #191 merges, inspect live #186/#192 plus current Goal contracts and begin the smallest real cross-surface Goal slice, wired from Kernel truth to web and extension with desktop/mobile-width acceptance before advancing to the next UI layer.
 
-After #191: implement #186 local-first product measurement, then begin #192 formal Product Design. Any collective analytics remain separately opt-in and privacy-reviewed.
+Any collective analytics remain separately opt-in and privacy-reviewed.
 
 ## Product Design gate
 
-Formal Product Design begins only after #191. It must refine the existing Goal-first product, preserve real Kernel state, accessibility/mobile/reduced-motion behavior, and never invent backend state.
+Formal Product Design or UX restructuring begins only after #191. It must refine the existing Goal-first product, preserve real Kernel state, extension/web parity, accessibility, desktop/mobile-width/reduced-motion behavior, and never invent backend state or fake autonomous activity.
 
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md and AGENTS.md, run pnpm resume, inspect GitHub main/open PRs/CI, and treat live Git as newer than chat memory. Preserve Kernel authority, local-first secrecy, Evidence provenance, capability gates, exact replay and altered-replay rejection. Work on exactly one bounded branch and require architecture + CI + Chromium + Windows exact-package gates before merge. Treat the Goal-first shell plus living-forge visual layer as the UI baseline and keep motion truthful to persisted or streaming state.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md and AGENTS.md, run pnpm resume, inspect GitHub main/open PRs/CI, and treat live Git as newer than chat memory. Preserve Kernel authority, local-first secrecy, Evidence provenance, capability gates, exact replay and altered-replay rejection. Work on exactly one bounded branch and require architecture + CI + Chromium + Windows exact-package gates before merge. Treat the Goal-first shell plus living-forge visual layer as the UI baseline and keep motion truthful to persisted or streaming state. After Memory Safety v1 freezes, improve Goal execution one cross-surface layer at a time and prove web + extension + desktop/mobile-width behavior before proceeding.
 ```
 
 ## Update rule
