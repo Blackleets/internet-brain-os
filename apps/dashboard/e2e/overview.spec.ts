@@ -1,126 +1,124 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const browserProblems = new WeakMap<Page, string[]>();
+const token = 'test-token-that-is-long-enough-for-kernel-validation';
 
 test.beforeEach(async ({ page }) => {
   const problems: string[] = [];
   browserProblems.set(page, problems);
   page.on('pageerror', (error) => problems.push(`pageerror: ${error.message}`));
-  page.on('console', (message) => {
-    if (message.type() === 'error') problems.push(`console.error: ${message.text()}`);
-  });
+  page.on('console', (message) => { if (message.type() === 'error') problems.push(`console.error: ${message.text()}`); });
   page.on('requestfailed', (request) => {
     const failure = request.failure()?.errorText ?? 'unknown';
-    const isCancelledHealthProbe = request.method() === 'GET'
-      && new URL(request.url()).pathname === '/health'
-      && failure === 'net::ERR_ABORTED';
-    if (!isCancelledHealthProbe) problems.push(`requestfailed: ${request.url()} (${failure})`);
+    const path = new URL(request.url()).pathname;
+    if (!(request.method() === 'GET' && path === '/health' && failure === 'net::ERR_ABORTED')) problems.push(`requestfailed: ${request.url()} (${failure})`);
   });
 });
 
-test.afterEach(async ({ page }) => {
-  expect(browserProblems.get(page) ?? []).toEqual([]);
-});
+test.afterEach(async ({ page }) => { expect(browserProblems.get(page) ?? []).toEqual([]); });
 
 async function connect(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Conectar' }).click();
-  await expect(page.getByRole('heading', { name: 'Centro de conexiones' })).toBeVisible();
-  await page.getByLabel('URL del Kernel').fill('http://127.0.0.1:4100');
-  await page.getByLabel('Token privado').fill('test-token-that-is-long-enough-for-kernel-validation');
-  await expect(page.getByRole('checkbox', { name: /Recordar solo en este dispositivo/ })).not.toBeChecked();
-  await page.getByRole('button', { name: 'Autorizar dispositivo' }).click();
-  await expect(page.getByRole('button', { name: /Kernel online/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Conectar', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await page.getByRole('textbox', { name: 'URL del Kernel', exact: true }).fill('http://127.0.0.1:4100');
+  await page.getByLabel('Token privado', { exact: true }).fill(token);
+  await page.getByRole('button', { name: 'Autorizar dispositivo', exact: true }).click();
+  await expect(page.getByRole('button', { name: /Kernel ready/ })).toBeVisible();
 }
 
-test('renders the migrated Sites UI and connects it to truthful Kernel data', async ({ page }) => {
-  const missionMutations: string[] = [];
-  page.on('request', (request) => {
-    const path = new URL(request.url()).pathname;
-    if (request.method() === 'POST' && (path === '/api/goals' || path.endsWith('/missions'))) missionMutations.push(path);
-  });
+test('runs the Goal-first journey only after explicit confirmation', async ({ page }) => {
+  const writes: string[] = [];
+  page.on('request', (request) => { if (request.method() === 'POST') writes.push(new URL(request.url()).pathname); });
   await page.goto('/');
   expect(page.viewportSize()).toEqual({ width: 1536, height: 1024 });
-  await expect(page.locator('.app')).toHaveCSS('grid-template-columns', /270px/);
-  await expect(page.getByRole('heading', { name: '¿Qué quieres investigar hoy?' })).toBeVisible();
-  const brain = page.getByRole('img', { name: /Cerebro digital completo/ });
-  await expect(brain).toBeVisible();
-  const brainBox = await brain.boundingBox();
-  expect(brainBox?.width).toBeGreaterThan(500);
-  expect(brainBox?.height).toBeGreaterThan(200);
-  await expect(page.getByText('Esperando Kernel')).toBeVisible();
-  await expect(page.getByText(/Sin datos inventados/)).toBeVisible();
+  await expect(page.locator('.efesto-product')).toHaveCSS('grid-template-columns', /270px/);
+  await expect(page.getByRole('heading', { name: '¿Qué quieres conseguir?', exact: true })).toBeVisible();
+  await expect(page.getByRole('img', { name: /Modo local desconectado/ })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Goal', exact: true })).toBeVisible();
 
   await connect(page);
-  await expect(page.getByText('Hermes verificado')).toBeVisible();
+  await page.getByRole('button', { name: 'Inicio', exact: true }).click();
+  await expect(page.getByRole('img', { name: /Investigando/ })).toBeVisible();
 
-  await page.getByRole('button', { name: /Investigación/ }).click();
-  await page.getByPlaceholder('¿Qué quieres comprobar con evidencia?').fill('Auditar fuentes públicas');
-  await page.getByRole('button', { name: /Crear borrador de caso/ }).click();
-  await expect(page.getByText('Requiere tu confirmación para crear la misión')).toBeVisible();
-  expect(missionMutations).toEqual([]);
-  await page.getByRole('button', { name: 'Ejecutar Auditar fuentes públicas' }).click();
-  await expect(page.getByText('Goal creado y misión confirmada para Hermes.')).toBeVisible();
-  expect(missionMutations).toEqual(['/api/goals', '/api/goals/goal-e2e/missions']);
+  await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Auditar fuentes públicas');
+  await page.getByRole('button', { name: 'Preparar Goal', exact: true }).click();
+  await expect(page.getByText('PLAN PROPUESTO · AÚN NO EJECUTADO', { exact: true })).toBeVisible();
+  expect(writes).toEqual([]);
 
-  await page.getByRole('button', { name: /Internet Brain/ }).click();
-  await expect(page.getByText('Investigando fuentes')).toBeVisible();
-  await page.getByRole('textbox', { name: 'Mensaje', exact: true }).fill('Resume el estado');
-  await page.getByRole('button', { name: 'Enviar' }).click();
-  await expect(page.getByText('Fixture response from the selected local model.')).toBeVisible();
-  await expect(page.getByText('Hephaestus mantiene las respuestas del modelo separadas de Evidence y memoria.')).toBeVisible();
-
-  await page.getByRole('button', { name: /Agentes/ }).click();
-  await expect(page.getByRole('heading', { name: 'Agentes e integraciones' })).toBeVisible();
-  await expect(page.getByText('mission-1')).toBeVisible();
-  await expect(page.getByText(/Sus findings vuelven al Kernel para validación, deduplicación y Evidence/)).toBeVisible();
+  await page.getByRole('button', { name: 'Confirmar y ejecutar', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Missions', exact: true })).toBeVisible();
+  expect(writes).toEqual(['/api/goals', '/api/goals/goal-e2e/missions']);
 });
 
-test('disconnect clears the tab-only token and returns to the offline forge', async ({ page }) => {
+test('wires Finds, Evidence and model Chat to real product contracts', async ({ page }) => {
+  const writes: string[] = [];
+  page.on('request', (request) => { if (request.method() === 'POST') writes.push(new URL(request.url()).pathname); });
   await page.goto('/');
   await connect(page);
 
-  await page.getByRole('button', { name: 'Desconectar' }).click();
-  await expect(page.getByRole('button', { name: 'Conectar' })).toBeVisible();
-  await expect(page.getByLabel('Token privado')).toHaveValue('');
-  await expect(page.getByText('Este navegador olvidó la URL y el token local.')).toBeVisible();
+  await page.getByRole('button', { name: /Finds/ }).click();
+  await expect(page.getByText('AI automation project', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Útil', exact: true }).click();
+  await expect.poll(() => writes).toContain('/api/opportunities/opportunity-1/feedback');
+
+  await page.getByRole('button', { name: /Evidence/ }).click();
+  await page.getByRole('button', { name: /Supplier research/ }).click();
+  const source = page.getByRole('link', { name: /Abrir fuente/ });
+  await expect(source).toBeVisible();
+  await expect(source).toHaveAttribute('href', 'https://supplier.example/source');
+
+  await page.getByRole('button', { name: /Models/ }).click();
+  await page.getByRole('button', { name: /qwen3:4b/ }).click();
+  await expect(page.getByRole('textbox', { name: 'Mensaje', exact: true })).toBeVisible();
+  await page.getByRole('textbox', { name: 'Mensaje', exact: true }).fill('Resume el estado');
+  await page.getByRole('button', { name: 'Enviar', exact: true }).click();
+  await expect(page.getByText('Fixture response from the selected local model.', { exact: true })).toBeVisible();
+  await expect(page.getByText('No admitido en memoria', { exact: true })).toBeVisible();
+  expect(writes).toContain('/api/chat/stream');
 });
 
-test.describe('mobile migrated control center', () => {
+test('disconnect removes the session credential and returns truthful offline state', async ({ page }) => {
+  await page.goto('/');
+  await connect(page);
+  await page.getByRole('button', { name: /Kernel ready/ }).click();
+  await page.getByRole('button', { name: 'Desconectar', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Conectar', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Inicio', exact: true }).click();
+  await expect(page.getByRole('img', { name: /Modo local desconectado/ })).toBeVisible();
+  expect(await page.evaluate(() => sessionStorage.getItem('hephaestus.owner.connection.session.v1'))).toBeNull();
+});
+
+test.describe('mobile Efesto product shell', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('keeps the forge, composer and bottom navigation inside the viewport', async ({ page }) => {
+  test('uses a drawer, single-column Goal surface and safe composer without horizontal overflow', async ({ page }) => {
     await page.goto('/');
-    expect(page.viewportSize()).toEqual({ width: 390, height: 844 });
-    await expect(page.getByRole('heading', { name: '¿Qué quieres investigar hoy?' })).toBeVisible();
-    await expect(page.locator('.brain-stage')).toBeVisible();
-    const brain = page.getByRole('img', { name: /Cerebro digital completo/ });
-    await expect(brain).toBeVisible();
-    const brainBox = await brain.boundingBox();
-    expect(brainBox?.height).toBeGreaterThan(140);
-    await expect(page.getByRole('textbox', { name: 'Mensaje', exact: true })).toBeVisible();
-    await expect(page.locator('.nav-section')).toHaveCSS('display', 'flex');
+    await expect(page.getByRole('button', { name: 'Abrir menú', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '¿Qué quieres conseguir?', exact: true })).toBeVisible();
+    await expect(page.getByRole('img', { name: /Modo local desconectado/ })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Goal', exact: true })).toBeVisible();
+    await expect(page.locator('.goal-dock')).toBeVisible();
 
-    const layout = await page.evaluate(() => {
-      const viewportWidth = window.innerWidth;
-      const visible = Array.from(document.querySelectorAll<HTMLElement>('body *')).filter((element) => {
-        const style = getComputedStyle(element);
-        const box = element.getBoundingClientRect();
-        return style.display !== 'none' && style.visibility !== 'hidden' && box.width > 0 && box.height > 0;
-      });
-      const clipped = visible.flatMap((element) => {
-        const box = element.getBoundingClientRect();
-        return box.left < -1 || box.right > viewportWidth + 1
-          ? [`${element.tagName.toLowerCase()}.${element.className}: ${Math.round(box.left)}-${Math.round(box.right)}`]
-          : [];
-      });
-      return {
-        viewportWidth,
-        documentWidth: document.documentElement.scrollWidth,
-        clipped,
-      };
-    });
+    const initial = await page.evaluate(() => ({ viewportWidth: innerWidth, documentWidth: document.documentElement.scrollWidth }));
+    expect(initial.documentWidth).toBe(initial.viewportWidth);
 
-    expect(layout.documentWidth).toBe(layout.viewportWidth);
-    expect(layout.clipped).toEqual([]);
+    await page.getByRole('button', { name: 'Abrir menú', exact: true }).click();
+    const sidebar = page.locator('.efesto-sidebar');
+    await expect(sidebar).toBeVisible();
+    await expect.poll(async () => (await sidebar.boundingBox())?.x ?? -999).toBeGreaterThanOrEqual(-1);
+    const sidebarBox = await sidebar.boundingBox();
+    expect(sidebarBox).not.toBeNull();
+    if (!sidebarBox) throw new Error('Mobile sidebar has no layout box');
+    expect(sidebarBox.x + sidebarBox.width).toBeLessThanOrEqual(391);
+
+    await page.getByRole('button', { name: 'Cerrar menú', exact: true }).first().click();
+    await expect.poll(async () => (await sidebar.boundingBox())?.x ?? 0).toBeLessThan(-100);
+    await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Busca oportunidades reales');
+    const composerBox = await page.locator('.goal-dock').boundingBox();
+    expect(composerBox).not.toBeNull();
+    if (!composerBox) throw new Error('Mobile composer has no layout box');
+    expect(composerBox.x).toBeGreaterThanOrEqual(0);
+    expect(composerBox.x + composerBox.width).toBeLessThanOrEqual(390);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
   });
 });

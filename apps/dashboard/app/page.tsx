@@ -1,5 +1,5 @@
-import ControlCenter from '../components/control-center';
+import EfestoProductShell from '../components/efesto-product-shell';
 
 export default function HomePage() {
-  return <ControlCenter />;
+  return <EfestoProductShell />;
 }
