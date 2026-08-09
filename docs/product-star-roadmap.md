@@ -58,13 +58,16 @@ Status: **complete**.
 
 ### G1 — Shared Goal Truth v1
 
-Status: **active; functional layers validated, final qualification pending**.
+Status: **active; functional layers + startup fix complete, final qualification pending**.
 
 - [x] **G1.1 Kernel projection:** `efesto.goal-surface.v1`, `sourceOfTruth: kernel`, UniversalGoal v2 and explicit `legacy_radar` compatibility, separate Goal lifecycle and Mission work state, deterministic current Mission selection, runtime fail-closed validation.
 - [x] **G1.2 local read adapter:** uses `LocalKnowledgeStore.read()` only, delegates semantics to Kernel, validates Goal identity before read, exposes no store project/write path.
 - [x] **G1.3 authenticated HTTP read boundary:** `GET /api/goal-surfaces` + `GET /api/goal-surfaces/:goalId`, existing token/extension identity gates, deterministic not-found/invalid-id behavior, no Goal-surface write route.
-- [x] contract/unit/HTTP/Gherkin coverage.
-- [ ] qualify immutable `0.1.0-internal.22` on the final #203 SHA and merge.
+- [x] source-tree startup hardening: Goal-surface production composition lazy-loads the trusted Kernel projector at first read so launcher startup does not require `packages/kernel/dist` before a Goal-surface request; packaged installs still build the Kernel runtime before launch.
+- [x] contract/unit/adapter/HTTP/Gherkin coverage.
+- [ ] qualify immutable `0.1.0-internal.23` on the final #203 SHA and merge.
+
+`internal.22` is frozen/superseded because its first final matrix exposed the eager Kernel-runtime startup regression on Windows launcher/pairing smoke. The regression was fixed without weakening G1.1/G1.2 semantics or modifying the launcher.
 
 Important: G1 is backend/shared truth only. The current Control Center and extension are not yet claimed to consume it.
 
@@ -113,8 +116,8 @@ Initial measurement remains local-first. Aggregate sharing requires a separate o
 ## Distribution / release closeout
 
 - `0.1.0-internal.6` remains the prior runtime-readiness candidate.
-- `0.1.0-internal.7` through `0.1.0-internal.21` are frozen and must not be reused.
-- G1 uses final candidate `0.1.0-internal.22`; its evidence must map to one final SHA.
+- `0.1.0-internal.7` through `0.1.0-internal.22` are frozen and must not be reused.
+- G1 uses final candidate `0.1.0-internal.23`; its evidence must map to one final SHA.
 - Public launch remains blocked until an exact candidate passes automated qualification plus manual UAT and explicit promotion.
 
 ## What not to do
@@ -127,6 +130,7 @@ Do not:
 - collapse Goal status and Mission phase into one invented state machine;
 - keep separate persisted Goal truth in dashboard and extension;
 - add a Goal-surface write route just because a read projection exists;
+- make source-tree launcher startup depend eagerly on a built Goal projection runtime;
 - display fake activity or animate work that was not observed;
 - push private Goals or Kernel tokens into the public landing;
 - claim arbitrary mobile remote-PC control while the trust boundary is loopback;
@@ -135,7 +139,7 @@ Do not:
 
 ## Next bounded sequence
 
-1. Finish G1 and qualify/merge `internal.22`.
+1. Finish G1 and qualify/merge `internal.23`.
 2. Open a new G2 branch from the merged G1 main commit.
 3. Wire responsive Control Center only to Shared Goal Truth v1 and prove desktop/mobile-width accessibility.
 4. Evaluate + merge G2 before touching extension consumption.
