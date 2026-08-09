@@ -142,7 +142,8 @@ Status: **current active release gate**.
 - [x] Production dependency audit without a GHSA ignore.
 - [x] Windows launcher, first-run and pairing recovery automation.
 - [x] `0.1.0-internal.6` preserved as the immutable previous runtime-readiness candidate.
-- [x] Advance the hardened release-validation state to `0.1.0-internal.7`.
+- [x] `0.1.0-internal.7` and `0.1.0-internal.8` frozen as failed automated-qualification candidates.
+- [x] Advance the isolated packaged-candidate qualification state to `0.1.0-internal.9`.
 - [x] Add exact-ZIP download, checksum/commit verification and extraction to a path containing spaces.
 - [x] Add Windows 2022 + Windows 2025 packaged-install qualification.
 - [x] Require runtime builds, Kernel ownership verification, Hermes readiness and trusted shortcut from the extracted ZIP.
@@ -152,7 +153,7 @@ Status: **current active release gate**.
 - [ ] Both packaged-install matrix jobs green for the final PR SHA.
 - [ ] Full PR CI/Chromium/Windows gates green for the same SHA.
 - [ ] Merge and prove the merged `main` SHA through the same affected gates.
-- [ ] UAT-1 through UAT-6 on the exact resulting `internal.7` artifact.
+- [ ] UAT-1 through UAT-6 on the exact resulting `internal.9` artifact.
 - [ ] Public-release PR/tag only after UAT passes and `publicLaunchApproved` is explicitly promoted.
 
 ## Phase G — Product Design formalization
