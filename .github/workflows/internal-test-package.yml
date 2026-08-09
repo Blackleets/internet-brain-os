@@ -75,6 +75,7 @@ jobs:
             SHA256SUMS.txt
             BUILD_INFO.txt
             package-contents.txt
+            scripts/qualify-packaged-windows-install.ps1
           if-no-files-found: error
           retention-days: 14
 
@@ -99,14 +100,11 @@ jobs:
         with:
           name: efesto-v${{ needs.package-internal-windows.outputs.release-version }}-windows-${{ github.sha }}
           path: candidate
-      - name: Verify and install the exact packaged candidate twice
+      - name: Verify, install and repair the exact packaged candidate
         shell: pwsh
         run: |
-          powershell.exe -NoProfile -ExecutionPolicy Bypass -File candidate-executor.ps1
-        env:
-          RELEASE_VERSION: ${{ needs.package-internal-windows.outputs.release-version }}
-          EXPECTED_COMMIT: ${{ github.sha }}
-      - name: Prepare isolated qualification executor
-        if: ${{ false }}
-        shell: pwsh
-        run: Write-Host 'Documentation-only placeholder; executor is copied in the next revision.'
+          powershell.exe -NoProfile -ExecutionPolicy Bypass `
+            -File candidate/scripts/qualify-packaged-windows-install.ps1 `
+            -CandidateDir candidate `
+            -ReleaseVersion '${{ needs.package-internal-windows.outputs.release-version }}' `
+            -ExpectedCommit '${{ github.sha }}'
