@@ -13,6 +13,8 @@ jobs:
   package-internal-windows:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      release-version: ${{ steps.release.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,6 +53,7 @@ jobs:
           unzip -l "$package" > package-contents.txt
           grep -q 'Install Efesto.cmd' package-contents.txt
           grep -q 'scripts/install-efesto.ps1' package-contents.txt
+          grep -q 'scripts/qualify-packaged-windows-install.ps1' package-contents.txt
           grep -q 'pnpm-lock.yaml' package-contents.txt
           grep -q 'INTERNAL_RELEASE.json' package-contents.txt
           if grep -Eq '(^|/)(node_modules|\.git|\.hephaestus|\.hermes)/' package-contents.txt; then
@@ -74,3 +77,36 @@ jobs:
             package-contents.txt
           if-no-files-found: error
           retention-days: 14
+
+  qualify-packaged-windows-install:
+    name: qualify packaged install (${{ matrix.os }})
+    needs: package-internal-windows
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+      - name: Download exact internal candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: efesto-v${{ needs.package-internal-windows.outputs.release-version }}-windows-${{ github.sha }}
+          path: candidate
+      - name: Verify and install the exact packaged candidate twice
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File candidate-executor.ps1
+        env:
+          RELEASE_VERSION: ${{ needs.package-internal-windows.outputs.release-version }}
+          EXPECTED_COMMIT: ${{ github.sha }}
+      - name: Prepare isolated qualification executor
+        if: ${{ false }}
+        shell: pwsh
+        run: Write-Host 'Documentation-only placeholder; executor is copied in the next revision.'
