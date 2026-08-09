@@ -1,0 +1,126 @@
+name: Windows First Run Repro
+
+on:
+  pull_request:
+    paths:
+      - 'apps/local-kernel/**'
+      - 'packages/kernel/**'
+      - 'packages/shared/**'
+      - 'scripts/efesto-*.mjs'
+      - 'scripts/install-efesto.ps1'
+      - 'Efesto Launcher.cmd'
+      - '.github/workflows/windows-first-run-repro.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-first-install:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Fresh Windows first run with pairing, Hermes and no Obsidian
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dataDir = Join-Path $PWD '.uat-real-first-run'
+          Remove-Item -Recurse -Force $dataDir -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
+
+          $hermesDir = Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent\venv\Scripts'
+          New-Item -ItemType Directory -Force -Path $hermesDir | Out-Null
+          Copy-Item -Force (Get-Command node).Source (Join-Path $hermesDir 'hermes.exe')
+
+          $env:HEPHAESTUS_DATA_DIR = $dataDir
+          Remove-Item Env:HEPHAESTUS_OBSIDIAN_DIR -ErrorAction SilentlyContinue
+          Remove-Item Env:HEPHAESTUS_HERMES_EXECUTABLE -ErrorAction SilentlyContinue
+          Remove-Item Env:HEPHAESTUS_PAIRING -ErrorAction SilentlyContinue
+          Remove-Item Env:HEPHAESTUS_INTERNAL_PORT -ErrorAction SilentlyContinue
+          Remove-Item Env:HEPHAESTUS_PORT -ErrorAction SilentlyContinue
+          Remove-Item Env:IBOS_HERMES_SECRET -ErrorAction SilentlyContinue
+          Remove-Item Env:HEPHAESTUS_HERMES_SECRET -ErrorAction SilentlyContinue
+
+          try {
+            # NUL keeps the real first-run pairing session active without exposing its one-time code.
+            cmd.exe /d /s /c "pnpm efesto:launcher repair >NUL 2>NUL"
+            $repairExit = $LASTEXITCODE
+            Start-Sleep -Seconds 1
+
+            $bootstrap = node scripts/efesto-bootstrap.mjs | ConvertFrom-Json
+            if ($repairExit -ne 0 -or $bootstrap.kernel -ne 'ready' -or -not $bootstrap.diagnostics.kernel.alive -or -not $bootstrap.diagnostics.kernel.owned -or -not $bootstrap.diagnostics.kernel.verified) {
+              throw "Real first-run failed: exit=$repairExit bootstrap=$($bootstrap | ConvertTo-Json -Compress)"
+            }
+            if ($bootstrap.hermes -ne 'ready') { throw 'Standard Windows Hermes install was not detected.' }
+            if ($bootstrap.obsidian -ne 'not_configured') { throw "Expected Obsidian not_configured, got $($bootstrap.obsidian)" }
+            if ($bootstrap.pairing -ne 'required') { throw "Expected first-run pairing required, got $($bootstrap.pairing)" }
+            if (-not (Test-Path (Join-Path $dataDir 'kernel-api-token'))) { throw 'First run did not create the private Kernel token.' }
+
+            $status = Invoke-RestMethod -Uri 'http://127.0.0.1:4000/status' -TimeoutSec 5
+            if (-not $status.ok -or $status.kernel -ne 'ready') { throw 'Kernel did not stay ready after first-run pairing startup.' }
+          }
+          finally {
+            pnpm efesto:launcher shutdown 2>$null | Out-Null
+          }
+
+  existing-hermes-secret-source-install:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Verify one-click installer rebuilds source-package runtimes before launch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dataDir = Join-Path $PWD '.uat-existing-hermes-secret'
+          Remove-Item -Recurse -Force $dataDir -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force 'packages/shared/dist' -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force 'packages/kernel/dist' -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
+          Set-Content -Path (Join-Path $dataDir 'kernel-api-token') -Value ('d' * 64) -NoNewline
+
+          $env:HEPHAESTUS_DATA_DIR = $dataDir
+          $env:HEPHAESTUS_HERMES_EXECUTABLE = (Get-Command node).Source
+          $env:HEPHAESTUS_HERMES_SECRET = 'uat-existing-local-boundary-secret'
+          $env:HEPHAESTUS_PAIRING = '0'
+          Remove-Item Env:HEPHAESTUS_OBSIDIAN_DIR -ErrorAction SilentlyContinue
+          Remove-Item Env:HEPHAESTUS_INTERNAL_PORT -ErrorAction SilentlyContinue
+          Remove-Item Env:HEPHAESTUS_PORT -ErrorAction SilentlyContinue
+          Remove-Item Env:IBOS_HERMES_SECRET -ErrorAction SilentlyContinue
+
+          try {
+            if (Test-Path 'packages/shared/dist/index.js') { throw 'Precondition failed: Shared dist must start absent.' }
+            if (Test-Path 'packages/kernel/dist/index.js') { throw 'Precondition failed: Kernel dist must start absent.' }
+
+            # The token is pre-created and HEPHAESTUS_PAIRING=0, so this path emits no one-time pairing code.
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install-efesto.ps1 -SkipNodeInstall -SkipShortcut
+            if ($LASTEXITCODE -ne 0) { throw "Installer failed with an existing Hermes boundary secret: $LASTEXITCODE" }
+            if (-not (Test-Path 'packages/shared/dist/index.js')) { throw 'Installer did not build the Shared runtime dependency.' }
+            if (-not (Test-Path 'packages/kernel/dist/index.js')) { throw 'Installer did not build the Kernel runtime.' }
+
+            Start-Sleep -Seconds 1
+            $bootstrap = node scripts/efesto-bootstrap.mjs | ConvertFrom-Json
+            if ($bootstrap.kernel -ne 'ready' -or -not $bootstrap.diagnostics.kernel.alive -or -not $bootstrap.diagnostics.kernel.owned -or -not $bootstrap.diagnostics.kernel.verified) {
+              throw "Installer did not recover the previously reproduced launcher death: $($bootstrap | ConvertTo-Json -Compress)"
+            }
+          }
+          finally {
+            pnpm efesto:launcher shutdown 2>$null | Out-Null
+          }

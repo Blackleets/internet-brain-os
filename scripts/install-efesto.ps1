@@ -118,6 +118,18 @@ try {
   Write-Step 'Installing verified workspace dependencies from the lockfile...'
   Invoke-Pnpm @('install', '--frozen-lockfile') 'Dependency installation failed'
 
+  Write-Step 'Building the trusted Kernel runtime and its internal project references...'
+  Invoke-Pnpm @('exec', 'tsc', '-b', 'packages/kernel/tsconfig.json') 'Kernel runtime build failed'
+
+  $sharedRuntime = Join-Path $RepoRoot 'packages\shared\dist\index.js'
+  $kernelRuntime = Join-Path $RepoRoot 'packages\kernel\dist\index.js'
+  if (-not (Test-Path $sharedRuntime)) {
+    throw 'Kernel dependency build completed but packages\shared\dist\index.js is missing.'
+  }
+  if (-not (Test-Path $kernelRuntime)) {
+    throw 'Kernel runtime build completed but packages\kernel\dist\index.js is missing.'
+  }
+
   Write-Step 'Building the browser extension bundle...'
   Invoke-Pnpm @('build:extension') 'Extension build failed'
 
