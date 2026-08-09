@@ -3,6 +3,7 @@ import type { IsoDateTime } from '@internet-brain-os/shared';
 import {
   isTerminalMemoryAuthorityState,
   type MemoryAuthorityActor,
+  type MemoryAuthorityActorType,
   type MemoryAuthorityState,
 } from './memory-authority-lifecycle';
 
@@ -147,6 +148,9 @@ function normalizeRequest(request: MemoryRecoveryReviewRequest): MemoryRecoveryR
   if (!Number.isSafeInteger(request.terminalRevision) || request.terminalRevision < 0) {
     throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', 'terminalRevision must be a non-negative safe integer.');
   }
+  if (!['approved_new_candidate', 'denied'].includes(request.outcome)) {
+    throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', 'Unsupported recovery review outcome.');
+  }
   const requestedBy = normalizeActor(request.requestedBy, 'requestedBy');
   const reviewer = normalizeActor(request.reviewer, 'reviewer');
   if (!['human', 'founder'].includes(reviewer.type)) {
@@ -203,7 +207,12 @@ function normalizeRequest(request: MemoryRecoveryReviewRequest): MemoryRecoveryR
   };
 }
 
+const ACTOR_TYPES: readonly MemoryAuthorityActorType[] = ['kernel', 'human', 'founder', 'recovery'];
+
 function normalizeActor(actor: MemoryAuthorityActor, field: string): MemoryAuthorityActor {
+  if (!actor || !ACTOR_TYPES.includes(actor.type)) {
+    throw new MemoryRecoveryReviewConflictError('INVALID_INPUT', `${field}.type is invalid.`);
+  }
   return { id: required(actor.id, `${field}.id`), type: actor.type };
 }
 
