@@ -77,7 +77,11 @@ Critical epistemic rule: **search snippet ≠ Evidence**. Agent text never becom
 
 ## G4 final freeze
 
-`internal.53` is frozen and non-promotable because its final adversarial freeze test referenced an obsolete source filename after the package artifact had already been produced. `internal.54` is also frozen and non-promotable because the complete suite found one continuity-contract omission in this checkpoint after its package artifact had already been produced: the literal phrase `machine-checkable release readiness` had been compacted away. Neither failure changed runtime behavior. `internal.55` is the corrected final G4 implementation candidate; no additional behavior belongs in this freeze.
+`internal.53` is frozen and non-promotable because its final adversarial freeze test referenced an obsolete source filename after the package artifact had already been produced. `internal.54` is also frozen and non-promotable because the complete suite found one continuity-contract omission in this checkpoint after its package artifact had already been produced: the literal phrase `machine-checkable release readiness` had been compacted away. Neither failure changed runtime behavior. `internal.55` is the frozen G4 implementation candidate and must never be reused.
+
+### UAT truthfulness hardening — `internal.56` candidate
+
+Pre-UAT audit found one cross-surface truth gap without weakening the G4 security gate: when Hermes was installed but automatic read-only certification failed, the claim gate correctly persisted `automaticBlock`, but Shared Goal Truth discarded that block and clients could render the Mission as queued indefinitely. `internal.56` is the bounded corrective candidate: preserve the block reason in the read projection, map blocked work to non-animated failed work for backward-safe clients, render explicit blocked state on extension/web, and keep the persisted Mission/gates unchanged. The UAT examples are also constrained to the real 120-character Goal-title contract and explicit categories so the founder can execute them through the product UI.
 
 ## Canonical CI/release gate
 
@@ -106,7 +110,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53` and `.54` remain
 
 ## What remains after G4 implementation merge
 
-1. Run manual UAT on the exact green internal package using a real public-web Goal and verify the full Goal → Evidence-backed Find journey without unauthorized side effects.
+1. Qualify immutable `internal.56` across the full automated package matrix, then run manual UAT on that exact green package using a real public-web Goal and verify the full Goal → Evidence-backed Find journey without unauthorized side effects.
 2. Establish product baselines before growth claims: Goal → Useful Find Rate, Time to First Useful Find, Repeat Goal Usage, retention and willingness-to-pay; keep unauthorized actions at zero.
 3. Improve onboarding/distribution from evidence, not speculative feature count.
 4. Treat scheduling expansion, cross-device authority and irreversible actions as separate security slices.

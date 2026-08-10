@@ -39,6 +39,9 @@ export interface GoalSurfaceMissionRecord {
   readonly completedAt?: string;
   readonly attempt?: number;
   readonly limitation?: string;
+  readonly automaticBlock?: {
+    readonly reason: string;
+  };
   readonly lastFailure?: {
     readonly reason?: string;
     readonly recordedAt?: string;
@@ -58,6 +61,7 @@ export interface GoalSurfaceMissionSnapshot {
   readonly updatedAt: string;
   readonly attempt?: number;
   readonly limitation?: string;
+  readonly blockedReason?: string;
   readonly findCount?: number;
 }
 
@@ -170,6 +174,7 @@ type NormalizedMission = {
   readonly updatedAt: string;
   readonly attempt?: number;
   readonly limitation?: string;
+  readonly blockedReason?: string;
   readonly findCount?: number;
 };
 
@@ -258,6 +263,9 @@ function normalizeMission(value: GoalSurfaceMissionRecord, index: number): Norma
   const limitation = value.limitation === undefined
     ? undefined
     : requireText(value.limitation, `missions[${index}].limitation`, 500);
+  const blockedReason = value.automaticBlock === undefined
+    ? undefined
+    : normalizeAutomaticBlockReason(value.automaticBlock, index);
   const promoted = isRecord(value.resultSummary) ? value.resultSummary.opportunitiesPromoted : undefined;
   if (promoted !== undefined && (!Number.isSafeInteger(promoted) || Number(promoted) < 0)) {
     throw new GoalSurfaceSnapshotInputError(`missions[${index}].resultSummary.opportunitiesPromoted must be a non-negative safe integer.`);
@@ -272,8 +280,16 @@ function normalizeMission(value: GoalSurfaceMissionRecord, index: number): Norma
     updatedAt,
     ...(value.attempt !== undefined ? { attempt: Number(value.attempt) } : {}),
     ...(limitation ? { limitation } : {}),
+    ...(blockedReason ? { blockedReason } : {}),
     ...(promoted !== undefined ? { findCount: Number(promoted) } : {}),
   };
+}
+
+function normalizeAutomaticBlockReason(value: unknown, index: number): string {
+  if (!isRecord(value)) {
+    throw new GoalSurfaceSnapshotInputError(`missions[${index}].automaticBlock must be an object.`);
+  }
+  return requireText(value.reason, `missions[${index}].automaticBlock.reason`, 240);
 }
 
 function projectMission(mission: NormalizedMission): GoalSurfaceMissionSnapshot {
@@ -286,11 +302,13 @@ function projectMission(mission: NormalizedMission): GoalSurfaceMissionSnapshot 
     updatedAt: mission.updatedAt,
     ...(mission.attempt !== undefined ? { attempt: mission.attempt } : {}),
     ...(mission.limitation ? { limitation: mission.limitation } : {}),
+    ...(mission.blockedReason ? { blockedReason: mission.blockedReason } : {}),
     ...(mission.findCount !== undefined ? { findCount: mission.findCount } : {}),
   };
 }
 
 function deriveWorkState(mission: NormalizedMission): GoalSurfaceWorkState {
+  if (mission.blockedReason) return 'failed';
   if (mission.executionPhase === 'investigating') return 'investigating';
   if (mission.executionPhase === 'verifying') return 'verifying';
   if (mission.executionPhase === 'forged') return 'forged';

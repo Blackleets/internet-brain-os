@@ -43,15 +43,22 @@ export function presentGoalSurface(surface) {
     autonomyLabel: autonomyLabel(surface.goal.policySummary?.autonomyLevel),
     approvalLabel: approvalLabel(surface.goal.policySummary?.approvalPolicy),
     workState: mission?.workState ?? 'idle',
-    workLabel: WORK_COPY[mission?.workState ?? 'idle'] ?? 'Kernel state unavailable',
+    workLabel: mission?.blockedReason
+      ? 'Automatic research blocked safely'
+      : WORK_COPY[mission?.workState ?? 'idle'] ?? 'Kernel state unavailable',
     missionId: mission?.id,
     findCount: mission?.findCount,
-    canResearch: surface.goal.status === 'active' && !isActiveWork(mission?.workState),
+    blockedReason: mission?.blockedReason,
+    canResearch: surface.goal.status === 'active'
+      && (!mission?.blockedReason || isReauthorizableBlock(mission.blockedReason))
+      && !isActiveWork(mission?.workState),
   };
 }
 
 export function forgeActivityForGoalSurface(surface) {
   const workState = surface?.mission?.workState;
+  const blockedReason = surface?.mission?.blockedReason;
+  if (blockedReason) return blockedActivity(blockedReason);
   if (!workState || workState === 'idle' || workState === 'completed') return FORGE_ACTIVITY.idle;
   if (workState === 'waiting_for_agent') return FORGE_ACTIVITY.waiting;
   if (workState === 'queued') return FORGE_ACTIVITY.queued;
@@ -65,6 +72,20 @@ export function forgeActivityForGoalSurface(surface) {
   }
   if (workState === 'failed') return FORGE_ACTIVITY.failed;
   return FORGE_ACTIVITY.idle;
+}
+
+function blockedActivity(reason) {
+  const detail = ({
+    runtime_read_only_unverified: 'Hermes was not run because its safe search-only runtime could not be certified.',
+    authorization_missing: 'Automatic continuation has no trusted Goal authorization receipt.',
+    authorization_revision_mismatch: 'The Goal changed after authorization. Re-authorize research for the current revision.',
+    goal_not_active: 'The Goal is no longer active, so automatic research remains stopped.',
+  })[reason] ?? `The Kernel denied automatic continuation (${reason}).`;
+  return { label: 'Automatic research blocked', detail, tone: 'error' };
+}
+
+function isReauthorizableBlock(reason) {
+  return ['authorization_missing', 'authorization_revision_mismatch', 'authorization_rejected', 'authorization_scope_mismatch'].includes(reason);
 }
 
 function isActiveWork(workState) {

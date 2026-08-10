@@ -46,6 +46,43 @@ describe('extension Shared Goal Truth presentation', () => {
     expect(presentGoalSurface(surface('queued')).canResearch).toBe(false);
   });
 
+  it('renders automatic claim denial as visibly blocked and never offers another automatic research click', () => {
+    const blocked = surface('failed', {
+      mission: {
+        status: 'queued',
+        executionPhase: 'queued',
+        blockedReason: 'runtime_read_only_unverified',
+        limitation: 'Automatic read-only continuation blocked: runtime_read_only_unverified',
+      },
+    });
+    expect(presentGoalSurface(blocked)).toMatchObject({
+      workState: 'failed',
+      workLabel: 'Automatic research blocked safely',
+      blockedReason: 'runtime_read_only_unverified',
+      canResearch: false,
+    });
+    expect(forgeActivityForGoalSurface(blocked)).toEqual({
+      label: 'Automatic research blocked',
+      detail: 'Hermes was not run because its safe search-only runtime could not be certified.',
+      tone: 'error',
+    });
+  });
+
+  it('allows explicit re-authorization when the block is caused by missing or stale authorization', () => {
+    const blocked = surface('failed', {
+      mission: {
+        status: 'queued',
+        executionPhase: 'queued',
+        blockedReason: 'authorization_revision_mismatch',
+      },
+    });
+    expect(presentGoalSurface(blocked)).toMatchObject({
+      workState: 'failed',
+      blockedReason: 'authorization_revision_mismatch',
+      canResearch: true,
+    });
+  });
+
   it('never upgrades completed into forged success without persisted forged work state', () => {
     expect(forgeActivityForGoalSurface(surface('completed'))).toEqual({
       label: 'The forge is ready', detail: 'Create a Goal or analyze a public page.', tone: 'idle',

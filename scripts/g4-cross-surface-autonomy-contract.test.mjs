@@ -41,6 +41,18 @@ describe('G4 automatic read-only cross-surface contract', () => {
     expect(refresher).toContain('latest.forgedAt');
   });
 
+  it('projects an automatic policy block without pretending queued work is progressing', () => {
+    const goalSnapshot = source('packages/kernel/src/goal/goal-surface-snapshot.ts');
+    const extensionPresentation = source('apps/extension/src/goal-surface-presentation.js');
+    const dashboard = source('apps/dashboard/components/efesto-product-shell.tsx');
+    expect(goalSnapshot).toContain('automaticBlock');
+    expect(goalSnapshot).toContain('blockedReason');
+    expect(goalSnapshot).toContain("if (mission.blockedReason) return 'failed'");
+    expect(extensionPresentation).toContain('Automatic research blocked');
+    expect(extensionPresentation).toContain('runtime_read_only_unverified');
+    expect(dashboard).toContain("if (workState === 'failed') return 'failed'");
+  });
+
   it('does not grant side-effect or memory authority from cross-surface state', () => {
     const verifier = source('apps/local-kernel/mission-search-candidate-verifier.mjs');
     const claimGate = source('apps/local-kernel/automatic-mission-claim-gate.mjs');
