@@ -109,30 +109,47 @@ Explicitly `not_measurable` until the required ledger exists:
 
 The scorecard is exposed additively as `profile.productScorecard` through the existing authenticated read-only `GET /api/preferences`. It uploads nothing, creates no telemetry endpoint, grants no capability and does not alter Goal, Evidence, Mission, Opportunity or memory authority.
 
-## G5.2 — responsive dashboard scorecard
+## G5.2 — responsive dashboard scorecard ✅
 
-The implementation consumes the G5.1 Kernel scorecard on the active `EfestoProductShell` Home surface without creating a second metric truth.
+PR #209 merged at `97f47669d8d0ef16a3127db63a503ce33a9cdaad`. `internal.59` is frozen after the complete pre-merge and post-merge automated matrix passed, including Chromium/Playwright and exact packaged install/repair on Windows 2022 and Windows 2025.
+
+The dashboard consumes the G5.1 Kernel scorecard on the active `EfestoProductShell` Home surface without creating a second metric truth.
 
 - `/api/preferences` is loaded in parallel with the other authenticated Overview reads.
 - The dashboard parser accepts only `efesto.product-scorecard.v1`, `sourceOfTruth: local_kernel`, `privacy.mode: local_only` and `externalTelemetry: false`.
 - `not_measurable` requires `value: null`; it can never be rendered as a fabricated zero.
 - The active Home surface receives `snapshot.productScorecard`; the visual component performs formatting only and has no fetch, Kernel client, telemetry or product-metric calculation path.
 - A scorecard failure degrades only the scorecard panel; Cases, Goals, Missions, Finds and system readiness remain usable.
-- The panel exposes Goal Useful Find Rate, Time to First Useful Find, Mission completion, useful/saved Find share, local coverage and guardrail rates while explicitly labelling local-only privacy.
-- 390×844 mobile-width must reflow without horizontal overflow.
+- Desktop and 390×844 acceptance verify the visible Useful Find Rate, Time to First Useful Find and `Solo local · sin telemetría externa` statement without horizontal overflow.
 
 ### `internal.58` frozen failure
 
-`internal.58` is frozen and non-promotable. Architecture, dependency audit, release-readiness, typecheck, the full Vitest suite, build, Windows launcher, Windows first-run and exact internal package generation were green, but Chromium acceptance failed after the package had already been produced. Root cause was bounded to the E2E Kernel fixture: the active dashboard correctly added authenticated `GET /api/preferences`, while `apps/dashboard/e2e/kernel-fixture.mjs` still lacked that route, producing console 404 errors. No production assertion, scorecard calculation, authority boundary or mobile-overflow assertion failed.
+`internal.58` is frozen and non-promotable. Architecture, dependency audit, release-readiness, typecheck, the full Vitest suite, build, Windows launcher, Windows first-run and exact internal package generation were green, but Chromium acceptance failed after the package had already been produced. Root cause was bounded to the E2E Kernel fixture: the active dashboard correctly added authenticated `GET /api/preferences`, while the fixture still lacked that route and produced console 404 errors. Production scorecard behavior and authority were unchanged.
 
-### `internal.59` corrective candidate
+### `internal.59` corrective freeze ✅
 
-`internal.59` keeps the G5.2 production implementation unchanged and corrects only the acceptance boundary:
+`internal.59` kept the G5.2 production implementation unchanged and corrected only the acceptance boundary: the E2E fixture serves a contract-valid local-only scorecard and Playwright verifies that same scorecard on desktop and 390×844. The full matrix passed before merge and repeated green on `main` after merge.
 
-- the E2E Kernel fixture now serves a contract-valid local-only `profile.productScorecard` through authenticated `/api/preferences`;
-- Playwright explicitly verifies the visible local scorecard, Useful Find Rate, Time to First Useful Find and the `Solo local · sin telemetría externa` statement;
-- disconnect still renders truthful unavailable metrics rather than stale or fabricated values;
-- the 390×844 journey now verifies the scorecard while retaining the existing horizontal-overflow checks.
+## G5.3 — authentic public-web journey acceptance
+
+Candidate `internal.60` strengthens the existing explicit `pnpm hermes:acceptance:live` path instead of creating a second executor or production code path.
+
+The existing live checks remain:
+
+- **L1** authentic Hermes reaches terminal `completed` state;
+- **L2** attempts remain bounded at three or fewer.
+
+G5.3 adds provenance checks:
+
+- **L3** authentic discovery persisted at least one bounded `searchCandidate`;
+- **L4** Kernel `web.read` independently verified at least one candidate and created Evidence;
+- **L5** at least one promoted Find matches the exact tested Goal;
+- **L6** the Find resolves through Case/Evidence to the same Mission and candidate with `kernel-web-read-v1`, a `web-read:` receipt, fetched text and content hash;
+- **L7** Shared Goal Truth reports `sourceOfTruth: kernel`, the same Mission id and `workState: forged`.
+
+The live probe uses a bounded public-learning Goal and an isolated temporary Kernel data directory. It collects proof only through authenticated Kernel APIs (`/api/agent-missions`, `/api/opportunities`, `/api/browser/case/:id`, `/api/goal-surfaces/:goalId`), not by reading the store directly. Search snippets remain non-Evidence; the proof is based on provenance rather than text inequality.
+
+Default CI remains deterministic: the real Internet/Hermes journey runs only through the already explicit live command. Normal CI runs unit/contract tests for the assessment logic without requiring Internet or a live account.
 
 ## Canonical CI/release gate
 
@@ -161,10 +178,10 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54` and `.58`
 
 ## What remains
 
-1. Qualify immutable `internal.59` across the complete automated release matrix.
-2. Run manual UAT on one exact green candidate using a real public-web Goal and verify Goal → Evidence-backed Find without unauthorized side effects.
-3. Use the Kernel-owned scorecard to establish real baselines from observed usage before setting growth targets; never invent retention, willingness-to-pay or cohort metrics that the local data cannot support.
-4. Improve the next product slice only from those measured baselines and UAT findings.
+1. Qualify immutable `internal.60` across the complete deterministic automated release matrix.
+2. Execute the explicit live acceptance on an environment with authentic Hermes + public Internet and require L1→L7; a green deterministic CI run alone does not claim this live proof.
+3. Run manual UAT on one exact green packaged candidate using a real public-web Goal and verify Goal → Evidence-backed Find without unauthorized side effects.
+4. Use the Kernel-owned scorecard to establish real baselines from observed usage before setting growth targets; never invent retention, willingness-to-pay or cohort metrics that the local data cannot support.
 5. Treat scheduling expansion, cross-device authority and irreversible actions as separate security slices.
 
 Issue #186 remains the local-first business scorecard.
@@ -172,7 +189,7 @@ Issue #186 remains the local-first business scorecard.
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen; G5.1 adds a Kernel-local product value scorecard and G5.2 consumes it from the active responsive dashboard without recalculating product truth. Search snippets are never Evidence. Never auto-promote R1/R2/R3 side effects, introduce central telemetry, or imply phone→PC authority. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen; G5.1 measures local product value, G5.2 surfaces the same Kernel-owned scorecard on the active responsive dashboard, and G5.3 strengthens the existing explicit live Hermes acceptance to require Candidate → Kernel Evidence → Goal-linked Find → Shared Goal Truth provenance. Search snippets are never Evidence. Never auto-promote R1/R2/R3 side effects, introduce central telemetry, or imply phone→PC authority. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule

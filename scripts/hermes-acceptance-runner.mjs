@@ -12,16 +12,24 @@ import {
   checkReplayRejectedAfterCompletion, checkTerminalStateOwnedByKernel,
   checkUnauthenticatedAccessRejected,
 } from './hermes-acceptance-checks.mjs';
+import { assessLivePublicWebJourney } from './hermes-live-journey-assessment.mjs';
 
 const PORT = Number(process.env.HEPHAESTUS_ACCEPTANCE_PORT ?? 4310);
 const INTERNAL_PORT = Number(process.env.HEPHAESTUS_ACCEPTANCE_INTERNAL_PORT ?? 4311);
 const LIVE = process.argv.includes('--live');
 const REPORT_PATH = process.env.HEPHAESTUS_ACCEPTANCE_REPORT ?? '.hephaestus/acceptance-report.json';
 
-const GOAL = {
+const BOUNDARY_GOAL = {
   title: 'Acceptance probe: public research boundary',
   categories: ['tool'],
   keywords: ['open source observability tooling'],
+  priority: 2,
+};
+
+const LIVE_VALUE_GOAL = {
+  title: 'Find a free public AI course with certification, enrollment and curriculum details',
+  categories: ['learning'],
+  keywords: ['free course', 'certification', 'training program', 'enroll', 'curriculum', 'AI'],
   priority: 2,
 };
 
@@ -57,7 +65,8 @@ export async function runAcceptance(options = {}) {
 
     checks.push(await checkUnauthenticatedAccessRejected({ baseUrl }));
 
-    const goal = await api(baseUrl, token, '/api/goals', { method: 'POST', body: GOAL });
+    const goalInput = live ? LIVE_VALUE_GOAL : BOUNDARY_GOAL;
+    const goal = await api(baseUrl, token, '/api/goals', { method: 'POST', body: goalInput });
     if (goal.status !== 201) throw new Error(`Goal creation failed with HTTP ${goal.status}`);
     const goalId = goal.body.goal.id;
     checks.push(await checkConsentRequired({ baseUrl, token, goalId }));
@@ -82,11 +91,13 @@ export async function runAcceptance(options = {}) {
         passed: Number(outcome.attempt ?? 0) <= 3,
         detail: `attempt=${outcome.attempt ?? 0}`,
       });
+      const journey = await readLiveJourney(baseUrl, token, goalId, outcome);
+      checks.push(...assessLivePublicWebJourney(journey));
     } else {
       const provision = async (suffix) => {
         const created = await api(baseUrl, token, '/api/goals', {
           method: 'POST',
-          body: { ...GOAL, title: `${GOAL.title} ${suffix}` },
+          body: { ...BOUNDARY_GOAL, title: `${BOUNDARY_GOAL.title} ${suffix}` },
         });
         if (created.status !== 201) throw new Error(`Goal ${suffix} failed with HTTP ${created.status}`);
         const id = created.body.goal.id;
@@ -144,6 +155,28 @@ export async function runAcceptance(options = {}) {
   };
   await writeFile(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8').catch(() => {});
   return report;
+}
+
+async function readLiveJourney(baseUrl, token, goalId, mission) {
+  const opportunitiesResponse = await api(baseUrl, token, '/api/opportunities');
+  if (opportunitiesResponse.status !== 200) throw new Error(`Opportunity read failed with HTTP ${opportunitiesResponse.status}`);
+  const opportunities = Array.isArray(opportunitiesResponse.body?.opportunities) ? opportunitiesResponse.body.opportunities : [];
+  const linkedFinds = opportunities.filter((item) => Array.isArray(item?.goalMatches) && item.goalMatches.some((match) => match?.goalId === goalId));
+  const caseIds = [...new Set(linkedFinds.map((item) => item?.caseId).filter((value) => typeof value === 'string' && value))];
+  const caseDetails = [];
+  for (const caseId of caseIds) {
+    const detail = await api(baseUrl, token, `/api/browser/case/${encodeURIComponent(caseId)}`);
+    if (detail.status === 200 && detail.body?.ok === true) caseDetails.push(detail.body);
+  }
+  const surfaceResponse = await api(baseUrl, token, `/api/goal-surfaces/${encodeURIComponent(goalId)}`);
+  if (surfaceResponse.status !== 200) throw new Error(`Shared Goal Truth read failed with HTTP ${surfaceResponse.status}`);
+  return {
+    goalId,
+    mission,
+    opportunities,
+    caseDetails,
+    surface: surfaceResponse.body?.surface,
+  };
 }
 
 async function waitForTerminal(baseUrl, token, missionId, timeoutMs = 15 * 60_000) {
