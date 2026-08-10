@@ -112,9 +112,9 @@ The existing explicit `pnpm hermes:acceptance:live` path now requires:
 
 Default CI remains deterministic/offline. **The harness is green; authentic Internet/Hermes L1→L7 is not claimed as live-proven until the explicit live command is run in a suitable environment.**
 
-## G5.4 — Kernel-owned one-line Goal intent
+## G5.4 — Kernel-owned one-line Goal intent ✅ implementation / internal.61 frozen failure
 
-Candidate `internal.61` preserves the simple Home experience while enriching discovery intent in the Kernel before persistence.
+Candidate `internal.61` preserved the simple Home experience while enriching discovery intent in the Kernel before persistence.
 
 - The active Home continues to submit only the natural Goal title, lightweight client keywords and priority; no category/price/location form is introduced.
 - Explicit supported categories always win; inference runs only when categories are absent.
@@ -124,6 +124,20 @@ Candidate `internal.61` preserves the simple Home experience while enriching dis
 - Freelance UAT intent should persist `job` + `client` and `20` + `30`; hourly currency alone must not infer shopping `offer`.
 - Unsupported explicit categories still fail closed; generic text with no discovery signal remains invalid.
 - Goal validation itself creates no Mission, research authorization, network request or side-effect authority.
+
+`internal.61` is frozen as a failed release qualification. The product behavior passed, but the release matrix exposed a UID-0-specific persistence test and an outdated boundary-only Hermes acceptance harness, so that candidate must never be reused or relabeled.
+
+## Internal.62 — release qualification repair candidate
+
+`internal.62` keeps the G5.4 product behavior unchanged and repairs only the qualification boundaries:
+
+- durable authority persistence failure is tested through a typed filesystem boundary, so the atomic cleanup invariant is deterministic on Windows, ordinary POSIX users and UID 0;
+- boundary-only Hermes acceptance uses an explicit trusted loopback UI origin and an isolated read-only-ready runtime contract without requiring an authentic Hermes install;
+- live acceptance still requires authentic Hermes and public Internet;
+- an exact completed-result retry no longer re-runs Obsidian projection or overwrites the persisted terminal summary/receipt;
+- the boundary harness proves authorization, SSRF rejection, forged-lease rejection, bounded batches, Kernel-owned terminal state, deduplication and exact-retry idempotency in 14/14 checks.
+
+Local Linux qualification on 2026-08-10 is green for frozen install, architecture, production audit, typecheck, 185 test files / 1045 tests, production build, `verify:first-run`, `release:verify`, extension packaging and offline Hermes boundary acceptance. Chromium could not be downloaded in the current restricted workspace, and Windows/package jobs remain pending on the exact published commit; neither is claimed as passed here.
 
 ## Canonical CI/release gate
 
@@ -141,7 +155,7 @@ Every affected candidate must pass on one unchanged SHA:
 10. exact internal-package generation and SHA binding;
 11. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
-Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54` and `.58` remain frozen failures and must never be reused.
+Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58` and `.61` remain frozen failures and must never be reused.
 
 ## Distribution and public launch
 
@@ -152,7 +166,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54` and `.58`
 
 ## What remains
 
-1. Qualify immutable `internal.61` across the complete automated release matrix.
+1. Qualify immutable `internal.62` across Chromium, Windows launcher/first-run, exact package SHA and packaged fresh-install/repair jobs on Windows 2022 and Windows 2025.
 2. Run the explicit G5.3 live acceptance where authentic Hermes + public Internet are available; require L1→L7 and do not substitute deterministic CI for that proof.
 3. Run UAT-1→UAT-6 on one exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
 4. Use the Kernel-owned scorecard to establish real baselines before growth/retention/willingness-to-pay claims.

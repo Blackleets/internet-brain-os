@@ -31,6 +31,8 @@ Feature: Agent Hub completion is atomic, idempotent and recoverable
     When the same completion request reaches the Kernel again
     Then the Kernel returns the completed mission idempotently
     And it does not create duplicate Evidence or Opportunities
+    And it does not run the Obsidian projection again
+    And the persisted projection receipt and terminal result summary remain unchanged
 
   Scenario: Competing completion requests
     Given two completion requests race using the same valid lease

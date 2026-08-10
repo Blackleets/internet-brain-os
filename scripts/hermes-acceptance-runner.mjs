@@ -3,13 +3,13 @@ import { writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { detectHermesRuntime } from '../apps/local-kernel/hermes-runtime.mjs';
 import {
-  SCHEMA, api, assertLoopback, createIsolatedDataDir, isPortFree, redact, removeDataDir,
+  ACCEPTANCE_ORIGIN, SCHEMA, api, assertLoopback, createIsolatedDataDir, isPortFree, redact, removeDataDir,
   sleep, startKernel, stopKernel, waitForHealth,
 } from './hermes-acceptance-lib.mjs';
 import {
   checkAuthorityFieldsIgnored, checkConsentRequired, checkDeduplication,
   checkHostileUrlsRejected, checkInvalidLeaseRejected, checkOversizedPayloadRejected,
-  checkReplayRejectedAfterCompletion, checkTerminalStateOwnedByKernel,
+  checkReplayIdempotentAfterCompletion, checkTerminalStateOwnedByKernel,
   checkUnauthenticatedAccessRejected,
 } from './hermes-acceptance-checks.mjs';
 import { assessLivePublicWebJourney } from './hermes-live-journey-assessment.mjs';
@@ -38,7 +38,12 @@ export async function runAcceptance(options = {}) {
   const started = new Date().toISOString();
   const runtime = await detectHermesRuntime();
   const preflight = [
-    { id: 'P1', name: 'Hermes runtime detected', passed: runtime.available, detail: `source=${runtime.source}` },
+    {
+      id: 'P1',
+      name: live ? 'Authentic Hermes runtime detected' : 'Hermes runtime is optional for boundary-only acceptance',
+      passed: !live || runtime.available,
+      detail: `required=${live} available=${runtime.available} source=${runtime.source}`,
+    },
     { id: 'P2', name: 'Node runtime supports the Kernel', passed: Number(process.versions.node.split('.')[0]) >= 20, detail: `node=${process.versions.node}` },
   ];
 
@@ -74,6 +79,7 @@ export async function runAcceptance(options = {}) {
     if (live) {
       const mission = await api(baseUrl, token, `/api/goals/${encodeURIComponent(goalId)}/missions`, {
         method: 'POST',
+        origin: ACCEPTANCE_ORIGIN,
         body: { agent: 'hermes', cadence: 'manual', confirmed: true },
       });
       if (mission.status !== 201) throw new Error(`Mission creation failed with HTTP ${mission.status}`);
@@ -103,6 +109,7 @@ export async function runAcceptance(options = {}) {
         const id = created.body.goal.id;
         const made = await api(baseUrl, token, `/api/goals/${encodeURIComponent(id)}/missions`, {
           method: 'POST',
+          origin: ACCEPTANCE_ORIGIN,
           body: { agent: 'hermes', cadence: 'manual', confirmed: true },
         });
         if (made.status !== 201) throw new Error(`Mission ${suffix} failed with HTTP ${made.status}`);
@@ -129,7 +136,7 @@ export async function runAcceptance(options = {}) {
       const dedupe = await provision('dedupe');
       checks.push(await checkDeduplication(dedupe));
       checks.push(await checkTerminalStateOwnedByKernel(dedupe));
-      checks.push(await checkReplayRejectedAfterCompletion(dedupe));
+      checks.push(await checkReplayIdempotentAfterCompletion(dedupe));
     }
   } catch (error) {
     blocked = redact(error instanceof Error ? error.message : error);

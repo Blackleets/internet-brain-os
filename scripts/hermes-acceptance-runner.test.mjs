@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { HOSTILE_URLS } from './hermes-acceptance-checks.mjs';
-import { assertLoopback, redact } from './hermes-acceptance-lib.mjs';
+import { ACCEPTANCE_ORIGIN, assertLoopback, redact } from './hermes-acceptance-lib.mjs';
 
 describe('hermes acceptance runner helpers', () => {
   it('rejects any non-loopback Kernel target', () => {
@@ -27,5 +27,9 @@ describe('hermes acceptance runner helpers', () => {
     for (const marker of ['127.0.0.1', 'localhost', '10.0.0.5', '192.168.', '172.16.', '169.254.', '[::1]', 'fd00::', 'fe80::', 'user:secret@', 'file://', 'access_token=']) {
       expect(joined).toContain(marker);
     }
+  });
+
+  it('uses an explicit trusted loopback origin for interactive acceptance', () => {
+    expect(ACCEPTANCE_ORIGIN).toBe('http://127.0.0.1:4173');
   });
 });

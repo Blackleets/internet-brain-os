@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import * as nodeFileSystem from 'node:fs';
 import { dirname } from 'node:path';
 import {
   InMemoryMemoryAuthorityReceiptRepository,
@@ -15,8 +15,16 @@ interface DurableReceiptFile {
   readonly receipts: readonly MemoryAuthorityTransitionReceipt[];
 }
 
+export type DurableMemoryAuthorityReceiptFileSystem = Pick<
+  typeof nodeFileSystem,
+  'mkdirSync' | 'readFileSync' | 'renameSync' | 'rmSync' | 'writeFileSync'
+>;
+
 export class DurableMemoryAuthorityReceiptRepository implements MemoryAuthorityReceiptRepository {
-  constructor(private readonly filePath: string) {
+  constructor(
+    private readonly filePath: string,
+    private readonly fileSystem: DurableMemoryAuthorityReceiptFileSystem = nodeFileSystem,
+  ) {
     if (!filePath?.trim()) throw new MemoryAuthorityReceiptConflictError('INVALID_INPUT', 'Authority receipt file path is required.');
   }
 
@@ -55,7 +63,7 @@ export class DurableMemoryAuthorityReceiptRepository implements MemoryAuthorityR
   private readReceipts(): readonly MemoryAuthorityTransitionReceipt[] {
     let raw: string;
     try {
-      raw = readFileSync(this.filePath, 'utf8');
+      raw = this.fileSystem.readFileSync(this.filePath, 'utf8');
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
       throw error;
@@ -79,14 +87,14 @@ export class DurableMemoryAuthorityReceiptRepository implements MemoryAuthorityR
 
   private persist(receipts: readonly MemoryAuthorityTransitionReceipt[]): void {
     const directory = dirname(this.filePath);
-    mkdirSync(directory, { recursive: true });
+    this.fileSystem.mkdirSync(directory, { recursive: true });
     const temporary = `${this.filePath}.tmp-${process.pid}-${Date.now()}`;
     const body = `${JSON.stringify({ version: 1, receipts }, null, 2)}\n`;
     try {
-      writeFileSync(temporary, body, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
-      renameSync(temporary, this.filePath);
+      this.fileSystem.writeFileSync(temporary, body, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+      this.fileSystem.renameSync(temporary, this.filePath);
     } catch (error) {
-      try { rmSync(temporary, { force: true }); } catch { /* cleanup best effort */ }
+      try { this.fileSystem.rmSync(temporary, { force: true }); } catch { /* cleanup best effort */ }
       throw error;
     }
   }

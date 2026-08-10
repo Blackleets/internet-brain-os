@@ -64,6 +64,7 @@ export type {
   MemoryAuthorityReceiptRepository,
   MemoryAuthorityTransitionReceipt,
 } from './memory-authority-receipt-repository';
+export type { DurableMemoryAuthorityReceiptFileSystem } from './durable-memory-authority-receipt-repository';
 export type {
   ExecuteMemoryAuthorityTransitionInput,
   ExecuteMemoryAuthorityTransitionResult,
