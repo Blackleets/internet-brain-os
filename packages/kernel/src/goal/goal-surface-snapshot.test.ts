@@ -129,6 +129,26 @@ describe('GoalSurfaceSnapshot v1', () => {
     expect(snapshot.mission?.workState).toBe('queued');
   });
 
+  it('projects an automatic claim denial as non-animated failed work with a machine-readable block reason', () => {
+    const snapshot = buildGoalSurfaceSnapshot({
+      goal: universalGoal(),
+      observedAt,
+      missions: [mission({
+        status: 'queued',
+        executionPhase: 'queued',
+        limitation: 'Automatic read-only continuation blocked: runtime_read_only_unverified',
+        automaticBlock: { reason: 'runtime_read_only_unverified' },
+      })],
+    });
+    expect(snapshot.mission).toMatchObject({
+      status: 'queued',
+      executionPhase: 'queued',
+      workState: 'failed',
+      blockedReason: 'runtime_read_only_unverified',
+      limitation: 'Automatic read-only continuation blocked: runtime_read_only_unverified',
+    });
+  });
+
   it('exposes the latest completed Mission outcome and Find count when no active work exists', () => {
     const snapshot = buildGoalSurfaceSnapshot({
       goal: universalGoal({ status: 'completed' }),
@@ -185,6 +205,11 @@ describe('GoalSurfaceSnapshot v1', () => {
       goal: universalGoal(),
       observedAt,
       missions: [{ ...mission(), resultSummary: { opportunitiesPromoted: -1 } }],
+    })).toThrowError(GoalSurfaceSnapshotInputError);
+    expect(() => buildGoalSurfaceSnapshot({
+      goal: universalGoal(),
+      observedAt,
+      missions: [{ ...mission(), automaticBlock: { reason: '' } }],
     })).toThrowError(GoalSurfaceSnapshotInputError);
   });
 });

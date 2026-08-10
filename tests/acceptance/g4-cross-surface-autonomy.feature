@@ -22,6 +22,15 @@ Feature: G4 automatic read-only work stays truthful across surfaces
     Then both surfaces consume the persisted forged workState
     And a completed Mission without forged remains visually calm
 
+  Scenario: A denied automatic claim is visibly blocked instead of looking queued
+    Given the Mission is persisted as queued after explicit Goal authorization
+    And the automatic claim gate denies continuation with runtime_read_only_unverified
+    When Shared Goal Truth is projected
+    Then the work state is non-animated failed with the blocked reason preserved
+    And the extension presents automatic research blocked safely
+    And the Control Center stops active-work motion through the failed work projection
+    And no client offers a broad-tool fallback or claims Hermes is researching
+
   Scenario: Automatic continuation never becomes memory authority
     Given web.search and web.read are authorized automatically
     Then neither UI state nor agent output can admit durable memory

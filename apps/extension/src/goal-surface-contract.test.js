@@ -32,6 +32,17 @@ describe('extension Shared Goal Truth contract', () => {
     expect(parseGoalSurfaces({ ok: true, surfaces: [surface] })).toEqual([surface]);
   });
 
+  it('preserves a Kernel-projected automatic block reason without exposing hidden runtime data', () => {
+    const blocked = {
+      ...surface,
+      mission: { ...surface.mission, status: 'queued', executionPhase: 'queued', workState: 'failed', blockedReason: 'runtime_read_only_unverified' },
+    };
+    expect(parseGoalSurfaces({ ok: true, surfaces: [blocked] })[0].mission).toMatchObject({
+      workState: 'failed',
+      blockedReason: 'runtime_read_only_unverified',
+    });
+  });
+
   it('accepts detail responses and Goals without a current Mission', () => {
     const idle = { ...surface, mission: undefined };
     expect(parseGoalSurface({ ok: true, surface: idle })).toEqual({ ...idle, goal: { ...idle.goal } });
@@ -43,6 +54,7 @@ describe('extension Shared Goal Truth contract', () => {
     ['goal.status', { ...surface, goal: { ...surface.goal, status: 'invented' } }],
     ['mission.workState', { ...surface, mission: { ...surface.mission, workState: 'thinking' } }],
     ['mission.findCount', { ...surface, mission: { ...surface.mission, findCount: -1 } }],
+    ['mission.blockedReason', { ...surface, mission: { ...surface.mission, blockedReason: '' } }],
   ])('fails closed for invalid %s', (_name, invalid) => {
     expect(() => parseGoalSurfaces({ ok: true, surfaces: [invalid] })).toThrow(GoalSurfaceContractError);
   });

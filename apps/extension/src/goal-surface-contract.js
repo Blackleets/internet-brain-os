@@ -75,6 +75,7 @@ function parseMission(value, path) {
     : enumeration(mission.executionPhase, EXECUTION_PHASES, `${path}.executionPhase`);
   const attempt = mission.attempt === undefined ? undefined : nonNegativeInteger(mission.attempt, `${path}.attempt`);
   const limitation = mission.limitation === undefined ? undefined : text(mission.limitation, `${path}.limitation`, 500);
+  const blockedReason = mission.blockedReason === undefined ? undefined : text(mission.blockedReason, `${path}.blockedReason`, 240);
   const findCount = mission.findCount === undefined ? undefined : nonNegativeInteger(mission.findCount, `${path}.findCount`);
   return {
     id: text(mission.id, `${path}.id`, 240),
@@ -85,6 +86,7 @@ function parseMission(value, path) {
     updatedAt: dateTime(mission.updatedAt, `${path}.updatedAt`),
     ...(attempt === undefined ? {} : { attempt }),
     ...(limitation === undefined ? {} : { limitation }),
+    ...(blockedReason === undefined ? {} : { blockedReason }),
     ...(findCount === undefined ? {} : { findCount }),
   };
 }
