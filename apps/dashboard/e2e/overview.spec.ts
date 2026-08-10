@@ -26,6 +26,15 @@ async function connect(page: Page): Promise<void> {
   await expect(page.getByRole('button', { name: /Kernel ready/ })).toBeVisible();
 }
 
+async function expectLocalScorecard(page: Page): Promise<void> {
+  await expect(page.getByRole('heading', { name: 'Valor del producto', exact: true })).toBeVisible();
+  await expect(page.getByText('Solo local · sin telemetría externa', { exact: true })).toBeVisible();
+  await expect(page.getByText('Goals con Find útil', { exact: true })).toBeVisible();
+  await expect(page.getByText('Tiempo al primer Find útil', { exact: true })).toBeVisible();
+  await expect(page.getByText('50%', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('5 min', { exact: true })).toBeVisible();
+}
+
 test('runs the Goal-first journey only after explicit confirmation', async ({ page }) => {
   const writes: string[] = [];
   page.on('request', (request) => { if (request.method() === 'POST') writes.push(new URL(request.url()).pathname); });
@@ -39,6 +48,7 @@ test('runs the Goal-first journey only after explicit confirmation', async ({ pa
   await connect(page);
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
   await expect(page.getByRole('img', { name: /Investigando/ })).toBeVisible();
+  await expectLocalScorecard(page);
 
   await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Auditar fuentes públicas');
   await page.getByRole('button', { name: 'Preparar Goal', exact: true }).click();
@@ -85,6 +95,7 @@ test('disconnect removes the session credential and returns truthful offline sta
   await expect(page.getByRole('button', { name: 'Conectar', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
   await expect(page.getByRole('img', { name: /Modo local desconectado/ })).toBeVisible();
+  await expect(page.getByText('Métricas temporalmente no disponibles', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.getItem('hephaestus.owner.connection.session.v1'))).toBeNull();
 });
 
@@ -141,6 +152,7 @@ test.describe('mobile Efesto product shell', () => {
     await page.getByRole('button', { name: 'Abrir menú', exact: true }).click();
     await page.getByRole('button', { name: 'Inicio', exact: true }).click();
     await expect(page.getByRole('img', { name: /Investigando/ })).toBeVisible();
+    await expectLocalScorecard(page);
     await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Busca oportunidades reales');
     const composerBox = await page.locator('.goal-dock').boundingBox();
     expect(composerBox).not.toBeNull();

@@ -111,7 +111,7 @@ The scorecard is exposed additively as `profile.productScorecard` through the ex
 
 ## G5.2 — responsive dashboard scorecard
 
-Candidate `internal.58` consumes the G5.1 Kernel scorecard on the active `EfestoProductShell` Home surface without creating a second metric truth.
+The implementation consumes the G5.1 Kernel scorecard on the active `EfestoProductShell` Home surface without creating a second metric truth.
 
 - `/api/preferences` is loaded in parallel with the other authenticated Overview reads.
 - The dashboard parser accepts only `efesto.product-scorecard.v1`, `sourceOfTruth: local_kernel`, `privacy.mode: local_only` and `externalTelemetry: false`.
@@ -120,6 +120,19 @@ Candidate `internal.58` consumes the G5.1 Kernel scorecard on the active `Efesto
 - A scorecard failure degrades only the scorecard panel; Cases, Goals, Missions, Finds and system readiness remain usable.
 - The panel exposes Goal Useful Find Rate, Time to First Useful Find, Mission completion, useful/saved Find share, local coverage and guardrail rates while explicitly labelling local-only privacy.
 - 390×844 mobile-width must reflow without horizontal overflow.
+
+### `internal.58` frozen failure
+
+`internal.58` is frozen and non-promotable. Architecture, dependency audit, release-readiness, typecheck, the full Vitest suite, build, Windows launcher, Windows first-run and exact internal package generation were green, but Chromium acceptance failed after the package had already been produced. Root cause was bounded to the E2E Kernel fixture: the active dashboard correctly added authenticated `GET /api/preferences`, while `apps/dashboard/e2e/kernel-fixture.mjs` still lacked that route, producing console 404 errors. No production assertion, scorecard calculation, authority boundary or mobile-overflow assertion failed.
+
+### `internal.59` corrective candidate
+
+`internal.59` keeps the G5.2 production implementation unchanged and corrects only the acceptance boundary:
+
+- the E2E Kernel fixture now serves a contract-valid local-only `profile.productScorecard` through authenticated `/api/preferences`;
+- Playwright explicitly verifies the visible local scorecard, Useful Find Rate, Time to First Useful Find and the `Solo local · sin telemetría externa` statement;
+- disconnect still renders truthful unavailable metrics rather than stale or fabricated values;
+- the 390×844 journey now verifies the scorecard while retaining the existing horizontal-overflow checks.
 
 ## Canonical CI/release gate
 
@@ -137,7 +150,7 @@ Every affected candidate must pass on one unchanged SHA:
 10. exact internal-package generation and SHA binding;
 11. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
-Candidate versions are immutable after use. `.41`, `.43`, `.53` and `.54` remain frozen failures and must never be reused.
+Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54` and `.58` remain frozen failures and must never be reused.
 
 ## Distribution and public launch
 
@@ -148,7 +161,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53` and `.54` remain
 
 ## What remains
 
-1. Qualify immutable `internal.58` across the complete automated release matrix.
+1. Qualify immutable `internal.59` across the complete automated release matrix.
 2. Run manual UAT on one exact green candidate using a real public-web Goal and verify Goal → Evidence-backed Find without unauthorized side effects.
 3. Use the Kernel-owned scorecard to establish real baselines from observed usage before setting growth targets; never invent retention, willingness-to-pay or cohort metrics that the local data cannot support.
 4. Improve the next product slice only from those measured baselines and UAT findings.

@@ -30,12 +30,43 @@ const fixtures = {
   opportunities: { ok: true, opportunities: [{ id: 'opportunity-1', category: 'client', categoryLabel: 'Potential client', benefitType: 'income', title: 'AI automation project', sourceHost: 'clients.example', relevance: 72, nextAction: 'Qualify the need before contacting', status: 'new', detectedAt: '2026-07-26T10:00:00.000Z' }] },
   providers: { ok: true, providers: [{ id: 'fixture-local', type: 'ollama', label: 'Ollama local', baseUrl: 'http://127.0.0.1:11434', models: ['qwen3:4b'], hasCredential: true, managedBy: 'environment' }] },
   modelForge: { ok: true, forge: { runtime: 'available', hardware: { ramGiB: 32, cpuCores: 12, tier: 'powerful' }, activeModel: 'qwen3:4b', recommended: 'qwen3:4b', models: [{ id: 'qwen3:4b', label: 'Qwen 3 4B', minRamGiB: 8, tier: 'light', uses: ['chat'], multilingual: true, compatible: true, installed: true, active: true }], setup: { action: 'configure', command: null, setting: null, restartRequired: false } } },
+  preferences: {
+    ok: true,
+    profile: {
+      categories: {}, benefitTypes: {}, sources: {}, eventCount: 2,
+      productScorecard: {
+        schemaVersion: 'efesto.product-scorecard.v1', sourceOfTruth: 'local_kernel', observedAt: '2026-08-10T16:00:00.000Z',
+        privacy: { mode: 'local_only', externalTelemetry: false },
+        primary: {
+          goalUsefulFindRate: { status: 'measured', unit: 'ratio', value: 0.5, reason: null, numerator: 1, denominator: 2 },
+          timeToFirstUsefulFind: { status: 'measured', unit: 'milliseconds', value: 300000, reason: null, sampleCount: 1 },
+          repeatGoalUsage: { status: 'not_measurable', unit: 'ratio', value: null, reason: 'user_cohort_identity_unavailable', localExecutedGoalCount: 2, localRepeatGoalObserved: true },
+        },
+        drivers: {
+          missionCompletionRate: { status: 'measured', unit: 'ratio', value: 0.5, reason: null, numerator: 1, denominator: 2 },
+          findsPerCompletedGoal: { status: 'measured', unit: 'count_per_goal', value: 1, reason: null, numerator: 1, denominator: 1 },
+          usefulSavedFindShare: { status: 'measured', unit: 'ratio', value: 0.5, reason: null, numerator: 1, denominator: 2 },
+          installationToFirstGoalActivationRate: { status: 'not_measurable', unit: 'ratio', value: null, reason: 'installation_cohort_not_recorded' },
+          goalToNotificationDeliveryRate: { status: 'not_measurable', unit: 'ratio', value: null, reason: 'notification_delivery_ledger_unavailable' },
+        },
+        guardrails: {
+          missionFailureRate: { status: 'measured', unit: 'ratio', value: 0.5, reason: null, numerator: 1, denominator: 2 },
+          findDismissalNotInterestedRate: { status: 'measured', unit: 'ratio', value: 0.5, reason: null, numerator: 1, denominator: 2 },
+          alteredReplayAcceptance: { status: 'not_measurable', unit: 'count', value: null, reason: 'security_event_ledger_unavailable', target: 0 },
+          unauthorizedMemoryAdmission: { status: 'not_measurable', unit: 'count', value: null, reason: 'security_event_ledger_unavailable', target: 0 },
+          credentialPrivacyLeakageIncidents: { status: 'not_measurable', unit: 'count', value: null, reason: 'security_incident_ledger_unavailable', target: 0 },
+          packagedInstallRepairSuccess: { status: 'not_measurable', unit: 'ratio', value: null, reason: 'release_ci_evidence_not_in_local_store', target: 1 },
+        },
+        coverage: { executedGoals: 2, completedGoals: 1, goalLinkedFinds: 2, feedbackEvents: 2, orphanFeedbackEvents: 0, invalidTimestampEvents: 0 },
+      },
+    },
+  },
 };
 
 const routes = new Map([
   ['/health', fixtures.health], ['/status', fixtures.status], ['/bootstrap/status', fixtures.bootstrap],
   ['/api/cases', fixtures.cases], ['/api/goals', fixtures.goals], ['/api/agent-missions', fixtures.missions], ['/api/goal-surfaces', fixtures.goalSurfaces],
-  ['/api/opportunities', fixtures.opportunities], ['/api/chat/providers', fixtures.providers], ['/api/model-forge', fixtures.modelForge],
+  ['/api/opportunities', fixtures.opportunities], ['/api/chat/providers', fixtures.providers], ['/api/model-forge', fixtures.modelForge], ['/api/preferences', fixtures.preferences],
 ]);
 
 const server = createServer((request, response) => {
