@@ -1,4 +1,4 @@
-import { Clock3, Gauge, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { Clock3, Gauge, LockKeyhole, Repeat2, ShieldCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { ProductMetric, ProductValueScorecard } from '../../lib/kernel/product-scorecard';
 
@@ -31,10 +31,12 @@ function ScorecardBody({ scorecard }: { scorecard: ProductValueScorecard }) {
     <dl className="scorecard-primary">
       <ScoreMetric icon={<Gauge size={17} aria-hidden="true" />} label="Goals con Find útil" metric={scorecard.primary.goalUsefulFindRate} />
       <ScoreMetric icon={<Clock3 size={17} aria-hidden="true" />} label="Tiempo al primer Find útil" metric={scorecard.primary.timeToFirstUsefulFind} />
-      <ScoreMetric icon={<ShieldCheck size={17} aria-hidden="true" />} label="Misiones completadas" metric={scorecard.drivers.missionCompletionRate} />
-      <ScoreMetric icon={<Gauge size={17} aria-hidden="true" />} label="Finds útiles o guardados" metric={scorecard.drivers.usefulSavedFindShare} />
+      <ScoreMetric icon={<Repeat2 size={17} aria-hidden="true" />} label="Repetición de Goals" metric={scorecard.primary.repeatGoalUsage} />
     </dl>
     <div className="scorecard-secondary" aria-label="Cobertura y guardas del scorecard">
+      <span>Activación local <strong>{formatMetric(scorecard.drivers.installationToFirstGoalActivationRate)}</strong></span>
+      <span>Misiones completadas <strong>{formatMetric(scorecard.drivers.missionCompletionRate)}</strong></span>
+      <span>Finds útiles <strong>{formatMetric(scorecard.drivers.usefulSavedFindShare)}</strong></span>
       <span>Goals medidos <strong>{scorecard.coverage.executedGoals}</strong></span>
       <span>Finds con Goal <strong>{scorecard.coverage.goalLinkedFinds}</strong></span>
       <span>Fallos de misión <strong>{formatMetric(scorecard.guardrails.missionFailureRate)}</strong></span>
@@ -78,7 +80,9 @@ function reasonCopy(reason: string | null): string {
   return ({
     no_executed_goals: 'Aún no hay Goals autorizados ejecutados.',
     no_useful_or_saved_find_feedback: 'Aún no hay Finds marcados como útiles o guardados.',
-    user_cohort_identity_unavailable: 'No existe una cohorte multiusuario fiable en esta instancia local.',
+    installation_cohort_not_recorded: 'La medición local aún no se ha iniciado en esta instalación.',
+    local_installation_cohort_invalid: 'El registro local de medición no es válido.',
+    no_local_goal_activation: 'Esta instalación aún no ha autorizado su primer Goal.',
     no_missions: 'Aún no hay misiones medibles.',
     no_completed_goals: 'Aún no hay Goals completados.',
     no_goal_linked_finds: 'Aún no hay Finds ligados a un Goal verificado.',
@@ -91,7 +95,7 @@ function countUnavailable(scorecard: ProductValueScorecard): number {
 const scorecardStyles = `
 .product-scorecard-view{width:min(960px,100%);margin:1.4rem auto 6rem;padding:1rem;border:1px solid rgb(61 99 150/.55);border-radius:1rem;background:linear-gradient(145deg,rgb(5 15 29/.94),rgb(8 17 34/.82));box-shadow:0 20px 70px rgb(0 0 0/.24)}
 .product-scorecard-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.8rem}.product-scorecard-header small{color:#7184a2;font-size:.62rem;letter-spacing:.12em}.product-scorecard-header h2{margin:.15rem 0 0;font-size:1rem}.scorecard-privacy{display:inline-flex;align-items:center;gap:.35rem;padding:.42rem .55rem;color:#7fe3b2;border:1px solid rgb(58 184 127/.35);border-radius:999px;background:rgb(27 116 78/.12);font-size:.62rem;white-space:nowrap}
-.scorecard-primary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.55rem;margin:0}.scorecard-metric{min-width:0;padding:.72rem;border:1px solid #172b46;border-radius:.65rem;background:rgb(3 11 21/.68)}.scorecard-metric dt{display:flex;align-items:center;gap:.38rem;color:#95a8c4;font-size:.62rem}.scorecard-metric dt svg{flex:none;color:#66c9ff}.scorecard-metric dd{margin:.45rem 0 .22rem;color:#eef7ff;font-size:1.2rem;font-weight:750}.scorecard-metric p{margin:0;color:#647894;font-size:.57rem;line-height:1.35}.scorecard-metric.unavailable dd{color:#7a8ca4;font-size:.92rem}.scorecard-metric.unavailable dt svg{color:#6d7a8d}
+.scorecard-primary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.55rem;margin:0}.scorecard-metric{min-width:0;padding:.72rem;border:1px solid #172b46;border-radius:.65rem;background:rgb(3 11 21/.68)}.scorecard-metric dt{display:flex;align-items:center;gap:.38rem;color:#95a8c4;font-size:.62rem}.scorecard-metric dt svg{flex:none;color:#66c9ff}.scorecard-metric dd{margin:.45rem 0 .22rem;color:#eef7ff;font-size:1.2rem;font-weight:750}.scorecard-metric p{margin:0;color:#647894;font-size:.57rem;line-height:1.35}.scorecard-metric.unavailable dd{color:#7a8ca4;font-size:.92rem}.scorecard-metric.unavailable dt svg{color:#6d7a8d}
 .scorecard-secondary{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.65rem}.scorecard-secondary span{padding:.35rem .48rem;color:#71839d;border:1px solid #152842;border-radius:.42rem;background:#07111d;font-size:.58rem}.scorecard-secondary strong{color:#d7e8fb}.scorecard-caveat{margin:.65rem 0 0;color:#8d9bb0;font-size:.6rem;line-height:1.45}.product-value-unavailable{display:flex;align-items:flex-start;gap:.6rem;padding:.75rem;color:#91a1b8;border:1px dashed #263b57;border-radius:.65rem}.product-value-unavailable strong{display:block;color:#d7e4f4;font-size:.7rem}.product-value-unavailable p{margin:.2rem 0 0;font-size:.62rem}
 @media(max-width:820px){.product-scorecard-view{margin-bottom:7rem}.product-scorecard-header{align-items:stretch;flex-direction:column}.scorecard-privacy{align-self:flex-start}.scorecard-primary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.product-scorecard-view{padding:.75rem;border-radius:.75rem}.scorecard-primary{grid-template-columns:1fr 1fr}.scorecard-metric{padding:.6rem}.scorecard-metric dd{font-size:1rem}.scorecard-secondary{display:grid;grid-template-columns:1fr 1fr}}

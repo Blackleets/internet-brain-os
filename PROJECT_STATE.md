@@ -127,7 +127,7 @@ Candidate `internal.61` preserved the simple Home experience while enriching dis
 
 `internal.61` is frozen as a failed release qualification. The product behavior passed, but the release matrix exposed a UID-0-specific persistence test and an outdated boundary-only Hermes acceptance harness, so that candidate must never be reused or relabeled.
 
-## Internal.62 — release qualification repair candidate
+## Internal.62 — release qualification repair ✅
 
 `internal.62` keeps the G5.4 product behavior unchanged and repairs only the qualification boundaries:
 
@@ -137,7 +137,23 @@ Candidate `internal.61` preserved the simple Home experience while enriching dis
 - an exact completed-result retry no longer re-runs Obsidian projection or overwrites the persisted terminal summary/receipt;
 - the boundary harness proves authorization, SSRF rejection, forged-lease rejection, bounded batches, Kernel-owned terminal state, deduplication and exact-retry idempotency in 14/14 checks.
 
-Local Linux qualification on 2026-08-10 is green for frozen install, architecture, production audit, typecheck, 185 test files / 1045 tests, production build, `verify:first-run`, `release:verify`, extension packaging and offline Hermes boundary acceptance. Chromium could not be downloaded in the current restricted workspace, and Windows/package jobs remain pending on the exact published commit; neither is claimed as passed here.
+PR #212 merged at `80e93b7a5cc6fbec80dc1435b220f88be9dcc477`. The exact published candidate passed local Linux qualification plus all four GitHub workflows: CI/Chromium, internal package, Windows Launcher and Windows First Run, including packaged fresh-install/repair on Windows 2022 and Windows 2025. A production-mode local UAT also verified Kernel/dashboard startup, the two natural one-line Goals, explicit confirmation, truthful `waiting_for_agent` state and desktop/mobile rendering without fabricating Evidence or Finds.
+
+## G5.5 — private local activation and repeat-usage cohort / internal.63
+
+`internal.63` advances the product-value phase without installing anything on the founder's PC:
+
+- first Kernel start initializes one private `local_installation` cohort in the existing local knowledge store;
+- the record contains only schema, unit and start timestamp—no global user, account, device or fingerprint identifier;
+- first trusted Goal authorization makes installation activation measurable as `1/1` instead of an inferred UI event;
+- a second distinct authorized Goal makes local repeat usage measurable as `1/1`; before activation, repeat usage remains `not_measurable`;
+- missing or malformed cohort metadata fails measurement closed;
+- the dashboard surfaces Repeat Goal Usage as a primary Kernel-owned KPI and local activation as supporting context;
+- no central telemetry, outbound route, network authority or new execution capability is introduced.
+
+Local qualification on 2026-08-11 is green for architecture, typecheck, 186 test files / 1050 tests, production build, `release:verify`, extension packaging, offline Hermes boundary acceptance `14/14`, `verify:first-run` and a real temporary Kernel-start persistence probe. Local Playwright reached the browser-launch boundary but could not execute because no Chromium binary is installed; no browser download was performed. GitHub Chromium/Windows/exact-package qualification remains required on the final published SHA.
+
+This candidate must pass the unchanged remote release matrix on one final SHA before merge. Aggregate multi-user rates remain unavailable until a separate opt-in privacy design exists.
 
 ## Canonical CI/release gate
 
@@ -166,16 +182,16 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58` an
 
 ## What remains
 
-1. Qualify immutable `internal.62` across Chromium, Windows launcher/first-run, exact package SHA and packaged fresh-install/repair jobs on Windows 2022 and Windows 2025.
+1. Qualify immutable `internal.63` across the complete local and GitHub release matrix, then merge only if the exact SHA is green.
 2. Run the explicit G5.3 live acceptance where authentic Hermes + public Internet are available; require L1→L7 and do not substitute deterministic CI for that proof.
 3. Run UAT-1→UAT-6 on one exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
-4. Use the Kernel-owned scorecard to establish real baselines before growth/retention/willingness-to-pay claims.
-5. Treat scheduling expansion, cross-device authority and irreversible actions as separate security slices.
+4. Use the Kernel-owned local-installation scorecard to establish the first real activation, repeat usage and useful-Find baselines before growth/retention/willingness-to-pay claims.
+5. Treat notification delivery, aggregate sharing, scheduling expansion, cross-device authority and irreversible actions as separate security/privacy slices.
 
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 strengthens explicit live provenance acceptance, and G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent. Search snippets are never Evidence. Never introduce central telemetry, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 strengthens explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, and G5.5 measures activation/repeat usage only for one private local installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule

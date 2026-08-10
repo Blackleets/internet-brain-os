@@ -9,7 +9,13 @@ Feature: Responsive dashboard consumes the Kernel-owned product scorecard
     Then the dashboard shows Goal Useful Find Rate and Time to First Useful Find from the Kernel snapshot
     And React does not recalculate either KPI from Missions, Evidence, Finds or feedback
 
-  Scenario: A metric is not measurable yet
+  Scenario: Local repeat usage is visible as a primary KPI
+    Given Repeat Goal Usage is measured by the Kernel for one local installation
+    When the scorecard is rendered
+    Then the dashboard shows the Kernel-owned Repeat Goal Usage value
+    And React does not derive a cohort from Goals or Missions
+
+  Scenario: Repeat usage has no activated denominator yet
     Given Repeat Goal Usage has status not_measurable
     And its value is null
     When the scorecard is rendered

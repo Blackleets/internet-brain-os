@@ -1,17 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { buildProductValueScorecard } from './product-value-scorecard.mjs';
 
-const authorization = (goalId, decidedAt) => ({
+const authorization = (goalId, decidedAt, goalRevision = 1) => ({
   decision: 'approved',
   scope: 'read_only_continuation',
   goalId,
-  goalRevision: 1,
+  goalRevision,
   decidedAt,
 });
+
+const productCohort = {
+  schemaVersion: 'efesto.local-product-cohort.v1',
+  unit: 'local_installation',
+  startedAt: '2026-08-10T09:00:00.000Z',
+};
 
 describe('local-first product value scorecard', () => {
   it('measures Goal value from Kernel-linked Finds and explicit private feedback', () => {
     const scorecard = buildProductValueScorecard({
+      productCohort,
       agentMissions: [
         { id: 'mission:1', goalId: 'goal:1', status: 'completed', authorization: authorization('goal:1', '2026-08-10T10:00:00.000Z') },
         { id: 'mission:2', goalId: 'goal:2', status: 'failed', authorization: authorization('goal:2', '2026-08-10T11:00:00.000Z') },
@@ -38,12 +45,13 @@ describe('local-first product value scorecard', () => {
       primary: {
         goalUsefulFindRate: { status: 'measured', value: 0.5, numerator: 1, denominator: 2 },
         timeToFirstUsefulFind: { status: 'measured', value: 300000, sampleCount: 1 },
-        repeatGoalUsage: { status: 'not_measurable', reason: 'user_cohort_identity_unavailable', localExecutedGoalCount: 2, localRepeatGoalObserved: true },
+        repeatGoalUsage: { status: 'measured', value: 1, numerator: 1, denominator: 1, cohortUnit: 'local_installation', localExecutedGoalCount: 2, localRepeatGoalObserved: true },
       },
       drivers: {
         missionCompletionRate: { status: 'measured', value: 0.5 },
         findsPerCompletedGoal: { status: 'measured', value: 1 },
         usefulSavedFindShare: { status: 'measured', value: 0.5 },
+        installationToFirstGoalActivationRate: { status: 'measured', value: 1, numerator: 1, denominator: 1, cohortUnit: 'local_installation' },
       },
       guardrails: {
         missionFailureRate: { status: 'measured', value: 0.5 },
@@ -57,6 +65,7 @@ describe('local-first product value scorecard', () => {
 
   it('reports a measurable zero Useful Find Rate while refusing to invent time-to-value without positive feedback', () => {
     const scorecard = buildProductValueScorecard({
+      productCohort,
       agentMissions: [{ id: 'mission:1', goalId: 'goal:1', status: 'completed', authorization: authorization('goal:1', '2026-08-10T10:00:00.000Z') }],
       evidence: [{ id: 'evidence:1', missionId: 'mission:1' }],
       opportunities: [{ id: 'opportunity:1', evidenceId: 'evidence:1' }],
@@ -69,6 +78,7 @@ describe('local-first product value scorecard', () => {
 
   it('does not let manual Finds or impossible timestamps contaminate Goal metrics', () => {
     const scorecard = buildProductValueScorecard({
+      productCohort,
       agentMissions: [{ id: 'mission:1', goalId: 'goal:1', status: 'completed', authorization: authorization('goal:1', '2026-08-10T10:00:00.000Z') }],
       evidence: [{ id: 'evidence:1', missionId: 'mission:1' }, { id: 'evidence:manual' }],
       opportunities: [
@@ -85,13 +95,42 @@ describe('local-first product value scorecard', () => {
     expect(scorecard.coverage).toMatchObject({ goalLinkedFinds: 1, orphanFeedbackEvents: 1, invalidTimestampEvents: 1 });
   });
 
-  it('marks cohort, notification and security-ledger metrics unavailable instead of guessing', () => {
+  it('keeps repeat usage unavailable before activation while measuring the local installation denominator', () => {
+    const scorecard = buildProductValueScorecard({ productCohort }, { now: '2026-08-10T12:00:00.000Z' });
+
+    expect(scorecard.primary.repeatGoalUsage).toMatchObject({ status: 'not_measurable', reason: 'no_local_goal_activation', cohortUnit: 'local_installation' });
+    expect(scorecard.drivers.installationToFirstGoalActivationRate).toMatchObject({ status: 'measured', value: 0, numerator: 0, denominator: 1, cohortUnit: 'local_installation' });
+  });
+
+  it('does not count a new revision of the same Goal as repeat Goal usage', () => {
+    const scorecard = buildProductValueScorecard({
+      productCohort,
+      agentMissions: [
+        { id: 'mission:1', goalId: 'goal:1', status: 'completed', authorization: authorization('goal:1', '2026-08-10T10:00:00.000Z', 1) },
+        { id: 'mission:2', goalId: 'goal:1', status: 'completed', authorization: authorization('goal:1', '2026-08-10T11:00:00.000Z', 2) },
+      ],
+    }, { now: '2026-08-10T12:00:00.000Z' });
+
+    expect(scorecard.primary.repeatGoalUsage).toMatchObject({
+      status: 'measured', value: 0, numerator: 0, denominator: 1,
+      localExecutedGoalCount: 1, localRepeatGoalObserved: false,
+    });
+  });
+
+  it('marks missing cohort, notification and security-ledger metrics unavailable instead of guessing', () => {
     const scorecard = buildProductValueScorecard({}, { now: '2026-08-10T12:00:00.000Z' });
 
-    expect(scorecard.primary.repeatGoalUsage.reason).toBe('user_cohort_identity_unavailable');
+    expect(scorecard.primary.repeatGoalUsage.reason).toBe('installation_cohort_not_recorded');
     expect(scorecard.drivers.installationToFirstGoalActivationRate.reason).toBe('installation_cohort_not_recorded');
     expect(scorecard.drivers.goalToNotificationDeliveryRate.reason).toBe('notification_delivery_ledger_unavailable');
     expect(scorecard.guardrails.credentialPrivacyLeakageIncidents).toMatchObject({ status: 'not_measurable', target: 0 });
     expect(scorecard.guardrails.packagedInstallRepairSuccess).toMatchObject({ status: 'not_measurable', target: 1 });
+  });
+
+  it('fails cohort measurement closed when local cohort metadata is malformed', () => {
+    const scorecard = buildProductValueScorecard({ productCohort: { ...productCohort, startedAt: 'invalid' } });
+
+    expect(scorecard.primary.repeatGoalUsage.reason).toBe('local_installation_cohort_invalid');
+    expect(scorecard.drivers.installationToFirstGoalActivationRate.reason).toBe('local_installation_cohort_invalid');
   });
 });
