@@ -6,7 +6,7 @@ import { LocalKnowledgeStore } from './capture-projector.mjs';
 import { PreferenceLearner, preferenceAdjustment } from './preference-learner.mjs';
 
 describe('private preference learner', () => {
-  it('learns bounded explainable preferences from explicit feedback', async () => {
+  it('learns bounded explainable preferences from explicit feedback and exposes the local product scorecard', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'efesto-learning-'));
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));
     await store.write({ opportunities: [{ id: 'opportunity:abc', category: 'food', benefitType: 'savings', sourceHost: 'local.example' }] });
@@ -15,11 +15,21 @@ describe('private preference learner', () => {
     const duplicate = await learner.record('opportunity:abc', { signal: 'saved' });
     const profile = await learner.profile();
     expect(duplicate.signal).toBe('saved');
-    expect(profile).toMatchObject({ eventCount: 1, categories: { food: 10 }, benefitTypes: { savings: 4 }, sources: { 'local.example': 2 } });
+    expect(profile).toMatchObject({
+      eventCount: 1,
+      categories: { food: 10 },
+      benefitTypes: { savings: 4 },
+      sources: { 'local.example': 2 },
+      productScorecard: {
+        schemaVersion: 'efesto.product-scorecard.v1',
+        sourceOfTruth: 'local_kernel',
+        privacy: { mode: 'local_only', externalTelemetry: false },
+      },
+    });
     expect(preferenceAdjustment({ category: 'food', benefitType: 'savings', sourceHost: 'local.example' }, profile)).toBe(16);
   });
 
-  it('allows the user to erase learned preferences', async () => {
+  it('allows the user to erase learned preferences without erasing factual product history', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'efesto-learning-reset-'));
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));
     await store.write({ opportunities: [{ id: 'opportunity:def', category: 'money', benefitType: 'income', sourceHost: 'spam.example' }] });
@@ -28,7 +38,9 @@ describe('private preference learner', () => {
     const profile = await learner.profile();
     expect(preferenceAdjustment({ category: 'money', benefitType: 'income', sourceHost: 'spam.example' }, profile)).toBeLessThan(0);
     await learner.reset();
-    expect(await learner.profile()).toEqual({ categories: {}, benefitTypes: {}, sources: {}, eventCount: 0 });
+    const resetProfile = await learner.profile();
+    expect(resetProfile).toMatchObject({ categories: {}, benefitTypes: {}, sources: {}, eventCount: 0 });
+    expect(resetProfile.productScorecard.coverage.feedbackEvents).toBe(0);
   });
 
   it('atomically removes explicitly dismissed opportunities from the Inbox', async () => {
