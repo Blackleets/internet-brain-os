@@ -115,13 +115,13 @@ export const preferencesResponse = {
       primary: {
         goalUsefulFindRate: { status: 'measured', unit: 'ratio', value: 0.5, reason: null, numerator: 1, denominator: 2 },
         timeToFirstUsefulFind: { status: 'measured', unit: 'milliseconds', value: 300000, reason: null, sampleCount: 1 },
-        repeatGoalUsage: { status: 'not_measurable', unit: 'ratio', value: null, reason: 'user_cohort_identity_unavailable', localExecutedGoalCount: 2, localRepeatGoalObserved: true },
+        repeatGoalUsage: { status: 'measured', unit: 'ratio', value: 1, reason: null, numerator: 1, denominator: 1, cohortUnit: 'local_installation', localExecutedGoalCount: 2, localRepeatGoalObserved: true },
       },
       drivers: {
         missionCompletionRate: { status: 'measured', unit: 'ratio', value: 0.5, reason: null, numerator: 1, denominator: 2 },
         findsPerCompletedGoal: { status: 'measured', unit: 'count_per_goal', value: 1, reason: null, numerator: 1, denominator: 1 },
         usefulSavedFindShare: { status: 'measured', unit: 'ratio', value: 0.5, reason: null, numerator: 1, denominator: 2 },
-        installationToFirstGoalActivationRate: { status: 'not_measurable', unit: 'ratio', value: null, reason: 'installation_cohort_not_recorded' },
+        installationToFirstGoalActivationRate: { status: 'measured', unit: 'ratio', value: 1, reason: null, numerator: 1, denominator: 1, cohortUnit: 'local_installation' },
         goalToNotificationDeliveryRate: { status: 'not_measurable', unit: 'ratio', value: null, reason: 'notification_delivery_ledger_unavailable' },
       },
       guardrails: {

@@ -65,14 +65,28 @@ Mandatory on every affected candidate: architecture guard, strict production aud
 
 ## Next product phase — prove value, not feature count
 
-After G4 implementation merge:
+Delivered measurement foundation:
 
-1. run the exact-package manual UAT with real public-web Goals;
-2. establish Goal → Useful Find Rate;
-3. measure Time to First Useful Find;
-4. measure Repeat Goal Usage and weekly retention;
-5. test willingness-to-pay and onboarding friction;
-6. use those results to choose the next product slice.
+- G5.1 computes Goal → Useful Find Rate, Time to First Useful Find and mission/Find drivers from Kernel-owned local provenance.
+- G5.2 renders the same scorecard in the responsive dashboard without creating React-owned metric truth.
+- G5.3 requires authentic public-web L1→L7 provenance in the explicit live harness; the live run still requires a suitable Hermes + Internet environment.
+- G5.4 preserves one-line Goals while the Kernel enriches bounded discovery intent.
+
+Active G5.5 slice:
+
+- initialize one private `local_installation` measurement cohort without a user/device identifier;
+- measure first confirmed Goal activation for that installation;
+- measure repeat usage only after a second distinct authorized Goal;
+- surface Repeat Goal Usage as a primary Kernel-owned KPI;
+- keep aggregate rates and notification-delivery measurement unavailable until separately justified ledgers/privacy boundaries exist.
+
+Next bounded sequence:
+
+1. qualify and merge immutable `internal.63` for G5.5;
+2. run the exact-package manual UAT with real public-web Goals;
+3. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;
+4. test willingness-to-pay and onboarding friction;
+5. use those results—not feature count—to choose the next product slice.
 
 Unauthorized automatic actions remain a zero-tolerance guardrail.
 

@@ -1,3 +1,5 @@
+import { readLocalProductCohort } from './product-cohort.mjs';
+
 const POSITIVE_SIGNALS = new Set(['useful', 'saved']);
 const NEGATIVE_SIGNALS = new Set(['dismissed', 'not_interested']);
 
@@ -9,6 +11,7 @@ export function buildProductValueScorecard(data = {}, options = {}) {
   const evidence = asArray(data.evidence);
   const opportunities = asArray(data.opportunities);
   const feedback = asArray(data.preferenceFeedback);
+  const productCohort = readLocalProductCohort(data.productCohort);
 
   const missionById = indexById(missions);
   const evidenceById = indexById(evidence);
@@ -73,6 +76,12 @@ export function buildProductValueScorecard(data = {}, options = {}) {
   const completedGoalFindIds = [...goalLinkedFinds.entries()]
     .filter(([, linked]) => completedGoalKeys.has(linked.execution.key))
     .map(([opportunityId]) => opportunityId);
+  const executedGoalIds = new Set([...executedGoals.values()].map((execution) => execution.goalId));
+  const cohortDetails = productCohort.status === 'valid'
+    ? { cohortUnit: productCohort.cohort.unit }
+    : {};
+  const localActivationObserved = executedGoalIds.size > 0;
+  const localRepeatObserved = executedGoalIds.size > 1;
 
   return {
     schemaVersion: PRODUCT_SCORECARD_SCHEMA_VERSION,
@@ -82,16 +91,33 @@ export function buildProductValueScorecard(data = {}, options = {}) {
     primary: {
       goalUsefulFindRate: ratioMetric(firstPositiveAtByGoal.size, executedGoals.size, 'no_executed_goals'),
       timeToFirstUsefulFind: durationMetric(firstUsefulSamples, 'no_useful_or_saved_find_feedback'),
-      repeatGoalUsage: unavailableMetric('ratio', 'user_cohort_identity_unavailable', {
-        localExecutedGoalCount: executedGoals.size,
-        localRepeatGoalObserved: executedGoals.size >= 2,
-      }),
+      repeatGoalUsage: productCohort.status !== 'valid'
+        ? unavailableMetric('ratio', cohortUnavailableReason(productCohort.status), {
+          localExecutedGoalCount: executedGoalIds.size,
+          localRepeatGoalObserved: localRepeatObserved,
+        })
+        : localActivationObserved
+          ? ratioMetric(Number(localRepeatObserved), 1, 'no_local_goal_activation', {
+            ...cohortDetails,
+            localExecutedGoalCount: executedGoalIds.size,
+            localRepeatGoalObserved: localRepeatObserved,
+          })
+          : unavailableMetric('ratio', 'no_local_goal_activation', {
+            ...cohortDetails,
+            localExecutedGoalCount: 0,
+            localRepeatGoalObserved: false,
+          }),
     },
     drivers: {
       missionCompletionRate: ratioMetric(missions.filter((mission) => mission?.status === 'completed').length, missions.length, 'no_missions'),
       findsPerCompletedGoal: averageMetric(completedGoalFindIds.length, completedGoalKeys.size, 'no_completed_goals'),
       usefulSavedFindShare: ratioMetric(positiveFindIds.size, goalLinkedFinds.size, 'no_goal_linked_finds'),
-      installationToFirstGoalActivationRate: unavailableMetric('ratio', 'installation_cohort_not_recorded'),
+      installationToFirstGoalActivationRate: productCohort.status === 'valid'
+        ? ratioMetric(Number(localActivationObserved), 1, 'installation_cohort_not_recorded', {
+          ...cohortDetails,
+          localActivationObserved,
+        })
+        : unavailableMetric('ratio', cohortUnavailableReason(productCohort.status)),
       goalToNotificationDeliveryRate: unavailableMetric('ratio', 'notification_delivery_ledger_unavailable'),
     },
     guardrails: {
@@ -131,10 +157,10 @@ function executionIdentity(mission) {
   };
 }
 
-function ratioMetric(numerator, denominator, emptyReason) {
+function ratioMetric(numerator, denominator, emptyReason, details = {}) {
   return denominator > 0
-    ? measuredMetric('ratio', numerator / denominator, { numerator, denominator })
-    : unavailableMetric('ratio', emptyReason, { numerator, denominator });
+    ? measuredMetric('ratio', numerator / denominator, { numerator, denominator, ...details })
+    : unavailableMetric('ratio', emptyReason, { numerator, denominator, ...details });
 }
 
 function averageMetric(total, denominator, emptyReason) {
@@ -185,4 +211,8 @@ function validId(value) {
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
+}
+
+function cohortUnavailableReason(status) {
+  return status === 'invalid' ? 'local_installation_cohort_invalid' : 'installation_cohort_not_recorded';
 }

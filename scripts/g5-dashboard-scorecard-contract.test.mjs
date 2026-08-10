@@ -20,6 +20,8 @@ describe('G5.2 active dashboard product-scorecard contract', () => {
     expect(panelSource).not.toContain('KernelClient');
     expect(panelSource).not.toContain('buildProductValueScorecard');
     expect(shellSource).not.toContain('buildProductValueScorecard');
+    expect(panelSource).toContain('Repetición de Goals');
+    expect(panelSource).toContain('installationToFirstGoalActivationRate');
   });
 
   it('preserves the local-only truth boundary and truthful unavailable copy', () => {

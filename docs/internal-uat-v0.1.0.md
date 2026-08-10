@@ -87,6 +87,8 @@ Pass only if public results are independently re-read, sourced, ranked and surfa
 
 Record whether the result was genuinely useful enough to inspect or act on manually. This is the first practical input to Goal → Useful Find Rate and Repeat Goal Usage.
 
+After the second distinct Goal is authorized, inspect the local product scorecard. Pass only if `Repeat Goal Usage` is measured from the Kernel-owned `local_installation` cohort, first-Goal activation remains a one-installation observation, and the UI does not present either as a multi-user or global rate. No account, device fingerprint or outbound telemetry identifier may be created.
+
 ## UAT-6 — failure handling
 
 Safely exercise at least: network loss during verification, Kernel restart, an incompatible/missing Hermes runtime, and a private/loopback candidate URL.

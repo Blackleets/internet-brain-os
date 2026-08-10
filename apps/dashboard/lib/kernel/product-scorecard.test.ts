@@ -13,7 +13,7 @@ describe('dashboard product scorecard contract', () => {
       primary: {
         goalUsefulFindRate: { status: 'measured', unit: 'ratio', value: 0.5 },
         timeToFirstUsefulFind: { status: 'measured', unit: 'milliseconds', value: 300000 },
-        repeatGoalUsage: { status: 'not_measurable', value: null, reason: 'user_cohort_identity_unavailable' },
+        repeatGoalUsage: { status: 'measured', value: 1, reason: null, cohortUnit: 'local_installation' },
       },
     });
   });
@@ -34,7 +34,7 @@ describe('dashboard product scorecard contract', () => {
 
   it('rejects a not-measurable metric disguised as zero', () => {
     const base = preferencesResponse.profile.productScorecard;
-    const repeatGoalUsage = { ...base.primary.repeatGoalUsage, value: 0 };
+    const repeatGoalUsage = { status: 'not_measurable', unit: 'ratio', value: 0, reason: 'no_local_goal_activation' };
     expect(() => parseProductScorecardPreferences({
       ...preferencesResponse,
       profile: {

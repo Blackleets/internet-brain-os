@@ -372,3 +372,48 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 
 ### Do not forget
 - The extractor must stay dumb: no inferred claims, no fabricated evidence, no Kernel authority decisions.
+
+## Handoff 2026-08-11 - Codex
+
+### What I changed
+- Advanced the prove-value phase to G5.5 / `0.1.0-internal.63`.
+- Added an idempotent local-installation cohort initialized at Kernel startup with only schema, unit and start timestamp.
+- Made first confirmed Goal activation measurable for the one local installation and Repeat Goal Usage measurable only after a second distinct authorized Goal.
+- Kept missing/corrupt cohort metadata fail-closed and removed the cohort timestamp from the dashboard payload.
+- Surfaced Repeat Goal Usage as a primary Home KPI and local activation as supporting context.
+- Updated Gherkin, UAT, architecture, roadmap, release identity and project checkpoint.
+
+### Files changed
+- `apps/local-kernel/product-cohort.mjs` and tests.
+- `apps/local-kernel/product-value-scorecard.mjs`, tests and production server composition.
+- Dashboard scorecard component, fixtures, parser tests and contract tests.
+- `ARCHITECTURE.md`, `PROJECT_STATE.md`, `ROADMAP.md`, `INTERNAL_RELEASE.json`, UAT/product docs, Gherkin and changelog.
+
+### Why I changed it
+- The only open product issue requires business-value measurement, while Repeat Goal Usage and installation activation lacked a trustworthy local denominator.
+- The founder does not want to install/download the candidate yet, so this slice prepares private pilot measurement without touching the founder PC or introducing central telemetry.
+
+### Tests or checks performed
+- Focused scorecard/cohort/HTTP/dashboard checks: 30/30 passed.
+- `pnpm architecture:check`: passed.
+- `pnpm typecheck`: passed.
+- `pnpm test`: 186 files / 1050 tests passed on the final candidate after the distinct-Goal regression was added.
+- `pnpm build`: passed.
+- Real temporary Kernel startup created exactly one three-field local cohort and reached listening state.
+- `pnpm release:verify`: green with public launch still blocked pending UAT.
+- `pnpm hermes:acceptance`: 14/14 boundary checks passed.
+- `pnpm build:extension`: passed.
+- `pnpm verify:first-run`: passed, including exact replay and altered-replay `409`.
+- Local Playwright could not launch because Chromium is not installed; no browser was downloaded.
+
+### Risks / uncertainties
+- The `0/1` and `1/1` activation/repeat ratios describe one local installation only; they are not population retention rates.
+- Chromium, Windows launcher/first-run and exact-package matrices remain to be proven in GitHub CI on the final published SHA.
+- Authentic Hermes + public Internet L1→L7 and founder UAT remain separate external proofs.
+
+### Next recommended step
+- Commit the scoped `internal.63` change, publish one draft PR, require all GitHub Chromium/Windows/package workflows to pass, and merge only the unchanged green SHA.
+
+### Do not forget
+- Do not add a global user/device identifier or telemetry upload to turn a private installation observation into a fake aggregate rate.
+- Do not reuse `internal.63` after its contents are published; any follow-up code/UI/package change must advance the candidate.

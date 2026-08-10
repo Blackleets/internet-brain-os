@@ -24,6 +24,7 @@ import { ModelProviderError, ModelProviderRegistry } from './model-provider-regi
 import { ChatServiceError, KernelChatService } from './chat-service.mjs';
 import { ChatConversationError, ChatConversationStore } from './chat-conversation-store.mjs';
 import { defaultEfestoPaths, inspectEfestoBootstrap, readLauncherConfig } from '../../scripts/efesto-bootstrap.mjs';
+import { LocalProductCohortLedger } from './product-cohort.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
@@ -46,6 +47,8 @@ if (isMain && tokenRecord.source === 'rotated') await extensionRegistry.clear();
 const dataFile = resolve(dataDir, 'page-context-inbox.jsonl');
 const inbox = new PageContextInbox(dataFile);
 const knowledgeStore = new LocalKnowledgeStore(resolve(dataDir, 'store.json'));
+const productCohort = new LocalProductCohortLedger(knowledgeStore);
+if (isMain) await productCohort.ensure();
 const projector = new CaptureCaseEvidenceProjector(knowledgeStore);
 const opportunityProjector = new OpportunityProjector(knowledgeStore);
 const goalManager = new GoalManager(knowledgeStore);

@@ -23,11 +23,19 @@ Feature: Local-first product value scorecard
     Then the event does not increase Goal Useful Find Rate
     And the scorecard records that feedback as outside Goal-linked measurement coverage
 
-  Scenario: Cohort metrics lack a trustworthy denominator
-    Given the local Kernel has no multi-user activation cohort identity
+  Scenario: One private installation repeats Goal usage
+    Given the local Kernel has initialized one local-installation measurement cohort
+    And that installation has authorized two distinct Goals
+    When Repeat Goal Usage is read
+    Then it is measured as one repeated installation out of one activated installation
+    And no global user or device identifier is created
+
+  Scenario: Repeat Goal Usage has no activated denominator yet
+    Given the local Kernel has initialized one local-installation measurement cohort
+    And that installation has not authorized a Goal
     When Repeat Goal Usage is read
     Then its status is not measurable
-    And the local count of executed Goals may be shown only as supporting context
+    But installation-to-first-Goal activation is measurably zero for the one local installation
 
   Scenario: No central telemetry is introduced
     Given the scorecard reads the existing local knowledge store
