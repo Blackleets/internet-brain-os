@@ -1,4 +1,5 @@
 import { InboxError } from './page-context-inbox.mjs';
+import { buildProductValueScorecard } from './product-value-scorecard.mjs';
 
 const SIGNALS = new Set(['useful', 'saved', 'dismissed', 'not_interested']);
 const DELTAS = { useful: 6, saved: 10, dismissed: -5, not_interested: -10 };
@@ -35,7 +36,11 @@ export class PreferenceLearner {
   }
 
   async profile() {
-    return buildPreferenceProfile((await this.store.read()).preferenceFeedback ?? []);
+    const data = await this.store.read();
+    return {
+      ...buildPreferenceProfile(data.preferenceFeedback ?? []),
+      productScorecard: buildProductValueScorecard(data),
+    };
   }
 
   async reset() {

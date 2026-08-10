@@ -79,9 +79,35 @@ Critical epistemic rule: **search snippet ≠ Evidence**. Agent text never becom
 
 `internal.53` is frozen and non-promotable because its final adversarial freeze test referenced an obsolete source filename after the package artifact had already been produced. `internal.54` is also frozen and non-promotable because the complete suite found one continuity-contract omission in this checkpoint after its package artifact had already been produced: the literal phrase `machine-checkable release readiness` had been compacted away. Neither failure changed runtime behavior. `internal.55` is the frozen G4 implementation candidate and must never be reused.
 
-### UAT truthfulness hardening — `internal.56` candidate
+### UAT truthfulness hardening — `internal.56` ✅
 
-Pre-UAT audit found one cross-surface truth gap without weakening the G4 security gate: when Hermes was installed but automatic read-only certification failed, the claim gate correctly persisted `automaticBlock`, but Shared Goal Truth discarded that block and clients could render the Mission as queued indefinitely. `internal.56` is the bounded corrective candidate: preserve the block reason in the read projection, map blocked work to non-animated failed work for backward-safe clients, render explicit blocked state on extension/web, and keep the persisted Mission/gates unchanged. The UAT examples are also constrained to the real 120-character Goal-title contract and explicit categories so the founder can execute them through the product UI.
+PR #207 merged at `01a5241ba7de93afe084d42a72e74a59b7fb1128`. `internal.56` is frozen after full automated qualification. It preserves `automaticBlock` through Shared Goal Truth, renders blocked automatic work truthfully instead of fabricating queued progress, keeps persisted Mission/gate authority unchanged, and aligns UAT Goal examples with the real 120-character title contract.
+
+## G5.1 — local-first product value scorecard
+
+Candidate `internal.57` adds a Kernel-local read model for Issue #186 without central telemetry or new authority. It derives business/product evidence only from the existing local knowledge store and explicit Find feedback.
+
+Measured when the local denominator exists:
+
+- Goal → Useful Find Rate;
+- Time to First Useful Find;
+- Mission completion rate;
+- Finds per completed Goal;
+- useful/saved Find share;
+- Mission failure rate;
+- Find dismissal/not-interested rate.
+
+Explicitly `not_measurable` until the required ledger exists:
+
+- Repeat Goal Usage as a user-cohort rate;
+- installation → first Goal activation;
+- Goal → notification delivery;
+- altered-replay acceptance event count;
+- unauthorized-memory admission event count;
+- credential/privacy incident count;
+- packaged install/repair success inside the local runtime store.
+
+The scorecard is exposed additively as `profile.productScorecard` through the existing authenticated read-only `GET /api/preferences`. It uploads nothing, creates no telemetry endpoint, grants no capability and does not alter Goal, Evidence, Mission, Opportunity or memory authority.
 
 ## Canonical CI/release gate
 
@@ -110,10 +136,11 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53` and `.54` remain
 
 ## What remains after G4 implementation merge
 
-1. Qualify immutable `internal.56` across the full automated package matrix, then run manual UAT on that exact green package using a real public-web Goal and verify the full Goal → Evidence-backed Find journey without unauthorized side effects.
-2. Establish product baselines before growth claims: Goal → Useful Find Rate, Time to First Useful Find, Repeat Goal Usage, retention and willingness-to-pay; keep unauthorized actions at zero.
-3. Improve onboarding/distribution from evidence, not speculative feature count.
-4. Treat scheduling expansion, cross-device authority and irreversible actions as separate security slices.
+1. Qualify immutable `internal.57` across the complete automated release matrix.
+2. G5.2 — consume the same Kernel-local product scorecard in the responsive dashboard without creating a second metric truth.
+3. Run manual UAT on one exact green candidate using a real public-web Goal and verify Goal → Evidence-backed Find without unauthorized side effects.
+4. Establish real baselines from observed usage before setting growth targets; never invent retention, willingness-to-pay or cohort metrics that the local data cannot support.
+5. Treat scheduling expansion, cross-device authority and irreversible actions as separate security slices.
 
 Issue #186 remains the local-first business scorecard.
 
