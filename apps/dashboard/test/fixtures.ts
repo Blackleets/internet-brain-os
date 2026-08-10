@@ -99,3 +99,40 @@ export const modelForgeResponse = {
     setup: { action: 'pull', command: 'ollama pull qwen3:4b', setting: 'HEPHAESTUS_OLLAMA_MODEL=qwen3:4b', restartRequired: true },
   },
 };
+
+export const preferencesResponse = {
+  ok: true,
+  profile: {
+    categories: {},
+    benefitTypes: {},
+    sources: {},
+    eventCount: 2,
+    productScorecard: {
+      schemaVersion: 'efesto.product-scorecard.v1',
+      sourceOfTruth: 'local_kernel',
+      observedAt: '2026-08-10T16:00:00.000Z',
+      privacy: { mode: 'local_only', externalTelemetry: false },
+      primary: {
+        goalUsefulFindRate: { status: 'measured', unit: 'ratio', value: 0.5, reason: null, numerator: 1, denominator: 2 },
+        timeToFirstUsefulFind: { status: 'measured', unit: 'milliseconds', value: 300000, reason: null, sampleCount: 1 },
+        repeatGoalUsage: { status: 'not_measurable', unit: 'ratio', value: null, reason: 'user_cohort_identity_unavailable', localExecutedGoalCount: 2, localRepeatGoalObserved: true },
+      },
+      drivers: {
+        missionCompletionRate: { status: 'measured', unit: 'ratio', value: 0.5, reason: null, numerator: 1, denominator: 2 },
+        findsPerCompletedGoal: { status: 'measured', unit: 'count_per_goal', value: 1, reason: null, numerator: 1, denominator: 1 },
+        usefulSavedFindShare: { status: 'measured', unit: 'ratio', value: 0.5, reason: null, numerator: 1, denominator: 2 },
+        installationToFirstGoalActivationRate: { status: 'not_measurable', unit: 'ratio', value: null, reason: 'installation_cohort_not_recorded' },
+        goalToNotificationDeliveryRate: { status: 'not_measurable', unit: 'ratio', value: null, reason: 'notification_delivery_ledger_unavailable' },
+      },
+      guardrails: {
+        missionFailureRate: { status: 'measured', unit: 'ratio', value: 0.5, reason: null, numerator: 1, denominator: 2 },
+        findDismissalNotInterestedRate: { status: 'measured', unit: 'ratio', value: 0.5, reason: null, numerator: 1, denominator: 2 },
+        alteredReplayAcceptance: { status: 'not_measurable', unit: 'count', value: null, reason: 'security_event_ledger_unavailable', target: 0 },
+        unauthorizedMemoryAdmission: { status: 'not_measurable', unit: 'count', value: null, reason: 'security_event_ledger_unavailable', target: 0 },
+        credentialPrivacyLeakageIncidents: { status: 'not_measurable', unit: 'count', value: null, reason: 'security_incident_ledger_unavailable', target: 0 },
+        packagedInstallRepairSuccess: { status: 'not_measurable', unit: 'ratio', value: null, reason: 'release_ci_evidence_not_in_local_store', target: 1 },
+      },
+      coverage: { executedGoals: 2, completedGoals: 1, goalLinkedFinds: 2, feedbackEvents: 2, orphanFeedbackEvents: 0, invalidTimestampEvents: 0 },
+    },
+  },
+};

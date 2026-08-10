@@ -9,6 +9,7 @@ import {
   missionsResponse,
   modelForgeResponse,
   opportunitiesResponse,
+  preferencesResponse,
   statusResponse,
 } from '../../test/fixtures';
 
@@ -21,6 +22,7 @@ const responses = {
   '/api/agent-missions': missionsResponse,
   '/api/opportunities': opportunitiesResponse,
   '/api/model-forge': modelForgeResponse,
+  '/api/preferences': preferencesResponse,
 };
 
 function clientWith(overrides: Partial<Record<keyof typeof responses, Response>> = {}) {
@@ -43,6 +45,11 @@ describe('loadOverview', () => {
       expect(snapshot.readiness.kernel).toBe('online');
       expect(snapshot.readiness.modelForge).toMatchObject({ runtime: 'available', recommended: 'qwen3:4b' });
       expect(snapshot.metrics).toEqual({ cases: 1, goals: 1, missions: 1, activeMissions: 1, opportunities: 1 });
+      expect(snapshot.productScorecard).toMatchObject({
+        sourceOfTruth: 'local_kernel',
+        privacy: { mode: 'local_only', externalTelemetry: false },
+        primary: { goalUsefulFindRate: { status: 'measured', value: 0.5 } },
+      });
       expect(snapshot.missions).toMatchObject([{ id: 'mission-1', status: 'running' }]);
       expect(snapshot.opportunities).toMatchObject([{ id: 'opportunity-1', status: 'new' }]);
       expect(snapshot.activity).toEqual([
@@ -57,16 +64,21 @@ describe('loadOverview', () => {
     }
   });
 
-  it('keeps successful records visible when Model Forge is unavailable', async () => {
+  it('keeps successful records visible when optional read models are unavailable', async () => {
     const snapshot = await loadOverview(clientWith({
       '/api/model-forge': new Response(null, { status: 404 }),
+      '/api/preferences': new Response(null, { status: 404 }),
     }));
 
     expect(snapshot.metrics).toEqual({ cases: 1, goals: 1, missions: 1, activeMissions: 1, opportunities: 1 });
     expect(snapshot.missions).toHaveLength(1);
     expect(snapshot.opportunities).toHaveLength(1);
     expect(snapshot.readiness.modelForge).toBeUndefined();
-    expect(snapshot.issues).toContainEqual({ endpoint: 'modelForge', code: 'UNAVAILABLE' });
+    expect(snapshot.productScorecard).toBeUndefined();
+    expect(snapshot.issues).toEqual(expect.arrayContaining([
+      { endpoint: 'modelForge', code: 'UNAVAILABLE' },
+      { endpoint: 'scorecard', code: 'UNAVAILABLE' },
+    ]));
   });
 
   it('counts a persisted mission waiting for an agent as active', async () => {
@@ -93,14 +105,15 @@ describe('loadOverview', () => {
     });
   });
 
-  it('retains a Model Forge server failure as HTTP_ERROR instead of optional unavailability', async () => {
+  it('retains server failures as HTTP_ERROR instead of optional unavailability', async () => {
     const snapshot = await loadOverview(clientWith({
       '/api/model-forge': new Response(null, { status: 500 }),
+      '/api/preferences': new Response(null, { status: 500 }),
     }));
 
-    expect(snapshot.metrics).toEqual({ cases: 1, goals: 1, missions: 1, activeMissions: 1, opportunities: 1 });
     expect(snapshot.issues).toContainEqual({ endpoint: 'modelForge', code: 'HTTP_ERROR' });
-    expect(snapshot.issues).not.toContainEqual({ endpoint: 'modelForge', code: 'UNAVAILABLE' });
+    expect(snapshot.issues).toContainEqual({ endpoint: 'scorecard', code: 'HTTP_ERROR' });
+    expect(snapshot.issues).not.toContainEqual({ endpoint: 'scorecard', code: 'UNAVAILABLE' });
   });
 
   it('does not initiate protected reads when health proves the Kernel is offline', async () => {
@@ -126,6 +139,7 @@ describe('loadOverview', () => {
       { endpoint: 'missions', code: 'UNAVAILABLE' },
       { endpoint: 'opportunities', code: 'UNAVAILABLE' },
       { endpoint: 'activity', code: 'UNAVAILABLE' },
+      { endpoint: 'scorecard', code: 'UNAVAILABLE' },
     ]));
     expect(invoked).toEqual(expect.arrayContaining(['/health', '/status', '/bootstrap/status']));
     expect(invoked.filter((path) => path.startsWith('/api/'))).toEqual([]);
@@ -154,6 +168,7 @@ describe('loadOverview', () => {
       '/api/agent-missions',
       '/api/opportunities',
       '/api/model-forge',
+      '/api/preferences',
     ]);
   });
 
