@@ -205,9 +205,9 @@ The extension popup lets the user start a new Case or select an active local Cas
 ### P0 — Stabilize the foundation
 
 - [x] Add initial coverage for research lifecycle, retries, and failure telemetry.
-- [ ] Add/repair tests for memory lifecycle, consolidation, provenance, and Hermes orchestration.
-- [ ] Run the repository's typecheck/test/build commands and fix regressions.
-- [ ] Ensure all public exports match actual implementations.
+- [x] Add/repair tests for memory lifecycle, consolidation, provenance, and Hermes orchestration.
+- [x] Run the repository's typecheck/test/build commands and fix regressions.
+- [x] Ensure all public exports match actual implementations.
 
 ### P1 — Make the Hermes bridge production-grade
 

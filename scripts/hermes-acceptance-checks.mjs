@@ -1,4 +1,4 @@
-import { api } from './hermes-acceptance-lib.mjs';
+import { ACCEPTANCE_ORIGIN, api } from './hermes-acceptance-lib.mjs';
 
 export const HOSTILE_URLS = [
   'http://127.0.0.1:4000/api/goals',
@@ -35,6 +35,7 @@ function finding(url, extra = {}) {
 export async function checkConsentRequired(ctx) {
   const response = await api(ctx.baseUrl, ctx.token, `/api/goals/${encodeURIComponent(ctx.goalId)}/missions`, {
     method: 'POST',
+    origin: ACCEPTANCE_ORIGIN,
     body: { agent: 'hermes', cadence: 'manual' },
   });
   return {
@@ -151,15 +152,38 @@ export async function checkTerminalStateOwnedByKernel(ctx) {
   };
 }
 
-export async function checkReplayRejectedAfterCompletion(ctx) {
+export async function checkReplayIdempotentAfterCompletion(ctx) {
+  const beforeResponse = await api(ctx.baseUrl, ctx.token, '/api/agent-missions');
+  const before = (beforeResponse.body?.missions ?? []).find((item) => item.id === ctx.missionId);
+  const duplicateUrl = 'https://example.com/duplicate-acceptance-probe';
   const response = await api(ctx.baseUrl, ctx.token, `/api/agent-missions/${encodeURIComponent(ctx.missionId)}/results`, {
     method: 'POST',
-    body: { leaseId: ctx.leaseId, findings: [finding('https://example.com/replay-probe')] },
+    body: { leaseId: ctx.leaseId, findings: [finding(duplicateUrl), finding(duplicateUrl)] },
   });
+  const afterResponse = await api(ctx.baseUrl, ctx.token, '/api/agent-missions');
+  const after = (afterResponse.body?.missions ?? []).find((item) => item.id === ctx.missionId);
+  const beforeExecution = missionExecutionSnapshot(before);
+  const afterExecution = missionExecutionSnapshot(after);
+  const executionUnchanged = JSON.stringify(afterExecution) === JSON.stringify(beforeExecution);
   return {
     id: 'A9',
-    name: 'Completed mission rejects replayed results',
-    passed: response.status === 409,
-    detail: `status=${response.status} code=${response.body?.code ?? 'none'}`,
+    name: 'Exact result retry is idempotent and does not reopen or duplicate the mission',
+    passed: response.status === 202
+      && response.body?.idempotent === true
+      && executionUnchanged
+      && after?.resultSummary?.evidenceCreated === 1,
+    detail: `status=${response.status} idempotent=${response.body?.idempotent === true} executionUnchanged=${executionUnchanged} evidenceCreated=${after?.resultSummary?.evidenceCreated ?? 'none'}`,
+  };
+}
+
+function missionExecutionSnapshot(mission) {
+  return {
+    status: mission?.status,
+    executionPhase: mission?.executionPhase,
+    attempt: mission?.attempt,
+    completedAt: mission?.completedAt,
+    forgedAt: mission?.forgedAt,
+    resultSummary: mission?.resultSummary,
+    leaseClosed: mission?.leaseId === undefined && mission?.leaseExpiresAt === undefined,
   };
 }

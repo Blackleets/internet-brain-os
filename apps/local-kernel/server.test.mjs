@@ -401,12 +401,13 @@ describe('local Kernel HTTP receiver', () => {
     const claimResponse = await fetch(`${endpoint}/api/agent-missions/claim`, { method: 'POST', headers: authHeaders });
     expect(claimResponse.status).toBe(200);
     const { mission } = await claimResponse.json();
+    const completionInput = { leaseId: mission.leaseId, findings: [{
+      url: 'https://jobs.example/remote-ai', title: 'Remote AI engineer role',
+      text: 'We are hiring. Open role with salary. Apply now for this full-time remote position.',
+    }] };
     const completed = await fetch(`${endpoint}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, {
       method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' },
-      body: JSON.stringify({ leaseId: mission.leaseId, findings: [{
-        url: 'https://jobs.example/remote-ai', title: 'Remote AI engineer role',
-        text: 'We are hiring. Open role with salary. Apply now for this full-time remote position.',
-      }] }),
+      body: JSON.stringify(completionInput),
     });
     expect(completed.status).toBe(202);
     const completedBody = await completed.json();
@@ -421,6 +422,24 @@ describe('local Kernel HTTP receiver', () => {
       obsidianReceipt: completedBody.obsidianReceipt,
       resultSummary: { obsidianNotesWritten: completedBody.obsidianReceipt.notesWritten },
     });
+    const beforeReplay = await store.read();
+    const replay = await fetch(`${endpoint}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, {
+      method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify(completionInput),
+    });
+    expect(replay.status).toBe(202);
+    expect(await replay.json()).toMatchObject({
+      ok: true,
+      idempotent: true,
+      mission: {
+        status: 'completed',
+        obsidianReceipt: completedBody.obsidianReceipt,
+        resultSummary: { obsidianNotesWritten: completedBody.obsidianReceipt.notesWritten },
+      },
+      obsidianReceipt: completedBody.obsidianReceipt,
+      findings: [],
+    });
+    expect(await store.read()).toEqual(beforeReplay);
     const evidenceId = (await store.read()).evidence[0].id.replace(/[^A-Za-z0-9._-]/g, '-');
     expect(await readFile(join(dir, 'vault', 'Evidence', `${evidenceId}.md`), 'utf8')).toContain('hermes-public-research-v1');
   });

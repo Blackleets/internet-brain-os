@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 export const SCHEMA = 'efesto.hermes-acceptance.v1';
+export const ACCEPTANCE_ORIGIN = 'http://127.0.0.1:4173';
 
 export function redact(value) {
   return String(value ?? '')
@@ -27,6 +28,7 @@ export async function api(baseUrl, token, path, init = {}) {
     method: init.method ?? 'GET',
     headers: {
       'x-hephaestus-token': token,
+      ...(init.origin ? { origin: init.origin } : {}),
       ...(init.body ? { 'content-type': 'application/json' } : {}),
     },
     body: init.body ? JSON.stringify(init.body) : undefined,
@@ -60,7 +62,10 @@ export function startKernel({ dataDir, port, internalPort, token, hermesExecutab
       HEPHAESTUS_DATA_DIR: dataDir,
       HEPHAESTUS_API_TOKEN: token,
       HEPHAESTUS_PAIRING: '0',
-      ...(autoRuntime ? {} : { HEPHAESTUS_HERMES_READY: '1' }),
+      ...(autoRuntime ? {} : {
+        HEPHAESTUS_HERMES_READY: '1',
+        HEPHAESTUS_HERMES_READ_ONLY_READY: '1',
+      }),
       ...(hermesExecutable && autoRuntime ? { HEPHAESTUS_HERMES_EXECUTABLE: hermesExecutable } : {}),
     },
   });

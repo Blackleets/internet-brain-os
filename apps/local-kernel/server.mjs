@@ -455,6 +455,13 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       try {
         const missionId = decodeURIComponent(request.url.slice('/api/agent-missions/'.length, -'/results'.length));
         const completed = await missionExecutor.complete(missionId, await readJson(request));
+        if (completed.idempotent === true) {
+          return send(response, 202, {
+            ok: true,
+            ...completed,
+            obsidianReceipt: completed.mission?.obsidianReceipt,
+          });
+        }
         const obsidianReceipt = await syncMissionObsidian(completed, obsidianProjector);
         const mission = await attachMissionObsidianReceipt(missionExecutor.store, missionId, obsidianReceipt);
         return send(response, 202, { ok: true, ...completed, mission, obsidianReceipt });

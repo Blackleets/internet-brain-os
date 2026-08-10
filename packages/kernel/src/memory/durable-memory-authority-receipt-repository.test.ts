@@ -1,14 +1,17 @@
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import * as nodeFileSystem from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { DurableMemoryAuthorityReceiptRepository } from './durable-memory-authority-receipt-repository';
+import {
+  DurableMemoryAuthorityReceiptRepository,
+  type DurableMemoryAuthorityReceiptFileSystem,
+} from './durable-memory-authority-receipt-repository';
 import { MemoryAuthorityReceiptConflictError, type MemoryAuthorityReceiptPayload } from './memory-authority-receipt-repository';
 
 const temporaryDirectories: string[] = [];
 
 function tempFile(): string {
-  const directory = mkdtempSync(join(tmpdir(), 'hephaestus-authority-'));
+  const directory = nodeFileSystem.mkdtempSync(join(tmpdir(), 'hephaestus-authority-'));
   temporaryDirectories.push(directory);
   return join(directory, 'authority-receipts.json');
 }
@@ -38,7 +41,7 @@ function payload(overrides: Partial<MemoryAuthorityReceiptPayload> = {}): Memory
 }
 
 afterEach(() => {
-  for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { recursive: true, force: true });
+  for (const directory of temporaryDirectories.splice(0)) nodeFileSystem.rmSync(directory, { recursive: true, force: true });
 });
 
 describe('DurableMemoryAuthorityReceiptRepository', () => {
@@ -76,9 +79,9 @@ describe('DurableMemoryAuthorityReceiptRepository', () => {
   it('fails closed when the durable file is tampered with', () => {
     const file = tempFile();
     new DurableMemoryAuthorityReceiptRepository(file).append(payload(), '2026-08-08T15:00:00.000Z');
-    const stored = JSON.parse(readFileSync(file, 'utf8'));
+    const stored = JSON.parse(nodeFileSystem.readFileSync(file, 'utf8'));
     stored.receipts[0].reason = 'tampered';
-    writeFileSync(file, JSON.stringify(stored));
+    nodeFileSystem.writeFileSync(file, JSON.stringify(stored));
 
     const restarted = new DurableMemoryAuthorityReceiptRepository(file);
     expect(() => restarted.list('memory-1')).toThrowError(expect.objectContaining({ code: 'ALTERED_REPLAY' }));
@@ -86,11 +89,11 @@ describe('DurableMemoryAuthorityReceiptRepository', () => {
 
   it('fails closed on corrupt JSON and unsupported schemas', () => {
     const file = tempFile();
-    writeFileSync(file, '{broken');
+    nodeFileSystem.writeFileSync(file, '{broken');
     expect(() => new DurableMemoryAuthorityReceiptRepository(file).list('memory-1'))
       .toThrowError(expect.objectContaining({ code: 'INVALID_INPUT' }));
 
-    writeFileSync(file, JSON.stringify({ version: 99, receipts: [] }));
+    nodeFileSystem.writeFileSync(file, JSON.stringify({ version: 99, receipts: [] }));
     expect(() => new DurableMemoryAuthorityReceiptRepository(file).list('memory-1'))
       .toThrowError(expect.objectContaining({ code: 'INVALID_INPUT' }));
   });
@@ -117,20 +120,23 @@ describe('DurableMemoryAuthorityReceiptRepository', () => {
   });
 
   it('does not publish a receipt when durable persistence cannot complete', () => {
-    const directory = mkdtempSync(join(tmpdir(), 'hephaestus-authority-readonly-'));
+    const directory = nodeFileSystem.mkdtempSync(join(tmpdir(), 'hephaestus-authority-failure-'));
     temporaryDirectories.push(directory);
     const file = join(directory, 'authority-receipts.json');
-    const repository = new DurableMemoryAuthorityReceiptRepository(file);
+    const failingFileSystem: DurableMemoryAuthorityReceiptFileSystem = {
+      mkdirSync: nodeFileSystem.mkdirSync,
+      readFileSync: nodeFileSystem.readFileSync,
+      renameSync: () => { throw new Error('simulated atomic rename failure'); },
+      rmSync: nodeFileSystem.rmSync,
+      writeFileSync: nodeFileSystem.writeFileSync,
+    };
+    const repository = new DurableMemoryAuthorityReceiptRepository(file, failingFileSystem);
 
-    if (process.platform === 'win32') return;
-    chmodSync(directory, 0o500);
-    try {
-      expect(() => repository.append(payload(), '2026-08-08T15:00:00.000Z')).toThrow();
-    } finally {
-      chmodSync(directory, 0o700);
-    }
+    expect(() => repository.append(payload(), '2026-08-08T15:00:00.000Z'))
+      .toThrow('simulated atomic rename failure');
     expect(() => repository.list('memory-1')).not.toThrow();
     expect(repository.list('memory-1')).toHaveLength(0);
+    expect(nodeFileSystem.readdirSync(directory).filter((entry) => entry.includes('.tmp-'))).toEqual([]);
   });
 
   it('rejects an empty path before touching disk', () => {
