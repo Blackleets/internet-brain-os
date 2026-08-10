@@ -15,6 +15,7 @@ import {
   AgentsView, AutomationsView, EvidenceView, FindsView, HomeView, MissionsView, ModelsView, SettingsView,
   type BrainPhase, type CaseDetail, type ChatMessage, type EvidenceRecord, type Provider,
 } from './efesto-product-views';
+import { ProductValueScorecardPanel } from './overview/product-value-scorecard';
 
 type View = 'home' | 'missions' | 'finds' | 'evidence' | 'models' | 'agents' | 'automations' | 'settings';
 type Connection = { baseUrl: string; token: string };
@@ -256,6 +257,7 @@ export default function EfestoProductShell() {
       <header className="efesto-topbar"><div><button type="button" className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menú"><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view)}</button></div><div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={`connection-pill ${connection ? 'online' : 'offline'}`} onClick={() => navigate('settings')}><span />{connection ? 'Kernel ready' : 'Conectar'}</button></div></header>
       <main className="efesto-main">
         {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} /> : null}
+        {view === 'home' && !chatMode ? <ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot || snapshot.issues.some((issue) => issue.endpoint === 'scorecard')} /> : null}
         {view === 'missions' ? <MissionsView snapshot={snapshot} onNew={newGoal} /> : null}
         {view === 'finds' ? <FindsView opportunities={snapshot?.opportunities ?? []} connected={Boolean(connection)} onFeedback={(id, signal) => void recordFeedback(id, signal)} /> : null}
         {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} onOpen={(record) => void openCase(record)} /> : null}

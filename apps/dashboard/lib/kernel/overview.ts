@@ -9,6 +9,7 @@ import type {
   ModelForgeSummary,
   OpportunitySummary,
 } from './contracts';
+import { parseProductScorecardPreferences, type ProductValueScorecard } from './product-scorecard';
 import {
   parseBootstrap,
   parseCases,
@@ -20,7 +21,7 @@ import {
   parseStatus,
 } from './parse';
 
-type OverviewEndpoint = 'health' | 'status' | 'bootstrap' | 'cases' | 'goals' | 'missions' | 'opportunities' | 'activity' | 'modelForge';
+type OverviewEndpoint = 'health' | 'status' | 'bootstrap' | 'cases' | 'goals' | 'missions' | 'opportunities' | 'activity' | 'modelForge' | 'scorecard';
 type OverviewIssueCode = KernelClientErrorCode | 'UNAVAILABLE' | 'UNKNOWN';
 
 export type OverviewIssue = {
@@ -51,6 +52,7 @@ export type OverviewSnapshot = {
     activeMissions: number;
     opportunities: number;
   };
+  productScorecard?: ProductValueScorecard;
   cases: CaseSummary[];
   goals: GoalSummary[];
   missions: MissionSummary[];
@@ -82,14 +84,16 @@ export async function loadOverview(client: KernelClient, signal?: AbortSignal): 
   let missionRecords: MissionSummary[] = [];
   let opportunityRecords: OpportunitySummary[] = [];
   let modelForge: ModelForgeSummary | undefined;
+  let productScorecard: ProductValueScorecard | undefined;
 
   if (!connectionImpossible) {
-    const [cases, goals, missions, opportunities, modelForgeResult] = await Promise.allSettled([
-    client.get('/api/cases', parseCases, signal),
-    client.get('/api/goals', parseGoals, signal),
-    client.get('/api/agent-missions', parseMissions, signal),
-    client.get('/api/opportunities', parseOpportunities, signal),
-    client.get('/api/model-forge', parseModelForge, signal),
+    const [cases, goals, missions, opportunities, modelForgeResult, scorecardResult] = await Promise.allSettled([
+      client.get('/api/cases', parseCases, signal),
+      client.get('/api/goals', parseGoals, signal),
+      client.get('/api/agent-missions', parseMissions, signal),
+      client.get('/api/opportunities', parseOpportunities, signal),
+      client.get('/api/model-forge', parseModelForge, signal),
+      client.get('/api/preferences', parseProductScorecardPreferences, signal),
     ]);
     const protectedResults = [
       ['cases', cases],
@@ -97,6 +101,7 @@ export async function loadOverview(client: KernelClient, signal?: AbortSignal): 
       ['missions', missions],
       ['opportunities', opportunities],
       ['modelForge', modelForgeResult],
+      ['scorecard', scorecardResult],
     ] as const;
     throwUnauthorized(protectedResults);
     issues.push(...issuesFrom(protectedResults));
@@ -105,8 +110,9 @@ export async function loadOverview(client: KernelClient, signal?: AbortSignal): 
     missionRecords = fulfilledValue(missions, [] as MissionSummary[]);
     opportunityRecords = fulfilledValue(opportunities, [] as OpportunitySummary[]);
     modelForge = fulfilledValue(modelForgeResult, undefined);
+    productScorecard = fulfilledValue(scorecardResult, undefined);
   } else {
-    issues.push(...unavailableIssues(['cases', 'goals', 'missions', 'opportunities', 'activity', 'modelForge']));
+    issues.push(...unavailableIssues(['cases', 'goals', 'missions', 'opportunities', 'activity', 'modelForge', 'scorecard']));
   }
 
   return {
@@ -124,6 +130,7 @@ export async function loadOverview(client: KernelClient, signal?: AbortSignal): 
       activeMissions: missionRecords.filter(isActiveMission).length,
       opportunities: opportunityRecords.length,
     },
+    ...(productScorecard === undefined ? {} : { productScorecard }),
     cases: caseRecords,
     goals: goalRecords,
     missions: missionRecords,
@@ -158,7 +165,7 @@ function issuesFrom(results: ReadonlyArray<readonly [OverviewEndpoint, PromiseSe
 }
 
 function toIssue(endpoint: OverviewEndpoint, reason: unknown): OverviewIssue {
-  if (endpoint === 'modelForge' && reason instanceof KernelClientError && reason.code === 'HTTP_ERROR' && reason.status === 404) {
+  if ((endpoint === 'modelForge' || endpoint === 'scorecard') && reason instanceof KernelClientError && reason.code === 'HTTP_ERROR' && reason.status === 404) {
     return { endpoint, code: 'UNAVAILABLE' };
   }
   return { endpoint, code: reason instanceof KernelClientError ? reason.code : 'UNKNOWN' };

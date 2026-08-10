@@ -83,9 +83,9 @@ Critical epistemic rule: **search snippet ≠ Evidence**. Agent text never becom
 
 PR #207 merged at `01a5241ba7de93afe084d42a72e74a59b7fb1128`. `internal.56` is frozen after full automated qualification. It preserves `automaticBlock` through Shared Goal Truth, renders blocked automatic work truthfully instead of fabricating queued progress, keeps persisted Mission/gate authority unchanged, and aligns UAT Goal examples with the real 120-character title contract.
 
-## G5.1 — local-first product value scorecard
+## G5.1 — local-first product value scorecard ✅
 
-Candidate `internal.57` adds a Kernel-local read model for Issue #186 without central telemetry or new authority. It derives business/product evidence only from the existing local knowledge store and explicit Find feedback.
+PR #208 merged at `4f9cfc5fc113366d35532fecfd0403c09f29a471`. `internal.57` is frozen after the complete automated and post-merge matrix passed. The Kernel-local read model implements Issue #186 without central telemetry or new authority and derives product evidence only from existing local provenance plus explicit private Find feedback.
 
 Measured when the local denominator exists:
 
@@ -109,6 +109,31 @@ Explicitly `not_measurable` until the required ledger exists:
 
 The scorecard is exposed additively as `profile.productScorecard` through the existing authenticated read-only `GET /api/preferences`. It uploads nothing, creates no telemetry endpoint, grants no capability and does not alter Goal, Evidence, Mission, Opportunity or memory authority.
 
+## G5.2 — responsive dashboard scorecard
+
+The implementation consumes the G5.1 Kernel scorecard on the active `EfestoProductShell` Home surface without creating a second metric truth.
+
+- `/api/preferences` is loaded in parallel with the other authenticated Overview reads.
+- The dashboard parser accepts only `efesto.product-scorecard.v1`, `sourceOfTruth: local_kernel`, `privacy.mode: local_only` and `externalTelemetry: false`.
+- `not_measurable` requires `value: null`; it can never be rendered as a fabricated zero.
+- The active Home surface receives `snapshot.productScorecard`; the visual component performs formatting only and has no fetch, Kernel client, telemetry or product-metric calculation path.
+- A scorecard failure degrades only the scorecard panel; Cases, Goals, Missions, Finds and system readiness remain usable.
+- The panel exposes Goal Useful Find Rate, Time to First Useful Find, Mission completion, useful/saved Find share, local coverage and guardrail rates while explicitly labelling local-only privacy.
+- 390×844 mobile-width must reflow without horizontal overflow.
+
+### `internal.58` frozen failure
+
+`internal.58` is frozen and non-promotable. Architecture, dependency audit, release-readiness, typecheck, the full Vitest suite, build, Windows launcher, Windows first-run and exact internal package generation were green, but Chromium acceptance failed after the package had already been produced. Root cause was bounded to the E2E Kernel fixture: the active dashboard correctly added authenticated `GET /api/preferences`, while `apps/dashboard/e2e/kernel-fixture.mjs` still lacked that route, producing console 404 errors. No production assertion, scorecard calculation, authority boundary or mobile-overflow assertion failed.
+
+### `internal.59` corrective candidate
+
+`internal.59` keeps the G5.2 production implementation unchanged and corrects only the acceptance boundary:
+
+- the E2E Kernel fixture now serves a contract-valid local-only `profile.productScorecard` through authenticated `/api/preferences`;
+- Playwright explicitly verifies the visible local scorecard, Useful Find Rate, Time to First Useful Find and the `Solo local · sin telemetría externa` statement;
+- disconnect still renders truthful unavailable metrics rather than stale or fabricated values;
+- the 390×844 journey now verifies the scorecard while retaining the existing horizontal-overflow checks.
+
 ## Canonical CI/release gate
 
 Every affected candidate must pass on one unchanged SHA:
@@ -125,7 +150,7 @@ Every affected candidate must pass on one unchanged SHA:
 10. exact internal-package generation and SHA binding;
 11. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
-Candidate versions are immutable after use. `.41`, `.43`, `.53` and `.54` remain frozen failures and must never be reused.
+Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54` and `.58` remain frozen failures and must never be reused.
 
 ## Distribution and public launch
 
@@ -134,12 +159,12 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53` and `.54` remain
 - `publicLaunchApproved` remains `false`.
 - The **public release light is separate** from implementation readiness: automated qualification may be fully green while public launch remains blocked pending manual UAT on the exact candidate.
 
-## What remains after G4 implementation merge
+## What remains
 
-1. Qualify immutable `internal.57` across the complete automated release matrix.
-2. G5.2 — consume the same Kernel-local product scorecard in the responsive dashboard without creating a second metric truth.
-3. Run manual UAT on one exact green candidate using a real public-web Goal and verify Goal → Evidence-backed Find without unauthorized side effects.
-4. Establish real baselines from observed usage before setting growth targets; never invent retention, willingness-to-pay or cohort metrics that the local data cannot support.
+1. Qualify immutable `internal.59` across the complete automated release matrix.
+2. Run manual UAT on one exact green candidate using a real public-web Goal and verify Goal → Evidence-backed Find without unauthorized side effects.
+3. Use the Kernel-owned scorecard to establish real baselines from observed usage before setting growth targets; never invent retention, willingness-to-pay or cohort metrics that the local data cannot support.
+4. Improve the next product slice only from those measured baselines and UAT findings.
 5. Treat scheduling expansion, cross-device authority and irreversible actions as separate security slices.
 
 Issue #186 remains the local-first business scorecard.
@@ -147,7 +172,7 @@ Issue #186 remains the local-first business scorecard.
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G3 are merged; G4 implements revision-bound automatic R0 continuation through safe Hermes discovery, candidate-only persistence, Kernel web.read verification, restart recovery and Shared Goal Truth parity. Search snippets are never Evidence. Never auto-promote R1/R2/R3 side effects or imply phone→PC authority. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen; G5.1 adds a Kernel-local product value scorecard and G5.2 consumes it from the active responsive dashboard without recalculating product truth. Search snippets are never Evidence. Never auto-promote R1/R2/R3 side effects, introduce central telemetry, or imply phone→PC authority. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule
