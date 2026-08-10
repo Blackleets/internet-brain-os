@@ -36,11 +36,11 @@ Pass only if:
 
 ## UAT-3 — real public-web economic Goal
 
-Use a real non-sensitive Goal, recommended:
+In the normal Home composer, enter exactly one natural-language Goal; do not use hidden/internal fields:
 
 > Find a good-quality drill in Spain for €18–€25 from reputable sellers.
 
-Use the actual Goal UI fields rather than overloading the title: select **Savings (`offer`)**, set location to **Spain**, and add bounded keywords such as `drill`, `taladro`, `18`, `25`, and `reputable seller`. The title must remain within the product's 120-character Goal-title contract.
+The active product intentionally does not require category, price or location forms. After Goal creation, authenticated `GET /api/goals` may be inspected only to verify the Kernel-owned intent contract: the persisted Goal should include supported discovery categories covering **`offer` and `tool`**, and bounded keywords should retain **`18` and `25`**. `Spain` remains part of the natural Goal/search scope; no separate location control is required for this UAT.
 
 Observe the real journey without manually calling internal worker endpoints:
 
@@ -77,11 +77,11 @@ Pass only if:
 
 ## UAT-5 — second value Goal
 
-Use a second real Goal, recommended:
+In the same one-line Home composer, enter:
 
 > Find recent remote freelance work matching my skills at $20–$30/hour or more.
 
-Select **Clients (`client`)** for freelance demand and add bounded keywords that describe the user's actual skills. Keep the title within the 120-character Goal-title contract; recency, sourcing and duplicate avoidance remain verification criteria rather than title padding.
+Do not add category fields manually. After Goal creation, the Kernel-owned intent should include discovery categories covering **`job` and `client`**, retain **`20` and `30`** as bounded keywords, and must **not** infer shopping `offer` merely because the Goal contains an hourly currency amount. Add the user's actual skill terms directly in the natural Goal when running the founder UAT. Keep the title within the 120-character Goal-title contract; recency, sourcing and duplicate avoidance remain verification criteria rather than hidden client metadata.
 
 Pass only if public results are independently re-read, sourced, ranked and surfaced with provenance; the two product surfaces converge on the same persisted Mission state; and explicit feedback may change personalized ordering without rewriting objective Evidence relevance.
 

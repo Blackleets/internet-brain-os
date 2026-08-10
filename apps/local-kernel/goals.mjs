@@ -1,10 +1,8 @@
 import { createHash } from 'node:crypto';
 import { InboxError } from './page-context-inbox.mjs';
+import { enrichGoalIntent, GOAL_CATEGORIES } from './goal-intent-enrichment.mjs';
 
-const ALLOWED_CATEGORIES = new Set([
-  'job', 'grant', 'client', 'offer', 'tool', 'food', 'aid', 'learning',
-  'event', 'housing', 'travel', 'collaboration', 'money',
-]);
+const ALLOWED_CATEGORIES = new Set(GOAL_CATEGORIES);
 
 export class GoalManager {
   constructor(store) { this.store = store; }
@@ -56,11 +54,15 @@ function validateGoal(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw invalid('Goal must be an object');
   const title = clean(input.title, 120);
   if (title.length < 3) throw invalid('Goal title must contain at least 3 characters');
-  const categories = uniqueStrings(input.categories, 13, 32).filter((value) => ALLOWED_CATEGORIES.has(value));
-  const suppliedCategories = Array.isArray(input.categories) ? input.categories.filter((value) => typeof value === 'string') : [];
-  if (categories.length !== new Set(suppliedCategories).size) throw invalid('Goal contains an unsupported category');
-  const keywords = uniqueStrings(input.keywords, 12, 40);
+
+  const suppliedCategories = uniqueStrings(input.categories, 13, 32);
+  if (suppliedCategories.some((value) => !ALLOWED_CATEGORIES.has(value))) throw invalid('Goal contains an unsupported category');
+  const suppliedKeywords = uniqueStrings(input.keywords, 12, 40);
+  const intent = enrichGoalIntent({ title, categories: suppliedCategories, keywords: suppliedKeywords, keywordLimit: 12 });
+  const categories = intent.categories;
+  const keywords = intent.keywords;
   if (!categories.length && !keywords.length) throw invalid('Goal needs at least one category or keyword');
+
   const location = input.location === undefined ? undefined : clean(input.location, 80);
   const priority = Number(input.priority ?? 2);
   if (!Number.isInteger(priority) || priority < 1 || priority > 3) throw invalid('Goal priority must be between 1 and 3');
