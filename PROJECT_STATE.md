@@ -14,142 +14,116 @@ Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md` and the active GitH
 
 - Product: **HEPHAESTUS / Efesto — The Intelligence Forge**.
 - Hermes and other agents discover, research and propose. **An agent is never the Kernel.**
-- Hephaestus owns Evidence, capability/risk gates, contradiction handling, replay, durable-memory authority and controlled persistence.
-- Dashboard, extension and Replay Lab are clients/read models. Replay Lab remains read-only over memory authority.
-- Exact replay is safe; altered replay is rejected.
-- Automatic authority in G4 is limited to explicitly authorized R0 `web.search` and `web.read`; purchases, logins, forms, messages, file mutation, payments and other external side effects remain separately approval-gated.
-- Responsive mobile-width support does not imply arbitrary phone → PC Kernel authority. Cross-device transport requires its own threat model.
+- Hephaestus owns Evidence, validation, capability/risk gates, contradiction handling, replay, durable-memory authority and controlled persistence.
+- Dashboard, extension and Replay Lab are clients/read models; Replay Lab remains read-only over memory authority.
+- Exact replay is safe/idempotent; altered replay is rejected; malformed/corrupt authority fails closed.
+- Automatic G4 authority is limited to explicitly authorized R0 `web.search` and `web.read`; purchase, login, forms, messages, file mutation, payments and durable-memory admission remain separately approval-gated.
+- Search snippet/agent text ≠ Evidence.
+- Responsive mobile-width support does not imply phone → PC Kernel authority.
 
-## Verified foundation — 2026-08-09
+## Verified foundation ✅
 
-### Memory Safety v1 ✅
+### Memory Safety v1
 
-PR #201 froze adversarial Memory Safety v1 at `dff2c2167fd16ad609dd5042ca61ee588d1f7de2`. Terminal memory remains terminal, recovery requires a distinct candidate identity, malformed/corrupt authority fails closed, exact replay is idempotent and altered replay is blocked.
+PR #201 froze adversarial Memory Safety v1 at `dff2c2167fd16ad609dd5042ca61ee588d1f7de2`.
 
-### Goal-first product surfaces ✅
+### Goal-first product surfaces
 
-- PR #202 / G0: Forge Focus and one Kernel-owned Goal truth. The **Goal-first shell** and **living-forge** visual baseline remain machine-checkable release-readiness contracts.
-- PR #203 / G1: Shared Goal Truth v1 (`efesto.goal-surface.v1`, `sourceOfTruth: kernel`) with authenticated read-only list/detail routes.
-- PR #204 / G2: responsive Control Center consumes Shared Goal Truth; desktop, 390×844, focus/keyboard and reduced-motion acceptance are green.
-- PR #205 / G3: extension parser/transport/Living Forge/Goal chips consume the same projection; legacy Mission history remains compatibility telemetry, not Goal authority.
+- PR #202 / G0: **Goal-first shell**, Forge Focus and one Kernel-owned persisted Goal truth.
+- The **living-forge** visual baseline remains a machine-checkable release requirement.
+- PR #203 / G1: Shared Goal Truth v1, authenticated read-only list/detail routes.
+- PR #204 / G2: responsive Control Center consumes Shared Goal Truth; desktop, 390×844, keyboard/focus and reduced-motion acceptance green.
+- PR #205 / G3: extension consumes the same Shared Goal Truth semantics.
 
-### Authentic agent boundary ✅
+### Authentic agent boundary
 
 **Authentic Hermes v0.19.0 runtime acceptance was proven** through the bounded Agent Hub boundary, not simulation. Agents may execute authorized work but do not own Goal, Evidence or memory authority.
 
-## G4 — automatic authorized read-only parity
+## G4 — automatic authorized read-only parity ✅
 
-PR #206 / branch `agent/automatic-read-only-g4`.
-
-Qualified layers:
-
-- `internal.39` — automatic-read-only policy: active Goal alone is not authority; exact Goal-id/revision receipt required; only trusted interactive/founder actors and R0 observe capabilities may continue.
-- `internal.40` — trusted confirmation receipt persistence; token-only or client-supplied authorization cannot self-promote.
-- `internal.42` — automatic claim eligibility through real `web.search` CapabilityRegistry + policy; `.41` frozen after release-identity-only failure.
-- `internal.44` — authorization before attempt/lease; denial burns no attempt; `.43` frozen after a storage-shape-only test failure.
-- `internal.45` — authentic Hermes automatic discovery restricted to `--safe-mode --toolsets search -z`; incompatible runtime fails closed.
-- `internal.46` — Hermes output persists as deterministic `searchCandidates`; search snippets create zero Case/Evidence/Find; exact candidate replay is idempotent.
-- `internal.47` — one-click enables automatic discovery only after read-only runtime certification.
-- `internal.48` — private connectors package emits trusted runtime JS; installer and daily launcher build/repair it.
-- `internal.49` — Kernel-owned `web.read` re-fetches candidate URLs through `PublicWebReadExecutionAdapter(WebPageFetcher)`; authority is checked before network I/O and again before persistence; only fetched page content becomes Evidence.
-- `internal.50` — one-click automatically continues `verifying` Missions through the existing authenticated `/results` boundary into Kernel verification; no second authority endpoint.
-- `internal.51` — restart recovery resumes queued/verifying work, promotes `waiting_for_agent` only when the adapter becomes ready, and never steals an unexpired lease.
-- `internal.52` — cross-surface semantics: Shared Goal Truth remains the web/extension source; one explicit research authorization precedes autonomous harmless reads; subsequent `web.search`, `web.read`, safe retry and recovery add no new harmless-read prompt.
-
-Canonical automatic value loop now implemented:
+PR #206 froze revision-bound automatic R0 continuation:
 
 ```text
-explicit trusted Goal research authorization
+trusted Goal research confirmation
 → revision-bound receipt
-→ CapabilityRegistry + automatic-read-only policy
+→ CapabilityRegistry + R0 policy
 → bounded lease
 → Hermes safe search-only discovery
-→ persisted searchCandidates
+→ searchCandidates
 → Kernel-authorized web.read
 → fetched public source
 → Case + Evidence
 → Opportunity/Find
-→ Shared Goal Truth on web + extension
+→ Shared Goal Truth
 → restart-safe continuation
 ```
 
-Critical epistemic rule: **search snippet ≠ Evidence**. Agent text never becomes trusted Evidence merely because Hermes returned it.
+Key frozen properties:
 
-## G4 final freeze
+- active Goal alone is not authority;
+- trusted interactive receipt required;
+- Hermes automatic discovery restricted to safe search-only runtime;
+- incompatible runtime fails closed;
+- search candidates are deterministic and are not Evidence;
+- Kernel independently re-fetches public candidates before Evidence;
+- authority is checked before network I/O and again before persistence;
+- restart recovery is lease-safe and idempotent;
+- side effects and durable-memory admission remain separate gates.
 
-`internal.53` is frozen and non-promotable because its final adversarial freeze test referenced an obsolete source filename after the package artifact had already been produced. `internal.54` is also frozen and non-promotable because the complete suite found one continuity-contract omission in this checkpoint after its package artifact had already been produced: the literal phrase `machine-checkable release readiness` had been compacted away. Neither failure changed runtime behavior. `internal.55` is the frozen G4 implementation candidate and must never be reused.
+`internal.53` and `.54` are frozen failures; `internal.55` is the frozen G4 implementation candidate.
 
-### UAT truthfulness hardening — `internal.56` ✅
+## UAT truthfulness hardening — internal.56 ✅
 
-PR #207 merged at `01a5241ba7de93afe084d42a72e74a59b7fb1128`. `internal.56` is frozen after full automated qualification. It preserves `automaticBlock` through Shared Goal Truth, renders blocked automatic work truthfully instead of fabricating queued progress, keeps persisted Mission/gate authority unchanged, and aligns UAT Goal examples with the real 120-character title contract.
+PR #207 merged at `01a5241ba7de93afe084d42a72e74a59b7fb1128`. Shared Goal Truth preserves automatic policy blocks so the UI cannot fabricate queued progress when execution is safely denied.
 
 ## G5.1 — local-first product value scorecard ✅
 
-PR #208 merged at `4f9cfc5fc113366d35532fecfd0403c09f29a471`. `internal.57` is frozen after the complete automated and post-merge matrix passed. The Kernel-local read model implements Issue #186 without central telemetry or new authority and derives product evidence only from existing local provenance plus explicit private Find feedback.
+PR #208 merged at `4f9cfc5fc113366d35532fecfd0403c09f29a471`; `internal.57` is frozen green.
 
-Measured when the local denominator exists:
+Kernel-local metrics now include, when a trustworthy denominator exists:
 
 - Goal → Useful Find Rate;
 - Time to First Useful Find;
-- Mission completion rate;
+- Mission completion/failure rate;
 - Finds per completed Goal;
-- useful/saved Find share;
-- Mission failure rate;
-- Find dismissal/not-interested rate.
+- useful/saved and dismissed/not-interested Find shares.
 
-Explicitly `not_measurable` until the required ledger exists:
-
-- Repeat Goal Usage as a user-cohort rate;
-- installation → first Goal activation;
-- Goal → notification delivery;
-- altered-replay acceptance event count;
-- unauthorized-memory admission event count;
-- credential/privacy incident count;
-- packaged install/repair success inside the local runtime store.
-
-The scorecard is exposed additively as `profile.productScorecard` through the existing authenticated read-only `GET /api/preferences`. It uploads nothing, creates no telemetry endpoint, grants no capability and does not alter Goal, Evidence, Mission, Opportunity or memory authority.
+Metrics without a trustworthy local cohort/ledger return `not_measurable` instead of fabricated zero. `profile.productScorecard` is exposed through authenticated read-only `GET /api/preferences`; there is no central telemetry or new authority.
 
 ## G5.2 — responsive dashboard scorecard ✅
 
-PR #209 merged at `97f47669d8d0ef16a3127db63a503ce33a9cdaad`. `internal.59` is frozen after the complete pre-merge and post-merge automated matrix passed, including Chromium/Playwright and exact packaged install/repair on Windows 2022 and Windows 2025.
+PR #209 merged at `97f47669d8d0ef16a3127db63a503ce33a9cdaad`; `internal.59` is frozen green after complete pre/post-merge CI, Chromium and packaged Windows 2022/2025 qualification.
 
-The dashboard consumes the G5.1 Kernel scorecard on the active `EfestoProductShell` Home surface without creating a second metric truth.
+The active `EfestoProductShell` consumes the Kernel-owned scorecard without recalculating KPI truth in React. `sourceOfTruth: local_kernel`, local-only privacy and `not_measurable → value:null` are fail-closed dashboard contracts. `internal.58` remains a frozen acceptance-fixture failure and must never be reused.
 
-- `/api/preferences` is loaded in parallel with the other authenticated Overview reads.
-- The dashboard parser accepts only `efesto.product-scorecard.v1`, `sourceOfTruth: local_kernel`, `privacy.mode: local_only` and `externalTelemetry: false`.
-- `not_measurable` requires `value: null`; it can never be rendered as a fabricated zero.
-- The active Home surface receives `snapshot.productScorecard`; the visual component performs formatting only and has no fetch, Kernel client, telemetry or product-metric calculation path.
-- A scorecard failure degrades only the scorecard panel; Cases, Goals, Missions, Finds and system readiness remain usable.
-- Desktop and 390×844 acceptance verify the visible Useful Find Rate, Time to First Useful Find and `Solo local · sin telemetría externa` statement without horizontal overflow.
+## G5.3 — authentic public-web journey acceptance ✅ harness / 🟡 live proof
 
-### `internal.58` frozen failure
+PR #210 merged at `b12f106155d1f3f2e0f771cf77cd04a7cb478bc4`; `internal.60` is frozen after the complete deterministic package matrix and 4/4 post-merge workflows passed.
 
-`internal.58` is frozen and non-promotable. Architecture, dependency audit, release-readiness, typecheck, the full Vitest suite, build, Windows launcher, Windows first-run and exact internal package generation were green, but Chromium acceptance failed after the package had already been produced. Root cause was bounded to the E2E Kernel fixture: the active dashboard correctly added authenticated `GET /api/preferences`, while the fixture still lacked that route and produced console 404 errors. Production scorecard behavior and authority were unchanged.
+The existing explicit `pnpm hermes:acceptance:live` path now requires:
 
-### `internal.59` corrective freeze ✅
+- L1 authentic Hermes reaches completed terminal state;
+- L2 attempts remain bounded;
+- L3 bounded `searchCandidates` exist;
+- L4 Kernel `web.read` creates verified Evidence;
+- L5 at least one promoted Find matches the tested Goal;
+- L6 Find → Case/Evidence → Mission/candidate provenance proves `kernel-web-read-v1` + `web-read:` receipt + fetched content hash;
+- L7 Shared Goal Truth converges on the same forged Mission.
 
-`internal.59` kept the G5.2 production implementation unchanged and corrected only the acceptance boundary: the E2E fixture serves a contract-valid local-only scorecard and Playwright verifies that same scorecard on desktop and 390×844. The full matrix passed before merge and repeated green on `main` after merge.
+Default CI remains deterministic/offline. **The harness is green; authentic Internet/Hermes L1→L7 is not claimed as live-proven until the explicit live command is run in a suitable environment.**
 
-## G5.3 — authentic public-web journey acceptance
+## G5.4 — Kernel-owned one-line Goal intent
 
-Candidate `internal.60` strengthens the existing explicit `pnpm hermes:acceptance:live` path instead of creating a second executor or production code path.
+Candidate `internal.61` preserves the simple Home experience while enriching discovery intent in the Kernel before persistence.
 
-The existing live checks remain:
-
-- **L1** authentic Hermes reaches terminal `completed` state;
-- **L2** attempts remain bounded at three or fewer.
-
-G5.3 adds provenance checks:
-
-- **L3** authentic discovery persisted at least one bounded `searchCandidate`;
-- **L4** Kernel `web.read` independently verified at least one candidate and created Evidence;
-- **L5** at least one promoted Find matches the exact tested Goal;
-- **L6** the Find resolves through Case/Evidence to the same Mission and candidate with `kernel-web-read-v1`, a `web-read:` receipt, fetched text and content hash;
-- **L7** Shared Goal Truth reports `sourceOfTruth: kernel`, the same Mission id and `workState: forged`.
-
-The live probe uses a bounded public-learning Goal and an isolated temporary Kernel data directory. It collects proof only through authenticated Kernel APIs (`/api/agent-missions`, `/api/opportunities`, `/api/browser/case/:id`, `/api/goal-surfaces/:goalId`), not by reading the store directly. Search snippets remain non-Evidence; the proof is based on provenance rather than text inequality.
-
-Default CI remains deterministic: the real Internet/Hermes journey runs only through the already explicit live command. Normal CI runs unit/contract tests for the assessment logic without requiring Internet or a live account.
+- The active Home continues to submit only the natural Goal title, lightweight client keywords and priority; no category/price/location form is introduced.
+- Explicit supported categories always win; inference runs only when categories are absent.
+- Inference is bounded to the existing discovery categories and cannot create execution capabilities.
+- Numeric constraints from the canonical title are preserved as keywords within the existing 12-keyword limit.
+- Drill UAT intent should persist `offer` + `tool` and `18` + `25`.
+- Freelance UAT intent should persist `job` + `client` and `20` + `30`; hourly currency alone must not infer shopping `offer`.
+- Unsupported explicit categories still fail closed; generic text with no discovery signal remains invalid.
+- Goal validation itself creates no Mission, research authorization, network request or side-effect authority.
 
 ## Canonical CI/release gate
 
@@ -178,18 +152,16 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54` and `.58`
 
 ## What remains
 
-1. Qualify immutable `internal.60` across the complete deterministic automated release matrix.
-2. Execute the explicit live acceptance on an environment with authentic Hermes + public Internet and require L1→L7; a green deterministic CI run alone does not claim this live proof.
-3. Run manual UAT on one exact green packaged candidate using a real public-web Goal and verify Goal → Evidence-backed Find without unauthorized side effects.
-4. Use the Kernel-owned scorecard to establish real baselines from observed usage before setting growth targets; never invent retention, willingness-to-pay or cohort metrics that the local data cannot support.
+1. Qualify immutable `internal.61` across the complete automated release matrix.
+2. Run the explicit G5.3 live acceptance where authentic Hermes + public Internet are available; require L1→L7 and do not substitute deterministic CI for that proof.
+3. Run UAT-1→UAT-6 on one exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
+4. Use the Kernel-owned scorecard to establish real baselines before growth/retention/willingness-to-pay claims.
 5. Treat scheduling expansion, cross-device authority and irreversible actions as separate security slices.
-
-Issue #186 remains the local-first business scorecard.
 
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen; G5.1 measures local product value, G5.2 surfaces the same Kernel-owned scorecard on the active responsive dashboard, and G5.3 strengthens the existing explicit live Hermes acceptance to require Candidate → Kernel Evidence → Goal-linked Find → Shared Goal Truth provenance. Search snippets are never Evidence. Never auto-promote R1/R2/R3 side effects, introduce central telemetry, or imply phone→PC authority. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 strengthens explicit live provenance acceptance, and G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent. Search snippets are never Evidence. Never introduce central telemetry, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule
