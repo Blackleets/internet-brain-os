@@ -3,7 +3,8 @@ import { pathToFileURL } from 'node:url';
 
 const MAX_OUTPUT_BYTES = 512 * 1024;
 const DEFAULT_TIMEOUT_MS = 15 * 60_000;
-const MAX_TIMEOUT_MS = 25 * 60_000;
+const MAX_TIMEOUT_MS = 30 * 60_000;
+const FORCE_KILL_DELAY_MS = 500;
 
 export async function runHermesMissionWorker(options = {}) {
   const baseUrl = normalizeLoopback(options.baseUrl ?? process.env.HEPHAESTUS_KERNEL_URL ?? 'http://127.0.0.1:4000');
@@ -42,26 +43,46 @@ export async function runHermesMissionWorker(options = {}) {
   }
 }
 
-function executeAdapter(command, args, mission, options) {
+export function executeAdapter(command, args, mission, options) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { shell: false, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
-    let stdout = ''; let stderr = ''; let size = 0; let settled = false;
-    const timer = setTimeout(() => { child.kill(); finish(new Error('Hermes adapter timed out')); }, options.timeoutMs);
-    const finish = (error, value) => { if (settled) return; settled = true; clearTimeout(timer); error ? reject(error) : resolve(value); };
+    let stdout = ''; let stderr = ''; let size = 0; let settled = false; let pendingError; let forceKillTimer;
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      clearTimeout(forceKillTimer);
+      error ? reject(error) : resolve(value);
+    };
+    const requestStop = (error) => {
+      if (settled || pendingError) return;
+      pendingError = error;
+      child.kill();
+      forceKillTimer = setTimeout(() => { if (!settled) child.kill('SIGKILL'); }, FORCE_KILL_DELAY_MS);
+    };
+    const timer = setTimeout(() => requestStop(new Error('Hermes adapter timed out')), options.timeoutMs);
     const collect = (chunk, target) => {
+      if (pendingError) return;
       size += chunk.length;
-      if (size > MAX_OUTPUT_BYTES) { child.kill(); finish(new Error('Hermes adapter output exceeded the limit')); return; }
+      if (size > MAX_OUTPUT_BYTES) { requestStop(new Error('Hermes adapter output exceeded the limit')); return; }
       if (target === 'stdout') stdout += chunk; else stderr += chunk;
     };
     child.stdout.on('data', (chunk) => collect(chunk, 'stdout'));
     child.stderr.on('data', (chunk) => collect(chunk, 'stderr'));
-    child.on('error', finish);
+    child.stdin.on('error', () => {});
+    child.on('error', (error) => finish(pendingError ?? error));
     child.on('close', (code) => {
-      if (code !== 0) return finish(new Error(`Hermes adapter exited with code ${code}`));
+      if (pendingError) return finish(pendingError);
+      if (code !== 0) return finish(new Error(adapterFailure(code, stderr)));
       try { finish(undefined, JSON.parse(stdout)); } catch { finish(new Error('Hermes adapter did not return valid JSON')); }
     });
     child.stdin.end(JSON.stringify({ schemaVersion: 'efesto.hermes-mission.v1', mission }));
   });
+}
+
+function adapterFailure(code, stderr) {
+  const diagnostic = sanitizeFailure(stderr).trim().slice(0, 400);
+  return `Hermes adapter exited with code ${code}${diagnostic ? `: ${diagnostic}` : ''}`;
 }
 
 async function request(fetchImpl, url, token, init, allowEmpty = false) {
@@ -99,7 +120,7 @@ function parseArgs(value) {
 function configuredTimeout(value, fallback) {
   if (value === undefined || value === '') return fallback;
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 60_000 || parsed > MAX_TIMEOUT_MS) throw new Error('HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS must be between 60000 and 1500000');
+  if (!Number.isInteger(parsed) || parsed < 60_000 || parsed > MAX_TIMEOUT_MS) throw new Error('HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS must be between 60000 and 1800000');
   return parsed;
 }
 function normalizeLoopback(value) {

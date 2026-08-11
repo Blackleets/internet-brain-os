@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -8,6 +8,7 @@ import {
   buildHermesPrompt,
   normalizeHermesExecutable,
   parseHermesFindings,
+  prepareHermesHome,
   runHermesProcess,
 } from './hermes-efesto-adapter.mjs';
 
@@ -21,12 +22,20 @@ describe('Hermes Efesto adapter', () => {
     expect(prompt).toContain('Find grants in Madrid');
     expect(prompt).toContain('public-source discovery mission');
     expect(prompt).toContain('candidates, not verified Evidence');
+    expect(prompt).toContain('canonical, directly readable public pages');
+    expect(prompt).toContain('Make exactly one public search call');
+    expect(prompt).toContain('Do not call another tool after the search result.');
+    expect(prompt).toContain('Return 3 to 5 relevant findings');
+    expect(prompt.startsWith('/no_think\n')).toBe(true);
+    expect(prompt).toContain('{"findings":[{"url":"https://public.example/path"}]}');
+    expect(prompt).toContain('Each finding must contain exactly one field: url.');
+    expect(prompt).toContain('Do not copy titles, snippets, summaries, dates, or other prose');
   });
 
   it('isolates user customizations while keeping the official search backend available', () => {
     const prompt = 'Return JSON only';
-    const args = buildHermesArgs(prompt);
-    expect(args).toEqual(['--ignore-user-config', '--ignore-rules', '--toolsets', 'search', '-z', prompt]);
+    const args = buildHermesArgs(prompt, 4, 'custom', 'qwen3.5:2b');
+    expect(args).toEqual(['chat', '--query', prompt, '--quiet', '--max-turns', '4', '--provider', 'custom', '--model', 'qwen3.5:2b', '--ignore-rules', '--toolsets', 'search']);
     expect(args).not.toContain('--safe-mode');
     expect(args).not.toContain('web');
     expect(args).not.toContain('browser');
@@ -44,12 +53,65 @@ describe('Hermes Efesto adapter', () => {
     expect(env).toMatchObject({
       HERMES_HOME: '/tmp/efesto-hermes-isolated',
       HERMES_ALLOW_PRIVATE_URLS: 'false',
-      HERMES_IGNORE_USER_CONFIG: '1',
       HERMES_IGNORE_RULES: '1',
       OPENROUTER_API_KEY: 'test-key',
     });
     expect(env).not.toHaveProperty('HERMES_SAFE_MODE');
     expect(env).not.toHaveProperty('HERMES_ENABLE_PROJECT_PLUGINS');
+    expect(env).not.toHaveProperty('HERMES_IGNORE_USER_CONFIG');
+  });
+
+  it('writes one exclusive bounded-turn config into the isolated Hermes home', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'efesto-hermes-config-test-'));
+    try {
+      const configPath = await prepareHermesHome(directory);
+      expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({ agent: { max_turns: 8 } });
+      await expect(prepareHermesHome(directory)).rejects.toMatchObject({ code: 'EEXIST' });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('supports a stricter per-run turn cap without allowing expansion beyond eight', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'efesto-hermes-turn-cap-test-'));
+    const invalidDirectory = await mkdtemp(join(tmpdir(), 'efesto-hermes-invalid-cap-test-'));
+    try {
+      const configPath = await prepareHermesHome(directory, 4);
+      expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({ agent: { max_turns: 4 } });
+      await expect(prepareHermesHome(invalidDirectory, 9)).rejects.toThrow('between 1 and 8');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+      await rm(invalidDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it('mirrors the bounded invocation route into the isolated profile for Hermes startup readiness', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'efesto-hermes-route-test-'));
+    try {
+      const configPath = await prepareHermesHome(directory, 4, 'custom', 'qwen3.5:2b');
+      expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({
+        agent: { max_turns: 4 },
+        model: { default: 'qwen3.5:2b', provider: 'custom' },
+      });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('preserves explicit loopback custom-provider routing for isolated remote acceptance', () => {
+    const env = buildHermesEnvironment({
+      HERMES_INFERENCE_PROVIDER: 'custom',
+      HERMES_INFERENCE_MODEL: 'qwen3:4b',
+      CUSTOM_BASE_URL: 'http://127.0.0.1:11434/v1',
+    }, '/tmp/efesto-hermes-local-provider');
+
+    expect(env).toMatchObject({
+      HERMES_HOME: '/tmp/efesto-hermes-local-provider',
+      HERMES_INFERENCE_PROVIDER: 'custom',
+      HERMES_INFERENCE_MODEL: 'qwen3:4b',
+      CUSTOM_BASE_URL: 'http://127.0.0.1:11434/v1',
+      HERMES_ALLOW_PRIVATE_URLS: 'false',
+    });
   });
 
   it('keeps PATH commands portable and resolves configured relative paths before changing cwd', () => {
@@ -76,6 +138,29 @@ describe('Hermes Efesto adapter', () => {
     }
   });
 
+  it('surfaces bounded sanitized Hermes diagnostics on a non-zero exit', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'efesto-hermes-diagnostic-test-'));
+    const fixture = join(directory, 'failed-hermes.mjs');
+    await writeFile(fixture, "process.stderr.write('provider rejected model; api_key=sk-not-a-real-secret-123456789\\nsession_id: private-session'); process.exit(7);\n", 'utf8');
+    try {
+      await expect(runHermesProcess({
+        executable: process.execPath,
+        args: [fixture],
+        timeoutMs: 2_000,
+        env: process.env,
+        cwd: directory,
+      })).rejects.toThrow('Hermes exited with code 7: provider rejected model; api_key=<redacted-secret> session_id:<redacted-session>');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects an invocation turn cap outside the reviewed bound', () => {
+    expect(() => buildHermesArgs('prompt', 0)).toThrow('between 1 and 8');
+    expect(() => buildHermesArgs('prompt', 9)).toThrow('between 1 and 8');
+    expect(() => buildHermesArgs('prompt', 4, 'custom', 'bad\nmodel')).toThrow('model is invalid');
+  });
+
   it('accepts strict JSON and bounded candidates', () => {
     expect(parseHermesFindings('{"findings":[{"url":"https://example.com/a","title":"A","text":"Search snippet","summary":"Summary"}]}')).toEqual({
       findings: [{ url: 'https://example.com/a', title: 'A', text: 'Search snippet', summary: 'Summary' }],
@@ -86,6 +171,57 @@ describe('Hermes Efesto adapter', () => {
     expect(parseHermesFindings('```json\n{"findings":[]}\n```')).toEqual({ findings: [] });
   });
 
+  it('accepts Qwen whitespace before the JSON fence label', () => {
+    expect(parseHermesFindings('``` json\n{"findings":[]}\n```')).toEqual({ findings: [] });
+  });
+
+  it('uses only the first fenced JSON payload and ignores trailing presentation text', () => {
+    expect(parseHermesFindings('```json\n{"findings":[]}\n```\nHere are the requested sources.')).toEqual({ findings: [] });
+  });
+
+  it('turns URL-only discovery into neutral candidates pending Kernel verification', () => {
+    expect(parseHermesFindings('{"findings":[{"url":"https://example.com/a"}]}')).toEqual({
+      findings: [{
+        url: 'https://example.com/a',
+        title: 'Public source: example.com',
+        text: 'Public source candidate pending Kernel verification.',
+      }],
+    });
+  });
+
+  it('repairs only literal string controls and trailing commas before schema validation', () => {
+    expect(parseHermesFindings('```json\n{"findings":[{"url":"https://example.com/a","title":"A","text":"line one\nline two",}],}\n```')).toEqual({
+      findings: [{ url: 'https://example.com/a', title: 'A', text: 'line one\nline two' }],
+    });
+  });
+
+  it('repairs an invalid escape without weakening field validation', () => {
+    expect(parseHermesFindings('{"findings":[{"url":"https://example.com/a","title":"A\\_B","text":"snippet"}]}')).toEqual({
+      findings: [{ url: 'https://example.com/a', title: 'A\\_B', text: 'snippet' }],
+    });
+  });
+
+  it('extracts only deduplicated literal web URLs when the final response is prose', () => {
+    expect(parseHermesFindings('Sources:\n- [One](https://example.com/a).\n- https://second.example/path?q=1!\n- https://example.com/a')).toEqual({
+      findings: [
+        { url: 'https://example.com/a', title: 'Public source: example.com', text: 'Public source candidate pending Kernel verification.' },
+        { url: 'https://second.example/path?q=1', title: 'Public source: second.example', text: 'Public source candidate pending Kernel verification.' },
+      ],
+    });
+  });
+
+  it('rejects non-web URL-only findings', () => {
+    expect(() => parseHermesFindings('{"findings":[{"url":"file:///tmp/private"}]}')).toThrow('public http or https');
+  });
+
+  it('accepts one bounded Qwen thinking envelope before strict JSON', () => {
+    expect(parseHermesFindings('<think>Plan two searches, then answer.</think>\n```json\n{"findings":[]}\n```')).toEqual({ findings: [] });
+  });
+
+  it('reports only output-shape metadata when JSON remains invalid', () => {
+    expect(() => parseHermesFindings('<think>reason</think>\nnot-json')).toThrow('chars=30 think=true fence=false findings=false repair=false urls=0');
+  });
+
   it('rejects authority or unsupported fields', () => {
     expect(() => parseHermesFindings('{"findings":[{"url":"https://example.com","title":"A","text":"B","admitted":true}]}')).toThrow('unsupported field');
   });
@@ -93,5 +229,6 @@ describe('Hermes Efesto adapter', () => {
   it('rejects invalid schemas and oversized result batches', () => {
     expect(() => buildHermesPrompt({ schemaVersion: 'wrong', mission: {} })).toThrow('efesto.hermes-mission.v1');
     expect(() => parseHermesFindings(JSON.stringify({ findings: Array.from({ length: 21 }, () => ({})) }))).toThrow('at most 20');
+    expect(() => parseHermesFindings(Array.from({ length: 21 }, (_, index) => `https://source${index}.example/path`).join('\n'))).toThrow('at most 20');
   });
 });

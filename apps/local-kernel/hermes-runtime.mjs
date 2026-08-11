@@ -37,16 +37,17 @@ export async function probeHermesReadOnlyRuntime(runtime, options = {}) {
   const runCommand = options.runCommand ?? runHermesHelp;
   let result;
   try {
-    result = await runCommand(runtime.executable, ['--help'], { timeoutMs: options.timeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS });
+    result = await runCommand(runtime.executable, ['chat', '--help'], { timeoutMs: options.timeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS });
   } catch {
     return { ready: false, reason: 'probe_failed' };
   }
   if (!result?.ok) return { ready: false, reason: result?.reason ?? 'probe_failed' };
   const help = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
   const required = [
-    /(?:^|\s)-z(?:,|\s)|--oneshot/m,
+    /(?:^|\s)-q(?:,|\s)|--query/m,
+    /(?:^|\s)-Q(?:,|\s)|--quiet/m,
+    /--max-turns/m,
     /--toolsets/m,
-    /--ignore-user-config/m,
     /--ignore-rules/m,
   ];
   if (!required.every((pattern) => pattern.test(help))) {
@@ -54,9 +55,9 @@ export async function probeHermesReadOnlyRuntime(runtime, options = {}) {
   }
   return {
     ready: true,
-    mode: 'isolated_search_only',
+    mode: 'bounded_isolated_search_only',
     executable: runtime.executable,
-    requiredArgs: ['--ignore-user-config', '--ignore-rules', '--toolsets', 'search', '-z'],
+    requiredArgs: ['chat', '--query', '<prompt>', '--quiet', '--max-turns', '<bounded>', '--ignore-rules', '--toolsets', 'search'],
   };
 }
 

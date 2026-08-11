@@ -54,6 +54,8 @@ describe('one-click Hermes runtime entrypoints', () => {
   it('keeps one-click Hermes execution bounded after observable worker failures', () => {
     const source = readFileSync(resolve('apps/local-kernel/one-click-kernel.mjs'), 'utf8');
     expect(source).toContain('MAX_AUTOMATIC_MISSION_ATTEMPTS');
+    expect(source).toContain('configuredAutomaticMissionAttempts(process.env.HEPHAESTUS_AUTOMATIC_MISSION_ATTEMPTS)');
+    expect(source).toContain('must be an integer between 1 and 3');
     expect(source).toContain('while (attempts < MAX_AUTOMATIC_MISSION_ATTEMPTS)');
     expect(source).toContain("if (result.status !== 'failed') break");
   });

@@ -11,7 +11,7 @@ import { runHermesMissionWorker } from './hermes-mission-worker.mjs';
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
 const MAX_PROXY_BODY_BYTES = 1024 * 1024;
-const MAX_AUTOMATIC_MISSION_ATTEMPTS = 3;
+const MAX_AUTOMATIC_MISSION_ATTEMPTS = configuredAutomaticMissionAttempts(process.env.HEPHAESTUS_AUTOMATIC_MISSION_ATTEMPTS);
 const activeRuns = new Map();
 let shuttingDown = false;
 let proxy;
@@ -140,6 +140,13 @@ async function runMissionUntilTerminal(missionId, apiToken) {
     }
     if (result.status !== 'failed') break;
   }
+}
+
+function configuredAutomaticMissionAttempts(value) {
+  if (value === undefined || value === '') return 3;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 3) throw new Error('HEPHAESTUS_AUTOMATIC_MISSION_ATTEMPTS must be an integer between 1 and 3');
+  return parsed;
 }
 
 async function readRecoveryToken() {

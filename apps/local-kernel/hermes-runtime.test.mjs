@@ -45,24 +45,24 @@ describe('Hermes runtime detection', () => {
 describe('Hermes automatic read-only capability probe', () => {
   const runtime = { available: true, executable: '/safe/hermes', source: 'test' };
 
-  it('accepts only a runtime advertising one-shot plus isolated search flags', async () => {
+  it('accepts only a runtime advertising bounded quiet-query plus isolated search flags', async () => {
     const result = await probeHermesReadOnlyRuntime(runtime, {
       runCommand: async (_executable, args) => {
-        expect(args).toEqual(['--help']);
-        return { ok: true, stdout: '-z, --oneshot PROMPT\n--toolsets TOOLSETS\n--ignore-user-config\n--ignore-rules' };
+        expect(args).toEqual(['chat', '--help']);
+        return { ok: true, stdout: '-q, --query PROMPT\n-Q, --quiet\n--max-turns N\n--toolsets TOOLSETS\n--ignore-rules' };
       },
     });
     expect(result).toEqual({
       ready: true,
-      mode: 'isolated_search_only',
+      mode: 'bounded_isolated_search_only',
       executable: runtime.executable,
-      requiredArgs: ['--ignore-user-config', '--ignore-rules', '--toolsets', 'search', '-z'],
+      requiredArgs: ['chat', '--query', '<prompt>', '--quiet', '--max-turns', '<bounded>', '--ignore-rules', '--toolsets', 'search'],
     });
   });
 
   it('fails closed for an older or incompatible runtime', async () => {
     await expect(probeHermesReadOnlyRuntime(runtime, {
-      runCommand: async () => ({ ok: true, stdout: '-z, --oneshot PROMPT' }),
+      runCommand: async () => ({ ok: true, stdout: '-q, --query PROMPT\n-Q, --quiet\n--toolsets TOOLSETS\n--ignore-rules' }),
     })).resolves.toEqual({ ready: false, reason: 'required_flags_missing' });
   });
 

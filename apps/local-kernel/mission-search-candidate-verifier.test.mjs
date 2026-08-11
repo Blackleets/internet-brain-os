@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -67,6 +68,22 @@ describe('Kernel-owned search candidate verification', () => {
     expect(data.evidence[0].rawText).not.toContain('UNTRUSTED SEARCH SNIPPET');
     expect(data.opportunities).toHaveLength(1);
     expect(data.agentMissions[0].searchCandidates[0]).toMatchObject({ status: 'verified', evidenceId: data.evidence[0].id });
+  });
+
+  it('retains full fetched Evidence while bounding only the classification view', async () => {
+    const text = `${verifiedPage().text}\n${'x'.repeat(13_000)}`;
+    const { store, mission, verifier } = await fixture({
+      fetch: async () => ({ ...verifiedPage(), text }),
+    });
+    const result = await verifier.verify(mission.id);
+    expect(result.mission).toMatchObject({
+      status: 'completed', executionPhase: 'forged',
+      resultSummary: { received: 1, evidenceCreated: 1, opportunitiesPromoted: 1 },
+    });
+    const data = await store.read();
+    expect(data.evidence[0].rawText).toBe(text);
+    expect(data.evidence[0].contentHash).toBe(createHash('sha256').update(text).digest('hex'));
+    expect(data.opportunities).toHaveLength(1);
   });
 
   it('replays completed verification idempotently without duplicate Evidence or Finds', async () => {

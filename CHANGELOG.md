@@ -1,7 +1,8 @@
 ## [Unreleased]
 
 ### Added
-- Manual GitHub acceptance workflow for authentic Hermes v0.20 public-web L1→L7 proof, pinned to reviewed action/runtime commits and publishing only the sanitized acceptance report.
+- Credential-free remote Hermes L1→L7 acceptance using a checksum-verified, runner-local Ollama runtime and reviewed tool-capable Qwen3 model identity; no founder API key or PC installation is required.
+- Remote GitHub acceptance workflow for authentic Hermes v0.20 public-web L1→L7 proof, pinned to reviewed action/runtime commits and publishing only the sanitized acceptance report.
 - Private local-installation product cohort for trustworthy first-Goal activation and repeat-Goal measurement without global identifiers or external telemetry.
 - Deterministic design for memory quarantine and toxic-memory handling, including authority gates, append-only transition receipts, reversible recovery, startup reconciliation, and safe Replay Lab language.
 - Product launch kit with the verified one-minute narrative, five-minute demo flow, founder pitch, launch-post draft, and explicit no-overclaim guardrails.
@@ -29,6 +30,20 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Kernel candidate verification now retains and hashes the complete fetched page as Evidence while deterministically bounding only the classifier/Opportunity page-context view to 12,000 characters; live terminal observation allows 32 minutes so the bounded 25-minute inference can finish the existing maximum web-read verification batch.
+- Non-JSON Hermes final responses may now contribute only deduplicated literal HTTP(S) URLs as neutral candidates; all prose is discarded and Kernel private-address, `web.read`, Evidence and classification gates remain mandatory.
+- The bounded quiet Hermes query now mirrors the already-configured provider/model route into its exclusive temporary profile and forwards the same length-checked values as explicit CLI arguments, satisfying the pinned chat startup guard without loading user configuration.
+- Authentic Hermes execution now uses the supported quiet `chat --query --max-turns` path so the reviewed four-turn cap reaches `AIAgent`; the runtime probe rejects installations that do not advertise that exact bounded interface.
+- Hermes live discovery now requests URL-only findings, derives neutral candidate labels locally, accepts only the first fenced JSON payload, and repairs invalid string escapes before the unchanged strict whitelist and Kernel verification.
+- Fenced Hermes JSON now receives a narrow deterministic repair for literal string controls and trailing commas before the unchanged strict field/value validation; the prompt also caps candidate field lengths.
+- The frozen `internal.74` path added one-search prompting and content-free usage diagnostics; later candidates retain the one-search boundary while replacing scripted one-shot execution with an authoritative CLI turn cap.
+- The bounded Qwen adapter now accepts a spaced `json` fence label and requests three to five concise, one-line JSON-escaped findings without trailing commas before applying the unchanged strict schema and authority checks.
+- The bounded Qwen live prompt selects non-thinking mode for this simple discovery/formatting task, and the adapter strips only a known Qwen thinking envelope plus the already-supported JSON fence before strict schema validation; invalid output reports shape metadata rather than content.
+- Non-zero Hermes and adapter exits now preserve a bounded, credential/path-redacted diagnostic through the mission failure record and sanitized live report instead of discarding provider stderr.
+- Remote live proof now uses the reviewed `qwen3.5:2b` tool-capable model with a 256K model context so bounded inference can run on a GitHub CPU runner while satisfying Hermes's truthful 64K minimum; model identity and tool capability remain verified before Hermes starts.
+- Remote live proof now uses one fail-closed attempt capped at four turns and two searches; normal product recovery remains three attempts, and an explicitly recorded live failure ends observation without overlapping another adapter run.
+- Authentic Hermes discovery now prefers canonical directly readable public pages, avoids login/paywall/redirect/search/JavaScript shells, and uses a durable open-source-tool live Goal without weakening Evidence or Find thresholds.
+- Authentic Hermes live acceptance now enforces nested adapter, worker, terminal, and job deadlines; timeout/output termination waits for the adapter process to close and escalates to a bounded forced kill before mission failure is recorded.
 - Authentic Hermes search launches now use an ephemeral home and working directory, ignore user configuration/rules, disable project plugins, retain only the official `search` toolset, and redact provider-shaped credentials from acceptance diagnostics.
 - The Kernel-owned product scorecard now measures local activation/repeat usage when a valid private cohort exists, fails closed on missing/corrupt cohort metadata, and surfaces Repeat Goal Usage as a primary dashboard KPI.
 - README opening now explains the current AI-forensics wedge, product boundaries, and local architecture before contributor doctrine.

@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -7,8 +7,10 @@ import { pathToFileURL } from 'node:url';
 const MAX_INPUT_BYTES = 128 * 1024;
 const MAX_OUTPUT_BYTES = 512 * 1024;
 const DEFAULT_TIMEOUT_MS = 12 * 60_000;
-const MAX_TIMEOUT_MS = 20 * 60_000;
+const MAX_TIMEOUT_MS = 25 * 60_000;
 const FORCE_KILL_DELAY_MS = 500;
+const MAX_AGENT_TURNS = 8;
+const DEFAULT_AGENT_TURNS = 8;
 
 export function buildHermesPrompt(payload) {
   if (!payload || payload.schemaVersion !== 'efesto.hermes-mission.v1' || !payload.mission) {
@@ -17,12 +19,16 @@ export function buildHermesPrompt(payload) {
   const mission = payload.mission;
   const scope = mission.scope ?? {};
   return [
+    '/no_think',
     'You are executing one bounded public-source discovery mission for Efesto.',
     'Use only public web search. The returned snippets are candidates, not verified Evidence.',
     'Do not access local files, private networks, credentials, messaging history, private sessions, browser automation or computer-use.',
     'Do not perform purchases, submissions, logins, outreach, downloads or destructive actions.',
-    'Return ONLY one valid JSON object with this exact top-level shape: {"findings":[...]}.',
-    'Each finding may contain only url, title, text, summary, and discoveredAt.',
+    'Prefer canonical, directly readable public pages with substantive content; avoid login walls, paywalls, redirectors, search-result pages and JavaScript-only shells.',
+    'Make exactly one public search call using the Goal, then return the final JSON. Do not call another tool after the search result.',
+    'Return 3 to 5 relevant findings when public search supports them, using diverse source hosts where practical.',
+    'Return ONLY one valid JSON object with this exact shape: {"findings":[{"url":"https://public.example/path"}]}.',
+    'Each finding must contain exactly one field: url. Do not copy titles, snippets, summaries, dates, or other prose from the search result. Keep every URL on one line, escape it as JSON, and do not use trailing commas.',
     'Use at most 20 findings. URLs must be public http or https. Do not include markdown fences or commentary.',
     '',
     `Mission id: ${String(mission.id ?? '').slice(0, 160)}`,
@@ -34,9 +40,25 @@ export function buildHermesPrompt(payload) {
   ].join('\n');
 }
 
-export function buildHermesArgs(prompt) {
+export function buildHermesArgs(prompt, maxTurns = DEFAULT_AGENT_TURNS, provider, model) {
   if (typeof prompt !== 'string' || !prompt.trim()) throw new Error('Hermes prompt is required');
-  return ['--ignore-user-config', '--ignore-rules', '--toolsets', 'search', '-z', prompt];
+  if (!Number.isInteger(maxTurns) || maxTurns < 1 || maxTurns > MAX_AGENT_TURNS) throw new Error(`Hermes max turns must be an integer between 1 and ${MAX_AGENT_TURNS}`);
+  const normalizedProvider = normalizeRouteValue(provider, 'provider');
+  const normalizedModel = normalizeRouteValue(model, 'model');
+  const route = [
+    ...(normalizedProvider ? ['--provider', normalizedProvider] : []),
+    ...(normalizedModel ? ['--model', normalizedModel] : []),
+  ];
+  return ['chat', '--query', prompt, '--quiet', '--max-turns', String(maxTurns), ...route, '--ignore-rules', '--toolsets', 'search'];
+}
+
+function normalizeRouteValue(value, label) {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value !== 'string') throw new Error(`Hermes ${label} must be a string`);
+  const normalized = value.trim();
+  if (!normalized) return undefined;
+  if (normalized.length > 160 || /[\u0000-\u001f\u007f]/.test(normalized)) throw new Error(`Hermes ${label} is invalid`);
+  return normalized;
 }
 
 export function buildHermesEnvironment(baseEnv, hermesHome) {
@@ -45,12 +67,29 @@ export function buildHermesEnvironment(baseEnv, hermesHome) {
     ...baseEnv,
     HERMES_HOME: hermesHome,
     HERMES_ALLOW_PRIVATE_URLS: 'false',
-    HERMES_IGNORE_USER_CONFIG: '1',
     HERMES_IGNORE_RULES: '1',
   };
   delete env.HERMES_SAFE_MODE;
   delete env.HERMES_ENABLE_PROJECT_PLUGINS;
   return env;
+}
+
+export async function prepareHermesHome(hermesHome, maxTurns = DEFAULT_AGENT_TURNS, provider, model) {
+  if (typeof hermesHome !== 'string' || !hermesHome.trim()) throw new Error('An isolated Hermes home is required');
+  if (!Number.isInteger(maxTurns) || maxTurns < 1 || maxTurns > MAX_AGENT_TURNS) throw new Error(`Hermes max turns must be an integer between 1 and ${MAX_AGENT_TURNS}`);
+  const normalizedProvider = normalizeRouteValue(provider, 'provider');
+  const normalizedModel = normalizeRouteValue(model, 'model');
+  const configPath = join(hermesHome, 'config.yaml');
+  const route = {
+    ...(normalizedModel ? { default: normalizedModel } : {}),
+    ...(normalizedProvider ? { provider: normalizedProvider } : {}),
+  };
+  const config = {
+    agent: { max_turns: maxTurns },
+    ...(Object.keys(route).length > 0 ? { model: route } : {}),
+  };
+  await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+  return configPath;
 }
 
 export function normalizeHermesExecutable(value) {
@@ -64,26 +103,105 @@ export function normalizeHermesExecutable(value) {
 export function parseHermesFindings(text) {
   if (typeof text !== 'string' || !text.trim()) throw new Error('Hermes returned empty output');
   const trimmed = text.trim();
-  const candidate = trimmed.startsWith('```')
-    ? trimmed.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
-    : trimmed;
+  const withoutThinking = trimmed.replace(/^(?:<think>[\s\S]*?<\/think>\s*)+/i, '');
+  const fence = /^```\s*(?:json\s*)?/i.exec(withoutThinking);
+  const fencedBody = fence ? withoutThinking.slice(fence[0].length) : withoutThinking;
+  const closingFence = fence ? fencedBody.indexOf('```') : -1;
+  const candidate = (closingFence >= 0 ? fencedBody.slice(0, closingFence) : fencedBody).trim();
   let parsed;
+  let repaired = false;
   try { parsed = JSON.parse(candidate); }
-  catch { throw new Error('Hermes did not return valid JSON'); }
+  catch {
+    const repairedCandidate = repairHermesJson(candidate);
+    repaired = repairedCandidate !== candidate;
+    try { parsed = JSON.parse(repairedCandidate); }
+    catch {
+      const urls = extractLiteralWebUrls(withoutThinking);
+      if (urls.length > 0) parsed = { findings: urls.map((url) => ({ url })) };
+      else {
+        const shape = `chars=${trimmed.length} think=${trimmed.startsWith('<think>')} fence=${withoutThinking.startsWith('```')} findings=${/\{\s*"findings"\s*:/.test(candidate)} repair=${repaired} urls=0`;
+        throw new Error(`Hermes did not return valid JSON or literal web URLs (${shape})`);
+      }
+    }
+  }
   if (!parsed || !Array.isArray(parsed.findings) || parsed.findings.length > 20) {
     throw new Error('Hermes must return { findings: [...] } with at most 20 findings');
   }
   return { findings: parsed.findings.map((finding, index) => normalizeFinding(finding, index)) };
 }
 
+function extractLiteralWebUrls(text) {
+  const matches = String(text ?? '').replace(/\\\//g, '/').match(/https?:\/\/[^\s<>"'`\\]+/gi) ?? [];
+  const unique = [];
+  const seen = new Set();
+  for (const match of matches) {
+    const candidate = match.replace(/[)\]}>.,;:!?]+$/g, '');
+    if (!candidate || seen.has(candidate)) continue;
+    try {
+      const parsed = new URL(candidate);
+      if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname) continue;
+    } catch { continue; }
+    seen.add(candidate);
+    unique.push(candidate);
+  }
+  return unique;
+}
+
+function repairHermesJson(candidate) {
+  let result = '';
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < candidate.length; index += 1) {
+    const char = candidate[index];
+    if (inString) {
+      if (escaped) {
+        result += char;
+        escaped = false;
+      } else if (char === '\\') {
+        const next = candidate[index + 1] ?? '';
+        if (/^["\\/bfnrtu]$/.test(next)) {
+          result += char;
+          escaped = true;
+        } else result += '\\\\';
+      } else if (char === '"') {
+        result += char;
+        inString = false;
+      } else if (char === '\n') result += '\\n';
+      else if (char === '\r') result += '\\r';
+      else if (char === '\t') result += '\\t';
+      else result += char;
+      continue;
+    }
+    if (char === '"') {
+      result += char;
+      inString = true;
+      continue;
+    }
+    if (char === ',') {
+      let cursor = index + 1;
+      while (/\s/.test(candidate[cursor] ?? '')) cursor += 1;
+      if (candidate[cursor] === ']' || candidate[cursor] === '}') continue;
+    }
+    result += char;
+  }
+  return result;
+}
+
 function normalizeFinding(value, index) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`finding ${index} must be an object`);
   const allowed = new Set(['url', 'title', 'text', 'summary', 'discoveredAt']);
   for (const key of Object.keys(value)) if (!allowed.has(key)) throw new Error(`finding ${index} contains unsupported field ${key}`);
+  const url = bounded(value.url, 2048, `finding ${index} url`);
+  let parsedUrl;
+  try { parsedUrl = new URL(url); }
+  catch { throw new Error(`finding ${index} url must be public http or https`); }
+  if (!['http:', 'https:'].includes(parsedUrl.protocol) || !parsedUrl.hostname) {
+    throw new Error(`finding ${index} url must be public http or https`);
+  }
   return {
-    url: bounded(value.url, 2048, `finding ${index} url`),
-    title: bounded(value.title, 240, `finding ${index} title`),
-    text: bounded(value.text, 20_000, `finding ${index} text`),
+    url,
+    title: value.title === undefined ? `Public source: ${parsedUrl.hostname}` : bounded(value.title, 240, `finding ${index} title`),
+    text: value.text === undefined ? 'Public source candidate pending Kernel verification.' : bounded(value.text, 20_000, `finding ${index} text`),
     ...(value.summary === undefined ? {} : { summary: bounded(value.summary, 500, `finding ${index} summary`) }),
     ...(value.discoveredAt === undefined ? {} : { discoveredAt: bounded(value.discoveredAt, 40, `finding ${index} discoveredAt`) }),
   };
@@ -100,7 +218,7 @@ function configuredTimeout(value, fallback) {
   if (value === undefined || value === '') return fallback;
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 60_000 || parsed > MAX_TIMEOUT_MS) {
-    throw new Error('HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS must be between 60000 and 1200000');
+    throw new Error('HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS must be between 60000 and 1500000');
   }
   return parsed;
 }
@@ -108,16 +226,19 @@ function configuredTimeout(value, fallback) {
 export async function runHermesOneShot(payload, options = {}) {
   const executable = normalizeHermesExecutable(options.executable ?? process.env.HEPHAESTUS_HERMES_EXECUTABLE ?? 'hermes');
   const prompt = buildHermesPrompt(payload);
-  const args = buildHermesArgs(prompt);
   const timeoutMs = options.timeoutMs ?? configuredTimeout(process.env.HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
   const ownsHermesHome = options.hermesHome === undefined;
   const hermesHome = options.hermesHome ?? await mkdtemp(join(tmpdir(), 'efesto-hermes-'));
+  const baseEnv = options.env ?? process.env;
+  const maxTurns = configuredMaxTurns(options.maxTurns ?? baseEnv.HEPHAESTUS_HERMES_MAX_TURNS);
+  const args = buildHermesArgs(prompt, maxTurns, baseEnv.HERMES_INFERENCE_PROVIDER, baseEnv.HERMES_INFERENCE_MODEL);
   try {
+    await prepareHermesHome(hermesHome, maxTurns, baseEnv.HERMES_INFERENCE_PROVIDER, baseEnv.HERMES_INFERENCE_MODEL);
     return await runHermesProcess({
       executable,
       args,
       timeoutMs,
-      env: buildHermesEnvironment(options.env ?? process.env, hermesHome),
+      env: buildHermesEnvironment(baseEnv, hermesHome),
       cwd: hermesHome,
     });
   } finally {
@@ -125,6 +246,15 @@ export async function runHermesOneShot(payload, options = {}) {
       await rm(hermesHome, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
   }
+}
+
+function configuredMaxTurns(value) {
+  if (value === undefined || value === '') return DEFAULT_AGENT_TURNS;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > MAX_AGENT_TURNS) {
+    throw new Error(`HEPHAESTUS_HERMES_MAX_TURNS must be an integer between 1 and ${MAX_AGENT_TURNS}`);
+  }
+  return parsed;
 }
 
 export function runHermesProcess({ executable, args, timeoutMs, env, cwd }) {
@@ -160,13 +290,29 @@ export function runHermesProcess({ executable, args, timeoutMs, env, cwd }) {
     child.stdout.on('data', (chunk) => collect(chunk, 'stdout'));
     child.stderr.on('data', (chunk) => collect(chunk, 'stderr'));
     child.on('error', (error) => finish(pendingError ?? error));
-    child.on('close', (code) => {
+    child.on('close', async (code) => {
       if (pendingError) return finish(pendingError);
-      if (code !== 0) return finish(new Error(`Hermes exited with code ${code}`));
+      if (code !== 0) {
+        return finish(new Error(processFailure('Hermes', code, stderr)));
+      }
       try { finish(undefined, parseHermesFindings(stdout)); }
       catch (error) { finish(error); }
     });
   });
+}
+
+function processFailure(label, code, stderr) {
+  const diagnostic = String(stderr ?? '')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\bsession_id:\s*[^\s,"']+/gi, 'session_id:<redacted-session>')
+    .replace(/((?:authorization|[a-z0-9_-]*api[_-]?key|[a-z0-9_-]*token)\s*[:=]\s*)(?:bearer\s+)?[^\s,"']+/gi, '$1<redacted-secret>')
+    .replace(/\b(?:sk|pk|ghp|gho|xox[abps])[-_][A-Za-z0-9._-]{8,}/gi, '<redacted-secret>')
+    .replace(/\b[A-Fa-f0-9]{32,}\b/g, '<redacted-secret>')
+    .replace(/[A-Za-z]:\\[^\s"']+/g, '<redacted-path>')
+    .replace(/\/(?:home|Users)\/[^\s"']+/g, '<redacted-path>')
+    .trim()
+    .slice(0, 400);
+  return `${label} exited with code ${code}${diagnostic ? `: ${diagnostic}` : ''}`;
 }
 
 async function readStdin() {

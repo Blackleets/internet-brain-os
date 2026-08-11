@@ -157,14 +157,239 @@ PR #213 merged at `3d4dbbf18573468bc7656a353f92714b94045dc1`. Its exact implemen
 
 `internal.64` makes the existing live L1→L7 acceptance runnable on an isolated GitHub-hosted machine without installing anything on the founder's PC:
 
-- fixes the Hermes v0.20 compatibility boundary: `--safe-mode` disabled the bundled backend plugins that provide web search, so the adapter now uses `--ignore-user-config --ignore-rules --toolsets search -z`;
+- fixes the Hermes v0.20 compatibility boundary: `--safe-mode` disabled the bundled backend plugins that provide web search, while scripted `-z` failed to forward the configured turn cap, so the adapter uses the bounded quiet chat query with explicit `--max-turns`, `--ignore-rules` and search-only toolsets;
 - gives each invocation a fresh `HERMES_HOME` and working directory, removes inherited project-plugin enablement, refuses private-URL search support and retains only public search candidates;
 - keeps Kernel-owned `web.read`, Evidence, classification, provenance and final Goal truth unchanged;
 - adds a manual-only, least-privilege workflow pinned to Hermes commit `ee4bb75b532e932a1055d9a710802a7435163b6a` and immutable Action commits;
-- requires the repository secret `HEPHAESTUS_LIVE_OPENROUTER_API_KEY`, fails closed if it is missing and uploads only the locally redacted acceptance report;
+- initially required the repository secret `HEPHAESTUS_LIVE_OPENROUTER_API_KEY` and uploaded only the locally redacted acceptance report;
 - strengthens report redaction for provider/API/Authorization-shaped credentials.
 
-Local qualification on 2026-08-11 is green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1055 tests, production build, `verify:first-run`, offline Hermes boundary acceptance `14/14`, extension packaging and workflow YAML/contract validation. This is **not yet authentic Internet proof**: `internal.64` still requires the GitHub Chromium/Windows/exact-package matrix and one green manual workflow report showing L1→L7 on the exact published SHA.
+PR #214 merged at `6e2aca2c6b06babb400d4c7ed35bb175145f6863`. Its exact candidate SHA passed CI/Chromium, internal package, Windows Launcher and Windows First Run, including packaged Windows 2022/2025 installation and repair. The provider-secret prerequisite remained an external blocker, so no authentic Internet L1→L7 success is claimed from `internal.64`.
+
+## Internal.65 — credential-free remote live-proof repair / frozen failure
+
+`internal.65` removes the founder-owned provider-secret prerequisite without changing product authority or default deterministic CI:
+
+- runs inference only inside the disposable GitHub-hosted runner through Hermes's `custom` provider and `http://127.0.0.1:11434/v1`;
+- checksum-verifies the pinned Ollama Linux archive before extraction under `/tmp` and never installs a system service;
+- pulls a reviewed Qwen3 tool-capable model, verifies its published model identity before Hermes can use it and binds the server to loopback;
+- preserves the pinned Hermes runtime, isolated home/cwd, search-only toolset, Kernel-owned `web.read`, sanitized report and exact L1→L7 acceptance criteria;
+- keeps default CI deterministic/offline while automatically qualifying same-repository pull requests and `main` only when the live-acceptance boundary changes, skips forks and retains manual reruns;
+- requires no provider secret, founder-PC download or persistent remote installation.
+
+Local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1056 tests, production build, `verify:first-run`, offline Hermes boundary acceptance `14/14`, extension packaging and workflow YAML/contract validation. PR #215 head `a78a1745063c9dd0f0bcd0949e7050fb6a1f80d9` then passed CI/Chromium, Windows Launcher, Windows First Run and packaged Windows 2022/2025 qualification.
+
+The authentic live run `31468965456` exposed two real control-budget failures. The pinned Hermes `--ignore-user-config` path restored its built-in `agent.max_turns: 500`, so time was the only practical loop bound. The mission worker and acceptance observer then both expired at 15 minutes while the inner Hermes adapter was allowed 20 minutes. The observer captured `running/investigating` as the worker concurrently persisted failure, and GitHub cleanup found the still-running process tree. The sanitized report proved only 7/13 checks and no candidates/Evidence/Find. `internal.65` is therefore frozen as failed and must never be reused or relabeled.
+
+## Internal.66 — live agent deadline and process-lifecycle repair / frozen failure
+
+`internal.66` preserves the exact credential-free runtime and L1→L7 truth criteria while repairing only the failed control plane:
+
+- replaces Hermes's 500-turn isolated default with one exclusively created private ephemeral profile capped at eight turns;
+- keeps the fresh home/cwd, ignores rules/memory, disables project plugins and exposes only `search` without loading any user configuration;
+- enforces a machine-checked live budget of 25 minutes for the inner Hermes adapter, 26 minutes for the worker, 27 minutes for terminal observation and 60 minutes for the outer job;
+- rejects any live configuration that does not satisfy adapter < worker < terminal;
+- waits for the adapter process to close before recording timeout or output-limit failure;
+- escalates ignored graceful termination to a bounded forced kill, preventing orphaned Hermes processes;
+- keeps the search-only toolset, loopback model, Kernel-owned `web.read`, Evidence/provenance gates and sanitized report unchanged.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, workflow YAML parsing, 187 test files / 1059 tests, production build, `verify:first-run`, offline Hermes boundary acceptance `14/14` and extension packaging. Regression coverage includes an actual child process that ignores graceful termination and must be gone before the worker returns. PR #215 head `45ea90ff9b9ab6a696e12c1e3e12ee579139d218` then passed the complete CI/Chromium/Windows/package matrix.
+
+Live run `31471100120` proved the control-plane repair: Hermes completed in one bounded attempt, the process closed cleanly, four candidates were persisted, Kernel `web.read` created one verified Evidence item and Goal Truth converged on `forged`. The unchanged report still failed closed at 12/14 because that page was ordinary Evidence: zero Finds were promoted, so L5 and L6 failed. `internal.66` is frozen as failed and must never be reused or relabeled.
+
+## Internal.67 — durable live discovery target repair / frozen failure
+
+`internal.67` preserves every authority, Evidence, classifier and L1→L7 threshold while repairing only the live discovery target and candidate quality:
+
+- replaces the fragile course query with a public open-source developer-tool Goal whose canonical pages normally expose API, documentation, installation and license details in fetched content;
+- asks Hermes to prefer canonical directly readable pages and avoid login walls, paywalls, redirectors, search-result pages and JavaScript-only shells;
+- requests six to ten relevant findings across diverse hosts when public search supports them, while retaining the hard maximum of twenty;
+- does not use search snippets to satisfy classification and does not lower the Opportunity score, Goal category match, Evidence or provenance requirements.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, workflow contracts, 187 test files / 1060 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14`, extension packaging and diff validation. PR #215 head `f15cf2c08ec7cb6f977f10494f85c56a44ca9bcd` passed the complete CI/Chromium/Windows/package matrix.
+
+Live run `31472695411` exposed that the nested deadlines were per attempt while terminal observation was per mission. The first 25-minute adapter attempt timed out, the normal product loop immediately started attempt two, and the 27-minute observer expired while that second child was active. The sanitized report therefore failed 8/14 with `running/investigating`, zero candidates and `attempt=2`. `internal.67` is frozen as failed and must never be reused or relabeled.
+
+## Internal.68 — global live-attempt budget repair / frozen failure
+
+`internal.68` preserves the product's default three-attempt recovery while making the disposable live proof one bounded attempt:
+
+- adds a fail-closed automatic-attempt setting limited to one through three; the product default remains three and the live workflow selects one;
+- lets an explicitly recorded queued failure end acceptance observation immediately as a failed outcome instead of waiting while no further live attempt is authorized;
+- supports a stricter per-run Hermes cap that can only reduce the default eight turns; live acceptance selects four;
+- limits the prompt to at most two public searches and asks for four to eight findings, keeping the hard maximum of twenty;
+- retains the same 25/26/27/60-minute process deadlines, Kernel Evidence/classifier authority and unchanged L1→L7 success criteria.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, workflow contracts, 187 test files / 1062 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14`, extension packaging, diff validation and sensitive-data preflight. PR #215 head `fb23097f7111793f152eb54669627a433316166f` passed the complete CI/Chromium/Windows/package matrix.
+
+Live run `31475334542` proved that the global attempt budget is repaired: exactly one attempt ran, no second adapter overlapped it and the queued failure became immediately observable. The unchanged report still failed 8/14 after the 25-minute adapter deadline because the reviewed Qwen3 4B model did not produce a valid result on the GitHub CPU runner within that bound. `internal.68` is frozen as failed and must never be reused or relabeled.
+
+## Internal.69 — bounded live-inference model repair / frozen failure
+
+`internal.69` changes only the disposable inference artifact selected by the remote live workflow:
+
+- replaces Qwen3 4B with the reviewed `qwen3:1.7b` tool-capable Ollama artifact to fit the existing bounded GitHub CPU execution window;
+- verifies the published model identity `8f68893c685c` and tool capability before Hermes can start;
+- retains one attempt, four turns, two searches and the existing 25/26/27/60-minute deadlines;
+- leaves the prompt, Kernel Evidence/classifier authority and all L1→L7 acceptance thresholds unchanged.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, workflow contracts, 187 test files / 1062 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging. PR #215 head `888b5a21024071f550a6a75096395c7129b32cf6` passed Windows Launcher, Windows First Run and internal-package qualification; live inference run `31477795868` downloaded the 1.7B model and verified its identity plus tool capability, then Hermes exited non-zero in 5.9 seconds before producing candidates. Both process layers discarded child stderr, so the sanitized report could prove only 8/14 and not identify the provider failure. `internal.69` is frozen as failed and must never be reused or relabeled.
+
+## Internal.70 — sanitized live-provider diagnostics / frozen failure
+
+`internal.70` retains the exact 1.7B model experiment and changes only bounded failure observability:
+
+- carries non-zero Hermes stderr through the adapter after credential, token and absolute-path redaction;
+- applies the same redaction again at the worker boundary and persists the bounded failure reason;
+- includes that sanitized reason in L1 report detail while keeping raw provider output out of the artifact;
+- leaves every authority boundary, attempt/turn/search/deadline bound and L1→L7 success threshold unchanged.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1065 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging. PR #215 head `58bb99e0377430c53b835632cbf94620b8d2219b` passed the complete CI/Chromium/Windows/package matrix.
+
+Live run `31478344733` then produced the intended actionable, sanitized reason: Qwen3 1.7B truthfully reports a 40,960-token context, below Hermes Agent's 64,000-token minimum. The model must not be misrepresented through a fake context override. The report failed closed at 8/14, so `internal.70` is frozen as failed and must never be reused or relabeled.
+
+## Internal.71 — truthful compact-context model repair / frozen failure
+
+`internal.71` preserves the new diagnostic path and replaces only the incompatible model artifact:
+
+- selects reviewed tool-capable `qwen3.5:2b`, whose published model family supports a 256K context and therefore truthfully satisfies Hermes's 64K minimum;
+- verifies the published Ollama model identity `324d162be6ca` and tool capability before Hermes starts;
+- retains the bounded 8K runtime context, one attempt, four turns, two searches and 25/26/27/60-minute deadlines;
+- leaves the prompt, Kernel Evidence/classifier authority and all L1→L7 thresholds unchanged.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1065 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging. PR #215 head `3f6d56da42bab21cb86fa781930f24ba42904b4f` passed the complete CI/Chromium/Windows/package matrix.
+
+Live run `31478786066` proved the model compatibility repair and completed real inference in 8m39s without timeout, but the adapter rejected the final response as invalid JSON before any candidates could be persisted. The report failed closed at 8/14, so `internal.71` is frozen as failed and must never be reused or relabeled.
+
+## Internal.72 — bounded Qwen output-envelope repair / frozen failure
+
+`internal.72` retains the exact compatible model and changes only model-mode and output-envelope handling:
+
+- selects Qwen's documented `/no_think` soft switch for the bounded discovery-plus-JSON task;
+- strips only a known `<think>…</think>` envelope and the existing optional JSON fence before strict parsing;
+- keeps rejecting prose, malformed JSON, unsupported fields and more than twenty findings;
+- reports only safe output-shape metadata when parsing fails, never raw model content;
+- leaves Kernel authority and all attempt/turn/search/deadline and L1→L7 bounds unchanged.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1067 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging. PR #215 head `7c89857b7024ef4da0d05cbc9fac12de6e3bc046` passed the complete CI/Chromium/Windows/package matrix.
+
+Live run `31479818132` completed real inference in 4m29s, but the fenced response still did not parse as strict JSON after the known envelope normalization. The sanitized shape metadata does not expose raw model content, so it does not prove which internal JSON token was invalid. The report failed closed at 8/14 before candidate persistence, so `internal.72` is frozen as failed and must never be reused or relabeled.
+
+## Internal.73 — broader JSON-fence and concise-output repair / frozen failure
+
+`internal.73` retains the exact compatible model and changes only bounded response formatting:
+
+- accepts optional whitespace between the opening markdown fence and its `json` label before strict parsing;
+- asks for three to five concise findings with one-line JSON-escaped strings and no trailing commas;
+- keeps strict schema and field validation after envelope normalization;
+- leaves Kernel authority and all attempt/turn/search/deadline and L1→L7 bounds unchanged.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1068 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging. PR #215 head `38c01e17578adc57c19564bf975a4b3efafc8e7d` passed the complete CI/Chromium/Windows/package matrix.
+
+Live run `31480815149` then performed 11m50s of real inference before Hermes exited with code 2 without a terminal response. No parser error occurred, and the report failed closed at 8/14 before candidate persistence. `internal.73` is frozen as failed and must never be reused or relabeled.
+
+## Internal.74 — one-search terminal-response repair / frozen failure
+
+`internal.74` retains the exact model and security boundary while tightening the agent path:
+
+- requires exactly one public search call followed immediately by final JSON, with no second tool call;
+- retains the one-attempt, four-turn and nested deadline bounds;
+- requests the Hermes usage file but exposes only completion/failure booleans and bounded API/token counters on a silent non-zero exit;
+- keeps the same concise output instructions, strict schema validation, Kernel authority and L1→L7 thresholds.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1069 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging. PR #215 head `f7b279bd839ed99f8e0b55902ba3070dd228e00a` passed the complete CI/Chromium/Windows/package matrix.
+
+Live run `31482264226` completed the one-search path and returned a fenced response containing `findings`, but strict parsing still rejected its 5,932-character internal JSON syntax. The report failed closed at 8/14 before candidate persistence, so `internal.74` is frozen as failed and must never be reused or relabeled.
+
+## Internal.75 — bounded deterministic JSON repair / frozen failure
+
+`internal.75` retains the successful one-search terminal path and adds only bounded syntax normalization:
+
+- caps requested title/text/summary lengths at 160/300/160 characters;
+- escapes literal newline, carriage-return and tab controls only while inside JSON strings;
+- removes only trailing commas immediately before `]` or `}`;
+- then applies the unchanged strict field whitelist, value bounds, Kernel authority and L1→L7 thresholds.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1070 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging. PR #215 head `45a4e9791395278603c9c57fff14b532d6e566e8` passed the complete CI/Chromium/Windows/package matrix.
+
+Live run `31483306338` ran for 4m39s and returned a fenced 1,734-character response containing `findings`, but none of the `.75` syntax repairs applied and strict parsing failed closed at 8/14 before candidate persistence. `internal.75` is frozen as failed and must never be reused or relabeled.
+
+## Internal.76 — URL-only fenced-payload repair / frozen failure
+
+`internal.76` reduces the untrusted model boundary while preserving the one-search terminal path:
+
+- requests only three to five public URLs, without model-authored titles, snippets, summaries or dates;
+- derives neutral title/text placeholders locally and leaves substantive content exclusively to Kernel `web.read` verification;
+- parses only the first fenced JSON payload, ignoring presentation text after its closing fence;
+- repairs invalid JSON string escapes, then applies the unchanged strict field whitelist, value bounds, Kernel authority and L1→L7 thresholds.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1074 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging. PR #215 head `ba25a0f28deffb37d70a29ffdd6c9c587162f13c` passed the complete CI/Chromium/Windows/package matrix.
+
+Live run `31484220482` ran for 15m22s before Hermes exited code 2 without a terminal response; its sanitized usage report showed `completed=false`, `failed=false` and 15 API calls. Inspection of pinned Hermes commit `ee4bb75b532e932a1055d9a710802a7435163b6a` established that `hermes -z` constructs `AIAgent` without forwarding `agent.max_turns`, leaving its internal 90-iteration default in authority despite Efesto's exclusive four-turn profile. The report failed closed at 8/14, so `internal.76` is frozen as failed and must never be reused or relabeled.
+
+## Internal.77 — authoritative CLI turn cap / frozen failure
+
+`internal.77` keeps the URL-only candidate boundary while repairing the actual agent-loop control:
+
+- replaces scripted `-z` with Hermes's supported quiet `chat --query` path;
+- passes the reviewed cap through explicit `--max-turns`, which the pinned chat path forwards to `AIAgent.max_iterations`;
+- probes `hermes chat --help` and fails readiness closed unless query, quiet, max-turns, ignore-rules and toolset controls are all advertised;
+- keeps the exclusive profile, one search, one Efesto attempt, nested deadlines, search-only tools and all Kernel/Evidence authority unchanged.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1074 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging. PR #215 head `826e396274dd11bbc167325bf6df86823fc4cacd` passed the complete CI/Chromium/Windows/package matrix.
+
+Live run `31486248829` failed closed in 3.8 seconds when the quiet chat process exited code 1 before inference. Inspection of the pinned chat path confirmed that model selection ignores `HERMES_INFERENCE_MODEL` and provider selection prefers its CLI config before the environment; the exclusive profile intentionally contains no inherited route configuration. `internal.77` is frozen as failed and must never be reused or relabeled.
+
+## Internal.78 — explicit bounded inference route / frozen failure
+
+`internal.78` retains the authoritative chat turn cap and supplies the missing isolated route explicitly:
+
+- reads the already-configured `HERMES_INFERENCE_PROVIDER` and `HERMES_INFERENCE_MODEL` values from the adapter process environment;
+- rejects route values over 160 characters or containing control characters;
+- passes non-empty values as direct `--provider` and `--model` spawn arguments without a shell;
+- keeps the private profile free of inherited user state, search-only tools, one search, one Efesto attempt, nested deadlines and all Kernel/Evidence authority unchanged.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1074 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging.
+
+PR #215 head `d42a30634ff021ae94be8e2487be456f66a035e2` passed the complete CI/Chromium/Windows/package matrix. Live run `31486865843` failed closed in 3.6 seconds at 8/14: the quiet chat process exited code 1 before inference, with no candidates, Evidence or Finds. Inspection of pinned `cmd_chat` established that its pre-agent first-run guard ignores CLI-only provider/model arguments and accepts an isolated run only when its profile contains `model.provider` or a recognized credential. `internal.78` is frozen as failed and must never be reused or relabeled.
+
+## Internal.79 — startup-visible isolated route / frozen failure
+
+`internal.79` preserves the explicit bounded quiet-chat invocation and repairs only the pinned pre-agent startup contract:
+
+- mirrors the already-configured, length/control-character-checked provider and model into the exclusively created temporary profile as `model.provider` and `model.default`;
+- passes the same values as direct `--provider` and `--model` arguments without a shell, so post-guard runtime selection remains explicit;
+- retains the authoritative four-turn cap, empty ephemeral home/cwd, search-only tools, one search, one Efesto attempt, nested deadlines and all Kernel/Evidence authority.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1075 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging.
+
+PR #215 head `0ec496e7c58290608582ba2ce6142b56280dc4ee` passed the complete CI/Chromium/Windows/package matrix. Live run `31487591309` proved the startup repair and performed 7m39s of authentic inference, but its 6,181-character final response contained neither valid JSON nor a `findings` object. Bounded syntax repair applied without making the response valid; no candidates, Evidence or Finds were admitted and the report failed closed at 8/14. `internal.79` is frozen as failed and must never be reused or relabeled.
+
+## Internal.80 — literal URL-only response fallback
+
+`internal.80` keeps the strict JSON path and adds one authority-reducing translation for invalid model presentation:
+
+- extracts only literal HTTP(S) URL strings from a non-JSON response, removes trailing presentation punctuation, deduplicates them and retains the existing maximum of twenty;
+- discards all surrounding prose, titles, snippets, summaries and claimed authority, deriving the same neutral local candidate labels;
+- still rejects valid structured output with an invalid schema or unsupported fields;
+- still requires every URL to pass the Kernel's credential/private-address rejection, authorized `web.read`, Evidence, classification, provenance and Goal-truth gates.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1076 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging.
+
+PR #215 head `07d77c839a90e862beb71a722d8eeb971050a18b` passed the complete CI/Chromium/Windows/package matrix. Live run `31488730093` performed authentic inference, persisted three candidates and entered Kernel verification, but one fetched page exceeded the 12,000-character `visibleText` page-context limit. The projection transaction rejected it, no Evidence or Finds were committed, the Mission remained truthfully `running/verifying`, and the 27-minute observer reported 8/14. `internal.80` is frozen as failed and must never be reused or relabeled.
+
+## Internal.81 — bounded verified-page projection and terminal observation
+
+`internal.81` preserves the complete fetched source while repairing only projection and observation bounds:
+
+- retains the full fetched body and its SHA-256 in Evidence;
+- deterministically caps only the page-context copy used by classification and Opportunity projection at the shared 12,000-character validation boundary;
+- extends live terminal observation from 27 to 32 minutes, giving the unchanged maximum of twenty sequential 15-second `web.read` calls plus projection a bounded six-minute post-worker window;
+- retains the 25-minute adapter, 26-minute worker and 60-minute job deadlines, one live attempt, four Hermes turns, one search and all URL, authority, Evidence, provenance and L1→L7 gates.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1077 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14`, extension packaging and diff validation. Regression coverage proves that a fetched body above 12,000 characters remains complete and hash-identical in Evidence while its bounded classifier projection reaches `completed/forged` and can still promote a Find.
+
+The exact candidate must pass the complete local and GitHub matrix and produce an authentic sanitized `14/14` report before merge.
 
 ## Canonical CI/release gate
 
@@ -182,7 +407,7 @@ Every affected candidate must pass on one unchanged SHA:
 10. exact internal-package generation and SHA binding;
 11. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
-Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58` and `.61` remain frozen failures and must never be reused.
+Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65`, `.66`, `.67`, `.68`, `.69`, `.70`, `.71`, `.72`, `.73`, `.74`, `.75`, `.76`, `.77`, `.78`, `.79` and `.80` remain frozen failures and must never be reused.
 
 ## Distribution and public launch
 
@@ -193,8 +418,8 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58` an
 
 ## What remains
 
-1. Qualify immutable `internal.64` across the complete local and GitHub release matrix, then merge only if the exact SHA is green.
-2. Configure the repository-scoped live provider secret and dispatch `Hermes live public-web acceptance` on that exact SHA; require a real green L1→L7 report and do not substitute deterministic CI or workflow presence for proof.
+1. Qualify immutable `internal.81` across the complete local and GitHub release matrix, then merge only if the exact SHA and authentic sanitized L1→L7 report are green.
+2. Require the automatically triggered `Hermes live public-web acceptance` run on the merged SHA to produce a real green L1→L7 report; do not substitute deterministic CI or workflow presence for proof.
 3. Run UAT-1→UAT-6 on the same exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
 4. Use the Kernel-owned local-installation scorecard to establish the first real activation, repeat usage and useful-Find baselines before growth/retention/willingness-to-pay claims.
 5. Treat notification delivery, aggregate sharing, scheduling expansion, cross-device authority and irreversible actions as separate security/privacy slices.
@@ -202,7 +427,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58` an
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6 runs the authentic Hermes public-web proof remotely without founder-PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.81 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3.5 2B inference, truthful 256K model context, bounded 8K runtime context, Qwen non-thinking mode, one live attempt capped authoritatively at four turns through quiet `chat --query --max-turns`, startup-visible isolated provider/model routing and exactly one search, strict JSON or literal URL-only candidates, first-fenced-payload extraction, bounded deterministic syntax repair, neutral locally derived candidate labels, canonical directly readable discovery targets, full fetched Evidence with a bounded 12,000-character classifier projection, 25/26/32/60-minute nested deadlines and no founder-owned provider credential or PC installation. Search snippets and discarded prose are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule

@@ -80,17 +80,169 @@ Delivered G5.5 slice:
 - surface Repeat Goal Usage as a primary Kernel-owned KPI;
 - keep aggregate rates and notification-delivery measurement unavailable until separately justified ledgers/privacy boundaries exist.
 
-Active G5.6 slice:
+Delivered G5.6 foundation (`internal.64`):
 
 - isolate authentic Hermes v0.20 search without disabling its bundled public-web provider;
 - execute the existing L1→L7 contract on a GitHub-hosted machine, not the founder's PC;
 - pin the external runtime/action supply chain and keep provider credentials out of logs/artifacts;
 - retain manual dispatch and require a real green report before claiming live proof.
 
+Frozen `internal.65` failure:
+
+- remove the founder-owned provider-secret prerequisite by running a reviewed tool-capable model only on loopback inside the disposable GitHub runner;
+- checksum-verify the pinned local inference runtime and verify the reviewed model identity before Hermes can use it;
+- preserve search-only Hermes execution, Kernel-owned verification and the same L1→L7 success contract;
+- trigger automatically only when the live-acceptance boundary changes in a same-repository pull request or on `main`, skip forks, retain manual reruns and keep default CI offline;
+- made the exact live proof executable without downloading or installing anything on the founder's PC;
+- passed the deterministic/Windows package matrix but failed live L1→L7 because `--ignore-user-config` restored Hermes's 500-turn built-in default and the 15-minute worker/observer deadlines expired together before the 20-minute inner Hermes deadline;
+- remains immutable and must not be reused.
+
+Frozen `internal.66` result:
+
+- preserve the credential-free isolated Qwen/Ollama/Hermes boundary from `internal.65`;
+- replace the 500-turn built-in Hermes default with one exclusive ephemeral eight-turn profile without loading user config;
+- enforce adapter < worker < terminal < job deadlines with explicit machine checks;
+- wait for real adapter-process termination before mission failure is recorded, escalating graceful shutdown when required;
+- passed the full deterministic/Chromium/Windows/package matrix and proved bounded clean mission completion with candidates plus Kernel Evidence;
+- failed closed at L5/L6 because the one verified course page was ordinary Evidence and produced no Find, so the candidate remains immutable and unmerged.
+
+Frozen `internal.67` result:
+
+- preserve the unchanged classifier, Goal match, Evidence and provenance gates;
+- target canonical public open-source tool pages with fetched API, documentation, installation and license details;
+- prefer directly readable sources, avoid login/paywall/redirect/search/JavaScript shells and return six to ten diverse candidates when available;
+- passed the full deterministic/Chromium/Windows/package matrix but exposed that per-attempt deadlines did not bound the whole three-attempt mission; attempt two was active when terminal observation expired;
+- remains immutable and unmerged.
+
+Frozen `internal.68` result:
+
+- preserve three attempts as the normal product default but constrain remote live proof to one explicitly configured attempt;
+- cap that live Hermes run at four turns and two searches while allowing four to eight diverse findings;
+- treat a recorded queued failure as an observable failed acceptance outcome so no idle observer waits after the configured live attempt ends;
+- passed the complete deterministic/Chromium/Windows/package matrix and proved exactly one bounded attempt with no overlapping retry;
+- failed closed at 8/14 because Qwen3 4B did not return valid output before the 25-minute adapter deadline on the GitHub CPU runner;
+- remains immutable and unmerged.
+
+Frozen `internal.69` result:
+
+- replace only the disposable live inference artifact with reviewed tool-capable `qwen3:1.7b`;
+- verify its published identity before Hermes starts;
+- retain the one-attempt, four-turn, two-search and 25/26/27/60-minute bounds;
+- downloaded and verified the reviewed model plus tool capability, then Hermes exited non-zero in 5.9 seconds before discovery;
+- exposed that both nested process boundaries discarded provider stderr, leaving the 8/14 report without an actionable reason;
+- remains immutable and unmerged.
+
+Frozen `internal.70` result:
+
+- carry only bounded credential/path-redacted diagnostics across both Hermes process boundaries;
+- include the already-sanitized persisted failure reason in L1 report detail;
+- retained the exact 1.7B experiment and unchanged L1→L7 evidence/provenance contract;
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- live run reported the actionable reason that Qwen3 1.7B's truthful 40,960-token context is below Hermes's 64K minimum;
+- remains immutable and unmerged.
+
+Frozen `internal.71` result:
+
+- replace only the incompatible model with reviewed tool-capable `qwen3.5:2b` and verify identity/capability;
+- rely on its truthful published 256K model context rather than overriding metadata;
+- retained the bounded 8K runtime context and unchanged L1→L7 evidence/provenance contract;
+- passed the complete deterministic/Chromium/Windows/package matrix and completed compatible inference in 8m39s;
+- failed closed before candidate persistence because the final response was not strict JSON;
+- remains immutable and unmerged.
+
+Frozen `internal.72` result:
+
+- select Qwen's documented non-thinking soft switch for the short tool-plus-JSON mission;
+- strip only its known thinking envelope and the existing optional JSON fence before strict schema validation;
+- expose only output-shape metadata if parsing still fails;
+- retain all authority, model identity, runtime and L1→L7 evidence/provenance bounds.
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- failed closed at 8/14 because the fenced response still did not parse as strict JSON after the known envelope normalization;
+- remains immutable and unmerged.
+
+Frozen `internal.73` result:
+
+- accept optional whitespace between the opening fence and its `json` label before strict parsing;
+- request three to five concise one-line, JSON-escaped candidates without trailing commas;
+- retain strict schema validation and all authority, model identity, runtime and L1→L7 evidence/provenance bounds.
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- failed closed at 8/14 after Hermes exited with code 2 without a terminal response following 11m50s of real inference;
+- remains immutable and unmerged.
+
+Frozen `internal.74` result:
+
+- require exactly one public search call followed immediately by the final JSON;
+- retain one attempt and four turns while avoiding a second search/tool loop;
+- collect only completion/failure booleans and bounded API/token counters when Hermes exits silently;
+- retain strict schema validation and every authority and L1→L7 evidence/provenance bound.
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- completed a terminal fenced response after one search, then failed closed at 8/14 because its internal JSON syntax remained invalid;
+- remains immutable and unmerged.
+
+Frozen `internal.75` result:
+
+- keep the successful one-search terminal path and set explicit per-field output lengths;
+- repair only literal newline/tab/carriage-return controls inside strings and trailing commas;
+- apply the unchanged field whitelist, size limits and Kernel authority after syntax repair.
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- returned a fenced 1,734-character response with `findings`, but no known repair applied and strict parsing failed closed at 8/14;
+- remains immutable and unmerged.
+
+Frozen `internal.76` result:
+
+- request URL-only findings and derive neutral candidate labels locally before Kernel verification;
+- parse only the first fenced JSON payload and ignore trailing presentation text;
+- repair invalid string escapes while retaining the strict whitelist, bounds and Kernel authority.
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- exited without a terminal response after 15 API calls because pinned `hermes -z` did not forward the configured turn cap into `AIAgent`;
+- remains immutable and unmerged.
+
+Frozen `internal.77` result:
+
+- invoke the supported quiet `chat --query` path with explicit `--max-turns`;
+- require the exact bounded query interface in the runtime readiness probe;
+- retain URL-only candidates, search-only tools, one attempt and all Kernel authority.
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- failed before inference because the pinned chat path did not select the environment-only provider/model route from the empty profile;
+- remains immutable and unmerged.
+
+Frozen `internal.78` result:
+
+- pass the already-configured provider and model as explicit quiet-chat arguments;
+- length/control-character bound both route values and keep shell execution disabled;
+- retain the authoritative four-turn cap and every search/Evidence/Kernel guardrail.
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- failed closed at 8/14 before inference because pinned `cmd_chat` ignores CLI-only routing in its pre-agent first-run guard;
+- remains immutable and unmerged.
+
+Frozen `internal.79` result:
+
+- mirror the same bounded provider/model values into the exclusively created temporary profile so Hermes startup recognizes an intentionally configured route;
+- retain explicit direct CLI routing after the guard, without a shell, credential, inherited user state or new network authority;
+- retain the authoritative four-turn cap and every search/Evidence/Kernel guardrail.
+- passed the complete deterministic/Chromium/Windows/package matrix and performed 7m39s of authentic inference;
+- failed closed at 8/14 because the 6,181-character final response contained neither valid JSON nor a `findings` object;
+- remains immutable and unmerged.
+
+Frozen `internal.80` result:
+
+- retain strict JSON when available, otherwise keep only deduplicated literal HTTP(S) URLs and discard every other model byte;
+- derive neutral candidates locally and keep the twenty-item cap;
+- require the unchanged Kernel private-address, `web.read`, Evidence, classification and provenance gates.
+- passed the complete deterministic/Chromium/Windows/package matrix and persisted three authentic candidates;
+- failed closed at 8/14 because a fetched page exceeded the 12,000-character classifier context limit, leaving the Mission in `verifying` until the 27-minute observer expired;
+- remains immutable and unmerged.
+
+Active `internal.81` repair:
+
+- retain and hash the complete fetched body as Evidence while bounding only the classifier/Opportunity page-context view to 12,000 characters;
+- expand terminal observation from 27 to 32 minutes so the unchanged maximum twenty sequential 15-second `web.read` calls have bounded post-inference headroom;
+- retain one attempt, four turns, one search, 25-minute adapter and 26-minute worker bounds plus all Kernel authority and L1→L7 thresholds.
+
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.64` for G5.6;
-2. configure the scoped live provider secret and run the exact-SHA remote L1→L7 workflow;
+1. qualify and merge immutable `internal.81` only if the exact release matrix and sanitized L1→L7 report are green;
+2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;
 5. test willingness-to-pay and onboarding friction, then choose the next slice from evidence.

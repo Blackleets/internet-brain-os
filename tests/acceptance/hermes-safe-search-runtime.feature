@@ -4,20 +4,21 @@ Feature: Hermes safe automatic discovery runtime
   So that prompt instructions are not the security boundary
 
   Scenario: Compatible Hermes runtime is certified for discovery
-    Given Hermes advertises one-shot, toolsets and safe-mode support
+    Given Hermes advertises quiet query, max-turns, toolsets and isolated configuration flags
     When Efesto probes the runtime
-    Then it is certified as safe_search_only
-    And required arguments are --safe-mode --toolsets search -z
+    Then it is certified as bounded_isolated_search_only
+    And required arguments include chat --query --quiet --max-turns --ignore-rules --toolsets search
+    And the exclusive ephemeral profile limits Hermes to 8 turns
 
   Scenario: Older Hermes runtime fails closed
-    Given Hermes does not advertise safe-mode or toolsets
+    Given Hermes does not advertise isolated configuration flags or toolsets
     When Efesto probes the runtime
     Then read-only readiness is denied
-    And Efesto does not fall back to unrestricted one-shot execution
+    And Efesto does not fall back to an unrestricted execution path
 
   Scenario: Automatic discovery has no broad toolsets
     Given a certified Hermes runtime
-    When Efesto builds the one-shot command
+    When Efesto builds the bounded quiet-query command
     Then only the search toolset is enabled
     And terminal, file, browser, computer-use and messaging tools are absent
     And private URL allowance is forced off

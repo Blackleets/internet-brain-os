@@ -34,3 +34,10 @@ Feature: Authentic public-web Goal journey acceptance
     When the boundary-authority suite runs
     Then the existing isolated deterministic checks remain in use
     And no real public-web value assertion is silently substituted into default CI
+
+  Scenario: Remote live proof does not require a founder-owned provider credential
+    Given live acceptance runs on a disposable GitHub-hosted machine
+    When the pinned loopback model identity and tool capability are verified
+    Then authentic Hermes uses only that loopback inference endpoint
+    And no provider API key is required or persisted
+    And the run still must prove L1 through L7 before live acceptance is green

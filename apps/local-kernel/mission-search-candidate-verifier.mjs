@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { InboxError } from './page-context-inbox.mjs';
+import { InboxError, MAX_PAGE_CONTEXT_VISIBLE_TEXT } from './page-context-inbox.mjs';
 import { classifyOpportunity } from './opportunity-classifier.mjs';
 
 const READ_CAPABILITY = 'web.read';
@@ -227,12 +227,13 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
   const capturedAt = String(document.fetchedAt ?? new Date().toISOString());
   const title = String(document.title ?? candidate.title).slice(0, 240) || candidate.title;
   const text = String(document.text ?? '').trim();
+  const projectionText = boundedProjectionText(text);
   const context = {
     schemaVersion: 'hephaestus.page-context.v1',
     url: sourceUrl,
     canonicalUrl: sourceUrl,
     title,
-    visibleText: text,
+    visibleText: projectionText,
     description: candidate.summary,
     capturedAt,
   };
@@ -281,6 +282,11 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
     opportunity = projected.result;
   }
   return { data: nextData, result: { caseId, evidenceId, duplicate, sourceUrl, opportunity } };
+}
+
+function boundedProjectionText(text) {
+  if (text.length <= MAX_PAGE_CONTEXT_VISIBLE_TEXT) return text;
+  return `${text.slice(0, MAX_PAGE_CONTEXT_VISIBLE_TEXT - 1)}…`;
 }
 
 function findMission(data, missionId) {

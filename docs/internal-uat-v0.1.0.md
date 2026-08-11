@@ -48,12 +48,14 @@ Observe the real journey without manually calling internal worker endpoints:
 
 Pass only if:
 
-- Hermes automatic discovery is certified read-only and uses an ephemeral home/cwd with the equivalent of `--ignore-user-config --ignore-rules --toolsets search -z`, while project plugins remain disabled; an incompatible Hermes runtime is visibly blocked rather than falling back to broad tools;
+- Hermes automatic discovery is certified read-only and uses an empty ephemeral home/cwd with one exclusive at-most-eight-turn config containing the already-configured provider/model route plus the equivalent of `chat --query <prompt> --quiet --max-turns <bounded> --provider <configured> --model <configured> --ignore-rules --toolsets search`, while memory and project plugins remain disabled; an incompatible Hermes runtime is visibly blocked rather than falling back to broad tools;
+- Hermes prefers canonical directly readable public pages over login walls, paywalls, redirectors, search-result pages and JavaScript-only shells, but this preference never grants Evidence or promotion authority;
 - search results are persisted first as candidates and **a search snippet is not Evidence**;
+- when Hermes returns prose instead of JSON, only deduplicated literal HTTP(S) URLs may survive as neutral candidates; every other model byte is discarded before Kernel verification;
 - the Kernel authorizes the registered `web.read` capability and re-fetches each candidate through the trusted public-web reader;
 - private/loopback/link-local targets, credential URLs and redirect abuse fail closed;
 - authority is rechecked after network I/O before persistence, so pausing/revising the Goal during a fetch cannot admit stale content;
-- Evidence `rawText` comes from fetched page content, not Hermes output, and retains Mission/candidate/source provenance;
+- Evidence `rawText` and its content hash cover the complete fetched page content, not Hermes output, while only the classifier projection is bounded to the 12,000-character page-context limit; Mission/candidate/source provenance remains intact;
 - every promoted Find retains Case/Evidence provenance and ranking is explainable;
 - duplicate candidates, exact discovery replay and exact verification replay do not duplicate Case, Evidence or Find;
 - zero search results complete calmly without a false forged state;

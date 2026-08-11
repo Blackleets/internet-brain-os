@@ -4,17 +4,15 @@ This guide prepares Efesto's Agent Hub worker to invoke the user's authentic Her
 
 ## Security boundary
 
-The worker sends one bounded `efesto.hermes-mission.v1` JSON object to the bundled adapter over stdin. The adapter invokes the authentic Hermes CLI in scripted one-shot mode and returns only:
+The worker sends one bounded `efesto.hermes-mission.v1` JSON object to the bundled adapter over stdin. The adapter invokes the authentic Hermes CLI in quiet single-query mode and returns only:
 
 ```json
 {
   "findings": [
     {
       "url": "https://public.example/item",
-      "title": "Public finding title",
-      "text": "Bounded public-source text",
-      "summary": "Optional bounded summary",
-      "discoveredAt": "2026-07-22T10:00:00.000Z"
+      "title": "Public source: public.example",
+      "text": "Public source candidate pending Kernel verification."
     }
   ]
 }
@@ -29,8 +27,8 @@ The Kernel still owns URL validation, Evidence creation, deduplication, Goal-sco
 1. reads exactly one mission JSON object from stdin;
 2. validates `efesto.hermes-mission.v1`;
 3. builds a bounded public-research prompt;
-4. invokes the authentic CLI from an ephemeral home/working directory with `--ignore-user-config --ignore-rules --toolsets search -z`;
-5. accepts only JSON containing at most 20 findings;
+4. creates one exclusive private config in the ephemeral home with `agent.max_turns: 8` and the already-configured provider/model route, then invokes the authentic CLI from that empty home/working directory with `chat --query <prompt> --quiet --max-turns <bounded> --provider <configured> --model <configured> --ignore-rules --toolsets search`;
+5. accepts strict JSON containing at most 20 findings, or discards all non-URL prose from an invalid response and admits only at most 20 deduplicated literal HTTP(S) URLs as neutral candidates;
 6. rejects unsupported authority fields, oversized values, invalid output, timeouts, and non-zero exits;
 7. writes only `{ "findings": [...] }` to stdout.
 
@@ -40,13 +38,25 @@ Hermes v0.20 `--safe-mode` is not compatible with this bridge because it disable
 
 ## Remote authentic L1→L7 acceptance
 
-`.github/workflows/hermes-live-public-web-acceptance.yml` runs the same product path on an isolated GitHub-hosted machine, so it does not install Hermes or another dependency on the founder's PC. It is manual-only and pins:
+`.github/workflows/hermes-live-public-web-acceptance.yml` runs the same product path on an isolated GitHub-hosted machine, so it does not install Hermes or another dependency on the founder's PC. It supports manual reruns and automatically qualifies same-repository pull requests plus `main` only when the live-acceptance boundary itself changes; fork pull requests are skipped. It pins:
 
 - Hermes commit `ee4bb75b532e932a1055d9a710802a7435163b6a` (v0.20.0 source);
 - every referenced GitHub Action by immutable commit;
-- `uv` 0.9.28, Python 3.11, pnpm 11.11.0 and `ddgs` 9.14.4.
+- `uv` 0.9.28, Python 3.11, pnpm 11.11.0 and `ddgs` 9.14.4;
+- Ollama 0.32.8 Linux archive SHA-256 `c10b76c39cb72908cc92dff314e80e32736c03f1287efb4b39e0b70fd600cc64`;
+- reviewed Qwen3.5 2B model identity `324d162be6ca`.
 
-Before dispatch, configure the repository secret `HEPHAESTUS_LIVE_OPENROUTER_API_KEY`. The default model input is `openrouter/free`; it can be replaced at dispatch without changing product authority. A missing secret fails closed, the credential is scoped only to the no-output preflight and authentic Hermes steps, and the workflow publishes only `.hephaestus/live-acceptance-report.json` after local redaction. A workflow definition or skipped/blocked run is not proof: acceptance requires the report itself to show all L1→L7 checks green on the tested SHA.
+The manual workflow needs no founder-owned provider credential. It installs a checksum-verified Ollama release on the disposable GitHub runner, pulls the reviewed `qwen3.5:2b` artifact, verifies its published model identity and tool capability, and exposes it only on loopback through Hermes's `custom` provider boundary. This smaller tool-capable model has a truthful 256K model context, satisfying Hermes's 64K minimum without overriding model metadata; it does not change Kernel authority or acceptance thresholds. The model and runtime disappear with the runner. The workflow still publishes only `.hephaestus/live-acceptance-report.json` after local redaction. A workflow definition or skipped/blocked run is not proof: acceptance requires the report itself to show all L1→L7 checks green on the tested SHA.
+
+Hermes's isolated built-in defaults otherwise allow up to 500 turns, so Efesto does not use `--ignore-user-config` for this bridge. The pinned Hermes `-z` implementation constructs `AIAgent` without forwarding `agent.max_turns`, while its chat path does not use `HERMES_INFERENCE_MODEL` for model selection and its pre-agent startup guard ignores CLI-only routing. Efesto therefore uses the supported quiet chat query, mirrors the already-configured provider/model values into the exclusive temporary profile, and passes `--max-turns`, `--provider` and `--model` explicitly; route values come from the already-configured environment, are length/control-character checked and are passed without a shell. The readiness probe requires the bounded chat interface. The freshly created `HERMES_HOME` cannot contain user configuration; Efesto writes the only config there with an exclusive create, refuses a pre-existing config, keeps rules/memory/project plugins disabled and limits the agent to at most eight turns. A deployment may select a stricter positive cap but cannot expand it beyond eight; remote live acceptance uses four.
+
+The live control plane also uses strictly nested deadlines: 25 minutes for the Hermes adapter, 26 minutes for the worker, 32 minutes for terminal observation and 60 minutes for the outer GitHub job. The six-minute post-worker window covers the existing maximum of twenty sequential `web.read` calls at their 15-second fetch deadline plus bounded projection overhead. On timeout or excess output, the worker waits for the adapter process to close and escalates to a bounded forced kill if graceful termination is ignored; it never records mission failure while the provider process is still running.
+
+When Hermes or its adapter exits non-zero, each process boundary retains only a bounded diagnostic after credential, token and absolute-path redaction. The same already-sanitized failure reason is included in the L1 report detail so provider compatibility failures remain actionable without publishing raw process output.
+
+The remote prompt starts with Qwen's `/no_think` soft switch because this mission needs short tool use followed by exact JSON, not a long reasoning trace. The adapter still accepts one known `<think>…</think>` envelope and the existing optional JSON code fence before parsing, then applies the same strict `{ findings: [...] }` schema. If JSON parsing fails but the response contains literal HTTP(S) URLs, only those deduplicated URL strings are retained; prose, titles, snippets, summaries and claimed authority are discarded before the unchanged Kernel verification boundary. With no usable URLs, the diagnostic contains only output-shape booleans, URL count and character count, never model text.
+
+For each accepted candidate, Kernel `web.read` retains the complete fetched body and its SHA-256 in Evidence. Only the page-context copy passed to the classifier and Opportunity projector is deterministically capped at the shared 12,000-character validation limit, so a long legitimate page cannot abort the verification transaction and no source provenance is discarded.
 
 ## Windows local configuration
 
