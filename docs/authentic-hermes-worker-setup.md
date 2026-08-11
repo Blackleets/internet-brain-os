@@ -4,17 +4,15 @@ This guide prepares Efesto's Agent Hub worker to invoke the user's authentic Her
 
 ## Security boundary
 
-The worker sends one bounded `efesto.hermes-mission.v1` JSON object to the bundled adapter over stdin. The adapter invokes the authentic Hermes CLI in scripted one-shot mode and returns only:
+The worker sends one bounded `efesto.hermes-mission.v1` JSON object to the bundled adapter over stdin. The adapter invokes the authentic Hermes CLI in quiet single-query mode and returns only:
 
 ```json
 {
   "findings": [
     {
       "url": "https://public.example/item",
-      "title": "Public finding title",
-      "text": "Bounded public-source text",
-      "summary": "Optional bounded summary",
-      "discoveredAt": "2026-07-22T10:00:00.000Z"
+      "title": "Public source: public.example",
+      "text": "Public source candidate pending Kernel verification."
     }
   ]
 }
@@ -29,7 +27,7 @@ The Kernel still owns URL validation, Evidence creation, deduplication, Goal-sco
 1. reads exactly one mission JSON object from stdin;
 2. validates `efesto.hermes-mission.v1`;
 3. builds a bounded public-research prompt;
-4. creates one exclusive private config in the ephemeral home with `agent.max_turns: 8`, then invokes the authentic CLI from that empty home/working directory with `--ignore-rules --toolsets search -z`;
+4. creates one exclusive private config in the ephemeral home with `agent.max_turns: 8`, then invokes the authentic CLI from that empty home/working directory with `chat --query <prompt> --quiet --max-turns <bounded> --ignore-rules --toolsets search`;
 5. accepts only JSON containing at most 20 findings;
 6. rejects unsupported authority fields, oversized values, invalid output, timeouts, and non-zero exits;
 7. writes only `{ "findings": [...] }` to stdout.
@@ -50,7 +48,7 @@ Hermes v0.20 `--safe-mode` is not compatible with this bridge because it disable
 
 The manual workflow needs no founder-owned provider credential. It installs a checksum-verified Ollama release on the disposable GitHub runner, pulls the reviewed `qwen3.5:2b` artifact, verifies its published model identity and tool capability, and exposes it only on loopback through Hermes's `custom` provider boundary. This smaller tool-capable model has a truthful 256K model context, satisfying Hermes's 64K minimum without overriding model metadata; it does not change Kernel authority or acceptance thresholds. The model and runtime disappear with the runner. The workflow still publishes only `.hephaestus/live-acceptance-report.json` after local redaction. A workflow definition or skipped/blocked run is not proof: acceptance requires the report itself to show all L1→L7 checks green on the tested SHA.
 
-Hermes's isolated built-in defaults otherwise allow up to 500 turns, so Efesto does not use `--ignore-user-config` for this bridge. The freshly created `HERMES_HOME` cannot contain user configuration; Efesto writes the only config there with an exclusive create, refuses a pre-existing config, keeps rules/memory/project plugins disabled and limits the agent to at most eight turns. A deployment may select a stricter positive cap but cannot expand it beyond eight; remote live acceptance uses four.
+Hermes's isolated built-in defaults otherwise allow up to 500 turns, so Efesto does not use `--ignore-user-config` for this bridge. The pinned Hermes `-z` implementation also constructs `AIAgent` without forwarding `agent.max_turns`, so it is not a valid bounded path. Efesto uses the supported quiet chat query and passes `--max-turns` explicitly; the readiness probe requires that interface. The freshly created `HERMES_HOME` cannot contain user configuration; Efesto writes the only config there with an exclusive create, refuses a pre-existing config, keeps rules/memory/project plugins disabled and limits the agent to at most eight turns. A deployment may select a stricter positive cap but cannot expand it beyond eight; remote live acceptance uses four.
 
 The live control plane also uses strictly nested deadlines: the Hermes adapter must finish before the worker deadline, the worker before terminal observation ends, and all three before the outer GitHub job deadline. On timeout or excess output, the worker waits for the adapter process to close and escalates to a bounded forced kill if graceful termination is ignored; it never records mission failure while the provider process is still running.
 

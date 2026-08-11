@@ -34,8 +34,8 @@ describe('Hermes Efesto adapter', () => {
 
   it('isolates user customizations while keeping the official search backend available', () => {
     const prompt = 'Return JSON only';
-    const args = buildHermesArgs(prompt);
-    expect(args).toEqual(['--ignore-rules', '--toolsets', 'search', '-z', prompt]);
+    const args = buildHermesArgs(prompt, 4);
+    expect(args).toEqual(['chat', '--query', prompt, '--quiet', '--max-turns', '4', '--ignore-rules', '--toolsets', 'search']);
     expect(args).not.toContain('--safe-mode');
     expect(args).not.toContain('web');
     expect(args).not.toContain('browser');
@@ -128,7 +128,7 @@ describe('Hermes Efesto adapter', () => {
   it('surfaces bounded sanitized Hermes diagnostics on a non-zero exit', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'efesto-hermes-diagnostic-test-'));
     const fixture = join(directory, 'failed-hermes.mjs');
-    await writeFile(fixture, "process.stderr.write('provider rejected model; api_key=sk-not-a-real-secret-123456789'); process.exit(7);\n", 'utf8');
+    await writeFile(fixture, "process.stderr.write('provider rejected model; api_key=sk-not-a-real-secret-123456789\\nsession_id: private-session'); process.exit(7);\n", 'utf8');
     try {
       await expect(runHermesProcess({
         executable: process.execPath,
@@ -136,29 +136,15 @@ describe('Hermes Efesto adapter', () => {
         timeoutMs: 2_000,
         env: process.env,
         cwd: directory,
-      })).rejects.toThrow('Hermes exited with code 7: provider rejected model; api_key=<redacted-secret>');
+      })).rejects.toThrow('Hermes exited with code 7: provider rejected model; api_key=<redacted-secret> session_id:<redacted-session>');
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
   });
 
-  it('adds only bounded usage metadata to a silent non-zero exit', async () => {
-    const directory = await mkdtemp(join(tmpdir(), 'efesto-hermes-usage-test-'));
-    const fixture = join(directory, 'failed-hermes.mjs');
-    const usageFile = join(directory, 'usage.json');
-    await writeFile(fixture, "import { writeFileSync } from 'node:fs'; writeFileSync(process.argv[2], JSON.stringify({ completed: false, failed: true, api_calls: 4, output_tokens: 321, total_tokens: 1234, session_id: 'private-session' })); process.exit(2);\n", 'utf8');
-    try {
-      await expect(runHermesProcess({
-        executable: process.execPath,
-        args: [fixture, usageFile],
-        timeoutMs: 2_000,
-        env: process.env,
-        cwd: directory,
-        usageFile,
-      })).rejects.toThrow('Hermes exited with code 2: completed=false failed=true api_calls=4 output_tokens=321 total_tokens=1234');
-    } finally {
-      await rm(directory, { recursive: true, force: true });
-    }
+  it('rejects an invocation turn cap outside the reviewed bound', () => {
+    expect(() => buildHermesArgs('prompt', 0)).toThrow('between 1 and 8');
+    expect(() => buildHermesArgs('prompt', 9)).toThrow('between 1 and 8');
   });
 
   it('accepts strict JSON and bounded candidates', () => {

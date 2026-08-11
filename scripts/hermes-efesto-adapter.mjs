@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -40,10 +40,10 @@ export function buildHermesPrompt(payload) {
   ].join('\n');
 }
 
-export function buildHermesArgs(prompt, usageFile) {
+export function buildHermesArgs(prompt, maxTurns = DEFAULT_AGENT_TURNS) {
   if (typeof prompt !== 'string' || !prompt.trim()) throw new Error('Hermes prompt is required');
-  if (usageFile !== undefined && (typeof usageFile !== 'string' || !usageFile.trim())) throw new Error('Hermes usage file must be a path');
-  return ['--ignore-rules', '--toolsets', 'search', ...(usageFile ? ['--usage-file', resolve(usageFile)] : []), '-z', prompt];
+  if (!Number.isInteger(maxTurns) || maxTurns < 1 || maxTurns > MAX_AGENT_TURNS) throw new Error(`Hermes max turns must be an integer between 1 and ${MAX_AGENT_TURNS}`);
+  return ['chat', '--query', prompt, '--quiet', '--max-turns', String(maxTurns), '--ignore-rules', '--toolsets', 'search'];
 }
 
 export function buildHermesEnvironment(baseEnv, hermesHome) {
@@ -184,10 +184,9 @@ export async function runHermesOneShot(payload, options = {}) {
   const timeoutMs = options.timeoutMs ?? configuredTimeout(process.env.HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
   const ownsHermesHome = options.hermesHome === undefined;
   const hermesHome = options.hermesHome ?? await mkdtemp(join(tmpdir(), 'efesto-hermes-'));
-  const usageFile = join(hermesHome, 'usage.json');
-  const args = buildHermesArgs(prompt, usageFile);
   const baseEnv = options.env ?? process.env;
   const maxTurns = configuredMaxTurns(options.maxTurns ?? baseEnv.HEPHAESTUS_HERMES_MAX_TURNS);
+  const args = buildHermesArgs(prompt, maxTurns);
   try {
     await prepareHermesHome(hermesHome, maxTurns);
     return await runHermesProcess({
@@ -196,7 +195,6 @@ export async function runHermesOneShot(payload, options = {}) {
       timeoutMs,
       env: buildHermesEnvironment(baseEnv, hermesHome),
       cwd: hermesHome,
-      usageFile,
     });
   } finally {
     if (ownsHermesHome) {
@@ -214,7 +212,7 @@ function configuredMaxTurns(value) {
   return parsed;
 }
 
-export function runHermesProcess({ executable, args, timeoutMs, env, cwd, usageFile }) {
+export function runHermesProcess({ executable, args, timeoutMs, env, cwd }) {
   return new Promise((resolve, reject) => {
     const child = spawn(executable, args, {
       shell: false,
@@ -250,8 +248,7 @@ export function runHermesProcess({ executable, args, timeoutMs, env, cwd, usageF
     child.on('close', async (code) => {
       if (pendingError) return finish(pendingError);
       if (code !== 0) {
-        const usage = await hermesUsageDiagnostic(usageFile);
-        return finish(new Error(processFailure('Hermes', code, [stderr, usage].filter(Boolean).join(' '))));
+        return finish(new Error(processFailure('Hermes', code, stderr)));
       }
       try { finish(undefined, parseHermesFindings(stdout)); }
       catch (error) { finish(error); }
@@ -259,27 +256,10 @@ export function runHermesProcess({ executable, args, timeoutMs, env, cwd, usageF
   });
 }
 
-async function hermesUsageDiagnostic(path) {
-  if (!path) return '';
-  try {
-    const raw = await readFile(path, 'utf8');
-    if (raw.length > 16 * 1024) return '';
-    const usage = JSON.parse(raw);
-    const fields = [];
-    if (typeof usage.completed === 'boolean') fields.push(`completed=${usage.completed}`);
-    if (typeof usage.failed === 'boolean') fields.push(`failed=${usage.failed}`);
-    for (const key of ['api_calls', 'output_tokens', 'total_tokens']) {
-      if (Number.isSafeInteger(usage[key]) && usage[key] >= 0) fields.push(`${key}=${usage[key]}`);
-    }
-    return fields.join(' ');
-  } catch {
-    return '';
-  }
-}
-
 function processFailure(label, code, stderr) {
   const diagnostic = String(stderr ?? '')
     .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\bsession_id:\s*[^\s,"']+/gi, 'session_id:<redacted-session>')
     .replace(/((?:authorization|[a-z0-9_-]*api[_-]?key|[a-z0-9_-]*token)\s*[:=]\s*)(?:bearer\s+)?[^\s,"']+/gi, '$1<redacted-secret>')
     .replace(/\b(?:sk|pk|ghp|gho|xox[abps])[-_][A-Za-z0-9._-]{8,}/gi, '<redacted-secret>')
     .replace(/\b[A-Fa-f0-9]{32,}\b/g, '<redacted-secret>')

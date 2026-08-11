@@ -1,6 +1,6 @@
 {
   "schema": "efesto.internal-release.v1",
-  "version": "0.1.0-internal.76",
+  "version": "0.1.0-internal.77",
   "channel": "internal",
   "audience": "founder-and-internal-testers",
   "publicLaunchApproved": false,

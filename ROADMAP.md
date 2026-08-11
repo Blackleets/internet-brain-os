@@ -188,15 +188,24 @@ Frozen `internal.75` result:
 - returned a fenced 1,734-character response with `findings`, but no known repair applied and strict parsing failed closed at 8/14;
 - remains immutable and unmerged.
 
-Active `internal.76` repair:
+Frozen `internal.76` result:
 
 - request URL-only findings and derive neutral candidate labels locally before Kernel verification;
 - parse only the first fenced JSON payload and ignore trailing presentation text;
 - repair invalid string escapes while retaining the strict whitelist, bounds and Kernel authority.
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- exited without a terminal response after 15 API calls because pinned `hermes -z` did not forward the configured turn cap into `AIAgent`;
+- remains immutable and unmerged.
+
+Active `internal.77` repair:
+
+- invoke the supported quiet `chat --query` path with explicit `--max-turns`;
+- require the exact bounded query interface in the runtime readiness probe;
+- retain URL-only candidates, search-only tools, one attempt and all Kernel authority.
 
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.76` only if the exact release matrix and sanitized L1→L7 report are green;
+1. qualify and merge immutable `internal.77` only if the exact release matrix and sanitized L1→L7 report are green;
 2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;

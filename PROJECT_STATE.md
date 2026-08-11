@@ -157,7 +157,7 @@ PR #213 merged at `3d4dbbf18573468bc7656a353f92714b94045dc1`. Its exact implemen
 
 `internal.64` makes the existing live L1→L7 acceptance runnable on an isolated GitHub-hosted machine without installing anything on the founder's PC:
 
-- fixes the Hermes v0.20 compatibility boundary: `--safe-mode` disabled the bundled backend plugins that provide web search, so the adapter now uses `--ignore-user-config --ignore-rules --toolsets search -z`;
+- fixes the Hermes v0.20 compatibility boundary: `--safe-mode` disabled the bundled backend plugins that provide web search, while scripted `-z` failed to forward the configured turn cap, so the adapter uses the bounded quiet chat query with explicit `--max-turns`, `--ignore-rules` and search-only toolsets;
 - gives each invocation a fresh `HERMES_HOME` and working directory, removes inherited project-plugin enablement, refuses private-URL search support and retains only public search candidates;
 - keeps Kernel-owned `web.read`, Evidence, classification, provenance and final Goal truth unchanged;
 - adds a manual-only, least-privilege workflow pinned to Hermes commit `ee4bb75b532e932a1055d9a710802a7435163b6a` and immutable Action commits;
@@ -314,7 +314,7 @@ Complete local qualification on 2026-08-11 was green for architecture, `release:
 
 Live run `31483306338` ran for 4m39s and returned a fenced 1,734-character response containing `findings`, but none of the `.75` syntax repairs applied and strict parsing failed closed at 8/14 before candidate persistence. `internal.75` is frozen as failed and must never be reused or relabeled.
 
-## Internal.76 — URL-only fenced-payload repair
+## Internal.76 — URL-only fenced-payload repair / frozen failure
 
 `internal.76` reduces the untrusted model boundary while preserving the one-search terminal path:
 
@@ -322,6 +322,19 @@ Live run `31483306338` ran for 4m39s and returned a fenced 1,734-character respo
 - derives neutral title/text placeholders locally and leaves substantive content exclusively to Kernel `web.read` verification;
 - parses only the first fenced JSON payload, ignoring presentation text after its closing fence;
 - repairs invalid JSON string escapes, then applies the unchanged strict field whitelist, value bounds, Kernel authority and L1→L7 thresholds.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1074 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging. PR #215 head `ba25a0f28deffb37d70a29ffdd6c9c587162f13c` passed the complete CI/Chromium/Windows/package matrix.
+
+Live run `31484220482` ran for 15m22s before Hermes exited code 2 without a terminal response; its sanitized usage report showed `completed=false`, `failed=false` and 15 API calls. Inspection of pinned Hermes commit `ee4bb75b532e932a1055d9a710802a7435163b6a` established that `hermes -z` constructs `AIAgent` without forwarding `agent.max_turns`, leaving its internal 90-iteration default in authority despite Efesto's exclusive four-turn profile. The report failed closed at 8/14, so `internal.76` is frozen as failed and must never be reused or relabeled.
+
+## Internal.77 — authoritative CLI turn cap
+
+`internal.77` keeps the URL-only candidate boundary while repairing the actual agent-loop control:
+
+- replaces scripted `-z` with Hermes's supported quiet `chat --query` path;
+- passes the reviewed cap through explicit `--max-turns`, which the pinned chat path forwards to `AIAgent.max_iterations`;
+- probes `hermes chat --help` and fails readiness closed unless query, quiet, max-turns, ignore-rules and toolset controls are all advertised;
+- keeps the exclusive profile, one search, one Efesto attempt, nested deadlines, search-only tools and all Kernel/Evidence authority unchanged.
 
 Complete local qualification on 2026-08-11 is green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1074 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging.
 
@@ -343,7 +356,7 @@ Every affected candidate must pass on one unchanged SHA:
 10. exact internal-package generation and SHA binding;
 11. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
-Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65`, `.66`, `.67`, `.68`, `.69`, `.70`, `.71`, `.72`, `.73`, `.74` and `.75` remain frozen failures and must never be reused.
+Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65`, `.66`, `.67`, `.68`, `.69`, `.70`, `.71`, `.72`, `.73`, `.74`, `.75` and `.76` remain frozen failures and must never be reused.
 
 ## Distribution and public launch
 
@@ -354,7 +367,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 
 ## What remains
 
-1. Qualify immutable `internal.76` across the complete local and GitHub release matrix, then merge only if the exact SHA and authentic sanitized L1→L7 report are green.
+1. Qualify immutable `internal.77` across the complete local and GitHub release matrix, then merge only if the exact SHA and authentic sanitized L1→L7 report are green.
 2. Require the automatically triggered `Hermes live public-web acceptance` run on the merged SHA to produce a real green L1→L7 report; do not substitute deterministic CI or workflow presence for proof.
 3. Run UAT-1→UAT-6 on the same exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
 4. Use the Kernel-owned local-installation scorecard to establish the first real activation, repeat usage and useful-Find baselines before growth/retention/willingness-to-pay claims.
@@ -363,7 +376,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.76 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3.5 2B inference, truthful 256K model context, bounded 8K runtime context, Qwen non-thinking mode, one live attempt capped at four turns and exactly one search, URL-only JSON candidates, first-fenced-payload extraction, bounded deterministic syntax repair, neutral locally derived candidate labels, bounded usage diagnostics, canonical directly readable discovery targets and no founder-owned provider credential or PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.77 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3.5 2B inference, truthful 256K model context, bounded 8K runtime context, Qwen non-thinking mode, one live attempt capped authoritatively at four turns through quiet `chat --query --max-turns` and exactly one search, URL-only JSON candidates, first-fenced-payload extraction, bounded deterministic syntax repair, neutral locally derived candidate labels, canonical directly readable discovery targets and no founder-owned provider credential or PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule
