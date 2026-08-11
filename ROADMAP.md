@@ -179,15 +179,24 @@ Frozen `internal.74` result:
 - completed a terminal fenced response after one search, then failed closed at 8/14 because its internal JSON syntax remained invalid;
 - remains immutable and unmerged.
 
-Active `internal.75` repair:
+Frozen `internal.75` result:
 
 - keep the successful one-search terminal path and set explicit per-field output lengths;
 - repair only literal newline/tab/carriage-return controls inside strings and trailing commas;
 - apply the unchanged field whitelist, size limits and Kernel authority after syntax repair.
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- returned a fenced 1,734-character response with `findings`, but no known repair applied and strict parsing failed closed at 8/14;
+- remains immutable and unmerged.
+
+Active `internal.76` repair:
+
+- request URL-only findings and derive neutral candidate labels locally before Kernel verification;
+- parse only the first fenced JSON payload and ignore trailing presentation text;
+- repair invalid string escapes while retaining the strict whitelist, bounds and Kernel authority.
 
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.75` only if the exact release matrix and sanitized L1→L7 report are green;
+1. qualify and merge immutable `internal.76` only if the exact release matrix and sanitized L1→L7 report are green;
 2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;

@@ -27,8 +27,8 @@ export function buildHermesPrompt(payload) {
     'Prefer canonical, directly readable public pages with substantive content; avoid login walls, paywalls, redirectors, search-result pages and JavaScript-only shells.',
     'Make exactly one public search call using the Goal, then return the final JSON. Do not call another tool after the search result.',
     'Return 3 to 5 relevant findings when public search supports them, using diverse source hosts where practical.',
-    'Return ONLY one valid JSON object with this exact top-level shape: {"findings":[...]}.',
-    'Each finding may contain only url, title, text, summary, and discoveredAt. Keep every string on one line, escape it as JSON, and do not use trailing commas. Keep title at most 160 characters, text at most 300, and summary at most 160.',
+    'Return ONLY one valid JSON object with this exact shape: {"findings":[{"url":"https://public.example/path"}]}.',
+    'Each finding must contain exactly one field: url. Do not copy titles, snippets, summaries, dates, or other prose from the search result. Keep every URL on one line, escape it as JSON, and do not use trailing commas.',
     'Use at most 20 findings. URLs must be public http or https. Do not include markdown fences or commentary.',
     '',
     `Mission id: ${String(mission.id ?? '').slice(0, 160)}`,
@@ -80,9 +80,10 @@ export function parseHermesFindings(text) {
   if (typeof text !== 'string' || !text.trim()) throw new Error('Hermes returned empty output');
   const trimmed = text.trim();
   const withoutThinking = trimmed.replace(/^(?:<think>[\s\S]*?<\/think>\s*)+/i, '');
-  const candidate = withoutThinking.startsWith('```')
-    ? withoutThinking.replace(/^```\s*(?:json\s*)?/i, '').replace(/\s*```$/, '')
-    : withoutThinking;
+  const fence = /^```\s*(?:json\s*)?/i.exec(withoutThinking);
+  const fencedBody = fence ? withoutThinking.slice(fence[0].length) : withoutThinking;
+  const closingFence = fence ? fencedBody.indexOf('```') : -1;
+  const candidate = (closingFence >= 0 ? fencedBody.slice(0, closingFence) : fencedBody).trim();
   let parsed;
   let repaired = false;
   try { parsed = JSON.parse(candidate); }
@@ -112,8 +113,11 @@ function repairHermesJson(candidate) {
         result += char;
         escaped = false;
       } else if (char === '\\') {
-        result += char;
-        escaped = true;
+        const next = candidate[index + 1] ?? '';
+        if (/^["\\/bfnrtu]$/.test(next)) {
+          result += char;
+          escaped = true;
+        } else result += '\\\\';
       } else if (char === '"') {
         result += char;
         inString = false;
@@ -142,10 +146,17 @@ function normalizeFinding(value, index) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`finding ${index} must be an object`);
   const allowed = new Set(['url', 'title', 'text', 'summary', 'discoveredAt']);
   for (const key of Object.keys(value)) if (!allowed.has(key)) throw new Error(`finding ${index} contains unsupported field ${key}`);
+  const url = bounded(value.url, 2048, `finding ${index} url`);
+  let parsedUrl;
+  try { parsedUrl = new URL(url); }
+  catch { throw new Error(`finding ${index} url must be public http or https`); }
+  if (!['http:', 'https:'].includes(parsedUrl.protocol) || !parsedUrl.hostname) {
+    throw new Error(`finding ${index} url must be public http or https`);
+  }
   return {
-    url: bounded(value.url, 2048, `finding ${index} url`),
-    title: bounded(value.title, 240, `finding ${index} title`),
-    text: bounded(value.text, 20_000, `finding ${index} text`),
+    url,
+    title: value.title === undefined ? `Public source: ${parsedUrl.hostname}` : bounded(value.title, 240, `finding ${index} title`),
+    text: value.text === undefined ? 'Public source candidate pending Kernel verification.' : bounded(value.text, 20_000, `finding ${index} text`),
     ...(value.summary === undefined ? {} : { summary: bounded(value.summary, 500, `finding ${index} summary`) }),
     ...(value.discoveredAt === undefined ? {} : { discoveredAt: bounded(value.discoveredAt, 40, `finding ${index} discoveredAt`) }),
   };

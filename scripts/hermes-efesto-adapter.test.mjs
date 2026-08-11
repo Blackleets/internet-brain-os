@@ -27,8 +27,9 @@ describe('Hermes Efesto adapter', () => {
     expect(prompt).toContain('Do not call another tool after the search result.');
     expect(prompt).toContain('Return 3 to 5 relevant findings');
     expect(prompt.startsWith('/no_think\n')).toBe(true);
-    expect(prompt).toContain('Keep every string on one line, escape it as JSON, and do not use trailing commas.');
-    expect(prompt).toContain('title at most 160 characters, text at most 300, and summary at most 160');
+    expect(prompt).toContain('{"findings":[{"url":"https://public.example/path"}]}');
+    expect(prompt).toContain('Each finding must contain exactly one field: url.');
+    expect(prompt).toContain('Do not copy titles, snippets, summaries, dates, or other prose');
   });
 
   it('isolates user customizations while keeping the official search backend available', () => {
@@ -174,10 +175,34 @@ describe('Hermes Efesto adapter', () => {
     expect(parseHermesFindings('``` json\n{"findings":[]}\n```')).toEqual({ findings: [] });
   });
 
+  it('uses only the first fenced JSON payload and ignores trailing presentation text', () => {
+    expect(parseHermesFindings('```json\n{"findings":[]}\n```\nHere are the requested sources.')).toEqual({ findings: [] });
+  });
+
+  it('turns URL-only discovery into neutral candidates pending Kernel verification', () => {
+    expect(parseHermesFindings('{"findings":[{"url":"https://example.com/a"}]}')).toEqual({
+      findings: [{
+        url: 'https://example.com/a',
+        title: 'Public source: example.com',
+        text: 'Public source candidate pending Kernel verification.',
+      }],
+    });
+  });
+
   it('repairs only literal string controls and trailing commas before schema validation', () => {
     expect(parseHermesFindings('```json\n{"findings":[{"url":"https://example.com/a","title":"A","text":"line one\nline two",}],}\n```')).toEqual({
       findings: [{ url: 'https://example.com/a', title: 'A', text: 'line one\nline two' }],
     });
+  });
+
+  it('repairs an invalid escape without weakening field validation', () => {
+    expect(parseHermesFindings('{"findings":[{"url":"https://example.com/a","title":"A\\_B","text":"snippet"}]}')).toEqual({
+      findings: [{ url: 'https://example.com/a', title: 'A\\_B', text: 'snippet' }],
+    });
+  });
+
+  it('rejects non-web URL-only findings', () => {
+    expect(() => parseHermesFindings('{"findings":[{"url":"file:///tmp/private"}]}')).toThrow('public http or https');
   });
 
   it('accepts one bounded Qwen thinking envelope before strict JSON', () => {

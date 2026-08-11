@@ -30,6 +30,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Hermes live discovery now requests URL-only findings, derives neutral candidate labels locally, accepts only the first fenced JSON payload, and repairs invalid string escapes before the unchanged strict whitelist and Kernel verification.
 - Fenced Hermes JSON now receives a narrow deterministic repair for literal string controls and trailing commas before the unchanged strict field/value validation; the prompt also caps candidate field lengths.
 - Authentic Hermes live discovery now permits exactly one public search before final JSON and carries only bounded usage counters/booleans when the agent exits silently, reducing tool-loop exhaustion without exposing model content.
 - The bounded Qwen adapter now accepts a spaced `json` fence label and requests three to five concise, one-line JSON-escaped findings without trailing commas before applying the unchanged strict schema and authority checks.
