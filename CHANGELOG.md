@@ -31,7 +31,7 @@
 
 ### Changed
 - Non-zero Hermes and adapter exits now preserve a bounded, credential/path-redacted diagnostic through the mission failure record and sanitized live report instead of discarding provider stderr.
-- Remote live proof now uses the reviewed `qwen3:1.7b` tool-capable model so bounded inference can complete on a GitHub CPU runner; model identity and tool capability remain verified before Hermes starts.
+- Remote live proof now uses the reviewed `qwen3.5:2b` tool-capable model with a 256K model context so bounded inference can run on a GitHub CPU runner while satisfying Hermes's truthful 64K minimum; model identity and tool capability remain verified before Hermes starts.
 - Remote live proof now uses one fail-closed attempt capped at four turns and two searches; normal product recovery remains three attempts, and an explicitly recorded live failure ends observation without overlapping another adapter run.
 - Authentic Hermes discovery now prefers canonical directly readable public pages, avoids login/paywall/redirect/search/JavaScript shells, and uses a durable open-source-tool live Goal without weakening Evidence or Find thresholds.
 - Authentic Hermes live acceptance now enforces nested adapter, worker, terminal, and job deadlines; timeout/output termination waits for the adapter process to close and escalates to a bounded forced kill before mission failure is recorded.

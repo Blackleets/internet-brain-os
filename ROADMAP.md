@@ -132,15 +132,24 @@ Frozen `internal.69` result:
 - exposed that both nested process boundaries discarded provider stderr, leaving the 8/14 report without an actionable reason;
 - remains immutable and unmerged.
 
-Active `internal.70` repair:
+Frozen `internal.70` result:
 
 - carry only bounded credential/path-redacted diagnostics across both Hermes process boundaries;
 - include the already-sanitized persisted failure reason in L1 report detail;
-- retain the exact 1.7B model experiment and unchanged L1→L7 evidence/provenance contract.
+- retained the exact 1.7B experiment and unchanged L1→L7 evidence/provenance contract;
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- live run reported the actionable reason that Qwen3 1.7B's truthful 40,960-token context is below Hermes's 64K minimum;
+- remains immutable and unmerged.
+
+Active `internal.71` repair:
+
+- replace only the incompatible model with reviewed tool-capable `qwen3.5:2b` and verify identity/capability;
+- rely on its truthful published 256K model context rather than overriding metadata;
+- retain the bounded 8K runtime context and unchanged L1→L7 evidence/provenance contract.
 
 Next bounded sequence:
 
-1. qualify immutable `internal.70`, resolve any provider incompatibility its sanitized report exposes, and merge only an exact green candidate;
+1. qualify and merge immutable `internal.71` only if the exact release matrix and sanitized L1→L7 report are green;
 2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;
