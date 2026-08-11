@@ -160,15 +160,25 @@ Frozen `internal.72` result:
 - failed closed at 8/14 because the fenced response still did not parse as strict JSON after the known envelope normalization;
 - remains immutable and unmerged.
 
-Active `internal.73` repair:
+Frozen `internal.73` result:
 
 - accept optional whitespace between the opening fence and its `json` label before strict parsing;
 - request three to five concise one-line, JSON-escaped candidates without trailing commas;
 - retain strict schema validation and all authority, model identity, runtime and L1→L7 evidence/provenance bounds.
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- failed closed at 8/14 after Hermes exited with code 2 without a terminal response following 11m50s of real inference;
+- remains immutable and unmerged.
+
+Active `internal.74` repair:
+
+- require exactly one public search call followed immediately by the final JSON;
+- retain one attempt and four turns while avoiding a second search/tool loop;
+- collect only completion/failure booleans and bounded API/token counters when Hermes exits silently;
+- retain strict schema validation and every authority and L1→L7 evidence/provenance bound.
 
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.73` only if the exact release matrix and sanitized L1→L7 report are green;
+1. qualify and merge immutable `internal.74` only if the exact release matrix and sanitized L1→L7 report are green;
 2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;

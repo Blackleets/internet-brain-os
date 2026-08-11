@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -25,7 +25,7 @@ export function buildHermesPrompt(payload) {
     'Do not access local files, private networks, credentials, messaging history, private sessions, browser automation or computer-use.',
     'Do not perform purchases, submissions, logins, outreach, downloads or destructive actions.',
     'Prefer canonical, directly readable public pages with substantive content; avoid login walls, paywalls, redirectors, search-result pages and JavaScript-only shells.',
-    'Use no more than two public search calls before returning the final JSON.',
+    'Make exactly one public search call using the Goal, then return the final JSON. Do not call another tool after the search result.',
     'Return 3 to 5 relevant findings when public search supports them, using diverse source hosts where practical.',
     'Return ONLY one valid JSON object with this exact top-level shape: {"findings":[...]}.',
     'Each finding may contain only url, title, text, summary, and discoveredAt. Keep every string on one line, escape it as JSON, and do not use trailing commas.',
@@ -40,9 +40,10 @@ export function buildHermesPrompt(payload) {
   ].join('\n');
 }
 
-export function buildHermesArgs(prompt) {
+export function buildHermesArgs(prompt, usageFile) {
   if (typeof prompt !== 'string' || !prompt.trim()) throw new Error('Hermes prompt is required');
-  return ['--ignore-rules', '--toolsets', 'search', '-z', prompt];
+  if (usageFile !== undefined && (typeof usageFile !== 'string' || !usageFile.trim())) throw new Error('Hermes usage file must be a path');
+  return ['--ignore-rules', '--toolsets', 'search', ...(usageFile ? ['--usage-file', resolve(usageFile)] : []), '-z', prompt];
 }
 
 export function buildHermesEnvironment(baseEnv, hermesHome) {
@@ -126,10 +127,11 @@ function configuredTimeout(value, fallback) {
 export async function runHermesOneShot(payload, options = {}) {
   const executable = normalizeHermesExecutable(options.executable ?? process.env.HEPHAESTUS_HERMES_EXECUTABLE ?? 'hermes');
   const prompt = buildHermesPrompt(payload);
-  const args = buildHermesArgs(prompt);
   const timeoutMs = options.timeoutMs ?? configuredTimeout(process.env.HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
   const ownsHermesHome = options.hermesHome === undefined;
   const hermesHome = options.hermesHome ?? await mkdtemp(join(tmpdir(), 'efesto-hermes-'));
+  const usageFile = join(hermesHome, 'usage.json');
+  const args = buildHermesArgs(prompt, usageFile);
   const baseEnv = options.env ?? process.env;
   const maxTurns = configuredMaxTurns(options.maxTurns ?? baseEnv.HEPHAESTUS_HERMES_MAX_TURNS);
   try {
@@ -140,6 +142,7 @@ export async function runHermesOneShot(payload, options = {}) {
       timeoutMs,
       env: buildHermesEnvironment(baseEnv, hermesHome),
       cwd: hermesHome,
+      usageFile,
     });
   } finally {
     if (ownsHermesHome) {
@@ -157,7 +160,7 @@ function configuredMaxTurns(value) {
   return parsed;
 }
 
-export function runHermesProcess({ executable, args, timeoutMs, env, cwd }) {
+export function runHermesProcess({ executable, args, timeoutMs, env, cwd, usageFile }) {
   return new Promise((resolve, reject) => {
     const child = spawn(executable, args, {
       shell: false,
@@ -190,13 +193,34 @@ export function runHermesProcess({ executable, args, timeoutMs, env, cwd }) {
     child.stdout.on('data', (chunk) => collect(chunk, 'stdout'));
     child.stderr.on('data', (chunk) => collect(chunk, 'stderr'));
     child.on('error', (error) => finish(pendingError ?? error));
-    child.on('close', (code) => {
+    child.on('close', async (code) => {
       if (pendingError) return finish(pendingError);
-      if (code !== 0) return finish(new Error(processFailure('Hermes', code, stderr)));
+      if (code !== 0) {
+        const usage = await hermesUsageDiagnostic(usageFile);
+        return finish(new Error(processFailure('Hermes', code, [stderr, usage].filter(Boolean).join(' '))));
+      }
       try { finish(undefined, parseHermesFindings(stdout)); }
       catch (error) { finish(error); }
     });
   });
+}
+
+async function hermesUsageDiagnostic(path) {
+  if (!path) return '';
+  try {
+    const raw = await readFile(path, 'utf8');
+    if (raw.length > 16 * 1024) return '';
+    const usage = JSON.parse(raw);
+    const fields = [];
+    if (typeof usage.completed === 'boolean') fields.push(`completed=${usage.completed}`);
+    if (typeof usage.failed === 'boolean') fields.push(`failed=${usage.failed}`);
+    for (const key of ['api_calls', 'output_tokens', 'total_tokens']) {
+      if (Number.isSafeInteger(usage[key]) && usage[key] >= 0) fields.push(`${key}=${usage[key]}`);
+    }
+    return fields.join(' ');
+  } catch {
+    return '';
+  }
 }
 
 function processFailure(label, code, stderr) {

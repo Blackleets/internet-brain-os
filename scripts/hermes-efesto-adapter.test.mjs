@@ -23,7 +23,8 @@ describe('Hermes Efesto adapter', () => {
     expect(prompt).toContain('public-source discovery mission');
     expect(prompt).toContain('candidates, not verified Evidence');
     expect(prompt).toContain('canonical, directly readable public pages');
-    expect(prompt).toContain('no more than two public search calls');
+    expect(prompt).toContain('Make exactly one public search call');
+    expect(prompt).toContain('Do not call another tool after the search result.');
     expect(prompt).toContain('Return 3 to 5 relevant findings');
     expect(prompt.startsWith('/no_think\n')).toBe(true);
     expect(prompt).toContain('Keep every string on one line, escape it as JSON, and do not use trailing commas.');
@@ -134,6 +135,25 @@ describe('Hermes Efesto adapter', () => {
         env: process.env,
         cwd: directory,
       })).rejects.toThrow('Hermes exited with code 7: provider rejected model; api_key=<redacted-secret>');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('adds only bounded usage metadata to a silent non-zero exit', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'efesto-hermes-usage-test-'));
+    const fixture = join(directory, 'failed-hermes.mjs');
+    const usageFile = join(directory, 'usage.json');
+    await writeFile(fixture, "import { writeFileSync } from 'node:fs'; writeFileSync(process.argv[2], JSON.stringify({ completed: false, failed: true, api_calls: 4, output_tokens: 321, total_tokens: 1234, session_id: 'private-session' })); process.exit(2);\n", 'utf8');
+    try {
+      await expect(runHermesProcess({
+        executable: process.execPath,
+        args: [fixture, usageFile],
+        timeoutMs: 2_000,
+        env: process.env,
+        cwd: directory,
+        usageFile,
+      })).rejects.toThrow('Hermes exited with code 2: completed=false failed=true api_calls=4 output_tokens=321 total_tokens=1234');
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

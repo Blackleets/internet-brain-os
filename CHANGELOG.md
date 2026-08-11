@@ -30,6 +30,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Authentic Hermes live discovery now permits exactly one public search before final JSON and carries only bounded usage counters/booleans when the agent exits silently, reducing tool-loop exhaustion without exposing model content.
 - The bounded Qwen adapter now accepts a spaced `json` fence label and requests three to five concise, one-line JSON-escaped findings without trailing commas before applying the unchanged strict schema and authority checks.
 - The bounded Qwen live prompt selects non-thinking mode for this simple discovery/formatting task, and the adapter strips only a known Qwen thinking envelope plus the already-supported JSON fence before strict schema validation; invalid output reports shape metadata rather than content.
 - Non-zero Hermes and adapter exits now preserve a bounded, credential/path-redacted diagnostic through the mission failure record and sanitized live report instead of discarding provider stderr.
