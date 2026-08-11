@@ -114,16 +114,25 @@ Frozen `internal.67` result:
 - passed the full deterministic/Chromium/Windows/package matrix but exposed that per-attempt deadlines did not bound the whole three-attempt mission; attempt two was active when terminal observation expired;
 - remains immutable and unmerged.
 
-Active `internal.68` repair:
+Frozen `internal.68` result:
 
 - preserve three attempts as the normal product default but constrain remote live proof to one explicitly configured attempt;
 - cap that live Hermes run at four turns and two searches while allowing four to eight diverse findings;
 - treat a recorded queued failure as an observable failed acceptance outcome so no idle observer waits after the configured live attempt ends;
+- passed the complete deterministic/Chromium/Windows/package matrix and proved exactly one bounded attempt with no overlapping retry;
+- failed closed at 8/14 because Qwen3 4B did not return valid output before the 25-minute adapter deadline on the GitHub CPU runner;
+- remains immutable and unmerged.
+
+Active `internal.69` repair:
+
+- replace only the disposable live inference artifact with reviewed tool-capable `qwen3:1.7b`;
+- verify its published identity before Hermes starts;
+- retain the one-attempt, four-turn, two-search and 25/26/27/60-minute bounds;
 - rerun the unchanged L1→L7 evidence/provenance contract rather than weakening acceptance.
 
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.68` across the complete release matrix;
+1. qualify and merge immutable `internal.69` across the complete release matrix;
 2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;

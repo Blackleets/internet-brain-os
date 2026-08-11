@@ -32,8 +32,8 @@ describe('authentic Hermes public-web workflow contract', () => {
     expect(source).toContain('OLLAMA_ARCHIVE_SHA256: c10b76c39cb72908cc92dff314e80e32736c03f1287efb4b39e0b70fd600cc64');
     expect(source).toContain('ollama-linux-amd64.tar.zst');
     expect(source).not.toContain('install.sh');
-    expect(source).toContain('OLLAMA_MODEL: qwen3:4b');
-    expect(source).toContain('OLLAMA_MODEL_ID: 359d7dd4bcda');
+    expect(source).toContain('OLLAMA_MODEL: qwen3:1.7b');
+    expect(source).toContain('OLLAMA_MODEL_ID: 8f68893c685c');
     expect(source).toContain('actual_model_id');
     expect(source).toContain('HERMES_INFERENCE_PROVIDER: custom');
     expect(source).toContain('CUSTOM_BASE_URL: http://127.0.0.1:11434/v1');

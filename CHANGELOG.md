@@ -1,7 +1,7 @@
 ## [Unreleased]
 
 ### Added
-- Credential-free remote Hermes L1→L7 acceptance using a checksum-verified, runner-local Ollama runtime and reviewed Qwen3 4B model identity; no founder API key or PC installation is required.
+- Credential-free remote Hermes L1→L7 acceptance using a checksum-verified, runner-local Ollama runtime and reviewed tool-capable Qwen3 model identity; no founder API key or PC installation is required.
 - Remote GitHub acceptance workflow for authentic Hermes v0.20 public-web L1→L7 proof, pinned to reviewed action/runtime commits and publishing only the sanitized acceptance report.
 - Private local-installation product cohort for trustworthy first-Goal activation and repeat-Goal measurement without global identifiers or external telemetry.
 - Deterministic design for memory quarantine and toxic-memory handling, including authority gates, append-only transition receipts, reversible recovery, startup reconciliation, and safe Replay Lab language.
@@ -30,6 +30,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Remote live proof now uses the reviewed `qwen3:1.7b` tool-capable model so bounded inference can complete on a GitHub CPU runner; model identity and tool capability remain verified before Hermes starts.
 - Remote live proof now uses one fail-closed attempt capped at four turns and two searches; normal product recovery remains three attempts, and an explicitly recorded live failure ends observation without overlapping another adapter run.
 - Authentic Hermes discovery now prefers canonical directly readable public pages, avoids login/paywall/redirect/search/JavaScript shells, and uses a durable open-source-tool live Goal without weakening Evidence or Find thresholds.
 - Authentic Hermes live acceptance now enforces nested adapter, worker, terminal, and job deadlines; timeout/output termination waits for the adapter process to close and escalates to a bounded forced kill before mission failure is recorded.

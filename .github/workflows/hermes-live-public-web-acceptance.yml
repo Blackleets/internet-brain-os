@@ -42,8 +42,8 @@ jobs:
       OLLAMA_VERSION: 0.32.8
       OLLAMA_ARCHIVE_SHA256: c10b76c39cb72908cc92dff314e80e32736c03f1287efb4b39e0b70fd600cc64
       OLLAMA_BIN: /tmp/efesto-ollama-runtime/bin/ollama
-      OLLAMA_MODEL: qwen3:4b
-      OLLAMA_MODEL_ID: 359d7dd4bcda
+      OLLAMA_MODEL: qwen3:1.7b
+      OLLAMA_MODEL_ID: 8f68893c685c
       OLLAMA_HOST: 127.0.0.1:11434
       OLLAMA_CONTEXT_LENGTH: 8192
     steps:
