@@ -48,7 +48,7 @@ Observe the real journey without manually calling internal worker endpoints:
 
 Pass only if:
 
-- Hermes automatic discovery is certified read-only and uses an empty ephemeral home/cwd with one exclusive at-most-eight-turn config plus the equivalent of `chat --query <prompt> --quiet --max-turns <bounded> --ignore-rules --toolsets search`, while memory and project plugins remain disabled; an incompatible Hermes runtime is visibly blocked rather than falling back to broad tools;
+- Hermes automatic discovery is certified read-only and uses an empty ephemeral home/cwd with one exclusive at-most-eight-turn config plus the equivalent of `chat --query <prompt> --quiet --max-turns <bounded> --provider <configured> --model <configured> --ignore-rules --toolsets search`, while memory and project plugins remain disabled; an incompatible Hermes runtime is visibly blocked rather than falling back to broad tools;
 - Hermes prefers canonical directly readable public pages over login walls, paywalls, redirectors, search-result pages and JavaScript-only shells, but this preference never grants Evidence or promotion authority;
 - search results are persisted first as candidates and **a search snippet is not Evidence**;
 - the Kernel authorizes the registered `web.read` capability and re-fetches each candidate through the trusted public-web reader;

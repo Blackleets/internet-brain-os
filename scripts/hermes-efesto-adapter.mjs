@@ -40,10 +40,25 @@ export function buildHermesPrompt(payload) {
   ].join('\n');
 }
 
-export function buildHermesArgs(prompt, maxTurns = DEFAULT_AGENT_TURNS) {
+export function buildHermesArgs(prompt, maxTurns = DEFAULT_AGENT_TURNS, provider, model) {
   if (typeof prompt !== 'string' || !prompt.trim()) throw new Error('Hermes prompt is required');
   if (!Number.isInteger(maxTurns) || maxTurns < 1 || maxTurns > MAX_AGENT_TURNS) throw new Error(`Hermes max turns must be an integer between 1 and ${MAX_AGENT_TURNS}`);
-  return ['chat', '--query', prompt, '--quiet', '--max-turns', String(maxTurns), '--ignore-rules', '--toolsets', 'search'];
+  const normalizedProvider = normalizeRouteValue(provider, 'provider');
+  const normalizedModel = normalizeRouteValue(model, 'model');
+  const route = [
+    ...(normalizedProvider ? ['--provider', normalizedProvider] : []),
+    ...(normalizedModel ? ['--model', normalizedModel] : []),
+  ];
+  return ['chat', '--query', prompt, '--quiet', '--max-turns', String(maxTurns), ...route, '--ignore-rules', '--toolsets', 'search'];
+}
+
+function normalizeRouteValue(value, label) {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value !== 'string') throw new Error(`Hermes ${label} must be a string`);
+  const normalized = value.trim();
+  if (!normalized) return undefined;
+  if (normalized.length > 160 || /[\u0000-\u001f\u007f]/.test(normalized)) throw new Error(`Hermes ${label} is invalid`);
+  return normalized;
 }
 
 export function buildHermesEnvironment(baseEnv, hermesHome) {
@@ -186,7 +201,7 @@ export async function runHermesOneShot(payload, options = {}) {
   const hermesHome = options.hermesHome ?? await mkdtemp(join(tmpdir(), 'efesto-hermes-'));
   const baseEnv = options.env ?? process.env;
   const maxTurns = configuredMaxTurns(options.maxTurns ?? baseEnv.HEPHAESTUS_HERMES_MAX_TURNS);
-  const args = buildHermesArgs(prompt, maxTurns);
+  const args = buildHermesArgs(prompt, maxTurns, baseEnv.HERMES_INFERENCE_PROVIDER, baseEnv.HERMES_INFERENCE_MODEL);
   try {
     await prepareHermesHome(hermesHome, maxTurns);
     return await runHermesProcess({

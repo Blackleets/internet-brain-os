@@ -197,15 +197,24 @@ Frozen `internal.76` result:
 - exited without a terminal response after 15 API calls because pinned `hermes -z` did not forward the configured turn cap into `AIAgent`;
 - remains immutable and unmerged.
 
-Active `internal.77` repair:
+Frozen `internal.77` result:
 
 - invoke the supported quiet `chat --query` path with explicit `--max-turns`;
 - require the exact bounded query interface in the runtime readiness probe;
 - retain URL-only candidates, search-only tools, one attempt and all Kernel authority.
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- failed before inference because the pinned chat path did not select the environment-only provider/model route from the empty profile;
+- remains immutable and unmerged.
+
+Active `internal.78` repair:
+
+- pass the already-configured provider and model as explicit quiet-chat arguments;
+- length/control-character bound both route values and keep shell execution disabled;
+- retain the authoritative four-turn cap and every search/Evidence/Kernel guardrail.
 
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.77` only if the exact release matrix and sanitized L1→L7 report are green;
+1. qualify and merge immutable `internal.78` only if the exact release matrix and sanitized L1→L7 report are green;
 2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;

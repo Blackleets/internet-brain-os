@@ -23,7 +23,7 @@ describe('G4 final automatic read-only adversarial contract', () => {
     const adapter = read('scripts/hermes-efesto-adapter.mjs');
     const worker = read('apps/local-kernel/hermes-mission-worker.mjs');
     const executor = read('apps/local-kernel/agent-mission-executor.mjs');
-    expect(adapter).toContain("['chat', '--query', prompt, '--quiet', '--max-turns', String(maxTurns), '--ignore-rules', '--toolsets', 'search']");
+    expect(adapter).toContain("['chat', '--query', prompt, '--quiet', '--max-turns', String(maxTurns), ...route, '--ignore-rules', '--toolsets', 'search']");
     expect(adapter).toContain("const MAX_AGENT_TURNS = 8");
     expect(adapter).toContain("flag: 'wx'");
     expect(adapter).toContain('HERMES_HOME: hermesHome');

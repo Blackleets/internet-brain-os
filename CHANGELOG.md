@@ -30,6 +30,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- The bounded quiet Hermes query now forwards the already-configured provider and model as explicit, length-checked CLI arguments because the pinned chat path does not use `HERMES_INFERENCE_MODEL` for model selection.
 - Authentic Hermes execution now uses the supported quiet `chat --query --max-turns` path so the reviewed four-turn cap reaches `AIAgent`; the runtime probe rejects installations that do not advertise that exact bounded interface.
 - Hermes live discovery now requests URL-only findings, derives neutral candidate labels locally, accepts only the first fenced JSON payload, and repairs invalid string escapes before the unchanged strict whitelist and Kernel verification.
 - Fenced Hermes JSON now receives a narrow deterministic repair for literal string controls and trailing commas before the unchanged strict field/value validation; the prompt also caps candidate field lengths.

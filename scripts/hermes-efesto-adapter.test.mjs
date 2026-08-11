@@ -34,8 +34,8 @@ describe('Hermes Efesto adapter', () => {
 
   it('isolates user customizations while keeping the official search backend available', () => {
     const prompt = 'Return JSON only';
-    const args = buildHermesArgs(prompt, 4);
-    expect(args).toEqual(['chat', '--query', prompt, '--quiet', '--max-turns', '4', '--ignore-rules', '--toolsets', 'search']);
+    const args = buildHermesArgs(prompt, 4, 'custom', 'qwen3.5:2b');
+    expect(args).toEqual(['chat', '--query', prompt, '--quiet', '--max-turns', '4', '--provider', 'custom', '--model', 'qwen3.5:2b', '--ignore-rules', '--toolsets', 'search']);
     expect(args).not.toContain('--safe-mode');
     expect(args).not.toContain('web');
     expect(args).not.toContain('browser');
@@ -145,6 +145,7 @@ describe('Hermes Efesto adapter', () => {
   it('rejects an invocation turn cap outside the reviewed bound', () => {
     expect(() => buildHermesArgs('prompt', 0)).toThrow('between 1 and 8');
     expect(() => buildHermesArgs('prompt', 9)).toThrow('between 1 and 8');
+    expect(() => buildHermesArgs('prompt', 4, 'custom', 'bad\nmodel')).toThrow('model is invalid');
   });
 
   it('accepts strict JSON and bounded candidates', () => {

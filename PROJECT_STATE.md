@@ -327,7 +327,7 @@ Complete local qualification on 2026-08-11 was green for architecture, `release:
 
 Live run `31484220482` ran for 15m22s before Hermes exited code 2 without a terminal response; its sanitized usage report showed `completed=false`, `failed=false` and 15 API calls. Inspection of pinned Hermes commit `ee4bb75b532e932a1055d9a710802a7435163b6a` established that `hermes -z` constructs `AIAgent` without forwarding `agent.max_turns`, leaving its internal 90-iteration default in authority despite Efesto's exclusive four-turn profile. The report failed closed at 8/14, so `internal.76` is frozen as failed and must never be reused or relabeled.
 
-## Internal.77 — authoritative CLI turn cap
+## Internal.77 — authoritative CLI turn cap / frozen failure
 
 `internal.77` keeps the URL-only candidate boundary while repairing the actual agent-loop control:
 
@@ -336,9 +336,22 @@ Live run `31484220482` ran for 15m22s before Hermes exited code 2 without a term
 - probes `hermes chat --help` and fails readiness closed unless query, quiet, max-turns, ignore-rules and toolset controls are all advertised;
 - keeps the exclusive profile, one search, one Efesto attempt, nested deadlines, search-only tools and all Kernel/Evidence authority unchanged.
 
-Complete local qualification on 2026-08-11 is green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1074 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging.
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1074 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging. PR #215 head `826e396274dd11bbc167325bf6df86823fc4cacd` passed the complete CI/Chromium/Windows/package matrix.
 
-The exact candidate must pass the complete local and GitHub matrix and produce an authentic sanitized `14/14` report before merge.
+Live run `31486248829` failed closed in 3.8 seconds when the quiet chat process exited code 1 before inference. Inspection of the pinned chat path confirmed that model selection ignores `HERMES_INFERENCE_MODEL` and provider selection prefers its CLI config before the environment; the exclusive profile intentionally contains no inherited route configuration. `internal.77` is frozen as failed and must never be reused or relabeled.
+
+## Internal.78 — explicit bounded inference route
+
+`internal.78` retains the authoritative chat turn cap and supplies the missing isolated route explicitly:
+
+- reads the already-configured `HERMES_INFERENCE_PROVIDER` and `HERMES_INFERENCE_MODEL` values from the adapter process environment;
+- rejects route values over 160 characters or containing control characters;
+- passes non-empty values as direct `--provider` and `--model` spawn arguments without a shell;
+- keeps the empty private profile, search-only tools, one search, one Efesto attempt, nested deadlines and all Kernel/Evidence authority unchanged.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1074 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging.
+
+The exact candidate must pass the complete GitHub matrix and produce an authentic sanitized `14/14` report before merge.
 
 ## Canonical CI/release gate
 
@@ -356,7 +369,7 @@ Every affected candidate must pass on one unchanged SHA:
 10. exact internal-package generation and SHA binding;
 11. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
-Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65`, `.66`, `.67`, `.68`, `.69`, `.70`, `.71`, `.72`, `.73`, `.74`, `.75` and `.76` remain frozen failures and must never be reused.
+Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65`, `.66`, `.67`, `.68`, `.69`, `.70`, `.71`, `.72`, `.73`, `.74`, `.75`, `.76` and `.77` remain frozen failures and must never be reused.
 
 ## Distribution and public launch
 
@@ -367,7 +380,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 
 ## What remains
 
-1. Qualify immutable `internal.77` across the complete local and GitHub release matrix, then merge only if the exact SHA and authentic sanitized L1→L7 report are green.
+1. Qualify immutable `internal.78` across the complete local and GitHub release matrix, then merge only if the exact SHA and authentic sanitized L1→L7 report are green.
 2. Require the automatically triggered `Hermes live public-web acceptance` run on the merged SHA to produce a real green L1→L7 report; do not substitute deterministic CI or workflow presence for proof.
 3. Run UAT-1→UAT-6 on the same exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
 4. Use the Kernel-owned local-installation scorecard to establish the first real activation, repeat usage and useful-Find baselines before growth/retention/willingness-to-pay claims.
@@ -376,7 +389,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.77 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3.5 2B inference, truthful 256K model context, bounded 8K runtime context, Qwen non-thinking mode, one live attempt capped authoritatively at four turns through quiet `chat --query --max-turns` and exactly one search, URL-only JSON candidates, first-fenced-payload extraction, bounded deterministic syntax repair, neutral locally derived candidate labels, canonical directly readable discovery targets and no founder-owned provider credential or PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.78 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3.5 2B inference, truthful 256K model context, bounded 8K runtime context, Qwen non-thinking mode, one live attempt capped authoritatively at four turns through quiet `chat --query --max-turns`, explicit bounded provider/model routing and exactly one search, URL-only JSON candidates, first-fenced-payload extraction, bounded deterministic syntax repair, neutral locally derived candidate labels, canonical directly readable discovery targets and no founder-owned provider credential or PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule
