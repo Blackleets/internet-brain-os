@@ -169,16 +169,25 @@ Frozen `internal.73` result:
 - failed closed at 8/14 after Hermes exited with code 2 without a terminal response following 11m50s of real inference;
 - remains immutable and unmerged.
 
-Active `internal.74` repair:
+Frozen `internal.74` result:
 
 - require exactly one public search call followed immediately by the final JSON;
 - retain one attempt and four turns while avoiding a second search/tool loop;
 - collect only completion/failure booleans and bounded API/token counters when Hermes exits silently;
 - retain strict schema validation and every authority and L1→L7 evidence/provenance bound.
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- completed a terminal fenced response after one search, then failed closed at 8/14 because its internal JSON syntax remained invalid;
+- remains immutable and unmerged.
+
+Active `internal.75` repair:
+
+- keep the successful one-search terminal path and set explicit per-field output lengths;
+- repair only literal newline/tab/carriage-return controls inside strings and trailing commas;
+- apply the unchanged field whitelist, size limits and Kernel authority after syntax repair.
 
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.74` only if the exact release matrix and sanitized L1→L7 report are green;
+1. qualify and merge immutable `internal.75` only if the exact release matrix and sanitized L1→L7 report are green;
 2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;

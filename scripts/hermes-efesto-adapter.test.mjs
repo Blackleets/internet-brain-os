@@ -28,6 +28,7 @@ describe('Hermes Efesto adapter', () => {
     expect(prompt).toContain('Return 3 to 5 relevant findings');
     expect(prompt.startsWith('/no_think\n')).toBe(true);
     expect(prompt).toContain('Keep every string on one line, escape it as JSON, and do not use trailing commas.');
+    expect(prompt).toContain('title at most 160 characters, text at most 300, and summary at most 160');
   });
 
   it('isolates user customizations while keeping the official search backend available', () => {
@@ -173,12 +174,18 @@ describe('Hermes Efesto adapter', () => {
     expect(parseHermesFindings('``` json\n{"findings":[]}\n```')).toEqual({ findings: [] });
   });
 
+  it('repairs only literal string controls and trailing commas before schema validation', () => {
+    expect(parseHermesFindings('```json\n{"findings":[{"url":"https://example.com/a","title":"A","text":"line one\nline two",}],}\n```')).toEqual({
+      findings: [{ url: 'https://example.com/a', title: 'A', text: 'line one\nline two' }],
+    });
+  });
+
   it('accepts one bounded Qwen thinking envelope before strict JSON', () => {
     expect(parseHermesFindings('<think>Plan two searches, then answer.</think>\n```json\n{"findings":[]}\n```')).toEqual({ findings: [] });
   });
 
   it('reports only output-shape metadata when JSON remains invalid', () => {
-    expect(() => parseHermesFindings('<think>reason</think>\nnot-json')).toThrow('chars=30 think=true fence=false findings=false');
+    expect(() => parseHermesFindings('<think>reason</think>\nnot-json')).toThrow('chars=30 think=true fence=false findings=false repair=false');
   });
 
   it('rejects authority or unsupported fields', () => {

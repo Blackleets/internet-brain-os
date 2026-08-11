@@ -288,7 +288,7 @@ Complete local qualification on 2026-08-11 was green for architecture, `release:
 
 Live run `31480815149` then performed 11m50s of real inference before Hermes exited with code 2 without a terminal response. No parser error occurred, and the report failed closed at 8/14 before candidate persistence. `internal.73` is frozen as failed and must never be reused or relabeled.
 
-## Internal.74 — one-search terminal-response repair
+## Internal.74 — one-search terminal-response repair / frozen failure
 
 `internal.74` retains the exact model and security boundary while tightening the agent path:
 
@@ -297,7 +297,20 @@ Live run `31480815149` then performed 11m50s of real inference before Hermes exi
 - requests the Hermes usage file but exposes only completion/failure booleans and bounded API/token counters on a silent non-zero exit;
 - keeps the same concise output instructions, strict schema validation, Kernel authority and L1→L7 thresholds.
 
-Complete local qualification on 2026-08-11 is green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1069 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging.
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1069 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging. PR #215 head `f7b279bd839ed99f8e0b55902ba3070dd228e00a` passed the complete CI/Chromium/Windows/package matrix.
+
+Live run `31482264226` completed the one-search path and returned a fenced response containing `findings`, but strict parsing still rejected its 5,932-character internal JSON syntax. The report failed closed at 8/14 before candidate persistence, so `internal.74` is frozen as failed and must never be reused or relabeled.
+
+## Internal.75 — bounded deterministic JSON repair
+
+`internal.75` retains the successful one-search terminal path and adds only bounded syntax normalization:
+
+- caps requested title/text/summary lengths at 160/300/160 characters;
+- escapes literal newline, carriage-return and tab controls only while inside JSON strings;
+- removes only trailing commas immediately before `]` or `}`;
+- then applies the unchanged strict field whitelist, value bounds, Kernel authority and L1→L7 thresholds.
+
+Complete local qualification on 2026-08-11 is green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1070 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging.
 
 The exact candidate must pass the complete local and GitHub matrix and produce an authentic sanitized `14/14` report before merge.
 
@@ -317,7 +330,7 @@ Every affected candidate must pass on one unchanged SHA:
 10. exact internal-package generation and SHA binding;
 11. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
-Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65`, `.66`, `.67`, `.68`, `.69`, `.70`, `.71`, `.72` and `.73` remain frozen failures and must never be reused.
+Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65`, `.66`, `.67`, `.68`, `.69`, `.70`, `.71`, `.72`, `.73` and `.74` remain frozen failures and must never be reused.
 
 ## Distribution and public launch
 
@@ -328,7 +341,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 
 ## What remains
 
-1. Qualify immutable `internal.74` across the complete local and GitHub release matrix, then merge only if the exact SHA and authentic sanitized L1→L7 report are green.
+1. Qualify immutable `internal.75` across the complete local and GitHub release matrix, then merge only if the exact SHA and authentic sanitized L1→L7 report are green.
 2. Require the automatically triggered `Hermes live public-web acceptance` run on the merged SHA to produce a real green L1→L7 report; do not substitute deterministic CI or workflow presence for proof.
 3. Run UAT-1→UAT-6 on the same exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
 4. Use the Kernel-owned local-installation scorecard to establish the first real activation, repeat usage and useful-Find baselines before growth/retention/willingness-to-pay claims.
@@ -337,7 +350,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.74 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3.5 2B inference, truthful 256K model context, bounded 8K runtime context, Qwen non-thinking mode, one live attempt capped at four turns and exactly one search, concise one-line JSON candidates, bounded usage diagnostics, canonical directly readable discovery targets and no founder-owned provider credential or PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.75 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3.5 2B inference, truthful 256K model context, bounded 8K runtime context, Qwen non-thinking mode, one live attempt capped at four turns and exactly one search, concise length-capped JSON candidates, bounded deterministic syntax repair, bounded usage diagnostics, canonical directly readable discovery targets and no founder-owned provider credential or PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule

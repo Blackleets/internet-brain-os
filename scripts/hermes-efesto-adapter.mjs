@@ -28,7 +28,7 @@ export function buildHermesPrompt(payload) {
     'Make exactly one public search call using the Goal, then return the final JSON. Do not call another tool after the search result.',
     'Return 3 to 5 relevant findings when public search supports them, using diverse source hosts where practical.',
     'Return ONLY one valid JSON object with this exact top-level shape: {"findings":[...]}.',
-    'Each finding may contain only url, title, text, summary, and discoveredAt. Keep every string on one line, escape it as JSON, and do not use trailing commas.',
+    'Each finding may contain only url, title, text, summary, and discoveredAt. Keep every string on one line, escape it as JSON, and do not use trailing commas. Keep title at most 160 characters, text at most 300, and summary at most 160.',
     'Use at most 20 findings. URLs must be public http or https. Do not include markdown fences or commentary.',
     '',
     `Mission id: ${String(mission.id ?? '').slice(0, 160)}`,
@@ -84,15 +84,58 @@ export function parseHermesFindings(text) {
     ? withoutThinking.replace(/^```\s*(?:json\s*)?/i, '').replace(/\s*```$/, '')
     : withoutThinking;
   let parsed;
+  let repaired = false;
   try { parsed = JSON.parse(candidate); }
   catch {
-    const shape = `chars=${trimmed.length} think=${trimmed.startsWith('<think>')} fence=${withoutThinking.startsWith('```')} findings=${/\{\s*"findings"\s*:/.test(candidate)}`;
-    throw new Error(`Hermes did not return valid JSON (${shape})`);
+    const repairedCandidate = repairHermesJson(candidate);
+    repaired = repairedCandidate !== candidate;
+    try { parsed = JSON.parse(repairedCandidate); }
+    catch {
+      const shape = `chars=${trimmed.length} think=${trimmed.startsWith('<think>')} fence=${withoutThinking.startsWith('```')} findings=${/\{\s*"findings"\s*:/.test(candidate)} repair=${repaired}`;
+      throw new Error(`Hermes did not return valid JSON (${shape})`);
+    }
   }
   if (!parsed || !Array.isArray(parsed.findings) || parsed.findings.length > 20) {
     throw new Error('Hermes must return { findings: [...] } with at most 20 findings');
   }
   return { findings: parsed.findings.map((finding, index) => normalizeFinding(finding, index)) };
+}
+
+function repairHermesJson(candidate) {
+  let result = '';
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < candidate.length; index += 1) {
+    const char = candidate[index];
+    if (inString) {
+      if (escaped) {
+        result += char;
+        escaped = false;
+      } else if (char === '\\') {
+        result += char;
+        escaped = true;
+      } else if (char === '"') {
+        result += char;
+        inString = false;
+      } else if (char === '\n') result += '\\n';
+      else if (char === '\r') result += '\\r';
+      else if (char === '\t') result += '\\t';
+      else result += char;
+      continue;
+    }
+    if (char === '"') {
+      result += char;
+      inString = true;
+      continue;
+    }
+    if (char === ',') {
+      let cursor = index + 1;
+      while (/\s/.test(candidate[cursor] ?? '')) cursor += 1;
+      if (candidate[cursor] === ']' || candidate[cursor] === '}') continue;
+    }
+    result += char;
+  }
+  return result;
 }
 
 function normalizeFinding(value, index) {
