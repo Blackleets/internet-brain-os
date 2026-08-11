@@ -181,7 +181,7 @@ Local qualification on 2026-08-11 was green for architecture, `release:verify`, 
 
 The authentic live run `31468965456` exposed two real control-budget failures. The pinned Hermes `--ignore-user-config` path restored its built-in `agent.max_turns: 500`, so time was the only practical loop bound. The mission worker and acceptance observer then both expired at 15 minutes while the inner Hermes adapter was allowed 20 minutes. The observer captured `running/investigating` as the worker concurrently persisted failure, and GitHub cleanup found the still-running process tree. The sanitized report proved only 7/13 checks and no candidates/Evidence/Find. `internal.65` is therefore frozen as failed and must never be reused or relabeled.
 
-## Internal.66 — live agent deadline and process-lifecycle repair
+## Internal.66 — live agent deadline and process-lifecycle repair / frozen failure
 
 `internal.66` preserves the exact credential-free runtime and L1→L7 truth criteria while repairing only the failed control plane:
 
@@ -193,7 +193,20 @@ The authentic live run `31468965456` exposed two real control-budget failures. T
 - escalates ignored graceful termination to a bounded forced kill, preventing orphaned Hermes processes;
 - keeps the search-only toolset, loopback model, Kernel-owned `web.read`, Evidence/provenance gates and sanitized report unchanged.
 
-Complete local qualification on 2026-08-11 is green for architecture, `release:verify`, production dependency audit, typecheck, workflow YAML parsing, 187 test files / 1059 tests, production build, `verify:first-run`, offline Hermes boundary acceptance `14/14` and extension packaging. Regression coverage includes an actual child process that ignores graceful termination and must be gone before the worker returns. Complete GitHub qualification and a real green L1→L7 report remain required on the new exact SHA.
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, workflow YAML parsing, 187 test files / 1059 tests, production build, `verify:first-run`, offline Hermes boundary acceptance `14/14` and extension packaging. Regression coverage includes an actual child process that ignores graceful termination and must be gone before the worker returns. PR #215 head `45ea90ff9b9ab6a696e12c1e3e12ee579139d218` then passed the complete CI/Chromium/Windows/package matrix.
+
+Live run `31471100120` proved the control-plane repair: Hermes completed in one bounded attempt, the process closed cleanly, four candidates were persisted, Kernel `web.read` created one verified Evidence item and Goal Truth converged on `forged`. The unchanged report still failed closed at 12/14 because that page was ordinary Evidence: zero Finds were promoted, so L5 and L6 failed. `internal.66` is frozen as failed and must never be reused or relabeled.
+
+## Internal.67 — durable live discovery target repair
+
+`internal.67` preserves every authority, Evidence, classifier and L1→L7 threshold while repairing only the live discovery target and candidate quality:
+
+- replaces the fragile course query with a public open-source developer-tool Goal whose canonical pages normally expose API, documentation, installation and license details in fetched content;
+- asks Hermes to prefer canonical directly readable pages and avoid login walls, paywalls, redirectors, search-result pages and JavaScript-only shells;
+- requests six to ten relevant findings across diverse hosts when public search supports them, while retaining the hard maximum of twenty;
+- does not use search snippets to satisfy classification and does not lower the Opportunity score, Goal category match, Evidence or provenance requirements.
+
+Complete local qualification on 2026-08-11 is green for architecture, `release:verify`, production dependency audit, typecheck, workflow contracts, 187 test files / 1060 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14`, extension packaging and diff validation. The exact GitHub matrix and an authentic sanitized report proving all L1→L7 checks remain mandatory before merge.
 
 ## Canonical CI/release gate
 
@@ -211,7 +224,7 @@ Every affected candidate must pass on one unchanged SHA:
 10. exact internal-package generation and SHA binding;
 11. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
-Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61` and `.65` remain frozen failures and must never be reused.
+Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65` and `.66` remain frozen failures and must never be reused.
 
 ## Distribution and public launch
 
@@ -222,7 +235,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 
 ## What remains
 
-1. Qualify immutable `internal.66` across the complete local and GitHub release matrix, then merge only if the exact SHA is green.
+1. Qualify immutable `internal.67` across the complete local and GitHub release matrix, then merge only if the exact SHA is green.
 2. Require the automatically triggered `Hermes live public-web acceptance` run on the merged SHA to produce a real green L1→L7 report; do not substitute deterministic CI or workflow presence for proof.
 3. Run UAT-1→UAT-6 on the same exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
 4. Use the Kernel-owned local-installation scorecard to establish the first real activation, repeat usage and useful-Find baselines before growth/retention/willingness-to-pay claims.
@@ -231,7 +244,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.66 runs the authentic Hermes public-web proof remotely with checksum-verified loopback inference, strictly nested deadlines and no founder-owned provider credential or PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.67 runs the authentic Hermes public-web proof remotely with checksum-verified loopback inference, bounded process lifecycle, canonical directly readable discovery targets and no founder-owned provider credential or PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule

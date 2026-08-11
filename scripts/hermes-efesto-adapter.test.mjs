@@ -22,6 +22,8 @@ describe('Hermes Efesto adapter', () => {
     expect(prompt).toContain('Find grants in Madrid');
     expect(prompt).toContain('public-source discovery mission');
     expect(prompt).toContain('candidates, not verified Evidence');
+    expect(prompt).toContain('canonical, directly readable public pages');
+    expect(prompt).toContain('Return 6 to 10 relevant findings');
   });
 
   it('isolates user customizations while keeping the official search backend available', () => {

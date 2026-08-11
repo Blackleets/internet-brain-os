@@ -32,10 +32,10 @@ const BOUNDARY_GOAL = {
   priority: 2,
 };
 
-const LIVE_VALUE_GOAL = {
-  title: 'Find a free public AI course with certification, enrollment and curriculum details',
-  categories: ['learning'],
-  keywords: ['free course', 'certification', 'training program', 'enroll', 'curriculum', 'AI'],
+export const LIVE_VALUE_GOAL = {
+  title: 'Find a public open-source developer tool with API, documentation, installation and license details',
+  categories: ['tool'],
+  keywords: ['open source', 'developer tool', 'GitHub', 'API', 'documentation', 'install', 'license'],
   priority: 2,
 };
 

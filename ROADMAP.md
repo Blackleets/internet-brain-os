@@ -97,17 +97,25 @@ Frozen `internal.65` failure:
 - passed the deterministic/Windows package matrix but failed live L1→L7 because `--ignore-user-config` restored Hermes's 500-turn built-in default and the 15-minute worker/observer deadlines expired together before the 20-minute inner Hermes deadline;
 - remains immutable and must not be reused.
 
-Active `internal.66` repair:
+Frozen `internal.66` result:
 
 - preserve the credential-free isolated Qwen/Ollama/Hermes boundary from `internal.65`;
 - replace the 500-turn built-in Hermes default with one exclusive ephemeral eight-turn profile without loading user config;
 - enforce adapter < worker < terminal < job deadlines with explicit machine checks;
 - wait for real adapter-process termination before mission failure is recorded, escalating graceful shutdown when required;
+- passed the full deterministic/Chromium/Windows/package matrix and proved bounded clean mission completion with candidates plus Kernel Evidence;
+- failed closed at L5/L6 because the one verified course page was ordinary Evidence and produced no Find, so the candidate remains immutable and unmerged.
+
+Active `internal.67` repair:
+
+- preserve the unchanged classifier, Goal match, Evidence and provenance gates;
+- target canonical public open-source tool pages with fetched API, documentation, installation and license details;
+- prefer directly readable sources, avoid login/paywall/redirect/search/JavaScript shells and return six to ten diverse candidates when available;
 - rerun the unchanged L1→L7 evidence/provenance contract rather than weakening acceptance.
 
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.66` across the complete release matrix;
+1. qualify and merge immutable `internal.67` across the complete release matrix;
 2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;

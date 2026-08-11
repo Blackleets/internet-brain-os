@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { resolveLiveTimeoutBudget } from './hermes-acceptance-runner.mjs';
+import { LIVE_VALUE_GOAL, resolveLiveTimeoutBudget } from './hermes-acceptance-runner.mjs';
 
 const runner = readFileSync(new URL('./hermes-acceptance-runner.mjs', import.meta.url), 'utf8');
 const assessment = readFileSync(new URL('./hermes-live-journey-assessment.mjs', import.meta.url), 'utf8');
@@ -17,6 +17,15 @@ describe('G5.3 authentic public-web acceptance contract', () => {
     expect(runner).toContain("mode: live ? 'live-authentic-runtime' : 'boundary-authority'");
     expect(runner).toContain('const goalInput = live ? LIVE_VALUE_GOAL : BOUNDARY_GOAL;');
     expect(runner).not.toContain('process.env.HEPHAESTUS_ACCEPTANCE_LIVE');
+  });
+
+  it('uses a durable public-page goal whose fetched body can independently satisfy the tool classifier', () => {
+    expect(LIVE_VALUE_GOAL).toEqual({
+      title: 'Find a public open-source developer tool with API, documentation, installation and license details',
+      categories: ['tool'],
+      keywords: ['open source', 'developer tool', 'GitHub', 'API', 'documentation', 'install', 'license'],
+      priority: 2,
+    });
   });
 
   it('collects journey evidence only through authenticated Kernel APIs', () => {

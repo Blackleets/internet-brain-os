@@ -22,6 +22,8 @@ export function buildHermesPrompt(payload) {
     'Use only public web search. The returned snippets are candidates, not verified Evidence.',
     'Do not access local files, private networks, credentials, messaging history, private sessions, browser automation or computer-use.',
     'Do not perform purchases, submissions, logins, outreach, downloads or destructive actions.',
+    'Prefer canonical, directly readable public pages with substantive content; avoid login walls, paywalls, redirectors, search-result pages and JavaScript-only shells.',
+    'Return 6 to 10 relevant findings when public search supports them, using diverse source hosts where practical.',
     'Return ONLY one valid JSON object with this exact top-level shape: {"findings":[...]}.',
     'Each finding may contain only url, title, text, summary, and discoveredAt.',
     'Use at most 20 findings. URLs must be public http or https. Do not include markdown fences or commentary.',
