@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { LIVE_VALUE_GOAL, resolveLiveTimeoutBudget } from './hermes-acceptance-runner.mjs';
+import { LIVE_VALUE_GOAL, isObservableMissionOutcome, resolveLiveTimeoutBudget } from './hermes-acceptance-runner.mjs';
 
 const runner = readFileSync(new URL('./hermes-acceptance-runner.mjs', import.meta.url), 'utf8');
 const assessment = readFileSync(new URL('./hermes-live-journey-assessment.mjs', import.meta.url), 'utf8');
@@ -59,5 +59,12 @@ describe('G5.3 authentic public-web acceptance contract', () => {
       HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS: '900000',
       HEPHAESTUS_ACCEPTANCE_TERMINAL_TIMEOUT_MS: '900000',
     })).toThrow('adapter < mission worker < acceptance');
+  });
+
+  it('stops observing after an explicitly recorded bounded-attempt failure', () => {
+    expect(isObservableMissionOutcome({ status: 'queued', attempt: 1 })).toBe(false);
+    expect(isObservableMissionOutcome({ status: 'queued', attempt: 1, lastFailure: { reason: 'adapter timeout' } })).toBe(true);
+    expect(isObservableMissionOutcome({ status: 'completed' })).toBe(true);
+    expect(isObservableMissionOutcome({ status: 'failed' })).toBe(true);
   });
 });

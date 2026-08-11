@@ -30,6 +30,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Remote live proof now uses one fail-closed attempt capped at four turns and two searches; normal product recovery remains three attempts, and an explicitly recorded live failure ends observation without overlapping another adapter run.
 - Authentic Hermes discovery now prefers canonical directly readable public pages, avoids login/paywall/redirect/search/JavaScript shells, and uses a durable open-source-tool live Goal without weakening Evidence or Find thresholds.
 - Authentic Hermes live acceptance now enforces nested adapter, worker, terminal, and job deadlines; timeout/output termination waits for the adapter process to close and escalates to a bounded forced kill before mission failure is recorded.
 - Authentic Hermes search launches now use an ephemeral home and working directory, ignore user configuration/rules, disable project plugins, retain only the official `search` toolset, and redact provider-shaped credentials from acceptance diagnostics.

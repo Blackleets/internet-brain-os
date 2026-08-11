@@ -23,7 +23,8 @@ describe('Hermes Efesto adapter', () => {
     expect(prompt).toContain('public-source discovery mission');
     expect(prompt).toContain('candidates, not verified Evidence');
     expect(prompt).toContain('canonical, directly readable public pages');
-    expect(prompt).toContain('Return 6 to 10 relevant findings');
+    expect(prompt).toContain('no more than two public search calls');
+    expect(prompt).toContain('Return 4 to 8 relevant findings');
   });
 
   it('isolates user customizations while keeping the official search backend available', () => {
@@ -63,6 +64,19 @@ describe('Hermes Efesto adapter', () => {
       await expect(prepareHermesHome(directory)).rejects.toMatchObject({ code: 'EEXIST' });
     } finally {
       await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('supports a stricter per-run turn cap without allowing expansion beyond eight', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'efesto-hermes-turn-cap-test-'));
+    const invalidDirectory = await mkdtemp(join(tmpdir(), 'efesto-hermes-invalid-cap-test-'));
+    try {
+      const configPath = await prepareHermesHome(directory, 4);
+      expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({ agent: { max_turns: 4 } });
+      await expect(prepareHermesHome(invalidDirectory, 9)).rejects.toThrow('between 1 and 8');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+      await rm(invalidDirectory, { recursive: true, force: true });
     }
   });
 

@@ -106,16 +106,24 @@ Frozen `internal.66` result:
 - passed the full deterministic/Chromium/Windows/package matrix and proved bounded clean mission completion with candidates plus Kernel Evidence;
 - failed closed at L5/L6 because the one verified course page was ordinary Evidence and produced no Find, so the candidate remains immutable and unmerged.
 
-Active `internal.67` repair:
+Frozen `internal.67` result:
 
 - preserve the unchanged classifier, Goal match, Evidence and provenance gates;
 - target canonical public open-source tool pages with fetched API, documentation, installation and license details;
 - prefer directly readable sources, avoid login/paywall/redirect/search/JavaScript shells and return six to ten diverse candidates when available;
+- passed the full deterministic/Chromium/Windows/package matrix but exposed that per-attempt deadlines did not bound the whole three-attempt mission; attempt two was active when terminal observation expired;
+- remains immutable and unmerged.
+
+Active `internal.68` repair:
+
+- preserve three attempts as the normal product default but constrain remote live proof to one explicitly configured attempt;
+- cap that live Hermes run at four turns and two searches while allowing four to eight diverse findings;
+- treat a recorded queued failure as an observable failed acceptance outcome so no idle observer waits after the configured live attempt ends;
 - rerun the unchanged L1→L7 evidence/provenance contract rather than weakening acceptance.
 
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.67` across the complete release matrix;
+1. qualify and merge immutable `internal.68` across the complete release matrix;
 2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;

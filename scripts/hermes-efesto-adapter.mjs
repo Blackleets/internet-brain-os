@@ -10,6 +10,7 @@ const DEFAULT_TIMEOUT_MS = 12 * 60_000;
 const MAX_TIMEOUT_MS = 25 * 60_000;
 const FORCE_KILL_DELAY_MS = 500;
 const MAX_AGENT_TURNS = 8;
+const DEFAULT_AGENT_TURNS = 8;
 
 export function buildHermesPrompt(payload) {
   if (!payload || payload.schemaVersion !== 'efesto.hermes-mission.v1' || !payload.mission) {
@@ -23,7 +24,8 @@ export function buildHermesPrompt(payload) {
     'Do not access local files, private networks, credentials, messaging history, private sessions, browser automation or computer-use.',
     'Do not perform purchases, submissions, logins, outreach, downloads or destructive actions.',
     'Prefer canonical, directly readable public pages with substantive content; avoid login walls, paywalls, redirectors, search-result pages and JavaScript-only shells.',
-    'Return 6 to 10 relevant findings when public search supports them, using diverse source hosts where practical.',
+    'Use no more than two public search calls before returning the final JSON.',
+    'Return 4 to 8 relevant findings when public search supports them, using diverse source hosts where practical.',
     'Return ONLY one valid JSON object with this exact top-level shape: {"findings":[...]}.',
     'Each finding may contain only url, title, text, summary, and discoveredAt.',
     'Use at most 20 findings. URLs must be public http or https. Do not include markdown fences or commentary.',
@@ -55,10 +57,11 @@ export function buildHermesEnvironment(baseEnv, hermesHome) {
   return env;
 }
 
-export async function prepareHermesHome(hermesHome) {
+export async function prepareHermesHome(hermesHome, maxTurns = DEFAULT_AGENT_TURNS) {
   if (typeof hermesHome !== 'string' || !hermesHome.trim()) throw new Error('An isolated Hermes home is required');
+  if (!Number.isInteger(maxTurns) || maxTurns < 1 || maxTurns > MAX_AGENT_TURNS) throw new Error(`Hermes max turns must be an integer between 1 and ${MAX_AGENT_TURNS}`);
   const configPath = join(hermesHome, 'config.yaml');
-  const config = { agent: { max_turns: MAX_AGENT_TURNS } };
+  const config = { agent: { max_turns: maxTurns } };
   await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
   return configPath;
 }
@@ -122,13 +125,15 @@ export async function runHermesOneShot(payload, options = {}) {
   const timeoutMs = options.timeoutMs ?? configuredTimeout(process.env.HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
   const ownsHermesHome = options.hermesHome === undefined;
   const hermesHome = options.hermesHome ?? await mkdtemp(join(tmpdir(), 'efesto-hermes-'));
+  const baseEnv = options.env ?? process.env;
+  const maxTurns = configuredMaxTurns(options.maxTurns ?? baseEnv.HEPHAESTUS_HERMES_MAX_TURNS);
   try {
-    await prepareHermesHome(hermesHome);
+    await prepareHermesHome(hermesHome, maxTurns);
     return await runHermesProcess({
       executable,
       args,
       timeoutMs,
-      env: buildHermesEnvironment(options.env ?? process.env, hermesHome),
+      env: buildHermesEnvironment(baseEnv, hermesHome),
       cwd: hermesHome,
     });
   } finally {
@@ -136,6 +141,15 @@ export async function runHermesOneShot(payload, options = {}) {
       await rm(hermesHome, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
   }
+}
+
+function configuredMaxTurns(value) {
+  if (value === undefined || value === '') return DEFAULT_AGENT_TURNS;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > MAX_AGENT_TURNS) {
+    throw new Error(`HEPHAESTUS_HERMES_MAX_TURNS must be an integer between 1 and ${MAX_AGENT_TURNS}`);
+  }
+  return parsed;
 }
 
 export function runHermesProcess({ executable, args, timeoutMs, env, cwd }) {

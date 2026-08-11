@@ -226,10 +226,16 @@ async function waitForTerminal(baseUrl, token, missionId, timeoutMs = DEFAULT_TE
   while (Date.now() < deadline) {
     const response = await api(baseUrl, token, '/api/agent-missions');
     last = (response.body?.missions ?? []).find((item) => item.id === missionId) ?? last;
-    if (['completed', 'failed'].includes(last.status)) return last;
+    if (isObservableMissionOutcome(last)) return last;
     await sleep(2_000);
   }
   return last;
+}
+
+export function isObservableMissionOutcome(mission) {
+  return Boolean(mission?.status === 'completed'
+    || mission?.status === 'failed'
+    || (mission?.status === 'queued' && mission?.lastFailure && Number(mission?.attempt ?? 0) > 0));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
