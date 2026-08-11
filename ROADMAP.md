@@ -206,15 +206,24 @@ Frozen `internal.77` result:
 - failed before inference because the pinned chat path did not select the environment-only provider/model route from the empty profile;
 - remains immutable and unmerged.
 
-Active `internal.78` repair:
+Frozen `internal.78` result:
 
 - pass the already-configured provider and model as explicit quiet-chat arguments;
 - length/control-character bound both route values and keep shell execution disabled;
 - retain the authoritative four-turn cap and every search/Evidence/Kernel guardrail.
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- failed closed at 8/14 before inference because pinned `cmd_chat` ignores CLI-only routing in its pre-agent first-run guard;
+- remains immutable and unmerged.
+
+Active `internal.79` repair:
+
+- mirror the same bounded provider/model values into the exclusively created temporary profile so Hermes startup recognizes an intentionally configured route;
+- retain explicit direct CLI routing after the guard, without a shell, credential, inherited user state or new network authority;
+- retain the authoritative four-turn cap and every search/Evidence/Kernel guardrail.
 
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.78` only if the exact release matrix and sanitized L1→L7 report are green;
+1. qualify and merge immutable `internal.79` only if the exact release matrix and sanitized L1→L7 report are green;
 2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;

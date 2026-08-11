@@ -85,6 +85,19 @@ describe('Hermes Efesto adapter', () => {
     }
   });
 
+  it('mirrors the bounded invocation route into the isolated profile for Hermes startup readiness', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'efesto-hermes-route-test-'));
+    try {
+      const configPath = await prepareHermesHome(directory, 4, 'custom', 'qwen3.5:2b');
+      expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({
+        agent: { max_turns: 4 },
+        model: { default: 'qwen3.5:2b', provider: 'custom' },
+      });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it('preserves explicit loopback custom-provider routing for isolated remote acceptance', () => {
     const env = buildHermesEnvironment({
       HERMES_INFERENCE_PROVIDER: 'custom',

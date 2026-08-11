@@ -340,16 +340,28 @@ Complete local qualification on 2026-08-11 was green for architecture, `release:
 
 Live run `31486248829` failed closed in 3.8 seconds when the quiet chat process exited code 1 before inference. Inspection of the pinned chat path confirmed that model selection ignores `HERMES_INFERENCE_MODEL` and provider selection prefers its CLI config before the environment; the exclusive profile intentionally contains no inherited route configuration. `internal.77` is frozen as failed and must never be reused or relabeled.
 
-## Internal.78 — explicit bounded inference route
+## Internal.78 — explicit bounded inference route / frozen failure
 
 `internal.78` retains the authoritative chat turn cap and supplies the missing isolated route explicitly:
 
 - reads the already-configured `HERMES_INFERENCE_PROVIDER` and `HERMES_INFERENCE_MODEL` values from the adapter process environment;
 - rejects route values over 160 characters or containing control characters;
 - passes non-empty values as direct `--provider` and `--model` spawn arguments without a shell;
-- keeps the empty private profile, search-only tools, one search, one Efesto attempt, nested deadlines and all Kernel/Evidence authority unchanged.
+- keeps the private profile free of inherited user state, search-only tools, one search, one Efesto attempt, nested deadlines and all Kernel/Evidence authority unchanged.
 
 Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1074 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging.
+
+PR #215 head `d42a30634ff021ae94be8e2487be456f66a035e2` passed the complete CI/Chromium/Windows/package matrix. Live run `31486865843` failed closed in 3.6 seconds at 8/14: the quiet chat process exited code 1 before inference, with no candidates, Evidence or Finds. Inspection of pinned `cmd_chat` established that its pre-agent first-run guard ignores CLI-only provider/model arguments and accepts an isolated run only when its profile contains `model.provider` or a recognized credential. `internal.78` is frozen as failed and must never be reused or relabeled.
+
+## Internal.79 — startup-visible isolated route
+
+`internal.79` preserves the explicit bounded quiet-chat invocation and repairs only the pinned pre-agent startup contract:
+
+- mirrors the already-configured, length/control-character-checked provider and model into the exclusively created temporary profile as `model.provider` and `model.default`;
+- passes the same values as direct `--provider` and `--model` arguments without a shell, so post-guard runtime selection remains explicit;
+- retains the authoritative four-turn cap, empty ephemeral home/cwd, search-only tools, one search, one Efesto attempt, nested deadlines and all Kernel/Evidence authority.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1075 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging.
 
 The exact candidate must pass the complete GitHub matrix and produce an authentic sanitized `14/14` report before merge.
 
@@ -369,7 +381,7 @@ Every affected candidate must pass on one unchanged SHA:
 10. exact internal-package generation and SHA binding;
 11. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
-Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65`, `.66`, `.67`, `.68`, `.69`, `.70`, `.71`, `.72`, `.73`, `.74`, `.75`, `.76` and `.77` remain frozen failures and must never be reused.
+Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65`, `.66`, `.67`, `.68`, `.69`, `.70`, `.71`, `.72`, `.73`, `.74`, `.75`, `.76`, `.77` and `.78` remain frozen failures and must never be reused.
 
 ## Distribution and public launch
 
@@ -380,7 +392,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 
 ## What remains
 
-1. Qualify immutable `internal.78` across the complete local and GitHub release matrix, then merge only if the exact SHA and authentic sanitized L1→L7 report are green.
+1. Qualify immutable `internal.79` across the complete local and GitHub release matrix, then merge only if the exact SHA and authentic sanitized L1→L7 report are green.
 2. Require the automatically triggered `Hermes live public-web acceptance` run on the merged SHA to produce a real green L1→L7 report; do not substitute deterministic CI or workflow presence for proof.
 3. Run UAT-1→UAT-6 on the same exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
 4. Use the Kernel-owned local-installation scorecard to establish the first real activation, repeat usage and useful-Find baselines before growth/retention/willingness-to-pay claims.
@@ -389,7 +401,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.78 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3.5 2B inference, truthful 256K model context, bounded 8K runtime context, Qwen non-thinking mode, one live attempt capped authoritatively at four turns through quiet `chat --query --max-turns`, explicit bounded provider/model routing and exactly one search, URL-only JSON candidates, first-fenced-payload extraction, bounded deterministic syntax repair, neutral locally derived candidate labels, canonical directly readable discovery targets and no founder-owned provider credential or PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.79 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3.5 2B inference, truthful 256K model context, bounded 8K runtime context, Qwen non-thinking mode, one live attempt capped authoritatively at four turns through quiet `chat --query --max-turns`, startup-visible isolated provider/model routing and exactly one search, URL-only JSON candidates, first-fenced-payload extraction, bounded deterministic syntax repair, neutral locally derived candidate labels, canonical directly readable discovery targets and no founder-owned provider credential or PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule

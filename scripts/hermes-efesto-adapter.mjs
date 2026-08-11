@@ -74,11 +74,20 @@ export function buildHermesEnvironment(baseEnv, hermesHome) {
   return env;
 }
 
-export async function prepareHermesHome(hermesHome, maxTurns = DEFAULT_AGENT_TURNS) {
+export async function prepareHermesHome(hermesHome, maxTurns = DEFAULT_AGENT_TURNS, provider, model) {
   if (typeof hermesHome !== 'string' || !hermesHome.trim()) throw new Error('An isolated Hermes home is required');
   if (!Number.isInteger(maxTurns) || maxTurns < 1 || maxTurns > MAX_AGENT_TURNS) throw new Error(`Hermes max turns must be an integer between 1 and ${MAX_AGENT_TURNS}`);
+  const normalizedProvider = normalizeRouteValue(provider, 'provider');
+  const normalizedModel = normalizeRouteValue(model, 'model');
   const configPath = join(hermesHome, 'config.yaml');
-  const config = { agent: { max_turns: maxTurns } };
+  const route = {
+    ...(normalizedModel ? { default: normalizedModel } : {}),
+    ...(normalizedProvider ? { provider: normalizedProvider } : {}),
+  };
+  const config = {
+    agent: { max_turns: maxTurns },
+    ...(Object.keys(route).length > 0 ? { model: route } : {}),
+  };
   await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
   return configPath;
 }
@@ -203,7 +212,7 @@ export async function runHermesOneShot(payload, options = {}) {
   const maxTurns = configuredMaxTurns(options.maxTurns ?? baseEnv.HEPHAESTUS_HERMES_MAX_TURNS);
   const args = buildHermesArgs(prompt, maxTurns, baseEnv.HERMES_INFERENCE_PROVIDER, baseEnv.HERMES_INFERENCE_MODEL);
   try {
-    await prepareHermesHome(hermesHome, maxTurns);
+    await prepareHermesHome(hermesHome, maxTurns, baseEnv.HERMES_INFERENCE_PROVIDER, baseEnv.HERMES_INFERENCE_MODEL);
     return await runHermesProcess({
       executable,
       args,
