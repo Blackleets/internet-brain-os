@@ -9,6 +9,8 @@ export const ACCEPTANCE_ORIGIN = 'http://127.0.0.1:4173';
 export function redact(value) {
   return String(value ?? '')
     .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/((?:authorization|[a-z0-9_-]*api[_-]?key|[a-z0-9_-]*token)\s*[:=]\s*)(?:bearer\s+)?[^\s,"']+/gi, '$1<redacted-secret>')
+    .replace(/\bsk-[A-Za-z0-9._-]{12,}\b/g, '<redacted-secret>')
     .replace(/[A-Fa-f0-9]{32,}/g, '<redacted-token>')
     .replace(/[A-Za-z]:\\[^\s"']+/g, '<redacted-path>')
     .replace(/\/(?:home|Users)\/[^\s"']+/g, '<redacted-path>')

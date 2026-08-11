@@ -151,9 +151,20 @@ PR #212 merged at `80e93b7a5cc6fbec80dc1435b220f88be9dcc477`. The exact publishe
 - the dashboard surfaces Repeat Goal Usage as a primary Kernel-owned KPI and local activation as supporting context;
 - no central telemetry, outbound route, network authority or new execution capability is introduced.
 
-Local qualification on 2026-08-11 is green for architecture, typecheck, 186 test files / 1050 tests, production build, `release:verify`, extension packaging, offline Hermes boundary acceptance `14/14`, `verify:first-run` and a real temporary Kernel-start persistence probe. Local Playwright reached the browser-launch boundary but could not execute because no Chromium binary is installed; no browser download was performed. GitHub Chromium/Windows/exact-package qualification remains required on the final published SHA.
+PR #213 merged at `3d4dbbf18573468bc7656a353f92714b94045dc1`. Its exact implementation SHA passed CI/Chromium, internal package, Windows Launcher and Windows First Run workflows before merge, including the packaged Windows qualification matrix. Aggregate multi-user rates remain unavailable until a separate opt-in privacy design exists.
 
-This candidate must pass the unchanged remote release matrix on one final SHA before merge. Aggregate multi-user rates remain unavailable until a separate opt-in privacy design exists.
+## G5.6 — remote authentic Hermes public-web proof / internal.64
+
+`internal.64` makes the existing live L1→L7 acceptance runnable on an isolated GitHub-hosted machine without installing anything on the founder's PC:
+
+- fixes the Hermes v0.20 compatibility boundary: `--safe-mode` disabled the bundled backend plugins that provide web search, so the adapter now uses `--ignore-user-config --ignore-rules --toolsets search -z`;
+- gives each invocation a fresh `HERMES_HOME` and working directory, removes inherited project-plugin enablement, refuses private-URL search support and retains only public search candidates;
+- keeps Kernel-owned `web.read`, Evidence, classification, provenance and final Goal truth unchanged;
+- adds a manual-only, least-privilege workflow pinned to Hermes commit `ee4bb75b532e932a1055d9a710802a7435163b6a` and immutable Action commits;
+- requires the repository secret `HEPHAESTUS_LIVE_OPENROUTER_API_KEY`, fails closed if it is missing and uploads only the locally redacted acceptance report;
+- strengthens report redaction for provider/API/Authorization-shaped credentials.
+
+Local qualification on 2026-08-11 is green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1055 tests, production build, `verify:first-run`, offline Hermes boundary acceptance `14/14`, extension packaging and workflow YAML/contract validation. This is **not yet authentic Internet proof**: `internal.64` still requires the GitHub Chromium/Windows/exact-package matrix and one green manual workflow report showing L1→L7 on the exact published SHA.
 
 ## Canonical CI/release gate
 
@@ -182,16 +193,16 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58` an
 
 ## What remains
 
-1. Qualify immutable `internal.63` across the complete local and GitHub release matrix, then merge only if the exact SHA is green.
-2. Run the explicit G5.3 live acceptance where authentic Hermes + public Internet are available; require L1→L7 and do not substitute deterministic CI for that proof.
-3. Run UAT-1→UAT-6 on one exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
+1. Qualify immutable `internal.64` across the complete local and GitHub release matrix, then merge only if the exact SHA is green.
+2. Configure the repository-scoped live provider secret and dispatch `Hermes live public-web acceptance` on that exact SHA; require a real green L1→L7 report and do not substitute deterministic CI or workflow presence for proof.
+3. Run UAT-1→UAT-6 on the same exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
 4. Use the Kernel-owned local-installation scorecard to establish the first real activation, repeat usage and useful-Find baselines before growth/retention/willingness-to-pay claims.
 5. Treat notification delivery, aggregate sharing, scheduling expansion, cross-device authority and irreversible actions as separate security/privacy slices.
 
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 strengthens explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, and G5.5 measures activation/repeat usage only for one private local installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6 runs the authentic Hermes public-web proof remotely without founder-PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule

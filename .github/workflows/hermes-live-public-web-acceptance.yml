@@ -1,0 +1,98 @@
+name: Hermes live public-web acceptance
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hermes-live-public-web-${{ github.ref }}
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: OpenRouter model or router used by authentic Hermes
+        required: true
+        type: string
+        default: openrouter/free
+
+jobs:
+  l1-l7:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      HERMES_REF: ee4bb75b532e932a1055d9a710802a7435163b6a
+    steps:
+      - name: Checkout Efesto
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - name: Checkout pinned Hermes
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          repository: NousResearch/hermes-agent
+          ref: ${{ env.HERMES_REF }}
+          path: .live-hermes
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+        with:
+          version: 0.9.28
+          enable-cache: true
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with:
+          version: 11.11.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@e51e5fe84fc33b4c73ebe40526b2694712b5b858
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Require the live provider credential
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.HEPHAESTUS_LIVE_OPENROUTER_API_KEY }}
+        shell: bash
+        run: |
+          if [ -z "${OPENROUTER_API_KEY:-}" ]; then
+            echo "::error::HEPHAESTUS_LIVE_OPENROUTER_API_KEY is required for authentic Hermes acceptance"
+            exit 1
+          fi
+
+      - name: Install pinned Hermes and search provider
+        working-directory: .live-hermes
+        shell: bash
+        run: |
+          uv python install 3.11
+          uv sync --locked --python 3.11
+          uv pip install ddgs==9.14.4
+
+      - name: Install and build Efesto
+        shell: bash
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm architecture:check
+          pnpm typecheck
+          pnpm build
+
+      - name: Run authentic Hermes L1-L7 acceptance
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.HEPHAESTUS_LIVE_OPENROUTER_API_KEY }}
+          HERMES_INFERENCE_MODEL: ${{ inputs.model }}
+          HEPHAESTUS_HERMES_EXECUTABLE: ${{ github.workspace }}/.live-hermes/.venv/bin/hermes
+          HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS: 1200000
+          HEPHAESTUS_ACCEPTANCE_REPORT: ${{ github.workspace }}/.hephaestus/live-acceptance-report.json
+        run: pnpm hermes:acceptance:live
+
+      - name: Upload sanitized acceptance report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: hermes-live-public-web-${{ github.sha }}
+          path: .hephaestus/live-acceptance-report.json
+          if-no-files-found: warn
+          retention-days: 14

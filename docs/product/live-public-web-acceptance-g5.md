@@ -8,7 +8,7 @@ The previous live acceptance could prove that an authentic Hermes runtime reache
 
 ```text
 trusted Goal confirmation
-→ authentic Hermes safe search discovery
+→ authentic Hermes isolated search-only discovery
 → persisted searchCandidates
 → Kernel web.read verification
 → Case + Evidence
@@ -50,7 +50,7 @@ Live acceptance continues to:
 - create an isolated temporary Efesto data directory;
 - remove that data directory after the run;
 - redact report details;
-- use the existing safe Hermes automatic runtime boundary;
+- run Hermes from an ephemeral home/cwd with user config, rules and project plugins disabled and only the official `search` toolset available;
 - add no purchase, login, form, message, payment or durable-memory authority.
 
 The report stays local at the existing acceptance report path unless the operator explicitly handles it elsewhere.
@@ -60,6 +60,8 @@ The report stays local at the existing acceptance report path unless the operato
 Default CI remains deterministic and does **not** require Internet access or a live Hermes account/runtime. The new live provenance checks run only when the existing acceptance command is explicitly invoked with `--live` / `pnpm hermes:acceptance:live`.
 
 Unit and structural tests for the G5.3 assessment logic remain part of normal CI so regressions in the acceptance contract are still caught offline.
+
+The manual `Hermes live public-web acceptance` GitHub workflow provides a remote execution environment without changing default CI. It pins the reviewed Hermes/runtime supply chain, requires a repository-scoped provider secret, fails closed when that secret is absent, and uploads only the sanitized report. It does not become evidence until the exact run completes L1→L7 successfully.
 
 ## What this does not replace
 

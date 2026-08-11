@@ -29,12 +29,24 @@ The Kernel still owns URL validation, Evidence creation, deduplication, Goal-sco
 1. reads exactly one mission JSON object from stdin;
 2. validates `efesto.hermes-mission.v1`;
 3. builds a bounded public-research prompt;
-4. invokes the authentic CLI with `hermes -z`, source `tool`, and bounded turns;
+4. invokes the authentic CLI from an ephemeral home/working directory with `--ignore-user-config --ignore-rules --toolsets search -z`;
 5. accepts only JSON containing at most 20 findings;
 6. rejects unsupported authority fields, oversized values, invalid output, timeouts, and non-zero exits;
 7. writes only `{ "findings": [...] }` to stdout.
 
 The Kernel performs the final URL, scope, provenance, deduplication, and persistence validation again.
+
+Hermes v0.20 `--safe-mode` is not compatible with this bridge because it disables the bundled backend plugins that supply public web search. The narrower invocation above preserves the official search backend while removing user config, rules, memory, skills and project plugins. Search output remains candidate material only.
+
+## Remote authentic L1→L7 acceptance
+
+`.github/workflows/hermes-live-public-web-acceptance.yml` runs the same product path on an isolated GitHub-hosted machine, so it does not install Hermes or another dependency on the founder's PC. It is manual-only and pins:
+
+- Hermes commit `ee4bb75b532e932a1055d9a710802a7435163b6a` (v0.20.0 source);
+- every referenced GitHub Action by immutable commit;
+- `uv` 0.9.28, Python 3.11, pnpm 11.11.0 and `ddgs` 9.14.4.
+
+Before dispatch, configure the repository secret `HEPHAESTUS_LIVE_OPENROUTER_API_KEY`. The default model input is `openrouter/free`; it can be replaced at dispatch without changing product authority. A missing secret fails closed, the credential is scoped only to the no-output preflight and authentic Hermes steps, and the workflow publishes only `.hephaestus/live-acceptance-report.json` after local redaction. A workflow definition or skipped/blocked run is not proof: acceptance requires the report itself to show all L1→L7 checks green on the tested SHA.
 
 ## Windows local configuration
 
