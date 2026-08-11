@@ -20,7 +20,7 @@ Replay Lab gives the operator a read-only explanation of the case, Evidence, pro
 2. Run `pnpm hermes:smoke` and show that exact replay returns the original cognitive record ID.
 3. Run `pnpm hermes:attack-smoke` and show `409 HERMES_IDEMPOTENCY_CONFLICT` for the altered replay.
 4. Open Replay Lab and point to the Evidence, claim proposal, Kernel gates, receipt state, and Authority Boundary panel.
-5. Show the Goal-first surface and explain that authentic Hermes runtime proof is already complete; the remaining launch gate is UAT-1 through UAT-6 on one immutable Windows candidate.
+5. Show the Goal-first surface and explain that the authentic Agent Hub boundary proof is complete, while public launch still requires remote authentic public-web L1→L7 acceptance plus UAT-1 through UAT-6 on one immutable Windows candidate.
 
 The exact deterministic commands and expected results are maintained in `docs/hermes-demo-quickstart.md`. Public-release promotion is controlled by `docs/internal-uat-v0.1.0.md` and `INTERNAL_RELEASE.json`.
 

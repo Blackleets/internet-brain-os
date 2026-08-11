@@ -12,7 +12,10 @@ describe('hermes acceptance runner helpers', () => {
 
   it('redacts tokens, absolute paths and control characters', () => {
     const token = 'a'.repeat(64);
+    const openRouterKey = 'sk-or-v1-notarealprovidercredential123456789';
     expect(redact(`token=${token}`)).not.toContain(token);
+    expect(redact(`OPENROUTER_API_KEY=${openRouterKey}`)).not.toContain(openRouterKey);
+    expect(redact(`Authorization: Bearer ${openRouterKey}`)).not.toContain(openRouterKey);
     expect(redact('C:\\Users\\someone\\secret')).not.toContain('someone');
     expect(redact('/home/someone/secret')).not.toContain('someone');
     expect(redact('line\u0000break')).not.toContain('\u0000');

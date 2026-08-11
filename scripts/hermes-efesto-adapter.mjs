@@ -1,10 +1,14 @@
 import { spawn } from 'node:child_process';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const MAX_INPUT_BYTES = 128 * 1024;
 const MAX_OUTPUT_BYTES = 512 * 1024;
 const DEFAULT_TIMEOUT_MS = 12 * 60_000;
 const MAX_TIMEOUT_MS = 20 * 60_000;
+const FORCE_KILL_DELAY_MS = 500;
 
 export function buildHermesPrompt(payload) {
   if (!payload || payload.schemaVersion !== 'efesto.hermes-mission.v1' || !payload.mission) {
@@ -32,7 +36,29 @@ export function buildHermesPrompt(payload) {
 
 export function buildHermesArgs(prompt) {
   if (typeof prompt !== 'string' || !prompt.trim()) throw new Error('Hermes prompt is required');
-  return ['--safe-mode', '--toolsets', 'search', '-z', prompt];
+  return ['--ignore-user-config', '--ignore-rules', '--toolsets', 'search', '-z', prompt];
+}
+
+export function buildHermesEnvironment(baseEnv, hermesHome) {
+  if (typeof hermesHome !== 'string' || !hermesHome.trim()) throw new Error('An isolated Hermes home is required');
+  const env = {
+    ...baseEnv,
+    HERMES_HOME: hermesHome,
+    HERMES_ALLOW_PRIVATE_URLS: 'false',
+    HERMES_IGNORE_USER_CONFIG: '1',
+    HERMES_IGNORE_RULES: '1',
+  };
+  delete env.HERMES_SAFE_MODE;
+  delete env.HERMES_ENABLE_PROJECT_PLUGINS;
+  return env;
+}
+
+export function normalizeHermesExecutable(value) {
+  if (typeof value !== 'string' || !value.trim()) throw new Error('Hermes executable is required');
+  const executable = value.trim();
+  return isAbsolute(executable) || executable.includes('/') || executable.includes('\\')
+    ? resolve(executable)
+    : executable;
 }
 
 export function parseHermesFindings(text) {
@@ -80,29 +106,62 @@ function configuredTimeout(value, fallback) {
 }
 
 export async function runHermesOneShot(payload, options = {}) {
-  const executable = options.executable ?? process.env.HEPHAESTUS_HERMES_EXECUTABLE ?? 'hermes';
+  const executable = normalizeHermesExecutable(options.executable ?? process.env.HEPHAESTUS_HERMES_EXECUTABLE ?? 'hermes');
   const prompt = buildHermesPrompt(payload);
   const args = buildHermesArgs(prompt);
   const timeoutMs = options.timeoutMs ?? configuredTimeout(process.env.HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
+  const ownsHermesHome = options.hermesHome === undefined;
+  const hermesHome = options.hermesHome ?? await mkdtemp(join(tmpdir(), 'efesto-hermes-'));
+  try {
+    return await runHermesProcess({
+      executable,
+      args,
+      timeoutMs,
+      env: buildHermesEnvironment(options.env ?? process.env, hermesHome),
+      cwd: hermesHome,
+    });
+  } finally {
+    if (ownsHermesHome) {
+      await rm(hermesHome, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+    }
+  }
+}
+
+export function runHermesProcess({ executable, args, timeoutMs, env, cwd }) {
   return new Promise((resolve, reject) => {
     const child = spawn(executable, args, {
       shell: false,
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, HERMES_ALLOW_PRIVATE_URLS: 'false' },
+      env,
+      cwd,
     });
-    let stdout = ''; let stderr = ''; let bytes = 0; let settled = false;
-    const finish = (error, value) => { if (settled) return; settled = true; clearTimeout(timer); error ? reject(error) : resolve(value); };
-    const timer = setTimeout(() => { child.kill(); finish(new Error('Hermes one-shot timed out')); }, timeoutMs);
+    let stdout = ''; let stderr = ''; let bytes = 0; let settled = false; let pendingError; let forceKillTimer;
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      clearTimeout(forceKillTimer);
+      error ? reject(error) : resolve(value);
+    };
+    const requestStop = (error) => {
+      if (settled || pendingError) return;
+      pendingError = error;
+      child.kill();
+      forceKillTimer = setTimeout(() => { if (!settled) child.kill('SIGKILL'); }, FORCE_KILL_DELAY_MS);
+    };
+    const timer = setTimeout(() => requestStop(new Error('Hermes one-shot timed out')), timeoutMs);
     const collect = (chunk, target) => {
+      if (pendingError) return;
       bytes += chunk.length;
-      if (bytes > MAX_OUTPUT_BYTES) { child.kill(); finish(new Error('Hermes output exceeded the limit')); return; }
+      if (bytes > MAX_OUTPUT_BYTES) { requestStop(new Error('Hermes output exceeded the limit')); return; }
       if (target === 'stdout') stdout += chunk; else stderr += chunk;
     };
     child.stdout.on('data', (chunk) => collect(chunk, 'stdout'));
     child.stderr.on('data', (chunk) => collect(chunk, 'stderr'));
-    child.on('error', finish);
+    child.on('error', (error) => finish(pendingError ?? error));
     child.on('close', (code) => {
+      if (pendingError) return finish(pendingError);
       if (code !== 0) return finish(new Error(`Hermes exited with code ${code}`));
       try { finish(undefined, parseHermesFindings(stdout)); }
       catch (error) { finish(error); }

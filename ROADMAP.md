@@ -72,7 +72,7 @@ Delivered measurement foundation:
 - G5.3 requires authentic public-web L1→L7 provenance in the explicit live harness; the live run still requires a suitable Hermes + Internet environment.
 - G5.4 preserves one-line Goals while the Kernel enriches bounded discovery intent.
 
-Active G5.5 slice:
+Delivered G5.5 slice:
 
 - initialize one private `local_installation` measurement cohort without a user/device identifier;
 - measure first confirmed Goal activation for that installation;
@@ -80,13 +80,20 @@ Active G5.5 slice:
 - surface Repeat Goal Usage as a primary Kernel-owned KPI;
 - keep aggregate rates and notification-delivery measurement unavailable until separately justified ledgers/privacy boundaries exist.
 
+Active G5.6 slice:
+
+- isolate authentic Hermes v0.20 search without disabling its bundled public-web provider;
+- execute the existing L1→L7 contract on a GitHub-hosted machine, not the founder's PC;
+- pin the external runtime/action supply chain and keep provider credentials out of logs/artifacts;
+- retain manual dispatch and require a real green report before claiming live proof.
+
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.63` for G5.5;
-2. run the exact-package manual UAT with real public-web Goals;
-3. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;
-4. test willingness-to-pay and onboarding friction;
-5. use those results—not feature count—to choose the next product slice.
+1. qualify and merge immutable `internal.64` for G5.6;
+2. configure the scoped live provider secret and run the exact-SHA remote L1→L7 workflow;
+3. run the exact-package manual UAT with real public-web Goals;
+4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;
+5. test willingness-to-pay and onboarding friction, then choose the next slice from evidence.
 
 Unauthorized automatic actions remain a zero-tolerance guardrail.
 

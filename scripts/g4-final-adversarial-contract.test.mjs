@@ -23,8 +23,11 @@ describe('G4 final automatic read-only adversarial contract', () => {
     const adapter = read('scripts/hermes-efesto-adapter.mjs');
     const worker = read('apps/local-kernel/hermes-mission-worker.mjs');
     const executor = read('apps/local-kernel/agent-mission-executor.mjs');
-    expect(adapter).toContain("['--safe-mode', '--toolsets', 'search', '-z', prompt]");
+    expect(adapter).toContain("['--ignore-user-config', '--ignore-rules', '--toolsets', 'search', '-z', prompt]");
+    expect(adapter).toContain('HERMES_HOME: hermesHome');
+    expect(adapter).toContain("delete env.HERMES_ENABLE_PROJECT_PLUGINS");
     expect(adapter).toContain("HERMES_ALLOW_PRIVATE_URLS: 'false'");
+    expect(adapter).toContain('cwd: hermesHome');
     expect(worker).toContain("resultKind: 'search_candidates'");
     expect(executor).toContain("status: 'pending_verification'");
     expect(executor).toContain('evidenceCreated: 0');

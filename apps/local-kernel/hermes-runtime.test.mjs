@@ -45,18 +45,18 @@ describe('Hermes runtime detection', () => {
 describe('Hermes automatic read-only capability probe', () => {
   const runtime = { available: true, executable: '/safe/hermes', source: 'test' };
 
-  it('accepts only a runtime advertising one-shot, toolsets and safe-mode', async () => {
+  it('accepts only a runtime advertising one-shot plus isolated search flags', async () => {
     const result = await probeHermesReadOnlyRuntime(runtime, {
       runCommand: async (_executable, args) => {
         expect(args).toEqual(['--help']);
-        return { ok: true, stdout: '-z, --oneshot PROMPT\n--toolsets TOOLSETS\n--safe-mode' };
+        return { ok: true, stdout: '-z, --oneshot PROMPT\n--toolsets TOOLSETS\n--ignore-user-config\n--ignore-rules' };
       },
     });
     expect(result).toEqual({
       ready: true,
-      mode: 'safe_search_only',
+      mode: 'isolated_search_only',
       executable: runtime.executable,
-      requiredArgs: ['--safe-mode', '--toolsets', 'search', '-z'],
+      requiredArgs: ['--ignore-user-config', '--ignore-rules', '--toolsets', 'search', '-z'],
     });
   });
 

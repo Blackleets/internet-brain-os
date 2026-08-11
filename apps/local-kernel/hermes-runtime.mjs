@@ -46,16 +46,17 @@ export async function probeHermesReadOnlyRuntime(runtime, options = {}) {
   const required = [
     /(?:^|\s)-z(?:,|\s)|--oneshot/m,
     /--toolsets/m,
-    /--safe-mode/m,
+    /--ignore-user-config/m,
+    /--ignore-rules/m,
   ];
   if (!required.every((pattern) => pattern.test(help))) {
     return { ready: false, reason: 'required_flags_missing' };
   }
   return {
     ready: true,
-    mode: 'safe_search_only',
+    mode: 'isolated_search_only',
     executable: runtime.executable,
-    requiredArgs: ['--safe-mode', '--toolsets', 'search', '-z'],
+    requiredArgs: ['--ignore-user-config', '--ignore-rules', '--toolsets', 'search', '-z'],
   };
 }
 

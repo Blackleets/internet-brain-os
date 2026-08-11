@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- Manual GitHub acceptance workflow for authentic Hermes v0.20 public-web L1→L7 proof, pinned to reviewed action/runtime commits and publishing only the sanitized acceptance report.
 - Private local-installation product cohort for trustworthy first-Goal activation and repeat-Goal measurement without global identifiers or external telemetry.
 - Deterministic design for memory quarantine and toxic-memory handling, including authority gates, append-only transition receipts, reversible recovery, startup reconciliation, and safe Replay Lab language.
 - Product launch kit with the verified one-minute narrative, five-minute demo flow, founder pitch, launch-post draft, and explicit no-overclaim guardrails.
@@ -28,6 +29,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Authentic Hermes search launches now use an ephemeral home and working directory, ignore user configuration/rules, disable project plugins, retain only the official `search` toolset, and redact provider-shaped credentials from acceptance diagnostics.
 - The Kernel-owned product scorecard now measures local activation/repeat usage when a valid private cohort exists, fails closed on missing/corrupt cohort metadata, and surfaces Repeat Goal Usage as a primary dashboard KPI.
 - README opening now explains the current AI-forensics wedge, product boundaries, and local architecture before contributor doctrine.
 - Product Star roadmap and AI handoff now distinguish verified, partial, blocked, and deferred sections using the current repository evidence.
