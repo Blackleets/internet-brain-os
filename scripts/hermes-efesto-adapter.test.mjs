@@ -24,8 +24,9 @@ describe('Hermes Efesto adapter', () => {
     expect(prompt).toContain('candidates, not verified Evidence');
     expect(prompt).toContain('canonical, directly readable public pages');
     expect(prompt).toContain('no more than two public search calls');
-    expect(prompt).toContain('Return 4 to 8 relevant findings');
+    expect(prompt).toContain('Return 3 to 5 relevant findings');
     expect(prompt.startsWith('/no_think\n')).toBe(true);
+    expect(prompt).toContain('Keep every string on one line, escape it as JSON, and do not use trailing commas.');
   });
 
   it('isolates user customizations while keeping the official search backend available', () => {
@@ -146,6 +147,10 @@ describe('Hermes Efesto adapter', () => {
 
   it('accepts one JSON code fence but strips it before parsing', () => {
     expect(parseHermesFindings('```json\n{"findings":[]}\n```')).toEqual({ findings: [] });
+  });
+
+  it('accepts Qwen whitespace before the JSON fence label', () => {
+    expect(parseHermesFindings('``` json\n{"findings":[]}\n```')).toEqual({ findings: [] });
   });
 
   it('accepts one bounded Qwen thinking envelope before strict JSON', () => {

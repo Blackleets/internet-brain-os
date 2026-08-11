@@ -26,9 +26,9 @@ export function buildHermesPrompt(payload) {
     'Do not perform purchases, submissions, logins, outreach, downloads or destructive actions.',
     'Prefer canonical, directly readable public pages with substantive content; avoid login walls, paywalls, redirectors, search-result pages and JavaScript-only shells.',
     'Use no more than two public search calls before returning the final JSON.',
-    'Return 4 to 8 relevant findings when public search supports them, using diverse source hosts where practical.',
+    'Return 3 to 5 relevant findings when public search supports them, using diverse source hosts where practical.',
     'Return ONLY one valid JSON object with this exact top-level shape: {"findings":[...]}.',
-    'Each finding may contain only url, title, text, summary, and discoveredAt.',
+    'Each finding may contain only url, title, text, summary, and discoveredAt. Keep every string on one line, escape it as JSON, and do not use trailing commas.',
     'Use at most 20 findings. URLs must be public http or https. Do not include markdown fences or commentary.',
     '',
     `Mission id: ${String(mission.id ?? '').slice(0, 160)}`,
@@ -80,7 +80,7 @@ export function parseHermesFindings(text) {
   const trimmed = text.trim();
   const withoutThinking = trimmed.replace(/^(?:<think>[\s\S]*?<\/think>\s*)+/i, '');
   const candidate = withoutThinking.startsWith('```')
-    ? withoutThinking.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
+    ? withoutThinking.replace(/^```\s*(?:json\s*)?/i, '').replace(/\s*```$/, '')
     : withoutThinking;
   let parsed;
   try { parsed = JSON.parse(candidate); }

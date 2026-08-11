@@ -150,16 +150,25 @@ Frozen `internal.71` result:
 - failed closed before candidate persistence because the final response was not strict JSON;
 - remains immutable and unmerged.
 
-Active `internal.72` repair:
+Frozen `internal.72` result:
 
 - select Qwen's documented non-thinking soft switch for the short tool-plus-JSON mission;
 - strip only its known thinking envelope and the existing optional JSON fence before strict schema validation;
 - expose only output-shape metadata if parsing still fails;
 - retain all authority, model identity, runtime and L1→L7 evidence/provenance bounds.
+- passed the complete deterministic/Chromium/Windows/package matrix;
+- failed closed at 8/14 because the fenced response still did not parse as strict JSON after the known envelope normalization;
+- remains immutable and unmerged.
+
+Active `internal.73` repair:
+
+- accept optional whitespace between the opening fence and its `json` label before strict parsing;
+- request three to five concise one-line, JSON-escaped candidates without trailing commas;
+- retain strict schema validation and all authority, model identity, runtime and L1→L7 evidence/provenance bounds.
 
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.72` only if the exact release matrix and sanitized L1→L7 report are green;
+1. qualify and merge immutable `internal.73` only if the exact release matrix and sanitized L1→L7 report are green;
 2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;
