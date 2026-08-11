@@ -49,6 +49,18 @@ describe('Hermes mission worker', () => {
     }
   });
 
+  it('surfaces bounded sanitized adapter diagnostics on a non-zero exit', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'efesto-worker-diagnostic-test-'));
+    const fixture = join(directory, 'failed-adapter.mjs');
+    await writeFile(fixture, "process.stdin.resume(); process.stderr.write('Hermes failed with token=abcdef0123456789abcdef0123456789'); process.exitCode = 9;\n", 'utf8');
+    try {
+      await expect(executeAdapter(process.execPath, [fixture], mission, { timeoutMs: 2_000 }))
+        .rejects.toThrow('Hermes adapter exited with code 9: Hermes failed with token=<redacted-secret>');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it('reconciles a persisted verifying Mission when the result response is lost', async () => {
     const verifying = { ...mission, status: 'running', executionPhase: 'verifying' };
     const fetchImpl = vi.fn()

@@ -120,6 +120,23 @@ describe('Hermes Efesto adapter', () => {
     }
   });
 
+  it('surfaces bounded sanitized Hermes diagnostics on a non-zero exit', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'efesto-hermes-diagnostic-test-'));
+    const fixture = join(directory, 'failed-hermes.mjs');
+    await writeFile(fixture, "process.stderr.write('provider rejected model; api_key=sk-not-a-real-secret-123456789'); process.exit(7);\n", 'utf8');
+    try {
+      await expect(runHermesProcess({
+        executable: process.execPath,
+        args: [fixture],
+        timeoutMs: 2_000,
+        env: process.env,
+        cwd: directory,
+      })).rejects.toThrow('Hermes exited with code 7: provider rejected model; api_key=<redacted-secret>');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it('accepts strict JSON and bounded candidates', () => {
     expect(parseHermesFindings('{"findings":[{"url":"https://example.com/a","title":"A","text":"Search snippet","summary":"Summary"}]}')).toEqual({
       findings: [{ url: 'https://example.com/a', title: 'A', text: 'Search snippet', summary: 'Summary' }],

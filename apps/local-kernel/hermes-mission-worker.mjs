@@ -73,11 +73,16 @@ export function executeAdapter(command, args, mission, options) {
     child.on('error', (error) => finish(pendingError ?? error));
     child.on('close', (code) => {
       if (pendingError) return finish(pendingError);
-      if (code !== 0) return finish(new Error(`Hermes adapter exited with code ${code}`));
+      if (code !== 0) return finish(new Error(adapterFailure(code, stderr)));
       try { finish(undefined, JSON.parse(stdout)); } catch { finish(new Error('Hermes adapter did not return valid JSON')); }
     });
     child.stdin.end(JSON.stringify({ schemaVersion: 'efesto.hermes-mission.v1', mission }));
   });
+}
+
+function adapterFailure(code, stderr) {
+  const diagnostic = sanitizeFailure(stderr).trim().slice(0, 400);
+  return `Hermes adapter exited with code ${code}${diagnostic ? `: ${diagnostic}` : ''}`;
 }
 
 async function request(fetchImpl, url, token, init, allowEmpty = false) {

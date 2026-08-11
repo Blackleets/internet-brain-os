@@ -54,6 +54,8 @@ Hermes's isolated built-in defaults otherwise allow up to 500 turns, so Efesto d
 
 The live control plane also uses strictly nested deadlines: the Hermes adapter must finish before the worker deadline, the worker before terminal observation ends, and all three before the outer GitHub job deadline. On timeout or excess output, the worker waits for the adapter process to close and escalates to a bounded forced kill if graceful termination is ignored; it never records mission failure while the provider process is still running.
 
+When Hermes or its adapter exits non-zero, each process boundary retains only a bounded diagnostic after credential, token and absolute-path redaction. The same already-sanitized failure reason is included in the L1 report detail so provider compatibility failures remain actionable without publishing raw process output.
+
 ## Windows local configuration
 
 Keep all values in the current PowerShell session or another ignored private environment file. Never commit tokens or private paths.

@@ -187,11 +187,24 @@ export function runHermesProcess({ executable, args, timeoutMs, env, cwd }) {
     child.on('error', (error) => finish(pendingError ?? error));
     child.on('close', (code) => {
       if (pendingError) return finish(pendingError);
-      if (code !== 0) return finish(new Error(`Hermes exited with code ${code}`));
+      if (code !== 0) return finish(new Error(processFailure('Hermes', code, stderr)));
       try { finish(undefined, parseHermesFindings(stdout)); }
       catch (error) { finish(error); }
     });
   });
+}
+
+function processFailure(label, code, stderr) {
+  const diagnostic = String(stderr ?? '')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/((?:authorization|[a-z0-9_-]*api[_-]?key|[a-z0-9_-]*token)\s*[:=]\s*)(?:bearer\s+)?[^\s,"']+/gi, '$1<redacted-secret>')
+    .replace(/\b(?:sk|pk|ghp|gho|xox[abps])[-_][A-Za-z0-9._-]{8,}/gi, '<redacted-secret>')
+    .replace(/\b[A-Fa-f0-9]{32,}\b/g, '<redacted-secret>')
+    .replace(/[A-Za-z]:\\[^\s"']+/g, '<redacted-path>')
+    .replace(/\/(?:home|Users)\/[^\s"']+/g, '<redacted-path>')
+    .trim()
+    .slice(0, 400);
+  return `${label} exited with code ${code}${diagnostic ? `: ${diagnostic}` : ''}`;
 }
 
 async function readStdin() {

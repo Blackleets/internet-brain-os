@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { LIVE_VALUE_GOAL, isObservableMissionOutcome, resolveLiveTimeoutBudget } from './hermes-acceptance-runner.mjs';
+import { LIVE_VALUE_GOAL, isObservableMissionOutcome, liveTerminalDetail, resolveLiveTimeoutBudget } from './hermes-acceptance-runner.mjs';
 
 const runner = readFileSync(new URL('./hermes-acceptance-runner.mjs', import.meta.url), 'utf8');
 const assessment = readFileSync(new URL('./hermes-live-journey-assessment.mjs', import.meta.url), 'utf8');
@@ -66,5 +66,11 @@ describe('G5.3 authentic public-web acceptance contract', () => {
     expect(isObservableMissionOutcome({ status: 'queued', attempt: 1, lastFailure: { reason: 'adapter timeout' } })).toBe(true);
     expect(isObservableMissionOutcome({ status: 'completed' })).toBe(true);
     expect(isObservableMissionOutcome({ status: 'failed' })).toBe(true);
+  });
+
+  it('carries the bounded failure reason into the sanitizable live report detail', () => {
+    expect(liveTerminalDetail({
+      status: 'queued', executionPhase: 'queued', attempt: 1, lastFailure: { reason: 'provider rejected model' },
+    })).toContain('failure="provider rejected model"');
   });
 });

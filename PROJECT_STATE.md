@@ -224,7 +224,7 @@ Complete local qualification on 2026-08-11 was green for architecture, `release:
 
 Live run `31475334542` proved that the global attempt budget is repaired: exactly one attempt ran, no second adapter overlapped it and the queued failure became immediately observable. The unchanged report still failed 8/14 after the 25-minute adapter deadline because the reviewed Qwen3 4B model did not produce a valid result on the GitHub CPU runner within that bound. `internal.68` is frozen as failed and must never be reused or relabeled.
 
-## Internal.69 — bounded live-inference model repair
+## Internal.69 — bounded live-inference model repair / frozen failure
 
 `internal.69` changes only the disposable inference artifact selected by the remote live workflow:
 
@@ -233,7 +233,18 @@ Live run `31475334542` proved that the global attempt budget is repaired: exactl
 - retains one attempt, four turns, two searches and the existing 25/26/27/60-minute deadlines;
 - leaves the prompt, Kernel Evidence/classifier authority and all L1→L7 acceptance thresholds unchanged.
 
-The exact candidate must pass the complete local and GitHub matrix and produce an authentic sanitized `14/14` report before merge.
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, workflow contracts, 187 test files / 1062 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging. PR #215 head `888b5a21024071f550a6a75096395c7129b32cf6` passed Windows Launcher, Windows First Run and internal-package qualification; live inference run `31477795868` downloaded the 1.7B model and verified its identity plus tool capability, then Hermes exited non-zero in 5.9 seconds before producing candidates. Both process layers discarded child stderr, so the sanitized report could prove only 8/14 and not identify the provider failure. `internal.69` is frozen as failed and must never be reused or relabeled.
+
+## Internal.70 — sanitized live-provider diagnostics
+
+`internal.70` retains the exact 1.7B model experiment and changes only bounded failure observability:
+
+- carries non-zero Hermes stderr through the adapter after credential, token and absolute-path redaction;
+- applies the same redaction again at the worker boundary and persists the bounded failure reason;
+- includes that sanitized reason in L1 report detail while keeping raw provider output out of the artifact;
+- leaves every authority boundary, attempt/turn/search/deadline bound and L1→L7 success threshold unchanged.
+
+The exact candidate must pass the complete local and GitHub matrix. A failed live report is diagnostic evidence only; merge still requires authentic sanitized `14/14` proof.
 
 ## Canonical CI/release gate
 
@@ -251,7 +262,7 @@ Every affected candidate must pass on one unchanged SHA:
 10. exact internal-package generation and SHA binding;
 11. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
-Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65`, `.66`, `.67` and `.68` remain frozen failures and must never be reused.
+Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65`, `.66`, `.67`, `.68` and `.69` remain frozen failures and must never be reused.
 
 ## Distribution and public launch
 
@@ -262,7 +273,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 
 ## What remains
 
-1. Qualify immutable `internal.69` across the complete local and GitHub release matrix, then merge only if the exact SHA is green.
+1. Qualify immutable `internal.70` across the complete local and GitHub release matrix, use its sanitized failure reason to resolve any remaining provider incompatibility, then merge only if the exact SHA is green.
 2. Require the automatically triggered `Hermes live public-web acceptance` run on the merged SHA to produce a real green L1→L7 report; do not substitute deterministic CI or workflow presence for proof.
 3. Run UAT-1→UAT-6 on the same exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
 4. Use the Kernel-owned local-installation scorecard to establish the first real activation, repeat usage and useful-Find baselines before growth/retention/willingness-to-pay claims.
@@ -271,7 +282,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.69 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3 1.7B inference, one live attempt capped at four turns/two searches, canonical directly readable discovery targets and no founder-owned provider credential or PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.70 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3 1.7B inference, one live attempt capped at four turns/two searches, sanitized provider-failure diagnostics, canonical directly readable discovery targets and no founder-owned provider credential or PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule

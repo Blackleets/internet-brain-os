@@ -104,7 +104,7 @@ export async function runAcceptance(options = {}) {
         id: 'L1',
         name: 'Authentic Hermes runtime drove the mission to a terminal state',
         passed: outcome.status === 'completed',
-        detail: `status=${outcome.status ?? 'timeout'} phase=${outcome.executionPhase ?? 'none'} summary=${JSON.stringify(outcome.resultSummary ?? null)}`,
+        detail: liveTerminalDetail(outcome),
       });
       checks.push({
         id: 'L2',
@@ -236,6 +236,10 @@ export function isObservableMissionOutcome(mission) {
   return Boolean(mission?.status === 'completed'
     || mission?.status === 'failed'
     || (mission?.status === 'queued' && mission?.lastFailure && Number(mission?.attempt ?? 0) > 0));
+}
+
+export function liveTerminalDetail(outcome = {}) {
+  return `status=${outcome.status ?? 'timeout'} phase=${outcome.executionPhase ?? 'none'} summary=${JSON.stringify(outcome.resultSummary ?? null)} failure=${JSON.stringify(outcome.lastFailure?.reason ?? null)}`;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
