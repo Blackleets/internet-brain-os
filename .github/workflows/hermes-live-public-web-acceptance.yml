@@ -9,19 +9,43 @@ concurrency:
 
 on:
   workflow_dispatch:
-    inputs:
-      model:
-        description: OpenRouter model or router used by authentic Hermes
-        required: true
-        type: string
-        default: openrouter/free
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/hermes-live-public-web-acceptance.yml
+      - apps/local-kernel/hermes-runtime.mjs
+      - scripts/hermes-acceptance-checks.mjs
+      - scripts/hermes-acceptance-lib.mjs
+      - scripts/hermes-acceptance-runner.mjs
+      - scripts/hermes-efesto-adapter.mjs
+      - scripts/hermes-live-journey-assessment.mjs
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/hermes-live-public-web-acceptance.yml
+      - apps/local-kernel/hermes-runtime.mjs
+      - scripts/hermes-acceptance-checks.mjs
+      - scripts/hermes-acceptance-lib.mjs
+      - scripts/hermes-acceptance-runner.mjs
+      - scripts/hermes-efesto-adapter.mjs
+      - scripts/hermes-live-journey-assessment.mjs
 
 jobs:
   l1-l7:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     env:
       HERMES_REF: ee4bb75b532e932a1055d9a710802a7435163b6a
+      OLLAMA_VERSION: 0.32.8
+      OLLAMA_ARCHIVE_SHA256: c10b76c39cb72908cc92dff314e80e32736c03f1287efb4b39e0b70fd600cc64
+      OLLAMA_BIN: /tmp/efesto-ollama-runtime/bin/ollama
+      OLLAMA_MODEL: qwen3:4b
+      OLLAMA_MODEL_ID: 359d7dd4bcda
+      OLLAMA_HOST: 127.0.0.1:11434
+      OLLAMA_CONTEXT_LENGTH: 8192
     steps:
       - name: Checkout Efesto
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -53,15 +77,18 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Require the live provider credential
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.HEPHAESTUS_LIVE_OPENROUTER_API_KEY }}
+      - name: Install pinned Ollama runtime
         shell: bash
         run: |
-          if [ -z "${OPENROUTER_API_KEY:-}" ]; then
-            echo "::error::HEPHAESTUS_LIVE_OPENROUTER_API_KEY is required for authentic Hermes acceptance"
-            exit 1
-          fi
+          command -v zstd >/dev/null
+          curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
+            "https://github.com/ollama/ollama/releases/download/v${OLLAMA_VERSION}/ollama-linux-amd64.tar.zst" \
+            --output /tmp/ollama-linux-amd64.tar.zst
+          printf '%s  %s\n' "${OLLAMA_ARCHIVE_SHA256}" /tmp/ollama-linux-amd64.tar.zst | sha256sum --check --strict
+          mkdir -p /tmp/efesto-ollama-runtime
+          zstd --decompress --stdout /tmp/ollama-linux-amd64.tar.zst \
+            | tar --extract --file - --directory /tmp/efesto-ollama-runtime
+          "${OLLAMA_BIN}" --version
 
       - name: Install pinned Hermes and search provider
         working-directory: .live-hermes
@@ -70,6 +97,36 @@ jobs:
           uv python install 3.11
           uv sync --locked --python 3.11
           uv pip install ddgs==9.14.4
+
+      - name: Start verified local inference
+        shell: bash
+        run: |
+          nohup "${OLLAMA_BIN}" serve >/tmp/efesto-ollama.log 2>&1 &
+          echo "$!" >/tmp/efesto-ollama.pid
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error "http://${OLLAMA_HOST}/api/tags" >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "${ready}" != true ]; then
+            echo "::error::Pinned Ollama runtime did not become ready on loopback"
+            exit 1
+          fi
+          "${OLLAMA_BIN}" pull "${OLLAMA_MODEL}"
+          actual_model_id="$(curl --fail --silent --show-error "http://${OLLAMA_HOST}/api/tags" \
+            | jq --raw-output --arg model "${OLLAMA_MODEL}" '.models[] | select(.name == $model) | .digest' \
+            | cut -c1-12)"
+          if [ "${actual_model_id}" != "${OLLAMA_MODEL_ID}" ]; then
+            echo "::error::Pulled model identity did not match the reviewed Qwen3 artifact"
+            exit 1
+          fi
+          curl --fail --silent --show-error "http://${OLLAMA_HOST}/api/show" \
+            --header 'content-type: application/json' \
+            --data "{\"model\":\"${OLLAMA_MODEL}\"}" \
+            | jq --exit-status '.capabilities | index("tools")' >/dev/null
 
       - name: Install and build Efesto
         shell: bash
@@ -81,12 +138,21 @@ jobs:
 
       - name: Run authentic Hermes L1-L7 acceptance
         env:
-          OPENROUTER_API_KEY: ${{ secrets.HEPHAESTUS_LIVE_OPENROUTER_API_KEY }}
-          HERMES_INFERENCE_MODEL: ${{ inputs.model }}
+          HERMES_INFERENCE_PROVIDER: custom
+          HERMES_INFERENCE_MODEL: ${{ env.OLLAMA_MODEL }}
+          CUSTOM_BASE_URL: http://127.0.0.1:11434/v1
           HEPHAESTUS_HERMES_EXECUTABLE: ${{ github.workspace }}/.live-hermes/.venv/bin/hermes
           HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS: 1200000
           HEPHAESTUS_ACCEPTANCE_REPORT: ${{ github.workspace }}/.hephaestus/live-acceptance-report.json
         run: pnpm hermes:acceptance:live
+
+      - name: Stop local inference
+        if: always()
+        shell: bash
+        run: |
+          if [ -s /tmp/efesto-ollama.pid ]; then
+            kill "$(cat /tmp/efesto-ollama.pid)" 2>/dev/null || true
+          fi
 
       - name: Upload sanitized acceptance report
         if: always()

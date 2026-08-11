@@ -61,7 +61,7 @@ Default CI remains deterministic and does **not** require Internet access or a l
 
 Unit and structural tests for the G5.3 assessment logic remain part of normal CI so regressions in the acceptance contract are still caught offline.
 
-The manual `Hermes live public-web acceptance` GitHub workflow provides a remote execution environment without changing default CI. It pins the reviewed Hermes/runtime supply chain, requires a repository-scoped provider secret, fails closed when that secret is absent, and uploads only the sanitized report. It does not become evidence until the exact run completes L1→L7 successfully.
+The separate `Hermes live public-web acceptance` GitHub workflow provides a remote execution environment without changing default deterministic CI. It supports manual reruns and automatically qualifies same-repository pull requests plus `main` only when the live-acceptance boundary itself changes; fork pull requests are skipped. It pins the reviewed Hermes runtime and checksum-verifies a disposable local Ollama runtime, verifies the reviewed Qwen3 model identity before use, binds inference to loopback, and uploads only the sanitized report. It requires no founder-owned provider credential and does not become evidence until the exact run completes L1→L7 successfully.
 
 ## What this does not replace
 

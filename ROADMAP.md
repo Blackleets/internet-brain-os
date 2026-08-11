@@ -80,17 +80,25 @@ Delivered G5.5 slice:
 - surface Repeat Goal Usage as a primary Kernel-owned KPI;
 - keep aggregate rates and notification-delivery measurement unavailable until separately justified ledgers/privacy boundaries exist.
 
-Active G5.6 slice:
+Delivered G5.6 foundation (`internal.64`):
 
 - isolate authentic Hermes v0.20 search without disabling its bundled public-web provider;
 - execute the existing L1→L7 contract on a GitHub-hosted machine, not the founder's PC;
 - pin the external runtime/action supply chain and keep provider credentials out of logs/artifacts;
 - retain manual dispatch and require a real green report before claiming live proof.
 
+Active `internal.65` repair:
+
+- remove the founder-owned provider-secret prerequisite by running a reviewed tool-capable model only on loopback inside the disposable GitHub runner;
+- checksum-verify the pinned local inference runtime and verify the reviewed model identity before Hermes can use it;
+- preserve search-only Hermes execution, Kernel-owned verification and the same L1→L7 success contract;
+- trigger automatically only when the live-acceptance boundary changes in a same-repository pull request or on `main`, skip forks, retain manual reruns and keep default CI offline;
+- make the exact live proof executable without downloading or installing anything on the founder's PC.
+
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.64` for G5.6;
-2. configure the scoped live provider secret and run the exact-SHA remote L1→L7 workflow;
+1. qualify and merge immutable `internal.65` across the complete release matrix;
+2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;
 5. test willingness-to-pay and onboarding friction, then choose the next slice from evidence.

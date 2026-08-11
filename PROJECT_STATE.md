@@ -161,10 +161,25 @@ PR #213 merged at `3d4dbbf18573468bc7656a353f92714b94045dc1`. Its exact implemen
 - gives each invocation a fresh `HERMES_HOME` and working directory, removes inherited project-plugin enablement, refuses private-URL search support and retains only public search candidates;
 - keeps Kernel-owned `web.read`, Evidence, classification, provenance and final Goal truth unchanged;
 - adds a manual-only, least-privilege workflow pinned to Hermes commit `ee4bb75b532e932a1055d9a710802a7435163b6a` and immutable Action commits;
-- requires the repository secret `HEPHAESTUS_LIVE_OPENROUTER_API_KEY`, fails closed if it is missing and uploads only the locally redacted acceptance report;
+- initially required the repository secret `HEPHAESTUS_LIVE_OPENROUTER_API_KEY` and uploaded only the locally redacted acceptance report;
 - strengthens report redaction for provider/API/Authorization-shaped credentials.
 
-Local qualification on 2026-08-11 is green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1055 tests, production build, `verify:first-run`, offline Hermes boundary acceptance `14/14`, extension packaging and workflow YAML/contract validation. This is **not yet authentic Internet proof**: `internal.64` still requires the GitHub Chromium/Windows/exact-package matrix and one green manual workflow report showing L1→L7 on the exact published SHA.
+PR #214 merged at `6e2aca2c6b06babb400d4c7ed35bb175145f6863`. Its exact candidate SHA passed CI/Chromium, internal package, Windows Launcher and Windows First Run, including packaged Windows 2022/2025 installation and repair. The provider-secret prerequisite remained an external blocker, so no authentic Internet L1→L7 success is claimed from `internal.64`.
+
+## Internal.65 — credential-free remote live-proof repair
+
+`internal.65` removes the founder-owned provider-secret prerequisite without changing product authority or default deterministic CI:
+
+- runs inference only inside the disposable GitHub-hosted runner through Hermes's `custom` provider and `http://127.0.0.1:11434/v1`;
+- checksum-verifies the pinned Ollama Linux archive before extraction under `/tmp` and never installs a system service;
+- pulls the reviewed `qwen3:4b` tool-capable model, verifies its published model identity before Hermes can use it and binds the server to loopback;
+- preserves the pinned Hermes runtime, isolated home/cwd, search-only toolset, Kernel-owned `web.read`, sanitized report and exact L1→L7 acceptance criteria;
+- keeps default CI deterministic/offline while automatically qualifying same-repository pull requests and `main` only when the live-acceptance boundary changes, skips forks and retains manual reruns;
+- requires no provider secret, founder-PC download or persistent remote installation.
+
+Local qualification on 2026-08-11 is green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1056 tests, production build, `verify:first-run`, offline Hermes boundary acceptance `14/14`, extension packaging and workflow YAML/contract validation.
+
+The candidate is not live-proven merely because the workflow exists. It must pass the complete local/GitHub release matrix and then the live workflow must produce one sanitized report with every L1→L7 check green on the exact candidate SHA.
 
 ## Canonical CI/release gate
 
@@ -193,8 +208,8 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58` an
 
 ## What remains
 
-1. Qualify immutable `internal.64` across the complete local and GitHub release matrix, then merge only if the exact SHA is green.
-2. Configure the repository-scoped live provider secret and dispatch `Hermes live public-web acceptance` on that exact SHA; require a real green L1→L7 report and do not substitute deterministic CI or workflow presence for proof.
+1. Qualify immutable `internal.65` across the complete local and GitHub release matrix, then merge only if the exact SHA is green.
+2. Require the automatically triggered `Hermes live public-web acceptance` run on the merged SHA to produce a real green L1→L7 report; do not substitute deterministic CI or workflow presence for proof.
 3. Run UAT-1→UAT-6 on the same exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
 4. Use the Kernel-owned local-installation scorecard to establish the first real activation, repeat usage and useful-Find baselines before growth/retention/willingness-to-pay claims.
 5. Treat notification delivery, aggregate sharing, scheduling expansion, cross-device authority and irreversible actions as separate security/privacy slices.
@@ -202,7 +217,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58` an
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6 runs the authentic Hermes public-web proof remotely without founder-PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.65 runs the authentic Hermes public-web proof remotely with checksum-verified loopback inference and no founder-owned provider credential or PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule

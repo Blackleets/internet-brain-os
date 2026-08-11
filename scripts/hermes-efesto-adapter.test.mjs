@@ -52,6 +52,22 @@ describe('Hermes Efesto adapter', () => {
     expect(env).not.toHaveProperty('HERMES_ENABLE_PROJECT_PLUGINS');
   });
 
+  it('preserves explicit loopback custom-provider routing for isolated remote acceptance', () => {
+    const env = buildHermesEnvironment({
+      HERMES_INFERENCE_PROVIDER: 'custom',
+      HERMES_INFERENCE_MODEL: 'qwen3:4b',
+      CUSTOM_BASE_URL: 'http://127.0.0.1:11434/v1',
+    }, '/tmp/efesto-hermes-local-provider');
+
+    expect(env).toMatchObject({
+      HERMES_HOME: '/tmp/efesto-hermes-local-provider',
+      HERMES_INFERENCE_PROVIDER: 'custom',
+      HERMES_INFERENCE_MODEL: 'qwen3:4b',
+      CUSTOM_BASE_URL: 'http://127.0.0.1:11434/v1',
+      HERMES_ALLOW_PRIVATE_URLS: 'false',
+    });
+  });
+
   it('keeps PATH commands portable and resolves configured relative paths before changing cwd', () => {
     expect(normalizeHermesExecutable('hermes')).toBe('hermes');
     expect(normalizeHermesExecutable('./runtime/hermes')).toMatch(/runtime[\\/]hermes$/);

@@ -40,13 +40,15 @@ Hermes v0.20 `--safe-mode` is not compatible with this bridge because it disable
 
 ## Remote authentic L1→L7 acceptance
 
-`.github/workflows/hermes-live-public-web-acceptance.yml` runs the same product path on an isolated GitHub-hosted machine, so it does not install Hermes or another dependency on the founder's PC. It is manual-only and pins:
+`.github/workflows/hermes-live-public-web-acceptance.yml` runs the same product path on an isolated GitHub-hosted machine, so it does not install Hermes or another dependency on the founder's PC. It supports manual reruns and automatically qualifies same-repository pull requests plus `main` only when the live-acceptance boundary itself changes; fork pull requests are skipped. It pins:
 
 - Hermes commit `ee4bb75b532e932a1055d9a710802a7435163b6a` (v0.20.0 source);
 - every referenced GitHub Action by immutable commit;
-- `uv` 0.9.28, Python 3.11, pnpm 11.11.0 and `ddgs` 9.14.4.
+- `uv` 0.9.28, Python 3.11, pnpm 11.11.0 and `ddgs` 9.14.4;
+- Ollama 0.32.8 Linux archive SHA-256 `c10b76c39cb72908cc92dff314e80e32736c03f1287efb4b39e0b70fd600cc64`;
+- reviewed Qwen3 4B model identity `359d7dd4bcda`.
 
-Before dispatch, configure the repository secret `HEPHAESTUS_LIVE_OPENROUTER_API_KEY`. The default model input is `openrouter/free`; it can be replaced at dispatch without changing product authority. A missing secret fails closed, the credential is scoped only to the no-output preflight and authentic Hermes steps, and the workflow publishes only `.hephaestus/live-acceptance-report.json` after local redaction. A workflow definition or skipped/blocked run is not proof: acceptance requires the report itself to show all L1→L7 checks green on the tested SHA.
+The manual workflow needs no founder-owned provider credential. It installs a checksum-verified Ollama release on the disposable GitHub runner, pulls the reviewed `qwen3:4b` artifact, verifies its published model identity and tool capability, and exposes it only on loopback through Hermes's `custom` provider boundary. The model and runtime disappear with the runner. The workflow still publishes only `.hephaestus/live-acceptance-report.json` after local redaction. A workflow definition or skipped/blocked run is not proof: acceptance requires the report itself to show all L1→L7 checks green on the tested SHA.
 
 ## Windows local configuration
 

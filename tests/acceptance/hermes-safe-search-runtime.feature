@@ -4,13 +4,13 @@ Feature: Hermes safe automatic discovery runtime
   So that prompt instructions are not the security boundary
 
   Scenario: Compatible Hermes runtime is certified for discovery
-    Given Hermes advertises one-shot, toolsets and safe-mode support
+    Given Hermes advertises one-shot, toolsets and isolated configuration flags
     When Efesto probes the runtime
-    Then it is certified as safe_search_only
-    And required arguments are --safe-mode --toolsets search -z
+    Then it is certified as isolated_search_only
+    And required arguments are --ignore-user-config --ignore-rules --toolsets search -z
 
   Scenario: Older Hermes runtime fails closed
-    Given Hermes does not advertise safe-mode or toolsets
+    Given Hermes does not advertise isolated configuration flags or toolsets
     When Efesto probes the runtime
     Then read-only readiness is denied
     And Efesto does not fall back to unrestricted one-shot execution
