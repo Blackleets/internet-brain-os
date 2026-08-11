@@ -56,6 +56,8 @@ The live control plane also uses strictly nested deadlines: the Hermes adapter m
 
 When Hermes or its adapter exits non-zero, each process boundary retains only a bounded diagnostic after credential, token and absolute-path redaction. The same already-sanitized failure reason is included in the L1 report detail so provider compatibility failures remain actionable without publishing raw process output.
 
+The remote prompt starts with Qwen's `/no_think` soft switch because this mission needs short tool use followed by exact JSON, not a long reasoning trace. The adapter still accepts one known `<think>…</think>` envelope and the existing optional JSON code fence before parsing, then applies the same strict `{ findings: [...] }` schema. If parsing fails, the diagnostic contains only output-shape booleans and character count, never model text.
+
 ## Windows local configuration
 
 Keep all values in the current PowerShell session or another ignored private environment file. Never commit tokens or private paths.

@@ -19,6 +19,7 @@ export function buildHermesPrompt(payload) {
   const mission = payload.mission;
   const scope = mission.scope ?? {};
   return [
+    '/no_think',
     'You are executing one bounded public-source discovery mission for Efesto.',
     'Use only public web search. The returned snippets are candidates, not verified Evidence.',
     'Do not access local files, private networks, credentials, messaging history, private sessions, browser automation or computer-use.',
@@ -77,12 +78,16 @@ export function normalizeHermesExecutable(value) {
 export function parseHermesFindings(text) {
   if (typeof text !== 'string' || !text.trim()) throw new Error('Hermes returned empty output');
   const trimmed = text.trim();
-  const candidate = trimmed.startsWith('```')
-    ? trimmed.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
-    : trimmed;
+  const withoutThinking = trimmed.replace(/^(?:<think>[\s\S]*?<\/think>\s*)+/i, '');
+  const candidate = withoutThinking.startsWith('```')
+    ? withoutThinking.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
+    : withoutThinking;
   let parsed;
   try { parsed = JSON.parse(candidate); }
-  catch { throw new Error('Hermes did not return valid JSON'); }
+  catch {
+    const shape = `chars=${trimmed.length} think=${trimmed.startsWith('<think>')} fence=${withoutThinking.startsWith('```')} findings=${/\{\s*"findings"\s*:/.test(candidate)}`;
+    throw new Error(`Hermes did not return valid JSON (${shape})`);
+  }
   if (!parsed || !Array.isArray(parsed.findings) || parsed.findings.length > 20) {
     throw new Error('Hermes must return { findings: [...] } with at most 20 findings');
   }

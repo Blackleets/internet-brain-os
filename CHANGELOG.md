@@ -30,6 +30,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- The bounded Qwen live prompt selects non-thinking mode for this simple discovery/formatting task, and the adapter strips only a known Qwen thinking envelope plus the already-supported JSON fence before strict schema validation; invalid output reports shape metadata rather than content.
 - Non-zero Hermes and adapter exits now preserve a bounded, credential/path-redacted diagnostic through the mission failure record and sanitized live report instead of discarding provider stderr.
 - Remote live proof now uses the reviewed `qwen3.5:2b` tool-capable model with a 256K model context so bounded inference can run on a GitHub CPU runner while satisfying Hermes's truthful 64K minimum; model identity and tool capability remain verified before Hermes starts.
 - Remote live proof now uses one fail-closed attempt capped at four turns and two searches; normal product recovery remains three attempts, and an explicitly recorded live failure ends observation without overlapping another adapter run.

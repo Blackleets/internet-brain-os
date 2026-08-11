@@ -141,15 +141,25 @@ Frozen `internal.70` result:
 - live run reported the actionable reason that Qwen3 1.7B's truthful 40,960-token context is below Hermes's 64K minimum;
 - remains immutable and unmerged.
 
-Active `internal.71` repair:
+Frozen `internal.71` result:
 
 - replace only the incompatible model with reviewed tool-capable `qwen3.5:2b` and verify identity/capability;
 - rely on its truthful published 256K model context rather than overriding metadata;
-- retain the bounded 8K runtime context and unchanged L1→L7 evidence/provenance contract.
+- retained the bounded 8K runtime context and unchanged L1→L7 evidence/provenance contract;
+- passed the complete deterministic/Chromium/Windows/package matrix and completed compatible inference in 8m39s;
+- failed closed before candidate persistence because the final response was not strict JSON;
+- remains immutable and unmerged.
+
+Active `internal.72` repair:
+
+- select Qwen's documented non-thinking soft switch for the short tool-plus-JSON mission;
+- strip only its known thinking envelope and the existing optional JSON fence before strict schema validation;
+- expose only output-shape metadata if parsing still fails;
+- retain all authority, model identity, runtime and L1→L7 evidence/provenance bounds.
 
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.71` only if the exact release matrix and sanitized L1→L7 report are green;
+1. qualify and merge immutable `internal.72` only if the exact release matrix and sanitized L1→L7 report are green;
 2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;

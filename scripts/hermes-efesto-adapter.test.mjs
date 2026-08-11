@@ -25,6 +25,7 @@ describe('Hermes Efesto adapter', () => {
     expect(prompt).toContain('canonical, directly readable public pages');
     expect(prompt).toContain('no more than two public search calls');
     expect(prompt).toContain('Return 4 to 8 relevant findings');
+    expect(prompt.startsWith('/no_think\n')).toBe(true);
   });
 
   it('isolates user customizations while keeping the official search backend available', () => {
@@ -145,6 +146,14 @@ describe('Hermes Efesto adapter', () => {
 
   it('accepts one JSON code fence but strips it before parsing', () => {
     expect(parseHermesFindings('```json\n{"findings":[]}\n```')).toEqual({ findings: [] });
+  });
+
+  it('accepts one bounded Qwen thinking envelope before strict JSON', () => {
+    expect(parseHermesFindings('<think>Plan two searches, then answer.</think>\n```json\n{"findings":[]}\n```')).toEqual({ findings: [] });
+  });
+
+  it('reports only output-shape metadata when JSON remains invalid', () => {
+    expect(() => parseHermesFindings('<think>reason</think>\nnot-json')).toThrow('chars=30 think=true fence=false findings=false');
   });
 
   it('rejects authority or unsupported fields', () => {
