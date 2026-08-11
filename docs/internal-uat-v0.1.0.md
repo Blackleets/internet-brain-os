@@ -55,7 +55,7 @@ Pass only if:
 - the Kernel authorizes the registered `web.read` capability and re-fetches each candidate through the trusted public-web reader;
 - private/loopback/link-local targets, credential URLs and redirect abuse fail closed;
 - authority is rechecked after network I/O before persistence, so pausing/revising the Goal during a fetch cannot admit stale content;
-- Evidence `rawText` comes from fetched page content, not Hermes output, and retains Mission/candidate/source provenance;
+- Evidence `rawText` and its content hash cover the complete fetched page content, not Hermes output, while only the classifier projection is bounded to the 12,000-character page-context limit; Mission/candidate/source provenance remains intact;
 - every promoted Find retains Case/Evidence provenance and ranking is explainable;
 - duplicate candidates, exact discovery replay and exact verification replay do not duplicate Case, Evidence or Find;
 - zero search results complete calmly without a false forged state;

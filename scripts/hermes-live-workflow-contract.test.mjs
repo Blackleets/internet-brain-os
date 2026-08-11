@@ -39,7 +39,7 @@ describe('authentic Hermes public-web workflow contract', () => {
     expect(source).toContain('CUSTOM_BASE_URL: http://127.0.0.1:11434/v1');
     expect(source).toContain('HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS: 1500000');
     expect(source).toContain('HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS: 1560000');
-    expect(source).toContain('HEPHAESTUS_ACCEPTANCE_TERMINAL_TIMEOUT_MS: 1620000');
+    expect(source).toContain('HEPHAESTUS_ACCEPTANCE_TERMINAL_TIMEOUT_MS: 1920000');
     expect(source).toContain('HEPHAESTUS_HERMES_MAX_TURNS: 4');
     expect(source).toContain('HEPHAESTUS_AUTOMATIC_MISSION_ATTEMPTS: 1');
     expect(source).toContain('timeout-minutes: 60');

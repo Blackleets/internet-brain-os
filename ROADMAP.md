@@ -224,15 +224,24 @@ Frozen `internal.79` result:
 - failed closed at 8/14 because the 6,181-character final response contained neither valid JSON nor a `findings` object;
 - remains immutable and unmerged.
 
-Active `internal.80` repair:
+Frozen `internal.80` result:
 
 - retain strict JSON when available, otherwise keep only deduplicated literal HTTP(S) URLs and discard every other model byte;
 - derive neutral candidates locally and keep the twenty-item cap;
 - require the unchanged Kernel private-address, `web.read`, Evidence, classification and provenance gates.
+- passed the complete deterministic/Chromium/Windows/package matrix and persisted three authentic candidates;
+- failed closed at 8/14 because a fetched page exceeded the 12,000-character classifier context limit, leaving the Mission in `verifying` until the 27-minute observer expired;
+- remains immutable and unmerged.
+
+Active `internal.81` repair:
+
+- retain and hash the complete fetched body as Evidence while bounding only the classifier/Opportunity page-context view to 12,000 characters;
+- expand terminal observation from 27 to 32 minutes so the unchanged maximum twenty sequential 15-second `web.read` calls have bounded post-inference headroom;
+- retain one attempt, four turns, one search, 25-minute adapter and 26-minute worker bounds plus all Kernel authority and L1→L7 thresholds.
 
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.80` only if the exact release matrix and sanitized L1→L7 report are green;
+1. qualify and merge immutable `internal.81` only if the exact release matrix and sanitized L1→L7 report are green;
 2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;

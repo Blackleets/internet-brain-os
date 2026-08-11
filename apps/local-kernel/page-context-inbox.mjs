@@ -3,7 +3,7 @@ import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
 export const MAX_BODY_BYTES = 32 * 1024;
-const MAX_TEXT = 12_000;
+export const MAX_PAGE_CONTEXT_VISIBLE_TEXT = 12_000;
 const MAX_SELECTION = 2_000;
 
 export class InboxError extends Error {
@@ -40,7 +40,7 @@ export function validatePageContext(value) {
     canonicalUrl,
     description: optionalText(value.description, 'description', 1_000),
     language: optionalText(value.language, 'language', 64),
-    visibleText: requiredText(value.visibleText, 'visibleText', MAX_TEXT),
+    visibleText: requiredText(value.visibleText, 'visibleText', MAX_PAGE_CONTEXT_VISIBLE_TEXT),
     selection: optionalText(value.selection, 'selection', MAX_SELECTION),
     targetCaseId: optionalCaseId(value.targetCaseId),
     capturedAt,

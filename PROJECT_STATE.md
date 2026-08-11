@@ -376,7 +376,20 @@ PR #215 head `0ec496e7c58290608582ba2ce6142b56280dc4ee` passed the complete CI/C
 
 Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1076 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging.
 
-The exact candidate must pass the complete GitHub matrix and produce an authentic sanitized `14/14` report before merge.
+PR #215 head `07d77c839a90e862beb71a722d8eeb971050a18b` passed the complete CI/Chromium/Windows/package matrix. Live run `31488730093` performed authentic inference, persisted three candidates and entered Kernel verification, but one fetched page exceeded the 12,000-character `visibleText` page-context limit. The projection transaction rejected it, no Evidence or Finds were committed, the Mission remained truthfully `running/verifying`, and the 27-minute observer reported 8/14. `internal.80` is frozen as failed and must never be reused or relabeled.
+
+## Internal.81 — bounded verified-page projection and terminal observation
+
+`internal.81` preserves the complete fetched source while repairing only projection and observation bounds:
+
+- retains the full fetched body and its SHA-256 in Evidence;
+- deterministically caps only the page-context copy used by classification and Opportunity projection at the shared 12,000-character validation boundary;
+- extends live terminal observation from 27 to 32 minutes, giving the unchanged maximum of twenty sequential 15-second `web.read` calls plus projection a bounded six-minute post-worker window;
+- retains the 25-minute adapter, 26-minute worker and 60-minute job deadlines, one live attempt, four Hermes turns, one search and all URL, authority, Evidence, provenance and L1→L7 gates.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1077 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14`, extension packaging and diff validation. Regression coverage proves that a fetched body above 12,000 characters remains complete and hash-identical in Evidence while its bounded classifier projection reaches `completed/forged` and can still promote a Find.
+
+The exact candidate must pass the complete local and GitHub matrix and produce an authentic sanitized `14/14` report before merge.
 
 ## Canonical CI/release gate
 
@@ -394,7 +407,7 @@ Every affected candidate must pass on one unchanged SHA:
 10. exact internal-package generation and SHA binding;
 11. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
-Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65`, `.66`, `.67`, `.68`, `.69`, `.70`, `.71`, `.72`, `.73`, `.74`, `.75`, `.76`, `.77`, `.78` and `.79` remain frozen failures and must never be reused.
+Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65`, `.66`, `.67`, `.68`, `.69`, `.70`, `.71`, `.72`, `.73`, `.74`, `.75`, `.76`, `.77`, `.78`, `.79` and `.80` remain frozen failures and must never be reused.
 
 ## Distribution and public launch
 
@@ -405,7 +418,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 
 ## What remains
 
-1. Qualify immutable `internal.80` across the complete local and GitHub release matrix, then merge only if the exact SHA and authentic sanitized L1→L7 report are green.
+1. Qualify immutable `internal.81` across the complete local and GitHub release matrix, then merge only if the exact SHA and authentic sanitized L1→L7 report are green.
 2. Require the automatically triggered `Hermes live public-web acceptance` run on the merged SHA to produce a real green L1→L7 report; do not substitute deterministic CI or workflow presence for proof.
 3. Run UAT-1→UAT-6 on the same exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
 4. Use the Kernel-owned local-installation scorecard to establish the first real activation, repeat usage and useful-Find baselines before growth/retention/willingness-to-pay claims.
@@ -414,7 +427,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.80 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3.5 2B inference, truthful 256K model context, bounded 8K runtime context, Qwen non-thinking mode, one live attempt capped authoritatively at four turns through quiet `chat --query --max-turns`, startup-visible isolated provider/model routing and exactly one search, strict JSON or literal URL-only candidates, first-fenced-payload extraction, bounded deterministic syntax repair, neutral locally derived candidate labels, canonical directly readable discovery targets and no founder-owned provider credential or PC installation. Search snippets and discarded prose are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.81 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3.5 2B inference, truthful 256K model context, bounded 8K runtime context, Qwen non-thinking mode, one live attempt capped authoritatively at four turns through quiet `chat --query --max-turns`, startup-visible isolated provider/model routing and exactly one search, strict JSON or literal URL-only candidates, first-fenced-payload extraction, bounded deterministic syntax repair, neutral locally derived candidate labels, canonical directly readable discovery targets, full fetched Evidence with a bounded 12,000-character classifier projection, 25/26/32/60-minute nested deadlines and no founder-owned provider credential or PC installation. Search snippets and discarded prose are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule

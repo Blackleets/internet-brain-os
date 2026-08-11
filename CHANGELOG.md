@@ -30,6 +30,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Kernel candidate verification now retains and hashes the complete fetched page as Evidence while deterministically bounding only the classifier/Opportunity page-context view to 12,000 characters; live terminal observation allows 32 minutes so the bounded 25-minute inference can finish the existing maximum web-read verification batch.
 - Non-JSON Hermes final responses may now contribute only deduplicated literal HTTP(S) URLs as neutral candidates; all prose is discarded and Kernel private-address, `web.read`, Evidence and classification gates remain mandatory.
 - The bounded quiet Hermes query now mirrors the already-configured provider/model route into its exclusive temporary profile and forwards the same length-checked values as explicit CLI arguments, satisfying the pinned chat startup guard without loading user configuration.
 - Authentic Hermes execution now uses the supported quiet `chat --query --max-turns` path so the reviewed four-turn cap reaches `AIAgent`; the runtime probe rejects installations that do not advertise that exact bounded interface.

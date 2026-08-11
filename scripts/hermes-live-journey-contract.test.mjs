@@ -52,8 +52,8 @@ describe('G5.3 authentic public-web acceptance contract', () => {
     expect(resolveLiveTimeoutBudget({
       HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS: '1500000',
       HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS: '1560000',
-      HEPHAESTUS_ACCEPTANCE_TERMINAL_TIMEOUT_MS: '1620000',
-    })).toEqual({ adapterMs: 1_500_000, workerMs: 1_560_000, terminalMs: 1_620_000 });
+      HEPHAESTUS_ACCEPTANCE_TERMINAL_TIMEOUT_MS: '1920000',
+    })).toEqual({ adapterMs: 1_500_000, workerMs: 1_560_000, terminalMs: 1_920_000 });
     expect(() => resolveLiveTimeoutBudget({
       HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS: '1200000',
       HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS: '900000',
