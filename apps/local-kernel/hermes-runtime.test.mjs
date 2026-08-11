@@ -49,14 +49,14 @@ describe('Hermes automatic read-only capability probe', () => {
     const result = await probeHermesReadOnlyRuntime(runtime, {
       runCommand: async (_executable, args) => {
         expect(args).toEqual(['--help']);
-        return { ok: true, stdout: '-z, --oneshot PROMPT\n--toolsets TOOLSETS\n--ignore-user-config\n--ignore-rules' };
+        return { ok: true, stdout: '-z, --oneshot PROMPT\n--toolsets TOOLSETS\n--ignore-rules' };
       },
     });
     expect(result).toEqual({
       ready: true,
-      mode: 'isolated_search_only',
+      mode: 'bounded_isolated_search_only',
       executable: runtime.executable,
-      requiredArgs: ['--ignore-user-config', '--ignore-rules', '--toolsets', 'search', '-z'],
+      requiredArgs: ['--ignore-rules', '--toolsets', 'search', '-z'],
     });
   });
 

@@ -142,7 +142,9 @@ jobs:
           HERMES_INFERENCE_MODEL: ${{ env.OLLAMA_MODEL }}
           CUSTOM_BASE_URL: http://127.0.0.1:11434/v1
           HEPHAESTUS_HERMES_EXECUTABLE: ${{ github.workspace }}/.live-hermes/.venv/bin/hermes
-          HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS: 1200000
+          HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS: 1500000
+          HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS: 1560000
+          HEPHAESTUS_ACCEPTANCE_TERMINAL_TIMEOUT_MS: 1620000
           HEPHAESTUS_ACCEPTANCE_REPORT: ${{ github.workspace }}/.hephaestus/live-acceptance-report.json
         run: pnpm hermes:acceptance:live
 

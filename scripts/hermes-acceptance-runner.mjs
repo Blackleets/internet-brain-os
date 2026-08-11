@@ -18,6 +18,12 @@ const PORT = Number(process.env.HEPHAESTUS_ACCEPTANCE_PORT ?? 4310);
 const INTERNAL_PORT = Number(process.env.HEPHAESTUS_ACCEPTANCE_INTERNAL_PORT ?? 4311);
 const LIVE = process.argv.includes('--live');
 const REPORT_PATH = process.env.HEPHAESTUS_ACCEPTANCE_REPORT ?? '.hephaestus/acceptance-report.json';
+const DEFAULT_ADAPTER_TIMEOUT_MS = 12 * 60_000;
+const MAX_ADAPTER_TIMEOUT_MS = 25 * 60_000;
+const DEFAULT_WORKER_TIMEOUT_MS = 15 * 60_000;
+const MAX_WORKER_TIMEOUT_MS = 30 * 60_000;
+const DEFAULT_TERMINAL_TIMEOUT_MS = 16 * 60_000;
+const MAX_TERMINAL_TIMEOUT_MS = 35 * 60_000;
 
 const BOUNDARY_GOAL = {
   title: 'Acceptance probe: public research boundary',
@@ -63,6 +69,15 @@ export async function runAcceptance(options = {}) {
 
   try {
     if (!portFree) throw new Error(`Acceptance port ${PORT} is already in use`);
+    const liveTimeoutBudget = live ? resolveLiveTimeoutBudget() : undefined;
+    if (liveTimeoutBudget) {
+      preflight.push({
+        id: 'P5',
+        name: 'Live runtime deadlines are strictly nested',
+        passed: true,
+        detail: `adapter=${liveTimeoutBudget.adapterMs} worker=${liveTimeoutBudget.workerMs} terminal=${liveTimeoutBudget.terminalMs}`,
+      });
+    }
     kernel = startKernel({ dataDir, port: PORT, internalPort: INTERNAL_PORT, token, hermesExecutable: runtime.executable, autoRuntime: live });
     const healthy = await waitForHealth(baseUrl);
     preflight.push({ id: 'P3', name: 'Isolated Kernel became healthy', passed: healthy, detail: healthy ? 'ready' : 'timeout' });
@@ -84,7 +99,7 @@ export async function runAcceptance(options = {}) {
       });
       if (mission.status !== 201) throw new Error(`Mission creation failed with HTTP ${mission.status}`);
       const missionId = mission.body.mission.id;
-      const outcome = await waitForTerminal(baseUrl, token, missionId);
+      const outcome = await waitForTerminal(baseUrl, token, missionId, liveTimeoutBudget.terminalMs);
       checks.push({
         id: 'L1',
         name: 'Authentic Hermes runtime drove the mission to a terminal state',
@@ -186,7 +201,26 @@ async function readLiveJourney(baseUrl, token, goalId, mission) {
   };
 }
 
-async function waitForTerminal(baseUrl, token, missionId, timeoutMs = 15 * 60_000) {
+export function resolveLiveTimeoutBudget(env = process.env) {
+  const adapterMs = boundedTimeout(env.HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS, DEFAULT_ADAPTER_TIMEOUT_MS, MAX_ADAPTER_TIMEOUT_MS, 'HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS');
+  const workerMs = boundedTimeout(env.HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS, DEFAULT_WORKER_TIMEOUT_MS, MAX_WORKER_TIMEOUT_MS, 'HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS');
+  const terminalMs = boundedTimeout(env.HEPHAESTUS_ACCEPTANCE_TERMINAL_TIMEOUT_MS, DEFAULT_TERMINAL_TIMEOUT_MS, MAX_TERMINAL_TIMEOUT_MS, 'HEPHAESTUS_ACCEPTANCE_TERMINAL_TIMEOUT_MS');
+  if (!(adapterMs < workerMs && workerMs < terminalMs)) {
+    throw new Error('Live timeout budget must satisfy Hermes adapter < mission worker < acceptance terminal deadline');
+  }
+  return { adapterMs, workerMs, terminalMs };
+}
+
+function boundedTimeout(value, fallback, max, name) {
+  if (value === undefined || value === '') return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 60_000 || parsed > max) {
+    throw new Error(`${name} must be an integer between 60000 and ${max}`);
+  }
+  return parsed;
+}
+
+async function waitForTerminal(baseUrl, token, missionId, timeoutMs = DEFAULT_TERMINAL_TIMEOUT_MS) {
   const deadline = Date.now() + timeoutMs;
   let last = {};
   while (Date.now() < deadline) {

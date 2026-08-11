@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -8,6 +8,7 @@ import {
   buildHermesPrompt,
   normalizeHermesExecutable,
   parseHermesFindings,
+  prepareHermesHome,
   runHermesProcess,
 } from './hermes-efesto-adapter.mjs';
 
@@ -26,7 +27,7 @@ describe('Hermes Efesto adapter', () => {
   it('isolates user customizations while keeping the official search backend available', () => {
     const prompt = 'Return JSON only';
     const args = buildHermesArgs(prompt);
-    expect(args).toEqual(['--ignore-user-config', '--ignore-rules', '--toolsets', 'search', '-z', prompt]);
+    expect(args).toEqual(['--ignore-rules', '--toolsets', 'search', '-z', prompt]);
     expect(args).not.toContain('--safe-mode');
     expect(args).not.toContain('web');
     expect(args).not.toContain('browser');
@@ -44,12 +45,23 @@ describe('Hermes Efesto adapter', () => {
     expect(env).toMatchObject({
       HERMES_HOME: '/tmp/efesto-hermes-isolated',
       HERMES_ALLOW_PRIVATE_URLS: 'false',
-      HERMES_IGNORE_USER_CONFIG: '1',
       HERMES_IGNORE_RULES: '1',
       OPENROUTER_API_KEY: 'test-key',
     });
     expect(env).not.toHaveProperty('HERMES_SAFE_MODE');
     expect(env).not.toHaveProperty('HERMES_ENABLE_PROJECT_PLUGINS');
+    expect(env).not.toHaveProperty('HERMES_IGNORE_USER_CONFIG');
+  });
+
+  it('writes one exclusive bounded-turn config into the isolated Hermes home', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'efesto-hermes-config-test-'));
+    try {
+      const configPath = await prepareHermesHome(directory);
+      expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({ agent: { max_turns: 8 } });
+      await expect(prepareHermesHome(directory)).rejects.toMatchObject({ code: 'EEXIST' });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   it('preserves explicit loopback custom-provider routing for isolated remote acceptance', () => {

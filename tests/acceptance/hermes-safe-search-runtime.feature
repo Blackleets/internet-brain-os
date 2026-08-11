@@ -6,8 +6,9 @@ Feature: Hermes safe automatic discovery runtime
   Scenario: Compatible Hermes runtime is certified for discovery
     Given Hermes advertises one-shot, toolsets and isolated configuration flags
     When Efesto probes the runtime
-    Then it is certified as isolated_search_only
-    And required arguments are --ignore-user-config --ignore-rules --toolsets search -z
+    Then it is certified as bounded_isolated_search_only
+    And required arguments are --ignore-rules --toolsets search -z
+    And the exclusive ephemeral profile limits Hermes to 8 turns
 
   Scenario: Older Hermes runtime fails closed
     Given Hermes does not advertise isolated configuration flags or toolsets

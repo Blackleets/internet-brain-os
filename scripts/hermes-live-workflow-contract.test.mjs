@@ -37,6 +37,10 @@ describe('authentic Hermes public-web workflow contract', () => {
     expect(source).toContain('actual_model_id');
     expect(source).toContain('HERMES_INFERENCE_PROVIDER: custom');
     expect(source).toContain('CUSTOM_BASE_URL: http://127.0.0.1:11434/v1');
+    expect(source).toContain('HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS: 1500000');
+    expect(source).toContain('HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS: 1560000');
+    expect(source).toContain('HEPHAESTUS_ACCEPTANCE_TERMINAL_TIMEOUT_MS: 1620000');
+    expect(source).toContain('timeout-minutes: 60');
     expect(source).toContain('HEPHAESTUS_HERMES_EXECUTABLE:');
     expect(source).toContain('HERMES_INFERENCE_MODEL: ${{ env.OLLAMA_MODEL }}');
     expect(source).toContain('pnpm hermes:acceptance:live');

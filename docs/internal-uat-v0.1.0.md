@@ -48,7 +48,7 @@ Observe the real journey without manually calling internal worker endpoints:
 
 Pass only if:
 
-- Hermes automatic discovery is certified read-only and uses an ephemeral home/cwd with the equivalent of `--ignore-user-config --ignore-rules --toolsets search -z`, while project plugins remain disabled; an incompatible Hermes runtime is visibly blocked rather than falling back to broad tools;
+- Hermes automatic discovery is certified read-only and uses an empty ephemeral home/cwd with one exclusive eight-turn config plus the equivalent of `--ignore-rules --toolsets search -z`, while memory and project plugins remain disabled; an incompatible Hermes runtime is visibly blocked rather than falling back to broad tools;
 - search results are persisted first as candidates and **a search snippet is not Evidence**;
 - the Kernel authorizes the registered `web.read` capability and re-fetches each candidate through the trusted public-web reader;
 - private/loopback/link-local targets, credential URLs and redirect abuse fail closed;

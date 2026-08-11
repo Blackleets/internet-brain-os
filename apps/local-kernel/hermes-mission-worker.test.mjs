@@ -1,5 +1,8 @@
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { runHermesMissionWorker } from './hermes-mission-worker.mjs';
+import { executeAdapter, runHermesMissionWorker } from './hermes-mission-worker.mjs';
 
 const token = 'worker-token-that-is-longer-than-thirty-two-characters';
 const mission = { id: 'mission:1', leaseId: 'lease:1', scope: { categories: ['job'] } };
@@ -28,6 +31,22 @@ describe('Hermes mission worker', () => {
       .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true }) });
     const execute = vi.fn(async () => { throw new Error('provider\nfailed'); });
     await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({ status: 'failed', reason: 'provider failed' });
+  });
+
+  it('does not report a timeout until the adapter process has actually stopped', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'efesto-worker-timeout-test-'));
+    const fixture = join(directory, 'ignore-term.mjs');
+    const pidFile = join(directory, 'child.pid');
+    await writeFile(fixture, "import { writeFileSync } from 'node:fs'; writeFileSync(process.argv[2], String(process.pid)); process.on('SIGTERM', () => {}); process.stdin.resume(); setInterval(() => {}, 1000);\n", 'utf8');
+    const startedAt = Date.now();
+    try {
+      await expect(executeAdapter(process.execPath, [fixture, pidFile], mission, { timeoutMs: 500 })).rejects.toThrow('timed out');
+      const pid = Number(await readFile(pidFile, 'utf8'));
+      expect(() => process.kill(pid, 0)).toThrow();
+      expect(Date.now() - startedAt).toBeLessThan(3_000);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   it('reconciles a persisted verifying Mission when the result response is lost', async () => {

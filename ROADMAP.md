@@ -87,17 +87,27 @@ Delivered G5.6 foundation (`internal.64`):
 - pin the external runtime/action supply chain and keep provider credentials out of logs/artifacts;
 - retain manual dispatch and require a real green report before claiming live proof.
 
-Active `internal.65` repair:
+Frozen `internal.65` failure:
 
 - remove the founder-owned provider-secret prerequisite by running a reviewed tool-capable model only on loopback inside the disposable GitHub runner;
 - checksum-verify the pinned local inference runtime and verify the reviewed model identity before Hermes can use it;
 - preserve search-only Hermes execution, Kernel-owned verification and the same L1→L7 success contract;
 - trigger automatically only when the live-acceptance boundary changes in a same-repository pull request or on `main`, skip forks, retain manual reruns and keep default CI offline;
-- make the exact live proof executable without downloading or installing anything on the founder's PC.
+- made the exact live proof executable without downloading or installing anything on the founder's PC;
+- passed the deterministic/Windows package matrix but failed live L1→L7 because `--ignore-user-config` restored Hermes's 500-turn built-in default and the 15-minute worker/observer deadlines expired together before the 20-minute inner Hermes deadline;
+- remains immutable and must not be reused.
+
+Active `internal.66` repair:
+
+- preserve the credential-free isolated Qwen/Ollama/Hermes boundary from `internal.65`;
+- replace the 500-turn built-in Hermes default with one exclusive ephemeral eight-turn profile without loading user config;
+- enforce adapter < worker < terminal < job deadlines with explicit machine checks;
+- wait for real adapter-process termination before mission failure is recorded, escalating graceful shutdown when required;
+- rerun the unchanged L1→L7 evidence/provenance contract rather than weakening acceptance.
 
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.65` across the complete release matrix;
+1. qualify and merge immutable `internal.66` across the complete release matrix;
 2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;

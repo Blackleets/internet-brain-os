@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -7,8 +7,9 @@ import { pathToFileURL } from 'node:url';
 const MAX_INPUT_BYTES = 128 * 1024;
 const MAX_OUTPUT_BYTES = 512 * 1024;
 const DEFAULT_TIMEOUT_MS = 12 * 60_000;
-const MAX_TIMEOUT_MS = 20 * 60_000;
+const MAX_TIMEOUT_MS = 25 * 60_000;
 const FORCE_KILL_DELAY_MS = 500;
+const MAX_AGENT_TURNS = 8;
 
 export function buildHermesPrompt(payload) {
   if (!payload || payload.schemaVersion !== 'efesto.hermes-mission.v1' || !payload.mission) {
@@ -36,7 +37,7 @@ export function buildHermesPrompt(payload) {
 
 export function buildHermesArgs(prompt) {
   if (typeof prompt !== 'string' || !prompt.trim()) throw new Error('Hermes prompt is required');
-  return ['--ignore-user-config', '--ignore-rules', '--toolsets', 'search', '-z', prompt];
+  return ['--ignore-rules', '--toolsets', 'search', '-z', prompt];
 }
 
 export function buildHermesEnvironment(baseEnv, hermesHome) {
@@ -45,12 +46,19 @@ export function buildHermesEnvironment(baseEnv, hermesHome) {
     ...baseEnv,
     HERMES_HOME: hermesHome,
     HERMES_ALLOW_PRIVATE_URLS: 'false',
-    HERMES_IGNORE_USER_CONFIG: '1',
     HERMES_IGNORE_RULES: '1',
   };
   delete env.HERMES_SAFE_MODE;
   delete env.HERMES_ENABLE_PROJECT_PLUGINS;
   return env;
+}
+
+export async function prepareHermesHome(hermesHome) {
+  if (typeof hermesHome !== 'string' || !hermesHome.trim()) throw new Error('An isolated Hermes home is required');
+  const configPath = join(hermesHome, 'config.yaml');
+  const config = { agent: { max_turns: MAX_AGENT_TURNS } };
+  await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+  return configPath;
 }
 
 export function normalizeHermesExecutable(value) {
@@ -100,7 +108,7 @@ function configuredTimeout(value, fallback) {
   if (value === undefined || value === '') return fallback;
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 60_000 || parsed > MAX_TIMEOUT_MS) {
-    throw new Error('HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS must be between 60000 and 1200000');
+    throw new Error('HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS must be between 60000 and 1500000');
   }
   return parsed;
 }
@@ -113,6 +121,7 @@ export async function runHermesOneShot(payload, options = {}) {
   const ownsHermesHome = options.hermesHome === undefined;
   const hermesHome = options.hermesHome ?? await mkdtemp(join(tmpdir(), 'efesto-hermes-'));
   try {
+    await prepareHermesHome(hermesHome);
     return await runHermesProcess({
       executable,
       args,
