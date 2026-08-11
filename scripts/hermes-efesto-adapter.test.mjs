@@ -201,6 +201,15 @@ describe('Hermes Efesto adapter', () => {
     });
   });
 
+  it('extracts only deduplicated literal web URLs when the final response is prose', () => {
+    expect(parseHermesFindings('Sources:\n- [One](https://example.com/a).\n- https://second.example/path?q=1!\n- https://example.com/a')).toEqual({
+      findings: [
+        { url: 'https://example.com/a', title: 'Public source: example.com', text: 'Public source candidate pending Kernel verification.' },
+        { url: 'https://second.example/path?q=1', title: 'Public source: second.example', text: 'Public source candidate pending Kernel verification.' },
+      ],
+    });
+  });
+
   it('rejects non-web URL-only findings', () => {
     expect(() => parseHermesFindings('{"findings":[{"url":"file:///tmp/private"}]}')).toThrow('public http or https');
   });
@@ -210,7 +219,7 @@ describe('Hermes Efesto adapter', () => {
   });
 
   it('reports only output-shape metadata when JSON remains invalid', () => {
-    expect(() => parseHermesFindings('<think>reason</think>\nnot-json')).toThrow('chars=30 think=true fence=false findings=false repair=false');
+    expect(() => parseHermesFindings('<think>reason</think>\nnot-json')).toThrow('chars=30 think=true fence=false findings=false repair=false urls=0');
   });
 
   it('rejects authority or unsupported fields', () => {
@@ -220,5 +229,6 @@ describe('Hermes Efesto adapter', () => {
   it('rejects invalid schemas and oversized result batches', () => {
     expect(() => buildHermesPrompt({ schemaVersion: 'wrong', mission: {} })).toThrow('efesto.hermes-mission.v1');
     expect(() => parseHermesFindings(JSON.stringify({ findings: Array.from({ length: 21 }, () => ({})) }))).toThrow('at most 20');
+    expect(() => parseHermesFindings(Array.from({ length: 21 }, (_, index) => `https://source${index}.example/path`).join('\n'))).toThrow('at most 20');
   });
 });

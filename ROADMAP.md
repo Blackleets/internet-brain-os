@@ -215,15 +215,24 @@ Frozen `internal.78` result:
 - failed closed at 8/14 before inference because pinned `cmd_chat` ignores CLI-only routing in its pre-agent first-run guard;
 - remains immutable and unmerged.
 
-Active `internal.79` repair:
+Frozen `internal.79` result:
 
 - mirror the same bounded provider/model values into the exclusively created temporary profile so Hermes startup recognizes an intentionally configured route;
 - retain explicit direct CLI routing after the guard, without a shell, credential, inherited user state or new network authority;
 - retain the authoritative four-turn cap and every search/Evidence/Kernel guardrail.
+- passed the complete deterministic/Chromium/Windows/package matrix and performed 7m39s of authentic inference;
+- failed closed at 8/14 because the 6,181-character final response contained neither valid JSON nor a `findings` object;
+- remains immutable and unmerged.
+
+Active `internal.80` repair:
+
+- retain strict JSON when available, otherwise keep only deduplicated literal HTTP(S) URLs and discard every other model byte;
+- derive neutral candidates locally and keep the twenty-item cap;
+- require the unchanged Kernel private-address, `web.read`, Evidence, classification and provenance gates.
 
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.79` only if the exact release matrix and sanitized L1→L7 report are green;
+1. qualify and merge immutable `internal.80` only if the exact release matrix and sanitized L1→L7 report are green;
 2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;

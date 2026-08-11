@@ -30,6 +30,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Non-JSON Hermes final responses may now contribute only deduplicated literal HTTP(S) URLs as neutral candidates; all prose is discarded and Kernel private-address, `web.read`, Evidence and classification gates remain mandatory.
 - The bounded quiet Hermes query now mirrors the already-configured provider/model route into its exclusive temporary profile and forwards the same length-checked values as explicit CLI arguments, satisfying the pinned chat startup guard without loading user configuration.
 - Authentic Hermes execution now uses the supported quiet `chat --query --max-turns` path so the reviewed four-turn cap reaches `AIAgent`; the runtime probe rejects installations that do not advertise that exact bounded interface.
 - Hermes live discovery now requests URL-only findings, derives neutral candidate labels locally, accepts only the first fenced JSON payload, and repairs invalid string escapes before the unchanged strict whitelist and Kernel verification.

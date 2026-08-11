@@ -353,7 +353,7 @@ Complete local qualification on 2026-08-11 was green for architecture, `release:
 
 PR #215 head `d42a30634ff021ae94be8e2487be456f66a035e2` passed the complete CI/Chromium/Windows/package matrix. Live run `31486865843` failed closed in 3.6 seconds at 8/14: the quiet chat process exited code 1 before inference, with no candidates, Evidence or Finds. Inspection of pinned `cmd_chat` established that its pre-agent first-run guard ignores CLI-only provider/model arguments and accepts an isolated run only when its profile contains `model.provider` or a recognized credential. `internal.78` is frozen as failed and must never be reused or relabeled.
 
-## Internal.79 — startup-visible isolated route
+## Internal.79 — startup-visible isolated route / frozen failure
 
 `internal.79` preserves the explicit bounded quiet-chat invocation and repairs only the pinned pre-agent startup contract:
 
@@ -362,6 +362,19 @@ PR #215 head `d42a30634ff021ae94be8e2487be456f66a035e2` passed the complete CI/C
 - retains the authoritative four-turn cap, empty ephemeral home/cwd, search-only tools, one search, one Efesto attempt, nested deadlines and all Kernel/Evidence authority.
 
 Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1075 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging.
+
+PR #215 head `0ec496e7c58290608582ba2ce6142b56280dc4ee` passed the complete CI/Chromium/Windows/package matrix. Live run `31487591309` proved the startup repair and performed 7m39s of authentic inference, but its 6,181-character final response contained neither valid JSON nor a `findings` object. Bounded syntax repair applied without making the response valid; no candidates, Evidence or Finds were admitted and the report failed closed at 8/14. `internal.79` is frozen as failed and must never be reused or relabeled.
+
+## Internal.80 — literal URL-only response fallback
+
+`internal.80` keeps the strict JSON path and adds one authority-reducing translation for invalid model presentation:
+
+- extracts only literal HTTP(S) URL strings from a non-JSON response, removes trailing presentation punctuation, deduplicates them and retains the existing maximum of twenty;
+- discards all surrounding prose, titles, snippets, summaries and claimed authority, deriving the same neutral local candidate labels;
+- still rejects valid structured output with an invalid schema or unsupported fields;
+- still requires every URL to pass the Kernel's credential/private-address rejection, authorized `web.read`, Evidence, classification, provenance and Goal-truth gates.
+
+Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1076 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14` and extension packaging.
 
 The exact candidate must pass the complete GitHub matrix and produce an authentic sanitized `14/14` report before merge.
 
@@ -381,7 +394,7 @@ Every affected candidate must pass on one unchanged SHA:
 10. exact internal-package generation and SHA binding;
 11. exact packaged fresh-install + paired-repair qualification on Windows 2022 and Windows 2025.
 
-Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65`, `.66`, `.67`, `.68`, `.69`, `.70`, `.71`, `.72`, `.73`, `.74`, `.75`, `.76`, `.77` and `.78` remain frozen failures and must never be reused.
+Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `.61`, `.65`, `.66`, `.67`, `.68`, `.69`, `.70`, `.71`, `.72`, `.73`, `.74`, `.75`, `.76`, `.77`, `.78` and `.79` remain frozen failures and must never be reused.
 
 ## Distribution and public launch
 
@@ -392,7 +405,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 
 ## What remains
 
-1. Qualify immutable `internal.79` across the complete local and GitHub release matrix, then merge only if the exact SHA and authentic sanitized L1→L7 report are green.
+1. Qualify immutable `internal.80` across the complete local and GitHub release matrix, then merge only if the exact SHA and authentic sanitized L1→L7 report are green.
 2. Require the automatically triggered `Hermes live public-web acceptance` run on the merged SHA to produce a real green L1→L7 report; do not substitute deterministic CI or workflow presence for proof.
 3. Run UAT-1→UAT-6 on the same exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
 4. Use the Kernel-owned local-installation scorecard to establish the first real activation, repeat usage and useful-Find baselines before growth/retention/willingness-to-pay claims.
@@ -401,7 +414,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.79 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3.5 2B inference, truthful 256K model context, bounded 8K runtime context, Qwen non-thinking mode, one live attempt capped authoritatively at four turns through quiet `chat --query --max-turns`, startup-visible isolated provider/model routing and exactly one search, URL-only JSON candidates, first-fenced-payload extraction, bounded deterministic syntax repair, neutral locally derived candidate labels, canonical directly readable discovery targets and no founder-owned provider credential or PC installation. Search snippets are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.80 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3.5 2B inference, truthful 256K model context, bounded 8K runtime context, Qwen non-thinking mode, one live attempt capped authoritatively at four turns through quiet `chat --query --max-turns`, startup-visible isolated provider/model routing and exactly one search, strict JSON or literal URL-only candidates, first-fenced-payload extraction, bounded deterministic syntax repair, neutral locally derived candidate labels, canonical directly readable discovery targets and no founder-owned provider credential or PC installation. Search snippets and discarded prose are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule

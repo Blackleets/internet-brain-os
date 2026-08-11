@@ -28,7 +28,7 @@ The Kernel still owns URL validation, Evidence creation, deduplication, Goal-sco
 2. validates `efesto.hermes-mission.v1`;
 3. builds a bounded public-research prompt;
 4. creates one exclusive private config in the ephemeral home with `agent.max_turns: 8` and the already-configured provider/model route, then invokes the authentic CLI from that empty home/working directory with `chat --query <prompt> --quiet --max-turns <bounded> --provider <configured> --model <configured> --ignore-rules --toolsets search`;
-5. accepts only JSON containing at most 20 findings;
+5. accepts strict JSON containing at most 20 findings, or discards all non-URL prose from an invalid response and admits only at most 20 deduplicated literal HTTP(S) URLs as neutral candidates;
 6. rejects unsupported authority fields, oversized values, invalid output, timeouts, and non-zero exits;
 7. writes only `{ "findings": [...] }` to stdout.
 
@@ -54,7 +54,7 @@ The live control plane also uses strictly nested deadlines: the Hermes adapter m
 
 When Hermes or its adapter exits non-zero, each process boundary retains only a bounded diagnostic after credential, token and absolute-path redaction. The same already-sanitized failure reason is included in the L1 report detail so provider compatibility failures remain actionable without publishing raw process output.
 
-The remote prompt starts with Qwen's `/no_think` soft switch because this mission needs short tool use followed by exact JSON, not a long reasoning trace. The adapter still accepts one known `<think>…</think>` envelope and the existing optional JSON code fence before parsing, then applies the same strict `{ findings: [...] }` schema. If parsing fails, the diagnostic contains only output-shape booleans and character count, never model text.
+The remote prompt starts with Qwen's `/no_think` soft switch because this mission needs short tool use followed by exact JSON, not a long reasoning trace. The adapter still accepts one known `<think>…</think>` envelope and the existing optional JSON code fence before parsing, then applies the same strict `{ findings: [...] }` schema. If JSON parsing fails but the response contains literal HTTP(S) URLs, only those deduplicated URL strings are retained; prose, titles, snippets, summaries and claimed authority are discarded before the unchanged Kernel verification boundary. With no usable URLs, the diagnostic contains only output-shape booleans, URL count and character count, never model text.
 
 ## Windows local configuration
 

@@ -116,14 +116,35 @@ export function parseHermesFindings(text) {
     repaired = repairedCandidate !== candidate;
     try { parsed = JSON.parse(repairedCandidate); }
     catch {
-      const shape = `chars=${trimmed.length} think=${trimmed.startsWith('<think>')} fence=${withoutThinking.startsWith('```')} findings=${/\{\s*"findings"\s*:/.test(candidate)} repair=${repaired}`;
-      throw new Error(`Hermes did not return valid JSON (${shape})`);
+      const urls = extractLiteralWebUrls(withoutThinking);
+      if (urls.length > 0) parsed = { findings: urls.map((url) => ({ url })) };
+      else {
+        const shape = `chars=${trimmed.length} think=${trimmed.startsWith('<think>')} fence=${withoutThinking.startsWith('```')} findings=${/\{\s*"findings"\s*:/.test(candidate)} repair=${repaired} urls=0`;
+        throw new Error(`Hermes did not return valid JSON or literal web URLs (${shape})`);
+      }
     }
   }
   if (!parsed || !Array.isArray(parsed.findings) || parsed.findings.length > 20) {
     throw new Error('Hermes must return { findings: [...] } with at most 20 findings');
   }
   return { findings: parsed.findings.map((finding, index) => normalizeFinding(finding, index)) };
+}
+
+function extractLiteralWebUrls(text) {
+  const matches = String(text ?? '').replace(/\\\//g, '/').match(/https?:\/\/[^\s<>"'`\\]+/gi) ?? [];
+  const unique = [];
+  const seen = new Set();
+  for (const match of matches) {
+    const candidate = match.replace(/[)\]}>.,;:!?]+$/g, '');
+    if (!candidate || seen.has(candidate)) continue;
+    try {
+      const parsed = new URL(candidate);
+      if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname) continue;
+    } catch { continue; }
+    seen.add(candidate);
+    unique.push(candidate);
+  }
+  return unique;
 }
 
 function repairHermesJson(candidate) {
