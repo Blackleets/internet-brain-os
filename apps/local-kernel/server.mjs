@@ -189,7 +189,9 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       }
     }
     if (request.method === 'POST' && request.url === '/pair') {
-      if (!isExtensionOrigin(origin)) return send(response, 403, { ok: false, code: 'PAIRING_ORIGIN_REQUIRED' });
+      if (!isExtensionOrigin(origin) && !isDashboardOrigin(origin, allowedDashboardOrigins)) {
+        return send(response, 403, { ok: false, code: 'PAIRING_ORIGIN_REQUIRED' });
+      }
       if (!activePairing) return send(response, 404, { ok: false, code: 'PAIRING_UNAVAILABLE' });
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) {
         return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
@@ -197,7 +199,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       try {
         const body = await readJson(request);
         const paired = activePairing.consume(body?.code);
-        if (identities) await identities.authorize(origin);
+        if (identities && isExtensionOrigin(origin)) await identities.authorize(origin);
         return send(response, 200, { ok: true, ...paired });
       } catch (error) {
         if (error instanceof PairingError) return send(response, error.status, { ok: false, code: error.code });
@@ -611,9 +613,12 @@ async function readRaw(request, maxBodyBytes) {
 }
 
 function isAllowedOrigin(origin, allowedDashboardOrigins = new Set()) {
-  return isExtensionOrigin(origin)
-    || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
-    || allowedDashboardOrigins.has(origin);
+  return isExtensionOrigin(origin) || isDashboardOrigin(origin, allowedDashboardOrigins);
+}
+
+function isDashboardOrigin(origin, allowedDashboardOrigins = new Set()) {
+  return typeof origin === 'string'
+    && (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) || allowedDashboardOrigins.has(origin));
 }
 
 function isExtensionOrigin(origin) {
