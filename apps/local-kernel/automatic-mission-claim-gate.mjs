@@ -148,7 +148,12 @@ function requiredKernelExports(kernel) {
 
 async function loadBuiltKernel() {
   try {
-    return await import('../../packages/kernel/dist/index.js');
+    const kernel = await import('../../packages/kernel/dist/index.js');
+    const publicWeb = await import('../../packages/kernel/dist/execution/public-web-search-adapter.js');
+    return {
+      ...kernel,
+      PUBLIC_WEB_SEARCH_CAPABILITY: publicWeb.PUBLIC_WEB_SEARCH_CAPABILITY ?? publicWeb.default?.PUBLIC_WEB_SEARCH_CAPABILITY,
+    };
   } catch {
     throw new AutomaticMissionClaimGateError('KERNEL_RUNTIME_UNAVAILABLE', 'Automatic Mission authorization requires the trusted Kernel package to be built first');
   }
