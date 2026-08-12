@@ -1,8 +1,8 @@
 # LLM HANDOFF
 
-> Recovery entrypoint: read `PROJECT_STATE.md` and run `pnpm resume` before relying on older entries in this historical handoff log.
+> Recovery entrypoint: read `CONSTITUTION.md` completely, run `pnpm resume`, then read `PROJECT_STATE.md` before relying on older entries in this historical handoff log.
 
-This file lets Hermes, OpenCode, Codex, GPT, and future models continue work without losing logic.
+This file lets Hermes, OpenCode, Codex, GPT, and future models continue work without losing logic. Read `CONSTITUTION.md` completely before reading this handoff or making any repository change; it is the canonical project and authority contract.
 
 Every AI must update this file before ending a work session.
 
@@ -22,14 +22,14 @@ Primary objective: close Issue #101 with real-runtime Agent Hub worker evidence 
 
 ## Mandatory reading order
 
-Before doing work, run `pnpm resume`, then read:
+Before doing work, read `CONSTITUTION.md` completely, run `pnpm resume`, then read:
 
-1. `PROJECT_STATE.md`
-2. `AGENTS.md`
-3. `README.md`
-4. `PROJECT_DNA.md`
-5. `PROJECT_BIBLE.md`
-6. `AI_CONSTITUTION.md`
+1. `CONSTITUTION.md`
+2. `PROJECT_STATE.md` after running `pnpm resume`
+3. `AGENTS.md`
+4. `README.md`
+5. `PROJECT_DNA.md`
+6. `PROJECT_BIBLE.md`
 7. `LLM_HANDOFF.md`
 8. `docs/architecture.md`
 9. `ROADMAP.md`
@@ -153,7 +153,7 @@ Use this prompt when passing the repo to a new AI:
 ```text
 You are working on Internet Brain OS.
 
-Before making changes, read README.md, PROJECT_DNA.md, PROJECT_BIBLE.md, AI_CONSTITUTION.md, LLM_HANDOFF.md, ARCHITECTURE.md, AGENTS.md, ROADMAP.md, DECISIONS.md, and the active task file.
+Before making changes, read CONSTITUTION.md completely, run `pnpm resume`, then read PROJECT_STATE.md, AGENTS.md, README.md, PROJECT_DNA.md, PROJECT_BIBLE.md, LLM_HANDOFF.md, ARCHITECTURE.md, ROADMAP.md, DECISIONS.md, and the active task file.
 
 Your job is to continue the project without breaking its identity.
 
@@ -417,3 +417,69 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 ### Do not forget
 - Do not add a global user/device identifier or telemetry upload to turn a private installation observation into a fake aggregate rate.
 - Do not reuse `internal.63` after its contents are published; any follow-up code/UI/package change must advance the candidate.
+
+## Handoff 2026-08-12 - Codex - Efesto Constitution
+
+### What I changed
+- Added the canonical root `CONSTITUTION.md` as Efesto's product, authority, safety, engineering, agent-preflight, and amendment contract.
+- Connected `AGENTS.md`, Hermes's operating protocol, `README.md`, `PROJECT_STATE.md`, `ARCHITECTURE.md`, `LLM_HANDOFF.md`, `PROJECT_DNA.md`, `PROJECT_BIBLE.md`, and `AGENT_ROLES.md` to the canonical constitution.
+- Marked `AI_CONSTITUTION.md` as a compatibility pointer so the repository has one authority instead of two competing constitutions.
+- Added `scripts/constitution-check.mjs` and its test; `pnpm resume` now validates the Constitution and nine required agent/project entry points before rendering live project state.
+
+### Why I changed it
+- The project needed one explicit Star/constitutional boundary that Hermes and every implementation worker must read before making changes, while preserving the existing continuity and handoff system.
+
+### Tests or checks performed
+- `pnpm constitution:check` — passed; nine agent/project entry points require `CONSTITUTION.md` first.
+- `pnpm exec vitest run scripts/constitution-check.test.mjs scripts/project-resume.test.mjs` — 2 files / 2 tests passed.
+- `pnpm architecture:check` — passed.
+- `pnpm resume` — constitutional preflight passed and live checkpoint rendered.
+- `git diff --check` — passed.
+
+### Risks / uncertainties
+- The preflight is a repository contract and machine check; it cannot prove that an external agent actually read a file outside the repository's documented workflow.
+- No code, Kernel authority, runtime behavior, or `pids/` user change was modified.
+
+### Next recommended step
+- Review the scoped documentation and preflight diff, then commit or open the normal review change without including the unrelated `pids/` directory.
+
+### Do not forget
+- `CONSTITUTION.md` is canonical. Do not reintroduce a second governing constitution or let an agent begin work without the preflight.
+
+## Handoff 2026-08-12 - Codex - Constitutional closure and local qualification
+
+### What I changed
+- Completed the constitutional preflight from the repository root and verified that the change remains limited to Efesto; Hermes Agent and the unrelated `pids/` directory were not modified or staged.
+- Preserved the canonical constitution integration and the nine checked agent/project entry points.
+- Restored the generated `apps/dashboard/next-env.d.ts` change produced by the production build so no generated runtime metadata remains in the scoped change.
+
+### Files changed
+- `CONSTITUTION.md`
+- `scripts/constitution-check.mjs`
+- `scripts/constitution-check.test.mjs`
+- Existing constitutional entry-point documentation and `LLM_HANDOFF.md`.
+
+### Tests or checks performed
+- `pnpm constitution:check` — passed.
+- Focused constitutional tests — 2 files / 2 tests passed.
+- `pnpm architecture:check` — passed.
+- `pnpm audit --prod` — no known vulnerabilities.
+- `pnpm typecheck` — passed.
+- `pnpm test` — 188 files / 1078 tests passed.
+- `pnpm build` — passed.
+- `pnpm verify:first-run` — passed, including Hermes smoke, altered-replay attack smoke and Replay Lab API smoke.
+- `pnpm hermes:acceptance` — boundary-authority `14/14` passed.
+- `pnpm build:extension` — passed.
+- Sanitized Hermes sensitive-data preflight — passed.
+- Workflow/release contract tests — 4 files / 16 tests passed.
+- `pnpm release:verify` and `git diff --check` — passed.
+
+### Risks / uncertainties
+- Dashboard Chromium acceptance could not execute in this environment because the Playwright browser binary was absent. The temporary `/tmp` download attempt returned a truncated 0 MiB archive from the CDN; no application test ran, so this remains an environmental blocker rather than a product pass or fail.
+- Authentic remote Hermes L1→L7 proof and the Windows packaged matrix still require their designated GitHub environments; deterministic local `14/14` is not a substitute.
+
+### Next recommended step
+- Commit this scoped constitutional change without `pids/`, then run the exact candidate through the designated GitHub/Chromium/Windows matrix and require the authentic sanitized `14/14` live report before promotion.
+
+### Do not forget
+- `internal.81` remains an internal candidate until the exact immutable SHA has the complete matrix and authentic public-web proof. Public launch remains blocked pending UAT.

@@ -6,22 +6,28 @@ Hermes coordinates work, chooses appropriate models, executes tasks, preserves c
 
 Hermes is not allowed to redefine the company or merge critical changes without approval.
 
+`CONSTITUTION.md` is the canonical project and authority contract. Hermes must read it completely before planning or changing anything, and must pass the same preflight requirement to every worker it coordinates.
+
 ## Startup procedure
 
-At the beginning of every session, Hermes must read:
+At the beginning of every session, Hermes must read `CONSTITUTION.md` completely, run `pnpm resume`, and then read:
 
-1. `README.md`
-2. `PROJECT_DNA.md`
-3. `PROJECT_BIBLE.md`
-4. `AI_CONSTITUTION.md`
-5. `LLM_HANDOFF.md`
-6. `ROADMAP.md`
-7. `DECISIONS.md`
-8. `AGENT_ROLES.md`
-9. `docs/architecture.md`
-10. `docs/obsidian-sync-protocol.md`
-11. `docs/hermes-ingestion-contract.md`
-12. The active task file or GitHub issue.
+1. `CONSTITUTION.md`
+2. `README.md`
+3. `PROJECT_STATE.md` after running `pnpm resume`
+4. `AGENTS.md`
+5. `PROJECT_DNA.md`
+6. `PROJECT_BIBLE.md`
+7. `LLM_HANDOFF.md`
+8. `ROADMAP.md`
+9. `DECISIONS.md`
+10. `AGENT_ROLES.md`
+11. `docs/architecture.md`
+12. `docs/obsidian-sync-protocol.md`
+13. `docs/hermes-ingestion-contract.md`
+14. The active task file or GitHub issue.
+
+`AI_CONSTITUTION.md` is a historical compatibility pointer only. If it differs from `CONSTITUTION.md`, the latter wins.
 
 ## Task selection
 

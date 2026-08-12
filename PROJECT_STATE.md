@@ -8,7 +8,7 @@ Canonical short checkpoint. GitHub `main`, live CI and the active PR are authori
 pnpm resume
 ```
 
-Then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md` and the active GitHub item. Work only in `Blackleets/internet-brain-os`; never mix AEGIS, Genesis HQ, APO, Hermes Agent or another project into this tree.
+Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `ARCHITECTURE.md` and the active GitHub item. Work only in `Blackleets/internet-brain-os`; never mix AEGIS, Genesis HQ, APO, Hermes Agent or another project into this tree. `CONSTITUTION.md` is the canonical durable product, authority, safety, and engineering contract; this file remains the live status checkpoint.
 
 ## Identity and authority
 

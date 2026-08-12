@@ -1,16 +1,19 @@
 # Agent Continuation Contract
 
-Before changing code in this repository:
+`CONSTITUTION.md` is the canonical project and authority contract. Before changing any repository artifact — code, documentation, tests, scripts, configuration, workflows, or generated contracts — every human or AI agent must read it completely. No agent may begin editing until this preflight is complete.
 
-1. Read `PROJECT_STATE.md` and run `pnpm resume`.
-2. Read `ARCHITECTURE.md` and `docs/architecture-guardrails.md`.
-3. Inspect the target package, implementation, tests, and exports.
-4. Confirm the current file SHA before sequential updates.
-5. Make the smallest coherent change that advances the current priority.
-6. Preserve backward compatibility unless a deliberate migration is documented.
-7. Add or update tests for behavior changed.
-8. Validate architecture boundaries, types, tests, and build when the repository provides those commands.
-9. Update `PROJECT_STATE.md` and `ARCHITECTURE.md` when the completed baseline, blocker, recovery procedure, architecture, or priority queue changes.
+1. Read `CONSTITUTION.md` completely.
+2. Run `pnpm resume` and read `PROJECT_STATE.md`.
+3. Read `ARCHITECTURE.md` and `docs/architecture-guardrails.md`.
+4. Inspect the target package, implementation, tests, and exports.
+5. Confirm the current file SHA before sequential updates.
+6. Make the smallest coherent change that advances the current priority.
+7. Preserve backward compatibility unless a deliberate migration is documented.
+8. Add or update tests for behavior changed.
+9. Validate architecture boundaries, types, tests, and build when the repository provides those commands.
+10. Update `PROJECT_STATE.md` and `ARCHITECTURE.md` when the completed baseline, blocker, recovery procedure, architecture, or priority queue changes.
+
+If a task conflicts with `CONSTITUTION.md`, stop and request Founder or maintainer review. Hermes must pass this same gate to every worker it coordinates.
 
 ## Non-Negotiable Invariants
 

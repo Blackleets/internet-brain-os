@@ -4,6 +4,16 @@ This file records major product and technical decisions.
 
 Do not delete old decisions. If a decision changes, add a new entry explaining why.
 
+## 2026-08-12 - Canonical Efesto constitution
+
+Decision: `CONSTITUTION.md` is the single canonical project constitution and agent preflight contract for Efesto.
+
+It governs product identity, Kernel sovereignty, evidence-before-memory, safety and privacy, truthful autonomy, engineering discipline, institutional memory, and constitutional amendments. `AI_CONSTITUTION.md` remains only as a compatibility pointer. Hermes and every coordinated worker must read the canonical constitution before planning or changing repository artifacts.
+
+Reason:
+
+Efesto needs one durable North Star that prevents product drift, authority bypass, and contradictory instructions as multiple agents and contributors work across the repository.
+
 ## 2026-07-10 - Product identity
 
 Decision: Internet Brain OS is not a generic scraper.
