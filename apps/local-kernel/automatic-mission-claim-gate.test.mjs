@@ -85,4 +85,14 @@ describe('automatic Mission claim gate', () => {
       id: 'mission:8', goalId: 'goal:legacy', authorization: receipt('goal:legacy', 1), searchCandidates: [{ url: 'https://example.com' }],
     })).resolves.toEqual({ allowed: false, reason: 'verification_pending' });
   });
+  it('fails closed when the trusted compiled Kernel cannot be loaded', async () => {
+    const unavailable = new AutomaticMissionClaimGate({
+      enforceRuntimeReadiness: true,
+      readOnlyRuntimeReady: () => true,
+      loadKernel: async () => { throw new Error('compiled runtime missing'); },
+    });
+    await expect(unavailable.evaluate(legacyGoal(), {
+      id: 'mission:9', goalId: 'goal:legacy', authorization: receipt('goal:legacy', 1),
+    })).resolves.toEqual({ allowed: false, reason: 'trusted_kernel_unavailable' });
+  });
 });
