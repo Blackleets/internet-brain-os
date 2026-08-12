@@ -8,9 +8,13 @@ const runtimePath = resolve(repositoryRoot, 'packages/kernel/dist/index.js');
 try {
   await access(runtimePath);
   const kernel = await import(pathToFileURL(runtimePath).href);
+  const publicWebRuntimePath = resolve(repositoryRoot, 'packages/kernel/dist/execution/public-web-search-adapter.js');
+  await access(publicWebRuntimePath);
+  const publicWeb = await import(pathToFileURL(publicWebRuntimePath).href);
+  const publicWebCapability = publicWeb.PUBLIC_WEB_SEARCH_CAPABILITY ?? publicWeb.default?.PUBLIC_WEB_SEARCH_CAPABILITY;
   const required = [
     ['CapabilityRegistry', typeof kernel.CapabilityRegistry === 'function'],
-    ['PUBLIC_WEB_SEARCH_CAPABILITY', typeof kernel.PUBLIC_WEB_SEARCH_CAPABILITY === 'string'],
+    ['PUBLIC_WEB_SEARCH_CAPABILITY', typeof publicWebCapability === 'object' && publicWebCapability?.id === 'web.search'],
     ['evaluateAutomaticReadOnlyContinuation', typeof kernel.evaluateAutomaticReadOnlyContinuation === 'function'],
     ['AUTOMATIC_READ_ONLY_POLICY_VERSION', typeof kernel.AUTOMATIC_READ_ONLY_POLICY_VERSION === 'string'],
   ];
