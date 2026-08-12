@@ -122,7 +122,8 @@ export default function EfestoProductShell() {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    const action = String(data.get('action') ?? 'token');
+    const pairingCode = String(data.get('pairingCode') ?? '').trim();
+    const action = String(data.get('action') ?? (pairingCode ? 'pair' : 'token'));
     const baseUrl = String(data.get('baseUrl') ?? DEFAULT_BASE_URL);
     const remember = data.get('rememberSession') === 'on';
     setRememberSession(remember);
