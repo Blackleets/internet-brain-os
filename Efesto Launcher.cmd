@@ -9,6 +9,7 @@ if errorlevel 1 goto INSTALL_OR_REPAIR
 where pnpm >nul 2>&1
 if errorlevel 1 goto INSTALL_OR_REPAIR
 if not exist "%~dp0node_modules" goto INSTALL_OR_REPAIR
+if not exist "%~dp0packages\shared\dist\index.js" goto INSTALL_OR_REPAIR
 if not exist "%~dp0packages\kernel\dist\index.js" goto INSTALL_OR_REPAIR
 if not exist "%~dp0packages\connectors\dist\index.js" goto INSTALL_OR_REPAIR
 
