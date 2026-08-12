@@ -15,15 +15,17 @@ pnpm kernel:serve
 pnpm dashboard:dev
 ```
 
-Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The dashboard connects
-only to a loopback Kernel and sends the token as `x-hephaestus-token` for
-authenticated `/api/*` requests.
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The web dashboard is
+the primary owner surface: enter the one-time pairing code printed by the local
+Kernel and it receives the private API credential over the local pairing route.
+It then sends that credential as `x-hephaestus-token` for authenticated
+`/api/*` requests. A manual token field remains as a recovery path.
 
-The owner-only hosted dashboard can also connect to the loopback Kernel. The
-Kernel permits the official Sites origin by default and continues to require
-the private API token for every `/api/*` request. Custom deployments must set a
-comma-separated `HEPHAESTUS_DASHBOARD_ORIGINS` allowlist; arbitrary web origins
-remain forbidden.
+The owner-only hosted dashboard can also pair with the loopback Kernel. The
+Kernel permits the official Sites origin and loopback dashboard origins while
+requiring a one-use code for pairing; arbitrary web origins remain forbidden.
+Custom deployments must set a comma-separated
+`HEPHAESTUS_DASHBOARD_ORIGINS` allowlist.
 
 ## Token handling
 
