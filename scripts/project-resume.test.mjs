@@ -4,6 +4,7 @@ import { renderProjectResume } from './project-resume.mjs';
 describe('project continuity checkpoint', () => {
   it('combines the canonical checkpoint with live Git state', async () => {
     const output = await renderProjectResume();
+    expect(output).toContain('Constitution preflight passed');
     expect(output).toContain('HEPHAESTUS — Current Project State');
     expect(output).toContain('Authentic Hermes v0.19.0 runtime acceptance was proven');
     expect(output).toContain('machine-checkable release readiness');

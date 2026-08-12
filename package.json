@@ -32,6 +32,7 @@
     "orchestrator": "node scripts/orchestrator-cli.mjs",
     "release:verify": "node scripts/release-readiness.mjs",
     "replay-lab:api-smoke": "node scripts/replay-lab-api-smoke.mjs",
+    "constitution:check": "node scripts/constitution-check.mjs",
     "resume": "node scripts/project-resume.mjs",
     "test": "vitest run --passWithNoTests",
     "verify:first-run": "pnpm architecture:check && pnpm typecheck && pnpm test && pnpm build && pnpm hermes:validate-agent examples/hermes-agent-run-output.sample.json && pnpm hermes:validate-agent --native-jsonl examples/hermes-native-log.sample.jsonl && pnpm hermes:smoke && pnpm hermes:attack-smoke && pnpm replay-lab:api-smoke",

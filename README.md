@@ -234,17 +234,22 @@ The current green MVP does **not** claim that every long-term idea is shipped. T
 
 Before changing the repository:
 
+Read `CONSTITUTION.md` completely, then run:
+
 ```bash
 pnpm resume
 ```
 
 Then read, in order:
 
-1. `PROJECT_STATE.md`
-2. `AGENTS.md`
-3. `ARCHITECTURE.md`
-4. `ROADMAP.md`
-5. the one active GitHub task/PR, if any.
+1. `CONSTITUTION.md` — the canonical project and authority contract
+2. `PROJECT_STATE.md`
+3. `AGENTS.md`
+4. `ARCHITECTURE.md`
+5. `ROADMAP.md`
+6. the one active GitHub task/PR, if any.
+
+`AI_CONSTITUTION.md` is retained as a historical compatibility pointer. It must not be treated as a second or conflicting constitution.
 
 Use one bounded branch at a time. Never weaken Evidence provenance, local-first secrecy, replay protection, capability gates or Kernel authority merely to make a test pass.
 

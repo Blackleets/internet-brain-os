@@ -2,7 +2,7 @@
 
 This document explains how to build Internet Brain OS without losing the original vision.
 
-Every LLM, agent, and contributor must read this before making changes.
+Read `CONSTITUTION.md` completely before this supporting product guide. Every LLM, agent, and contributor must pass that constitutional preflight before making changes.
 
 ## One-sentence product definition
 

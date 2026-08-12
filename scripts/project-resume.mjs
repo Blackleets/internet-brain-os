@@ -3,10 +3,12 @@ import { execFile } from 'node:child_process';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
+import { checkConstitution } from './constitution-check.mjs';
 
 const exec = promisify(execFile);
 
 export async function renderProjectResume({ cwd = process.cwd() } = {}) {
+  const preflight = await checkConstitution();
   const checkpoint = await readFile(new URL('../PROJECT_STATE.md', import.meta.url), 'utf8');
   const [branch, commit, status] = await Promise.all([
     git(['branch', '--show-current'], cwd),
@@ -14,6 +16,8 @@ export async function renderProjectResume({ cwd = process.cwd() } = {}) {
     git(['status', '--short', '--branch'], cwd),
   ]);
   return [
+    `Constitution preflight passed: ${preflight.requiredEntryPoints.length} agent entry points require CONSTITUTION.md first.`,
+    '',
     checkpoint.trimEnd(),
     '',
     '## Git live state',

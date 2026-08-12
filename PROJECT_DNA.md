@@ -1,8 +1,8 @@
 # PROJECT DNA
 
-This file defines the identity of **Hephaestus — The Intelligence Forge**.
+This file defines the durable identity of **Hephaestus — The Intelligence Forge**.
 
-It is the highest-level project file. All future decisions must respect it.
+`CONSTITUTION.md` is the canonical project and agent-governance entry point. This document remains the product DNA that the constitution protects; all future decisions must respect both.
 
 ## What we are building
 

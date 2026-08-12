@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- Canonical `CONSTITUTION.md` for Efesto's product identity, Kernel authority, safety boundaries, truthful autonomy, engineering discipline, agent preflight, and amendment process; `pnpm resume` now validates its required agent entry points before exposing the live checkpoint.
 - Credential-free remote Hermes L1→L7 acceptance using a checksum-verified, runner-local Ollama runtime and reviewed tool-capable Qwen3 model identity; no founder API key or PC installation is required.
 - Remote GitHub acceptance workflow for authentic Hermes v0.20 public-web L1→L7 proof, pinned to reviewed action/runtime commits and publishing only the sanitized acceptance report.
 - Private local-installation product cohort for trustworthy first-Goal activation and repeat-Goal measurement without global identifiers or external telemetry.

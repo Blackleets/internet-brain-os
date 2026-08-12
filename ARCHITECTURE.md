@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document is the canonical handoff point for any future agent continuing the repository. Read it before modifying code.
+This document is the implementation continuation guide for any future agent continuing the repository. Read `CONSTITUTION.md` first for durable product, authority, safety, and engineering invariants, then read this guide before modifying code.
 
 ## Product Identity
 
@@ -245,6 +245,8 @@ The planned direction is a teacher/student or distillation architecture around a
 ## Safe Agent Workflow
 
 ```text
+READ CONSTITUTION.md
+  ↓
 READ ARCHITECTURE.md
   ↓
 INSPECT TARGET FILES + TESTS

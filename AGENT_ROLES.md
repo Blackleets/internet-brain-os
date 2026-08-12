@@ -1,6 +1,6 @@
 # AGENT ROLES
 
-This file defines how different LLMs and agents should work on Internet Brain OS.
+This file defines how different LLMs and agents should work on Internet Brain OS. Every role must read `CONSTITUTION.md` completely before editing or coordinating repository changes.
 
 No agent owns the whole project alone.
 
@@ -49,7 +49,7 @@ Responsibilities:
 Must not:
 
 - Rewrite the Kernel without Kernel Change Request.
-- Ignore the AI Constitution.
+- Ignore `CONSTITUTION.md`.
 
 ## OpenCode
 
