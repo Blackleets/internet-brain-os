@@ -1,4 +1,8 @@
-# AI CONSTITUTION
+# AI CONSTITUTION — COMPATIBILITY POINTER
+
+> The canonical, current constitution is [`CONSTITUTION.md`](CONSTITUTION.md). Every agent must read that file completely before changing any repository artifact. This file is retained for historical compatibility; if any wording differs, `CONSTITUTION.md` is authoritative.
+
+---
 
 This constitution governs every AI model, agent, and human contributor working on Internet Brain OS.
 
