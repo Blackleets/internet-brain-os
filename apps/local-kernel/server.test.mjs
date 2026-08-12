@@ -625,6 +625,24 @@ describe('local Kernel HTTP receiver', () => {
     expect(await noOrigin.json()).toEqual({ ok: false, code: 'PAIRING_ORIGIN_REQUIRED' });
   });
 
+  it('pairs from the trusted local dashboard origin without exposing the token beforehand', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-dashboard-pairing-'));
+    const pairing = new PairingSession(apiToken, { code: 'DASH1234', expiresAt: 2_000, now: () => 1_000 });
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, {
+      pairingSession: pairing,
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const base = `http://127.0.0.1:${server.address().port}`;
+
+    const paired = await fetch(`${base}/pair`, {
+      method: 'POST',
+      headers: { origin: 'http://127.0.0.1:3000', 'content-type': 'application/json' },
+      body: JSON.stringify({ code: 'dash-1234' }),
+    });
+    expect(paired.status).toBe(200);
+    expect(await paired.json()).toEqual({ ok: true, apiToken });
+  });
+
   it('rejects non-loopback Host headers before routing', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
     server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')));
