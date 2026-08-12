@@ -23,8 +23,15 @@ export class AutomaticMissionClaimGate {
     if (Array.isArray(mission.searchCandidates) && mission.searchCandidates.length > 0) return deny('verification_pending');
     if (this.enforceRuntimeReadiness && this.readOnlyRuntimeReady() !== true) return deny('runtime_read_only_unverified');
 
-    const kernel = await this.#kernel();
-    const required = requiredKernelExports(kernel);
+    let required;
+    try {
+      const kernel = await this.#kernel();
+      required = requiredKernelExports(kernel);
+    } catch {
+      // A missing or malformed compiled Kernel must block automatic work safely.
+      // It must never surface as a worker HTTP 500 or look like active research.
+      return deny('trusted_kernel_unavailable');
+    }
     const context = capabilityContext(goal);
     if (!context) return deny('invalid_goal');
 
