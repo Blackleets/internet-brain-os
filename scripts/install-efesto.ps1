@@ -54,8 +54,13 @@ function Ensure-Pnpm {
 }
 
 function Invoke-Pnpm([string[]]$Arguments, [string]$FailureMessage) {
-  & pnpm @Arguments
-  if ($LASTEXITCODE -ne 0) { throw "$FailureMessage (exit $LASTEXITCODE)." }
+  Push-Location -LiteralPath $RepoRoot
+  try {
+    & pnpm @Arguments
+    if ($LASTEXITCODE -ne 0) { throw "$FailureMessage (exit $LASTEXITCODE)." }
+  } finally {
+    Pop-Location
+  }
 }
 
 function Install-DesktopShortcut {
@@ -94,6 +99,9 @@ try {
   if (-not (Test-Path $sharedRuntime)) { throw 'Kernel dependency build completed but packages\shared\dist\index.js is missing.' }
   if (-not (Test-Path $kernelRuntime)) { throw 'Kernel runtime build completed but packages\kernel\dist\index.js is missing.' }
   if (-not (Test-Path $connectorsRuntime)) { throw 'Connectors runtime build completed but packages\connectors\dist\index.js is missing.' }
+
+  Write-Step 'Verifying that the trusted Kernel runtime can be imported...'
+  Invoke-Pnpm @('exec', 'node', 'scripts/trusted-kernel-runtime-doctor.mjs') 'Trusted Kernel runtime verification failed'
 
   Write-Step 'Building the browser extension bundle...'
   Invoke-Pnpm @('build:extension') 'Extension build failed'

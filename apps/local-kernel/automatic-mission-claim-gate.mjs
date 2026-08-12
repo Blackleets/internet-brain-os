@@ -23,8 +23,15 @@ export class AutomaticMissionClaimGate {
     if (Array.isArray(mission.searchCandidates) && mission.searchCandidates.length > 0) return deny('verification_pending');
     if (this.enforceRuntimeReadiness && this.readOnlyRuntimeReady() !== true) return deny('runtime_read_only_unverified');
 
-    const kernel = await this.#kernel();
-    const required = requiredKernelExports(kernel);
+    let required;
+    try {
+      const kernel = await this.#kernel();
+      required = requiredKernelExports(kernel);
+    } catch {
+      // A missing or malformed compiled Kernel must block automatic work safely.
+      // It must never surface as a worker HTTP 500 or look like active research.
+      return deny('trusted_kernel_unavailable');
+    }
     const context = capabilityContext(goal);
     if (!context) return deny('invalid_goal');
 
@@ -141,7 +148,12 @@ function requiredKernelExports(kernel) {
 
 async function loadBuiltKernel() {
   try {
-    return await import('../../packages/kernel/dist/index.js');
+    const kernel = await import('../../packages/kernel/dist/index.js');
+    const publicWeb = await import('../../packages/kernel/dist/execution/public-web-search-adapter.js');
+    return {
+      ...kernel,
+      PUBLIC_WEB_SEARCH_CAPABILITY: publicWeb.PUBLIC_WEB_SEARCH_CAPABILITY ?? publicWeb.default?.PUBLIC_WEB_SEARCH_CAPABILITY,
+    };
   } catch {
     throw new AutomaticMissionClaimGateError('KERNEL_RUNTIME_UNAVAILABLE', 'Automatic Mission authorization requires the trusted Kernel package to be built first');
   }

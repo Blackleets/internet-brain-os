@@ -28,16 +28,19 @@ async function tick() {
 
 function render(mission) {
   if (!missionState || !mission || !ACTIVE_STATUSES.has(mission.status)) return;
-  const startedAt = mission.claimedAt ?? mission.createdAt;
+  const startedAt = mission.status === 'queued' ? mission.createdAt : (mission.claimedAt ?? mission.createdAt);
   const startedMs = Date.parse(startedAt);
   if (!Number.isFinite(startedMs)) return;
   const elapsedSeconds = Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
   const elapsed = formatDuration(elapsedSeconds);
-  const phase = mission.status === 'queued' ? 'Starting Hermes' : 'Hermes is researching';
-  const next = `${phase} · ${elapsed} elapsed · live`;
+  const phase = mission.status === 'queued' ? 'Queued for Hermes' : 'Hermes is researching';
+  const suffix = mission.status === 'queued' ? 'waiting' : 'live';
+  const next = `${phase} · ${elapsed} elapsed · ${suffix}`;
   if (missionState.textContent !== next) missionState.textContent = next;
   missionState.dataset.status = mission.status;
-  missionState.title = 'Efesto checks the local mission state every second. Deep research may take several minutes.';
+  missionState.title = mission.status === 'queued'
+    ? 'The mission is authorized and queued; no research lease is active yet.'
+    : 'Efesto checks the local mission state every second. Deep research may take several minutes.';
 }
 
 function formatDuration(totalSeconds) {

@@ -91,6 +91,30 @@ export default function EfestoProductShell() {
     if (!current.models.includes(selectedModel)) setSelectedModel(current.models[0] ?? '');
   }, [providers, selectedModel, selectedProviderId]);
 
+  useEffect(() => {
+    if (!connection) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const client = new KernelClient(connection);
+        const [nextSnapshot, nextGoalSurfaces] = await Promise.all([
+          loadOverview(client),
+          loadGoalSurfaces(client),
+        ]);
+        if (cancelled) return;
+        setSnapshot(nextSnapshot);
+        setGoalSurfaces(nextGoalSurfaces);
+      } catch {
+        // The visible readiness state remains the last verified state until the next successful poll.
+      }
+    };
+    const timer = window.setInterval(() => { void poll(); }, 3_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [connection]);
+
   function navigate(next: View) { setView(next); setNavOpen(false); }
   function newGoal() { setChatMode(false); setPreparedGoal(''); setInput(''); navigate('home'); }
 
@@ -98,11 +122,55 @@ export default function EfestoProductShell() {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    const tokenInput = form.elements.namedItem('token');
+    const pairingCode = String(data.get('pairingCode') ?? '').trim();
+    const action = String(data.get('action') ?? (pairingCode ? 'pair' : 'token'));
+    const baseUrl = String(data.get('baseUrl') ?? DEFAULT_BASE_URL);
     const remember = data.get('rememberSession') === 'on';
-    if (tokenInput instanceof HTMLInputElement) tokenInput.value = '';
     setRememberSession(remember);
-    await connectWith({ baseUrl: String(data.get('baseUrl') ?? DEFAULT_BASE_URL), token: String(data.get('token') ?? '') }, remember);
+    if (action === 'pair') {
+      await pairWithCode(baseUrl, String(data.get('pairingCode') ?? ''), remember);
+      return;
+    }
+    const tokenInput = form.elements.namedItem('token');
+    const token = String(data.get('token') ?? '').trim();
+    if (tokenInput instanceof HTMLInputElement) tokenInput.value = '';
+    if (!token) {
+      setToast('Introduce el token privado o usa el código de emparejamiento.');
+      return;
+    }
+    await connectWith({ baseUrl, token }, remember);
+  }
+
+  async function pairWithCode(baseUrl: string, code: string, remember: boolean) {
+    setConnecting(true);
+    setToast('');
+    try {
+      const verifiedBaseUrl = normalizeKernelBaseUrl(baseUrl);
+      const response = await fetch(`${verifiedBaseUrl}/pair`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ code }),
+        cache: 'no-store',
+      });
+      const payload: unknown = await response.json().catch(() => ({}));
+      const body = payload && typeof payload === 'object' && !Array.isArray(payload)
+        ? payload as Record<string, unknown>
+        : {};
+      if (!response.ok || body.ok !== true || typeof body.apiToken !== 'string') {
+        throw new KernelClientError('HTTP_ERROR', response.status);
+      }
+      if (await connectWith({ baseUrl: verifiedBaseUrl, token: body.apiToken }, remember)) {
+        setToast('Kernel emparejado. La web ya puede controlar Missions y Evidence.');
+      }
+    } catch (error) {
+      if (error instanceof KernelClientError && error.code === 'HTTP_ERROR') {
+        setToast('Código rechazado, expirado o ya utilizado. Genera otro en el Kernel.');
+      } else {
+        setToast(connectionMessage(error));
+      }
+    } finally {
+      setConnecting(false);
+    }
   }
 
   async function connectWith(input: Connection, remember: boolean) {
@@ -125,10 +193,12 @@ export default function EfestoProductShell() {
       if (remember) window.sessionStorage.setItem(SESSION_CONNECTION_KEY, JSON.stringify(verified));
       else window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
       setToast('Kernel conectado. La interfaz muestra estado persistido real.');
+      return true;
     } catch (error) {
       setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); connectionStore.clear();
       window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
       setToast(connectionMessage(error));
+      return false;
     } finally { setConnecting(false); }
   }
 
