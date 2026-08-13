@@ -21,7 +21,7 @@
 }
 
 .efesto-product {
-  grid-template-columns: 236px minmax(0, 1fr);
+  grid-template-columns: 270px minmax(0, 1fr);
   background: var(--ef-redesign-bg);
   color: var(--ef-redesign-text);
 }
@@ -220,7 +220,7 @@
 }
 
 .efesto-main {
-  padding: 30px max(28px, calc((100vw - 236px - 1220px) / 2)) 80px;
+  padding: 30px max(28px, calc((100vw - 270px - 1220px) / 2)) 80px;
   scrollbar-gutter: stable;
 }
 
