@@ -31,6 +31,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Raised the workspace `nanoid` override to `3.3.18`, clearing the production audit advisory inherited through Next/PostCSS without changing application behavior.
 - Refined the draft Efesto web redesign into a professional conversation-first surface with a persistent bottom composer, real `Chat / Goal` modes, compact smith identity, direct local forge imagery, and a verified 390×844 no-overflow layout while preserving all existing Kernel action contracts.
 - Internal.81 was qualified on final `main` SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb` by the complete CI/package matrix and authentic remote Hermes L1→L7 run `31686750785` (`14/14`: 14 candidates, 3 verified Evidence records and 3 Evidence-backed Finds); public launch remains blocked on manual UAT.
 - Kernel candidate verification now retains and hashes the complete fetched page as Evidence while deterministically bounding only the classifier/Opportunity page-context view to 12,000 characters; live terminal observation allows 32 minutes so the bounded 25-minute inference can finish the existing maximum web-read verification batch.
