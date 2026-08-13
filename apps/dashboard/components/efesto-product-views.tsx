@@ -54,7 +54,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
 
   return <section className="home-view">
     <ComposerForm input={input} chatMode={chatMode} chatAvailable={chatAvailable} chatPending={chatPending} submitDisabled={submitDisabled} onInputChange={onInputChange} onSubmit={onSubmit} onToggleChat={onToggleChat} onStopChat={onStopChat} />
-    <div className="brain-stage phase-" + phase role="img" aria-label={'Cerebro Efesto: ' + state.label}>
+    <div className={'brain-stage phase-' + phase} role="img" aria-label={'Cerebro Efesto: ' + state.label}>
       <div className="brain-caption"><span><Activity /> Investigation</span><small>Kernel is the authority</small></div>
       <div className="brain-aura" />
       <Image src="/internet-brain-core.webp" alt="" width={1060} height={454} priority sizes="(max-width: 720px) 92vw, 720px" />
