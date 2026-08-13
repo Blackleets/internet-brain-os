@@ -9,28 +9,31 @@ concurrency:
 
 on:
   workflow_dispatch:
+  # L1-L7 depends on the local runtime, Kernel, public-web adapters and acceptance boundary.
   push:
     branches:
       - main
     paths:
       - .github/workflows/hermes-live-public-web-acceptance.yml
-      - apps/local-kernel/hermes-runtime.mjs
-      - scripts/hermes-acceptance-checks.mjs
-      - scripts/hermes-acceptance-lib.mjs
-      - scripts/hermes-acceptance-runner.mjs
-      - scripts/hermes-efesto-adapter.mjs
-      - scripts/hermes-live-journey-assessment.mjs
+      - apps/local-kernel/**
+      - packages/connectors/src/**
+      - packages/kernel/src/**
+      - packages/shared/src/**
+      - scripts/hermes-*.mjs
+      - package.json
+      - pnpm-lock.yaml
   pull_request:
     branches:
       - main
     paths:
       - .github/workflows/hermes-live-public-web-acceptance.yml
-      - apps/local-kernel/hermes-runtime.mjs
-      - scripts/hermes-acceptance-checks.mjs
-      - scripts/hermes-acceptance-lib.mjs
-      - scripts/hermes-acceptance-runner.mjs
-      - scripts/hermes-efesto-adapter.mjs
-      - scripts/hermes-live-journey-assessment.mjs
+      - apps/local-kernel/**
+      - packages/connectors/src/**
+      - packages/kernel/src/**
+      - packages/shared/src/**
+      - scripts/hermes-*.mjs
+      - package.json
+      - pnpm-lock.yaml
 
 jobs:
   l1-l7:
