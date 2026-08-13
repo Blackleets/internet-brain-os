@@ -230,11 +230,11 @@
   min-height: 0;
   grid-template-columns: minmax(0, 1fr) 350px;
   grid-template-areas:
-    "goal context"
     "copy context"
+    "goal context"
+    "starter context"
     "brain context"
     "plan context"
-    "starter context"
     "truth context";
   align-items: start;
   column-gap: 18px;
@@ -247,22 +247,38 @@
 
 .home-copy {
   grid-area: copy;
-  text-align: left;
+  padding: 22px 0 4px;
+  text-align: center;
+}
+
+.home-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ef-redesign-copper-bright);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.home-eyebrow svg {
+  width: 14px;
 }
 
 .home-copy h1 {
-  margin: 0;
+  margin: 8px 0 0;
   color: var(--ef-redesign-text);
-  font-size: clamp(25px, 2.5vw, 34px);
-  letter-spacing: -.035em;
+  font-size: clamp(30px, 4vw, 44px);
+  letter-spacing: -.045em;
 }
 
 .home-copy p {
   max-width: 690px;
-  margin: 8px 0 0;
+  margin: 10px auto 0;
   color: var(--ef-redesign-muted);
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .goal-dock {
@@ -270,6 +286,8 @@
   left: auto;
   bottom: auto;
   width: 100%;
+  max-width: 860px;
+  justify-self: center;
   transform: none;
   grid-template-columns: auto minmax(0, 1fr) 44px;
   gap: 9px;
@@ -325,7 +343,9 @@
 .brain-stage {
   grid-area: brain;
   width: 100%;
-  min-height: 238px;
+  max-width: 860px;
+  min-height: 174px;
+  justify-self: center;
   aspect-ratio: auto;
   margin: 0;
   padding: 12px 18px;
@@ -337,7 +357,7 @@
 }
 
 .brain-stage > img {
-  width: min(680px, 84%);
+  width: min(540px, 78%);
   margin: 6px auto 0;
   opacity: .72;
   filter: saturate(.72) contrast(1.04);
@@ -405,6 +425,8 @@
 .starter-goals {
   grid-area: starter;
   width: 100%;
+  max-width: 860px;
+  justify-self: center;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px;
   margin: 0;
@@ -430,6 +452,8 @@
 
 .proposed-plan {
   width: 100%;
+  max-width: 860px;
+  justify-self: center;
   margin: 0;
   padding: 18px;
   border-color: #4a362a;
@@ -445,6 +469,8 @@
 }
 
 .forge-context-panel {
+  position: sticky;
+  top: 18px;
   grid-area: context;
   min-width: 0;
   overflow: hidden;
@@ -642,6 +668,11 @@
   width: min(100%, 1180px);
 }
 
+.chat-thread {
+  max-width: 860px;
+  margin-inline: auto;
+}
+
 .workspace-heading {
   padding-bottom: 20px;
   border-bottom-color: var(--ef-redesign-line-soft);
@@ -746,6 +777,7 @@
   }
 
   .forge-context-panel {
+    position: static;
     width: 100%;
   }
 
@@ -778,6 +810,10 @@
   .home-view {
     width: 100%;
     row-gap: 12px;
+  }
+
+  .home-copy {
+    padding-top: 10px;
   }
 
   .goal-dock {
@@ -814,7 +850,7 @@
   }
 
   .brain-stage {
-    min-height: 210px;
+    min-height: 190px;
     padding: 8px;
   }
 
