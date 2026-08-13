@@ -120,3 +120,13 @@ final result: blocked
 - Post-change browser capture, interaction replay, and console inspection remain blocked because the saved browser permission denies `http://terminal.local:4173/`.
 
 final result: blocked
+
+
+## Web-first chat surface iteration — 2026-08-13
+
+- Home now leads with a centered Efesto welcome, the real Goal/Chat composer, starter goals, compact Forge state and proposed plan.
+- Evidence and Finds remain visible as a sticky desktop context rail and return to their existing workspaces through real handlers.
+- The responsive mobile order follows the same conversation-first hierarchy; native mobile runtime is not claimed.
+- Automated evidence before this documentation commit: CI `31708590296` and Internal Test Package `31708590258` passed on head `ed4bf8ac04eec5da970102098663710e817fbcf3`.
+- Visual screenshot comparison remains blocked because this runtime cannot capture the rendered dashboard.
+
