@@ -31,6 +31,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Internal.81 was qualified on final `main` SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb` by the complete CI/package matrix and authentic remote Hermes L1→L7 run `31686750785` (`14/14`: 14 candidates, 3 verified Evidence records and 3 Evidence-backed Finds); public launch remains blocked on manual UAT.
 - Kernel candidate verification now retains and hashes the complete fetched page as Evidence while deterministically bounding only the classifier/Opportunity page-context view to 12,000 characters; live terminal observation allows 32 minutes so the bounded 25-minute inference can finish the existing maximum web-read verification batch.
 - Non-JSON Hermes final responses may now contribute only deduplicated literal HTTP(S) URLs as neutral candidates; all prose is discarded and Kernel private-address, `web.read`, Evidence and classification gates remain mandatory.
 - The bounded quiet Hermes query now mirrors the already-configured provider/model route into its exclusive temporary profile and forwards the same length-checked values as explicit CLI arguments, satisfying the pinned chat startup guard without loading user configuration.

@@ -2,7 +2,7 @@
 
 Internet Brain OS / Hephaestus grows in controlled phases. Product speed never bypasses Kernel authority.
 
-## MVP implementation status — 2026-08-09
+## MVP implementation status — 2026-08-13
 
 Canonical local-first value loop:
 
@@ -69,7 +69,7 @@ Delivered measurement foundation:
 
 - G5.1 computes Goal → Useful Find Rate, Time to First Useful Find and mission/Find drivers from Kernel-owned local provenance.
 - G5.2 renders the same scorecard in the responsive dashboard without creating React-owned metric truth.
-- G5.3 requires authentic public-web L1→L7 provenance in the explicit live harness; the live run still requires a suitable Hermes + Internet environment.
+- G5.3 requires authentic public-web L1→L7 provenance in the explicit live harness; final `main` SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb` now has a sanitized remote `14/14` report.
 - G5.4 preserves one-line Goals while the Kernel enriches bounded discovery intent.
 
 Delivered G5.5 slice:
@@ -85,7 +85,7 @@ Delivered G5.6 foundation (`internal.64`):
 - isolate authentic Hermes v0.20 search without disabling its bundled public-web provider;
 - execute the existing L1→L7 contract on a GitHub-hosted machine, not the founder's PC;
 - pin the external runtime/action supply chain and keep provider credentials out of logs/artifacts;
-- retain manual dispatch and require a real green report before claiming live proof.
+- retain manual dispatch for reruns; the final `internal.81` main candidate now has a sanitized green `14/14` report, while public launch remains blocked by manual UAT.
 
 Frozen `internal.65` failure:
 
@@ -233,16 +233,18 @@ Frozen `internal.80` result:
 - failed closed at 8/14 because a fetched page exceeded the 12,000-character classifier context limit, leaving the Mission in `verifying` until the 27-minute observer expired;
 - remains immutable and unmerged.
 
-Active `internal.81` repair:
+Qualified `internal.81` candidate (2026-08-13):
 
 - retain and hash the complete fetched body as Evidence while bounding only the classifier/Opportunity page-context view to 12,000 characters;
 - expand terminal observation from 27 to 32 minutes so the unchanged maximum twenty sequential 15-second `web.read` calls have bounded post-inference headroom;
-- retain one attempt, four turns, one search, 25-minute adapter and 26-minute worker bounds plus all Kernel authority and L1→L7 thresholds.
+- retain one attempt, four turns, one search, 25-minute adapter and 26-minute worker bounds plus all Kernel authority and L1→L7 thresholds;
+- final `main` SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb` passed CI, exact packaged Windows 2022/2025 qualification and remote authentic Hermes L1→L7 `14/14`;
+- the sanitized report recorded 14 candidates, 3 verified Evidence records and 3 Evidence-backed Finds.
 
 Next bounded sequence:
 
-1. qualify and merge immutable `internal.81` only if the exact release matrix and sanitized L1→L7 report are green;
-2. run the exact-SHA credential-free remote L1→L7 workflow and require its sanitized green report;
+1. ✅ qualify and merge immutable `internal.81` on final `main` SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb`;
+2. ✅ run the exact-SHA credential-free remote L1→L7 workflow; run `31686750785` passed the sanitized `14/14` report;
 3. run the exact-package manual UAT with real public-web Goals;
 4. establish the first real local activation, repeat-usage, Useful Find and time-to-value baselines;
 5. test willingness-to-pay and onboarding friction, then choose the next slice from evidence.
