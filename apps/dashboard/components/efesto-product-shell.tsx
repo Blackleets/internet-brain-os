@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import {
   BrainCircuit, ChevronRight, Home, Menu, MessageSquare, Pause, RefreshCw, Send,
   Settings, ShieldCheck, Sparkles, Target, Workflow, Bot, X,
@@ -315,7 +316,7 @@ export default function EfestoProductShell() {
 
   return <div className={`efesto-product ${navOpen ? 'nav-open' : ''}`}>
     <aside className="efesto-sidebar" aria-label="Navegación principal">
-      <div className="efesto-brand"><button type="button" onClick={() => navigate('home')} aria-label="Efesto, inicio"><span className="brand-mark"><BrainCircuit /></span><span><strong>EFESTO</strong><small>The Intelligence Forge</small></span></button><button type="button" className="mobile-close" onClick={() => setNavOpen(false)} aria-label="Cerrar menú"><X /></button></div>
+      <div className="efesto-brand"><button type="button" onClick={() => navigate('home')} aria-label="Efesto, inicio"><span className="brand-mark"><Image src="/efesto-smith.svg" alt="" width={36} height={36} /></span><span><strong>EFESTO</strong><small>The Intelligence Forge</small></span></button><button type="button" className="mobile-close" onClick={() => setNavOpen(false)} aria-label="Cerrar menú"><X /></button></div>
       <button type="button" className="new-goal" onClick={newGoal}><Target /><span>Nuevo Goal</span></button>
       <nav>{nav.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined}><Icon /><span>{label}</span>{id === 'missions' && snapshot ? <b>{snapshot.missions.length}</b> : null}{id === 'finds' && snapshot ? <b>{snapshot.opportunities.filter((item) => item.status === 'new').length}</b> : null}</button>)}</nav>
       <div className="sidebar-spacer" />
@@ -324,9 +325,13 @@ export default function EfestoProductShell() {
     {navOpen ? <button type="button" className="nav-scrim" onClick={() => setNavOpen(false)} aria-label="Cerrar menú" /> : null}
 
     <section className="efesto-stage">
-      <header className="efesto-topbar"><div><button type="button" className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menú"><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view)}</button></div><div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={`connection-pill ${connection ? 'online' : 'offline'}`} onClick={() => navigate('settings')}><span />{connection ? 'Kernel ready' : 'Conectar'}</button></div></header>
+      <header className="efesto-topbar">
+        <div><button type="button" className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menú"><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view)}</button></div>
+        <div className="top-context"><span className="local-first-status"><ShieldCheck /> Local-first</span><span className="private-status">Private by design</span></div>
+        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? 'Kernel ready' : 'Conectar'}</button></div>
+      </header>
       <main className="efesto-main">
-        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} /> : null}
+        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} snapshot={snapshot} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} /> : null}
         {view === 'home' && !chatMode ? <ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot || snapshot.issues.some((issue) => issue.endpoint === 'scorecard')} /> : null}
         {view === 'missions' ? <MissionsView snapshot={snapshot} onNew={newGoal} /> : null}
         {view === 'finds' ? <FindsView opportunities={snapshot?.opportunities ?? []} connected={Boolean(connection)} onFeedback={(id, signal) => void recordFeedback(id, signal)} /> : null}
@@ -337,12 +342,6 @@ export default function EfestoProductShell() {
         {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} onConnect={connect} onDisconnect={disconnect} onRefresh={() => void refresh()} /> : null}
       </main>
 
-      {view === 'home' ? <form className="goal-dock" onSubmit={chatMode ? sendChat : prepareGoal}>
-        <div className="composer-mode" role="group" aria-label="Modo del compositor"><button type="button" className={!chatMode ? 'active' : ''} onClick={() => setChatMode(false)}><Target /> Goal</button><button type="button" className={chatMode ? 'active' : ''} onClick={() => setChatMode(true)}><MessageSquare /> Chat</button></div>
-        <textarea aria-label={chatMode ? 'Mensaje' : 'Goal'} value={input} onChange={(event) => setInput(event.target.value)} rows={1} placeholder={chatMode ? (providers.length ? 'Pregunta a tu modelo…' : 'Configura un modelo para conversar…') : 'Dile a Efesto qué quieres conseguir…'} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
-        {chatPending ? <button type="button" className="send-button stop" onClick={() => chatAbortRef.current?.abort()} aria-label="Detener"><Pause /></button> : <button type="submit" className="send-button" disabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} aria-label={chatMode ? 'Enviar' : 'Preparar Goal'}><Send /></button>}
-        <p><ShieldCheck /> {chatMode ? 'Chat no entra en memoria automáticamente.' : 'El Goal se prepara primero; ejecutar requiere confirmación explícita.'}</p>
-      </form> : null}
       {toast ? <div className="efesto-toast" role="status"><ShieldCheck /><span>{toast}</span><button type="button" onClick={() => setToast('')} aria-label="Cerrar aviso"><X /></button></div> : null}
     </section>
   </div>;
