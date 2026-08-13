@@ -66,6 +66,13 @@ test('wires Finds, Evidence and model Chat to real product contracts', async ({ 
   await page.goto('/');
   await connect(page);
 
+  await page.getByRole('button', { name: 'Inicio', exact: true }).click();
+  await page.locator('.context-section').nth(0).getByRole('button', { name: 'Ver todo', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Evidence', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Inicio', exact: true }).click();
+  await page.locator('.context-section').nth(1).getByRole('button', { name: 'Ver todo', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Finds', exact: true })).toBeVisible();
+
   await page.getByRole('button', { name: /Finds/ }).click();
   await expect(page.getByText('AI automation project', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Útil', exact: true }).click();
