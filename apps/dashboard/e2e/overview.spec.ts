@@ -44,6 +44,9 @@ test('runs the Goal-first journey only after explicit confirmation', async ({ pa
   await expect(page.getByRole('heading', { name: '¿Qué quieres conseguir?', exact: true })).toBeVisible();
   await expect(page.getByRole('img', { name: /Modo local desconectado/ })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Goal', exact: true })).toBeVisible();
+  await expect(page.locator('.home-eyebrow')).toHaveText('EFESTO · INTELLIGENCE FORGE');
+  await expect(page.getByRole('button', { name: 'Goal', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Chat', exact: true })).toHaveAttribute('aria-pressed', 'false');
 
   await connect(page);
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
