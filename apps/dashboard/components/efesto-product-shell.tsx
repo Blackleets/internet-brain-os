@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import {
-  BrainCircuit, ChevronRight, Home, Menu, MessageSquare, Pause, RefreshCw, Send,
+  BrainCircuit, ChevronRight, Home, Menu, RefreshCw,
   Settings, ShieldCheck, Sparkles, Target, Workflow, Bot, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
@@ -272,6 +272,23 @@ export default function EfestoProductShell() {
     finally { setLoadingCaseId(''); }
   }
 
+  function openEvidence(record?: CaseSummary) {
+    if (!connection) {
+      navigate('settings');
+      return;
+    }
+    if (record) void openCase(record);
+    navigate('evidence');
+  }
+
+  function openFinds() {
+    if (!connection) {
+      navigate('settings');
+      return;
+    }
+    navigate('finds');
+  }
+
   async function addProvider(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!connection) return navigate('settings');
@@ -331,7 +348,7 @@ export default function EfestoProductShell() {
         <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? 'Kernel ready' : 'Conectar'}</button></div>
       </header>
       <main className="efesto-main">
-        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} snapshot={snapshot} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} /> : null}
+        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} snapshot={snapshot} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onOpenEvidence={openEvidence} onOpenFinds={openFinds} /> : null}
         {view === 'home' && !chatMode ? <ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot || snapshot.issues.some((issue) => issue.endpoint === 'scorecard')} /> : null}
         {view === 'missions' ? <MissionsView snapshot={snapshot} onNew={newGoal} /> : null}
         {view === 'finds' ? <FindsView opportunities={snapshot?.opportunities ?? []} connected={Boolean(connection)} onFeedback={(id, signal) => void recordFeedback(id, signal)} /> : null}
