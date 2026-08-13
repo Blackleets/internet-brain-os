@@ -32,8 +32,8 @@ const projectState = await text('PROJECT_STATE.md');
 const internalRelease = JSON.parse(await text('INTERNAL_RELEASE.json'));
 
 requireCondition(!workspace.includes('ignoreGhsas'), 'production audit contains a GHSA ignore');
-requireCondition(workspace.includes("nanoid: '3.3.17'"), 'patched Nano ID override is missing');
-requireCondition(lockfile.includes('nanoid@3.3.17:'), 'patched Nano ID is not locked');
+requireCondition(workspace.includes("nanoid: '3.3.18'"), 'patched Nano ID override is missing');
+requireCondition(lockfile.includes('nanoid@3.3.18:'), 'patched Nano ID is not locked');
 requireCondition(!lockfile.includes('nanoid@3.3.16:'), 'vulnerable Nano ID 3.3.16 returned');
 
 requireCondition(await exists('packages/kernel/src/memory/durable-memory-authority-receipt-repository.ts'), 'durable memory authority repository is missing');

@@ -156,7 +156,7 @@ pnpm --filter @internet-brain-os/dashboard e2e
 - first-run Hermes/replay/Replay Lab verification;
 - dedicated Chromium/Playwright dashboard acceptance.
 
-The supply-chain gate locks patched `nanoid@3.3.17`; no GHSA audit ignore is permitted.
+The supply-chain gate locks patched `nanoid@3.3.18`; no GHSA audit ignore is permitted.
 
 ## Hermes forensics demo
 
