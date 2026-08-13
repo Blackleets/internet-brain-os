@@ -73,7 +73,7 @@ test('wires Finds, Evidence and model Chat to real product contracts', async ({ 
   await page.locator('.context-section').nth(1).getByRole('button', { name: 'Ver todo', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Finds', exact: true })).toBeVisible();
 
-  await page.getByRole('button', { name: /Finds/ }).click();
+  await page.locator('.efesto-sidebar nav').getByRole('button', { name: /Finds/ }).click();
   await expect(page.getByText('AI automation project', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Útil', exact: true }).click();
   await expect.poll(() => writes).toContain('/api/opportunities/opportunity-1/feedback');
