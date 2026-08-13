@@ -47,7 +47,7 @@ export default function EfestoProductShell() {
   const [input, setInput] = useState('');
   const [preparedGoal, setPreparedGoal] = useState('');
   const [goalPending, setGoalPending] = useState(false);
-  const [chatMode, setChatMode] = useState(false);
+  const [chatMode, setChatMode] = useState(true);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatPending, setChatPending] = useState(false);
   const [caseDetails, setCaseDetails] = useState<Record<string, CaseDetail>>({});
