@@ -470,6 +470,12 @@
   margin-bottom: 12px;
 }
 
+.context-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .context-heading {
   display: flex;
   align-items: center;
@@ -482,6 +488,23 @@
 .context-heading svg {
   width: 17px;
   color: var(--ef-redesign-copper-bright);
+}
+
+.context-link {
+  min-height: 32px;
+  padding: 5px 8px;
+  color: #c8a388;
+  border: 1px solid #4b3427;
+  border-radius: 8px;
+  background: #1c1410;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.context-link:hover {
+  color: #ffe0c5;
+  border-color: #87522f;
+  background: #2a1a12;
 }
 
 .context-count {
@@ -503,16 +526,25 @@
 
 .context-record {
   display: grid;
+  width: 100%;
   grid-template-columns: 20px minmax(0, 1fr) auto;
   gap: 8px;
   align-items: start;
   padding: 11px 0;
+  color: inherit;
   border-top: 1px solid #252528;
+  background: transparent;
+  font: inherit;
+  text-align: left;
 }
 
 .context-record:first-child {
   border-top: 0;
   padding-top: 0;
+}
+
+.context-record:hover {
+  background: #171516;
 }
 
 .context-record svg {
@@ -559,10 +591,20 @@
 }
 
 .verified-find {
+  display: block;
+  width: 100%;
   padding: 13px;
+  color: inherit;
   border: 1px solid #32422f;
   border-radius: 12px;
   background: #151b14;
+  font: inherit;
+  text-align: left;
+}
+
+.verified-find:hover {
+  border-color: #54724e;
+  background: #192219;
 }
 
 .verified-find header {
@@ -718,7 +760,19 @@
   }
 
   .efesto-main {
-    padding: 20px 14px 34px;
+    padding: 20px 14px calc(34px + env(safe-area-inset-bottom));
+  }
+
+  .efesto-topbar {
+    min-height: calc(58px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) 14px 0;
+  }
+
+  .menu-button,
+  .refresh-button,
+  .connection-pill {
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .home-view {
@@ -739,6 +793,16 @@
   .goal-dock textarea {
     grid-column: 1 / 2;
     min-height: 48px;
+    font-size: 16px;
+  }
+
+  .context-link,
+  .context-record,
+  .starter-goals button,
+  .primary-action,
+  .secondary-action,
+  .danger-action {
+    min-height: 44px;
   }
 
   .goal-dock .send-button {
@@ -769,5 +833,16 @@
 
   .workspace-heading h1 {
     font-size: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .efesto-product *,
+  .efesto-product *::before,
+  .efesto-product *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .001ms !important;
   }
 }
