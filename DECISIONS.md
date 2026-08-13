@@ -81,3 +81,27 @@ Implications:
 
 - Phase 0 focuses on Case, Evidence, Memory, Obsidian export, and reports.
 - Browser extension comes after local core works.
+
+## 2026-08-13 - PWA-first mobile surface
+
+Decision: The first mobile surface is the responsive, manifest-based Efesto
+dashboard. A native Android/iOS runtime and phone-to-PC Kernel transport remain
+separate slices and are not implied by mobile-width rendering or installation
+metadata.
+
+Reason:
+
+The repository currently contains the authenticated dashboard and browser
+extension, but no native mobile application. The Kernel's default authority
+boundary is loopback/local-first, so adding a remote bridge merely to make a
+phone appear connected would weaken privacy and token safety.
+
+Implications:
+
+- Reuse the existing Goal, Mission, Finds, Evidence, Chat and Settings
+  contracts in the mobile-width dashboard.
+- Keep touch targets, keyboard/focus behavior, reduced motion and safe-area
+  spacing as acceptance requirements.
+- Do not expose the Kernel token in URLs or add a public proxy.
+- A native companion requires a separate reviewed transport, pairing and
+  authorization contract before implementation.

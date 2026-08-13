@@ -27,6 +27,22 @@ requiring a one-use code for pairing; arbitrary web origins remain forbidden.
 Custom deployments must set a comma-separated
 `HEPHAESTUS_DASHBOARD_ORIGINS` allowlist.
 
+## Mobile surface
+
+The dashboard is a first-class mobile-width surface and exposes a manifest-based
+install entrypoint at `/manifest.webmanifest`. On a supported phone browser,
+the owner can add Efesto to the home screen and use the same Goal, Missions,
+Finds, Evidence, Chat and Settings contracts with touch-safe controls and
+safe-area spacing.
+
+This is an installable mobile web surface, not a native Android/iOS runtime.
+The default Kernel address is loopback (`127.0.0.1`), so a phone cannot reach a
+Kernel running on a separate PC through that address. Responsive rendering and
+install metadata must never be described as phone-to-PC Kernel authority. A
+future native companion or cross-device transport requires a separate reviewed
+pairing, authorization, privacy and network-boundary contract; this dashboard
+does not create a public proxy or copy the Kernel token into a URL.
+
 ## Token handling
 
 Enter the local Kernel token in the connection screen. By default it stays only

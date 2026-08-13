@@ -44,6 +44,10 @@ test('runs the Goal-first journey only after explicit confirmation', async ({ pa
   await expect(page.getByRole('heading', { name: '¿Qué quieres conseguir?', exact: true })).toBeVisible();
   await expect(page.getByRole('img', { name: /Modo local desconectado/ })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Goal', exact: true })).toBeVisible();
+  await expect(page.locator('.home-eyebrow')).toHaveText('CONVERSACIÓN CON AUTORIDAD DEL KERNEL');
+  await expect(page.locator('.composer-identity')).toContainText('Forjar un nuevo Goal');
+  await expect(page.getByRole('button', { name: 'Goal', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Chat', exact: true })).toHaveAttribute('aria-pressed', 'false');
 
   await connect(page);
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
@@ -66,7 +70,14 @@ test('wires Finds, Evidence and model Chat to real product contracts', async ({ 
   await page.goto('/');
   await connect(page);
 
-  await page.getByRole('button', { name: /Finds/ }).click();
+  await page.getByRole('button', { name: 'Inicio', exact: true }).click();
+  await page.locator('.context-section').nth(0).getByRole('button', { name: 'Ver todo', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Evidence', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Inicio', exact: true }).click();
+  await page.locator('.context-section').nth(1).getByRole('button', { name: 'Ver todo', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Finds', exact: true })).toBeVisible();
+
+  await page.locator('.efesto-sidebar nav').getByRole('button', { name: /Finds/ }).click();
   await expect(page.getByText('AI automation project', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Útil', exact: true }).click();
   await expect.poll(() => writes).toContain('/api/opportunities/opportunity-1/feedback');
@@ -125,6 +136,19 @@ test('supports keyboard Goal preparation with visible focus and reduced motion',
 test.describe('mobile Efesto product shell', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
+  test('publishes install metadata for the mobile web surface', async ({ page, request }) => {
+    await page.goto('/');
+    const response = await request.get('/manifest.webmanifest');
+    expect(response.ok()).toBeTruthy();
+    const manifest = await response.json();
+    expect(manifest.name).toBe('Efesto · The Intelligence Forge');
+    expect(manifest.short_name).toBe('Efesto');
+    expect(manifest.display).toBe('standalone');
+    expect(manifest.start_url).toBe('/');
+    expect(manifest.icons).toEqual(expect.arrayContaining([expect.objectContaining({ src: '/efesto-smith.svg' })]));
+  });
+
+
   test('uses a drawer, single-column Goal surface and safe composer without horizontal overflow', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('button', { name: 'Abrir menú', exact: true })).toBeVisible();
@@ -132,6 +156,7 @@ test.describe('mobile Efesto product shell', () => {
     await expect(page.getByRole('img', { name: /Modo local desconectado/ })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Goal', exact: true })).toBeVisible();
     await expect(page.locator('.goal-dock')).toBeVisible();
+    await expect(page.locator('.composer-identity')).toContainText('Forjar un nuevo Goal');
 
     const initial = await page.evaluate(() => ({ viewportWidth: innerWidth, documentWidth: document.documentElement.scrollWidth }));
     expect(initial.documentWidth).toBe(initial.viewportWidth);

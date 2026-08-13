@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import {
   Activity, Bot, BrainCircuit, Check, ChevronRight, CircleOff, ExternalLink, FileSearch,
-  History, Plug, RefreshCw, Search, Settings, ShieldCheck, Sparkles, Target, Workflow, X,
+  History, MessageSquare, Pause, Plug, RefreshCw, Search, Send, Settings, ShieldCheck, Sparkles, Target, Workflow, X,
 } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import type { CaseSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
@@ -33,28 +33,72 @@ const starterGoals = [
   'Encuentra oportunidades públicas relevantes y evita duplicados.',
 ];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, onConfirmGoal, onEditGoal, onStarterGoal }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, snapshot, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onOpenEvidence, onOpenFinds }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
+  snapshot?: OverviewSnapshot; input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
   onConfirmGoal: () => void; onEditGoal: () => void; onStarterGoal: (goal: string) => void;
+  onOpenEvidence: (record?: CaseSummary) => void; onOpenFinds: () => void;
 }) {
   const state = brainState(phase);
+  const cases = snapshot?.cases ?? [];
+  const opportunities = snapshot?.opportunities ?? [];
+  const featuredFind = opportunities[0];
+  const featuredFindLabel = featuredFind && ['forged', 'verified', 'completed'].includes(featuredFind.status) ? 'Verified Find' : 'Find';
+
   if (chatMode && messages.length) {
-    return <section className="chat-thread" aria-label="Conversación"><BrainHeader phase={phase} />{messages.map((message, index) => <article className={message.role} key={`${message.role}-${index}`}><div className="message-avatar">{message.role === 'user' ? 'Tú' : <BrainCircuit />}</div><div><header><strong>{message.role === 'user' ? 'Tú' : message.model ?? 'Modelo'}</strong>{message.role === 'assistant' ? <span><ShieldCheck /> No admitido en memoria</span> : null}</header><p>{message.content}</p></div></article>)}</section>;
+    return <>
+      <section className="chat-thread" aria-label="Conversación"><BrainHeader phase={phase} />{messages.map((message, index) => <article className={message.role} key={message.role + '-' + index}><div className="message-avatar">{message.role === 'user' ? 'Tú' : <BrainCircuit />}</div><div><header><strong>{message.role === 'user' ? 'Tú' : message.model ?? 'Modelo'}</strong>{message.role === 'assistant' ? <span><ShieldCheck /> No admitido en memoria</span> : null}</header><p>{message.content}</p></div></article>)}</section>
+      <ComposerForm input={input} chatMode={chatMode} chatAvailable={chatAvailable} chatPending={chatPending} submitDisabled={submitDisabled} onInputChange={onInputChange} onSubmit={onSubmit} onToggleChat={onToggleChat} onStopChat={onStopChat} />
+    </>;
   }
 
   return <section className="home-view">
-    <div className={`brain-stage phase-${phase}`} role="img" aria-label={`Cerebro Efesto: ${state.label}`}>
+    <ComposerForm input={input} chatMode={chatMode} chatAvailable={chatAvailable} chatPending={chatPending} submitDisabled={submitDisabled} onInputChange={onInputChange} onSubmit={onSubmit} onToggleChat={onToggleChat} onStopChat={onStopChat} />
+    <div className={'brain-stage phase-' + phase} role="img" aria-label={'Cerebro Efesto: ' + state.label}>
+      <div className="brain-caption"><span><Activity /> Forge state</span><small>Kernel-owned state</small></div>
       <div className="brain-aura" />
-      <Image src="/internet-brain-core.webp" alt="" width={1060} height={454} priority sizes="(max-width: 720px) 92vw, 720px" />
+      <Image src="/internet-brain-core.webp" alt="" width={1060} height={454} priority unoptimized sizes="(max-width: 720px) 92vw, 720px" />
       <div className="brain-status"><span /><div><small>EFESTO BRAIN</small><strong>{state.label}</strong><p>{state.detail}</p></div></div>
     </div>
-    <div className="home-copy"><h1>¿Qué quieres conseguir?</h1><p>Describe el resultado. Efesto prepara el trabajo, el Kernel aplica límites y solo conserva Evidence verificable.</p></div>
+    <div className="home-copy">
+      <div className="home-identity"><span><Image src="/efesto-smith.svg" alt="" width={48} height={48} /></span><div><small>EFESTO · INTELLIGENCE FORGE</small><strong>{state.label}</strong></div></div>
+      <span className="home-eyebrow"><Sparkles /> CONVERSACIÓN CON AUTORIDAD DEL KERNEL</span>
+      <h1>¿Qué quieres conseguir?</h1>
+      <p>Habla con Efesto para explorar una pregunta o convertirla en un Goal. Solo la Evidence que supera los gates del Kernel puede respaldar un resultado.</p>
+    </div>
     {preparedGoal ? <section className="proposed-plan" aria-label="Plan propuesto"><header><span><Target /></span><div><small>PLAN PROPUESTO · AÚN NO EJECUTADO</small><h2>{preparedGoal}</h2></div></header><ol><li><b>1</b><span><strong>Crear Goal privado</strong><small>Persistido por el Kernel con el objetivo y palabras clave derivadas.</small></span></li><li><b>2</b><span><strong>Confirmar misión Hermes</strong><small>Cadencia manual; sin compras, logins ni formularios externos.</small></span></li><li><b>3</b><span><strong>Forjar Evidence y Finds</strong><small>Solo aparecen resultados devueltos por contratos verificables.</small></span></li></ol><div className="plan-actions"><button type="button" className="primary-action" disabled={!connected || goalPending} onClick={onConfirmGoal}>{goalPending ? 'Confirmando…' : connected ? 'Confirmar y ejecutar' : 'Conecta el Kernel para ejecutar'}</button><button type="button" className="secondary-action" onClick={onEditGoal}>Editar Goal</button></div></section>
       : <div className="starter-goals">{starterGoals.map((goal) => <button type="button" key={goal} onClick={() => onStarterGoal(goal)}><Sparkles /><span>{goal}</span><ChevronRight /></button>)}</div>}
     <p className="truth-note"><ShieldCheck /> El cerebro cambia solo con conexión, streaming o fases persistidas de misión.</p>
+
+    <aside className="forge-context-panel" aria-label="Estado de Evidence y Finds">
+      <section className="context-section">
+        <header><span className="context-heading"><ShieldCheck /> Evidence</span><div className="context-header-actions"><span className="context-count">{snapshot ? cases.length : '—'}</span><button type="button" className="context-link" onClick={() => onOpenEvidence()}>Ver todo</button></div></header>
+        {cases.length ? <div className="context-records">{cases.slice(0, 5).map((record) => <button type="button" className="context-record" key={record.id} onClick={() => onOpenEvidence(record)} aria-label={`Abrir ${record.title}`}><FileSearch /><span><strong>{record.title}</strong><small>{record.status} · {record.id}</small></span><StatePill state={record.status} /></button>)}</div> : <p className="context-empty">{snapshot ? 'No hay Evidence visible para este estado del Kernel.' : 'Conecta el Kernel para cargar Evidence persistida.'}</p>}
+      </section>
+      <section className="context-section">
+        <header><span className="context-heading"><Sparkles /> {featuredFindLabel}</span><div className="context-header-actions">{featuredFind ? <StatePill state={featuredFind.status} /> : null}<button type="button" className="context-link" onClick={onOpenFinds}>Ver todo</button></div></header>
+        {featuredFind ? <button type="button" className="verified-find" onClick={onOpenFinds} aria-label={`Abrir resultado ${featuredFind.title}`}><h2>{featuredFind.title}</h2><p>{featuredFind.sourceHost} · relevancia {formatRelevance(featuredFind.relevance)}</p><small>El estado mostrado proviene del Kernel; el feedback no reescribe Evidence objetiva.</small></button> : <p className="context-empty">{snapshot ? 'Todavía no hay Finds publicados.' : 'Conecta el Kernel para cargar Finds reales.'}</p>}
+      </section>
+    </aside>
   </section>;
 }
 
+function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisabled, onInputChange, onSubmit, onToggleChat, onStopChat }: {
+  input: string; chatMode: boolean; chatAvailable: boolean; chatPending: boolean; submitDisabled: boolean;
+  onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void; onToggleChat: (value: boolean) => void;
+  onStopChat: () => void;
+}) {
+  return <form className="goal-dock" onSubmit={onSubmit}>
+    <header className="composer-heading">
+      <span className="composer-identity"><Image src="/efesto-smith.svg" alt="" width={34} height={34} /><span><strong>Efesto</strong><small>{chatMode ? 'Conversación privada' : 'Forjar un nuevo Goal'}</small></span></span>
+      <div className="composer-mode" role="group" aria-label="Modo del compositor"><button type="button" aria-pressed={chatMode} className={chatMode ? 'active' : ''} onClick={() => onToggleChat(true)}><MessageSquare /> Chat</button><button type="button" aria-pressed={!chatMode} className={!chatMode ? 'active' : ''} onClick={() => onToggleChat(false)}><Target /> Goal</button></div>
+    </header>
+    <textarea aria-label={chatMode ? 'Mensaje' : 'Goal'} value={input} onChange={(event) => onInputChange(event.target.value)} rows={1} placeholder={chatMode ? (chatAvailable ? 'Pregunta a tu modelo…' : 'Configura un modelo para conversar…') : 'Dile a Efesto qué quieres conseguir…'} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
+    {chatPending ? <button type="button" className="send-button stop" onClick={onStopChat} aria-label="Detener"><Pause /></button> : <button type="submit" className="send-button" disabled={submitDisabled} aria-label={chatMode ? 'Enviar' : 'Preparar Goal'}><Send /></button>}
+    <p><ShieldCheck /><span>{chatMode ? 'Chat no entra en memoria automáticamente.' : 'El Goal se prepara primero; ejecutar requiere confirmación explícita.'}</span><b>{chatMode ? 'Private' : 'Kernel-gated'}</b></p>
+  </form>;
+}
 export function MissionsView({ snapshot, onNew }: { snapshot?: OverviewSnapshot; onNew: () => void }) {
   const missions = snapshot?.missions ?? [];
   const goals = snapshot?.goals ?? [];
@@ -103,7 +147,7 @@ export function SettingsView({ connected, connecting, rememberSession, snapshot,
   </Workspace>;
 }
 
-function BrainHeader({ phase }: { phase: BrainPhase }) { const state = brainState(phase); return <header className={`brain-header phase-${phase}`}><Image src="/internet-brain-core.webp" alt="" width={96} height={42} /><div><small>EFESTO LIVE</small><strong>{state.label}</strong><span>{state.detail}</span></div><i /></header>; }
+function BrainHeader({ phase }: { phase: BrainPhase }) { const state = brainState(phase); return <header className={`brain-header phase-${phase}`}><Image src="/efesto-smith.svg" alt="" width={52} height={52} /><div><small>EFESTO LIVE</small><strong>{state.label}</strong><span>{state.detail}</span></div><i /></header>; }
 function Workspace({ icon: Icon, eyebrow, title, copy, action, children }: { icon: typeof Target; eyebrow: string; title: string; copy: string; action?: ReactNode; children: ReactNode }) { return <section className="workspace"><header className="workspace-heading"><span><Icon /></span><div><small>{eyebrow}</small><h1>{title}</h1><p>{copy}</p></div>{action ? <div className="workspace-heading-action">{action}</div> : null}</header><div className="workspace-body">{children}</div></section>; }
 function Empty({ icon: Icon, title, copy }: { icon: typeof Target; title: string; copy: string }) { return <div className="empty-state"><Icon /><strong>{title}</strong><p>{copy}</p></div>; }
 function StatePill({ state }: { state: string }) { const tone = ['ready', 'completed', 'forged', 'available', 'new'].includes(state) ? 'good' : ['failed', 'invalid'].includes(state) ? 'bad' : ['running', 'investigating', 'verifying', 'queued', 'waiting_for_agent'].includes(state) ? 'working' : 'neutral'; return <span className={`state-pill ${tone}`}><i />{state.replaceAll('_', ' ')}</span>; }

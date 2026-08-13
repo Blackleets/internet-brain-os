@@ -12,7 +12,7 @@ describe('supply-chain audit policy', () => {
   it('requires the patched Nano ID line and keeps production audit unfiltered', async () => {
     const policy = await read(workspaceUrl);
 
-    expect(policy).toContain("nanoid: '3.3.17'");
+    expect(policy).toContain("nanoid: '3.3.18'");
     expect(policy).not.toContain('ignoreGhsas');
     expect(policy).not.toContain('GHSA-2v37-7h3g-55p8');
     expect(policy).not.toMatch(/^\s*auditLevel\s*:/m);
@@ -22,8 +22,8 @@ describe('supply-chain audit policy', () => {
   it('locks the patched Nano ID package and removes the vulnerable 3.3.16 package', async () => {
     const lockfile = await read(lockfileUrl);
 
-    expect(lockfile).toContain('nanoid@3.3.17:');
-    expect(lockfile).toContain('nanoid: 3.3.17');
+    expect(lockfile).toContain('nanoid@3.3.18:');
+    expect(lockfile).toContain('nanoid: 3.3.18');
     expect(lockfile).not.toContain('nanoid@3.3.16:');
   });
 });

@@ -58,6 +58,9 @@ describe('Efesto goal-first product shell', () => {
     expect(screen.getByRole('heading', { name: '¿Qué quieres conseguir?' })).toBeTruthy();
     expect(screen.getByRole('img', { name: /Modo local desconectado/ })).toBeTruthy();
     expect(screen.getByLabelText('Goal')).toBeTruthy();
+    expect(screen.getByText('Forjar un nuevo Goal')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Goal', exact: true }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Chat', exact: true }).getAttribute('aria-pressed')).toBe('false');
     expect(screen.getByRole('button', { name: 'Conectar' })).toBeTruthy();
     expect(requests).toHaveLength(0);
   });

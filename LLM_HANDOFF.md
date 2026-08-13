@@ -483,3 +483,107 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 
 ### Do not forget
 - `internal.81` remains an internal candidate until the exact immutable SHA has the complete matrix and authentic public-web proof. Public launch remains blocked pending UAT.
+
+## Handoff 2026-08-13 - Codex - Forge Command Center + mobile web
+
+### What I changed
+
+- Continued PR #221 for the selected Efesto visual direction.
+- Moved the real Goal/Chat composer and Kernel-backed Evidence/Find context into the Forge Command Center home surface.
+- Wired Home context actions to the existing Evidence and Finds workspaces without creating a second store or authority path.
+- Added the responsive mobile web install surface: manifest route, viewport metadata, safe-area padding, touch targets and mobile acceptance coverage.
+- Recorded the PWA-first decision: no native runtime or unsafe phone-to-PC bridge was added.
+
+### Files changed
+
+- `apps/dashboard/app/efesto-forge-redesign.css`
+- `apps/dashboard/app/layout.tsx`
+- `apps/dashboard/app/manifest.ts`
+- `apps/dashboard/components/efesto-product-shell.tsx`
+- `apps/dashboard/components/efesto-product-views.tsx`
+- `apps/dashboard/e2e/overview.spec.ts`
+- `apps/dashboard/README.md`
+- `DECISIONS.md`
+- `design-qa.md`
+
+### Why I changed it
+
+- The selected visual direction needed to become a real product surface while preserving the existing Kernel contracts.
+- The founder asked for web and mobile progress without installing anything on the PC; a mobile-width/PWA web surface is implementable now, while a native app would require a new runtime and a reviewed cross-device authority contract.
+- The current loopback Kernel must not be misrepresented as reachable from a separate phone.
+
+### Tests or checks performed
+
+- Local dashboard unit suite: 124 tests passed.
+- Local dashboard production build: passed, including `/manifest.webmanifest`.
+- GitHub CI on head `56731ecbb8c969d1e1a60a19f7501b6f8d55db3f`: `validate` passed.
+- GitHub Internal Test Package on the same head: `package-internal-windows`, Windows 2022 and Windows 2025 packaged qualification passed.
+- GitHub CI run `31707162949` passed `validate` (architecture, audit, release readiness, typecheck, full tests, build and first-run) and `dashboard-browser` (6/6 functional browser scenarios, including context navigation, mobile layout, manifest, keyboard and reduced motion).
+- GitHub Internal Test Package run `31707162960` passed the exact package generation and Windows 2022/2025 packaged install-repair qualification.
+- This environment still cannot launch Chromium locally because the Playwright binary is unavailable; the GitHub browser run is the functional evidence for this candidate.
+- Visual screenshot comparison remains blocked and is stated in `design-qa.md`.
+
+### Risks / uncertainties
+
+- This is an installable mobile web surface, not a native Android/iOS app.
+- A phone cannot use `127.0.0.1` to reach a Kernel running on another PC; no public proxy, token URL or remote authority was introduced.
+- The selected image-to-code direction still needs a rendered screenshot comparison when a browser/preview environment is available.
+
+### Next recommended step
+
+- Review/merge PR #221 only if the safe decision is approved; keep the visual screenshot comparison and native mobile transport as explicit follow-up boundaries.
+- After the founder can install/run Efesto on PC, define the separate secure cross-device transport contract before starting native mobile work.
+
+### Do not forget
+
+- Do not call the PWA surface a native app.
+- Do not imply phone→PC Kernel authority.
+- Do not merge the draft PR automatically.
+
+
+
+## Handoff 2026-08-13 - Codex - Chat-first web surface
+
+### What I changed
+
+- Kept PR #221 web-first and refined the Home surface around the familiar ChatGPT interaction model: welcome, composer, starter prompts and live context.
+- Added a distinctive Efesto identity layer through the “Intelligence Forge” eyebrow, copper/obsidian visual language and a compact Kernel-owned Forge state.
+- Kept Goal and Chat in the same real composer, with explicit `aria-pressed` state and the existing submit/confirmation rules.
+- Kept Evidence and Finds as real contextual navigation into the existing workspaces; no second store, fixture-only action or new authority path was introduced.
+
+### Checks on the exact head before this documentation commit
+
+- GitHub CI run `31708590296`: passed, including dashboard-browser.
+- GitHub Internal Test Package run `31708590258`: passed.
+- The new browser assertions cover the Efesto identity and Goal/Chat mode semantics.
+- Screenshot comparison remains blocked in this environment; no pixel-level visual claim is made from source alone.
+
+### Boundary
+
+This completes the web-first design slice. Responsive mobile use is included through the existing dashboard/PWA surface, but native Android/iOS and phone-to-PC Kernel transport remain outside this PR.
+
+## Handoff 2026-08-13 - Codex - Professional Efesto conversation surface
+
+### What changed
+
+- Refined PR #221 around a persistent bottom composer with a professional `Chat / Goal` selector.
+- Removed visible comparison copy that named another AI product; the Home now explains Efesto, Goal preparation, Evidence and Kernel authority in its own language.
+- Integrated the existing pixel smith as compact product identity in the Home, composer and live Chat header.
+- Preserved the existing brain/forge asset because the living-forge state remains a release contract; its delivery is now direct/local in static previews.
+- Kept every action on its existing handler: Chat streaming, Goal preparation and confirmation, starter Goals, Evidence navigation and Finds navigation.
+- Tightened the 390×844 layout: no horizontal overflow, nonessential top metadata hidden, 134 px sticky composer and safe-area bottom offset.
+
+### Verification
+
+- Dashboard unit suite: 124/124 passed.
+- Dashboard production build: passed.
+- Cloud-browser desktop render: 1363×936, zero broken images and composer visible inside the viewport.
+- Cloud-browser mobile render: 390×844, document width 390, composer x=12 / width=351 / bottom=822.
+- Browser interaction: Chat and Goal mode semantics passed; starter Goal populated the real textarea; no app-origin console errors.
+- Exact screenshot artifact persistence remains blocked by the cloud-browser export boundary and is recorded in `design-qa.md`; PR #221 must remain draft until the final CI/browser artifact is available.
+
+### Boundaries
+
+- No Kernel, authentication, persistence, agent, Evidence, Find, replay or memory-authority contract changed.
+- No native app or phone→PC transport was added.
+- Do not merge the draft automatically.
