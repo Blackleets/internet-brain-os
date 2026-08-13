@@ -45,6 +45,15 @@ Blocked for the same reason. No visual claim is made from code or automated acce
 
 final result: blocked
 
+## Mobile install surface QA
+
+- Mobile-width acceptance covers 390×844 drawer layout, single-column Goal surface, safe composer and zero horizontal overflow.
+- The install metadata is covered by `/manifest.webmanifest` checks for standalone display, home start URL and the existing Efesto mark.
+- Touch-safe controls, safe-area spacing, keyboard/focus and reduced-motion requirements remain part of the implementation contract.
+- No native Android/iOS screenshot or phone-to-PC runtime proof is claimed; this PR implements mobile web/PWA metadata only.
+- Screenshot comparison remains blocked because this runtime cannot capture the rendered dashboard; GitHub browser acceptance is functional evidence, not pixel-level visual evidence.
+
+
 ---
 
 ## Previous design QA history

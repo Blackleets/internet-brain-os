@@ -483,3 +483,58 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 
 ### Do not forget
 - `internal.81` remains an internal candidate until the exact immutable SHA has the complete matrix and authentic public-web proof. Public launch remains blocked pending UAT.
+
+## Handoff 2026-08-13 - Codex - Forge Command Center + mobile web
+
+### What I changed
+
+- Continued PR #221 for the selected Efesto visual direction.
+- Moved the real Goal/Chat composer and Kernel-backed Evidence/Find context into the Forge Command Center home surface.
+- Wired Home context actions to the existing Evidence and Finds workspaces without creating a second store or authority path.
+- Added the responsive mobile web install surface: manifest route, viewport metadata, safe-area padding, touch targets and mobile acceptance coverage.
+- Recorded the PWA-first decision: no native runtime or unsafe phone-to-PC bridge was added.
+
+### Files changed
+
+- `apps/dashboard/app/efesto-forge-redesign.css`
+- `apps/dashboard/app/layout.tsx`
+- `apps/dashboard/app/manifest.ts`
+- `apps/dashboard/components/efesto-product-shell.tsx`
+- `apps/dashboard/components/efesto-product-views.tsx`
+- `apps/dashboard/e2e/overview.spec.ts`
+- `apps/dashboard/README.md`
+- `DECISIONS.md`
+- `design-qa.md`
+
+### Why I changed it
+
+- The selected visual direction needed to become a real product surface while preserving the existing Kernel contracts.
+- The founder asked for web and mobile progress without installing anything on the PC; a mobile-width/PWA web surface is implementable now, while a native app would require a new runtime and a reviewed cross-device authority contract.
+- The current loopback Kernel must not be misrepresented as reachable from a separate phone.
+
+### Tests or checks performed
+
+- Local dashboard unit suite: 124 tests passed.
+- Local dashboard production build: passed, including `/manifest.webmanifest`.
+- GitHub CI on head `56731ecbb8c969d1e1a60a19f7501b6f8d55db3f`: `validate` passed.
+- GitHub Internal Test Package on the same head: `package-internal-windows`, Windows 2022 and Windows 2025 packaged qualification passed.
+- GitHub `dashboard-browser` remains the required functional browser proof; this environment cannot launch Chromium locally because the Playwright binary is unavailable.
+- Visual screenshot comparison remains blocked and is stated in `design-qa.md`.
+
+### Risks / uncertainties
+
+- This is an installable mobile web surface, not a native Android/iOS app.
+- A phone cannot use `127.0.0.1` to reach a Kernel running on another PC; no public proxy, token URL or remote authority was introduced.
+- The selected image-to-code direction still needs a rendered screenshot comparison when a browser/preview environment is available.
+
+### Next recommended step
+
+- Finish the GitHub dashboard-browser check on the unchanged implementation head, then review/merge PR #221 only if the safe decision is approved.
+- After the founder can install/run Efesto on PC, define the separate secure cross-device transport contract before starting native mobile work.
+
+### Do not forget
+
+- Do not call the PWA surface a native app.
+- Do not imply phone→PC Kernel authority.
+- Do not merge the draft PR automatically.
+
