@@ -518,7 +518,9 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 - Local dashboard production build: passed, including `/manifest.webmanifest`.
 - GitHub CI on head `56731ecbb8c969d1e1a60a19f7501b6f8d55db3f`: `validate` passed.
 - GitHub Internal Test Package on the same head: `package-internal-windows`, Windows 2022 and Windows 2025 packaged qualification passed.
-- GitHub `dashboard-browser` remains the required functional browser proof; this environment cannot launch Chromium locally because the Playwright binary is unavailable.
+- GitHub CI run `31707162949` passed `validate` (architecture, audit, release readiness, typecheck, full tests, build and first-run) and `dashboard-browser` (6/6 functional browser scenarios, including context navigation, mobile layout, manifest, keyboard and reduced motion).
+- GitHub Internal Test Package run `31707162960` passed the exact package generation and Windows 2022/2025 packaged install-repair qualification.
+- This environment still cannot launch Chromium locally because the Playwright binary is unavailable; the GitHub browser run is the functional evidence for this candidate.
 - Visual screenshot comparison remains blocked and is stated in `design-qa.md`.
 
 ### Risks / uncertainties
@@ -529,7 +531,7 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 
 ### Next recommended step
 
-- Finish the GitHub dashboard-browser check on the unchanged implementation head, then review/merge PR #221 only if the safe decision is approved.
+- Review/merge PR #221 only if the safe decision is approved; keep the visual screenshot comparison and native mobile transport as explicit follow-up boundaries.
 - After the founder can install/run Efesto on PC, define the separate secure cross-device transport contract before starting native mobile work.
 
 ### Do not forget
