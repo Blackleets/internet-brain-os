@@ -33,12 +33,12 @@ const starterGoals = [
   'Encuentra oportunidades públicas relevantes y evita duplicados.',
 ];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, snapshot, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenEvidence, onOpenFinds }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, snapshot, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, onOpenEvidence, onOpenFinds }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
   snapshot?: OverviewSnapshot; input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
   onConfirmGoal: () => void; onEditGoal: () => void; onStarterGoal: (goal: string) => void; onStarterChat: (prompt: string) => void;
-  onOpenEvidence: (record?: CaseSummary) => void; onOpenFinds: () => void;
+  onOpenModels: () => void; modelLabel: string; onOpenEvidence: (record?: CaseSummary) => void; onOpenFinds: () => void;
 }) {
   const state = brainState(phase);
   const cases = snapshot?.cases ?? [];
@@ -47,80 +47,107 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   const featuredFindLabel = featuredFind && ['forged', 'verified', 'completed'].includes(featuredFind.status) ? 'Verified Find' : 'Find';
 
   if (chatMode) {
-    return <section className="chat-workspace" aria-label="Conversación con Efesto">
-      <header className="chat-workspace-header">
-        <div className="chat-workspace-identity">
-          <span><Image src="/efesto-smith.svg" alt="" width={44} height={44} /></span>
-          <div><small>EFESTO · INTELLIGENCE FORGE</small><h1>Conversación</h1><p>{connected && chatAvailable ? 'Un espacio privado para pensar con tu modelo.' : 'Conecta un modelo para empezar a conversar.'}</p></div>
+    return <section className="efesto-chat-workspace" aria-label="Conversación con Efesto">
+      <header className="efesto-workspace-header">
+        <div className="efesto-workspace-identity">
+          <span className="efesto-workspace-mark"><Image src="/efesto-smith.svg" alt="" width={44} height={44} /></span>
+          <div><small>EFESTO · INTELLIGENCE FORGE</small><h1>Chat</h1><p>{connected && chatAvailable ? 'Un espacio privado para conversar con tu modelo.' : 'Configura un modelo para comenzar.'}</p></div>
         </div>
-        <span className={'chat-state phase-' + phase}><i />{state.label}</span>
+        <div className="efesto-workspace-actions">
+          <span className={'efesto-phase-chip phase-' + phase}><i />{state.label}</span>
+          <ModeSwitcher chatMode={chatMode} onToggleChat={onToggleChat} />
+        </div>
       </header>
 
-      {messages.length ? <div className="chat-scroll">
-        <section className="chat-thread" aria-label="Mensajes">
+      <div className="efesto-chat-scroll">
+        {messages.length ? <section className="efesto-chat-thread" aria-label="Mensajes">
           <BrainHeader phase={phase} />
-          {messages.map((message, index) => <article className={message.role} key={message.role + '-' + index}>
-            <div className="message-avatar">{message.role === 'user' ? 'Tú' : <BrainCircuit />}</div>
-            <div><header><strong>{message.role === 'user' ? 'Tú' : message.model ?? 'Modelo'}</strong>{message.role === 'assistant' ? <span><ShieldCheck /> No admitido en memoria</span> : null}</header><p>{message.content || (chatPending && index === messages.length - 1 ? <span className="chat-generating"><i />Generando respuesta…</span> : null)}</p></div>
+          {messages.map((message, index) => <article className={'efesto-message ' + message.role} key={message.role + '-' + index}>
+            <div className="efesto-message-avatar">{message.role === 'user' ? 'Tú' : <BrainCircuit />}</div>
+            <div className="efesto-message-body"><header><strong>{message.role === 'user' ? 'Tú' : message.model ?? 'Modelo'}</strong>{message.role === 'assistant' ? <span><ShieldCheck /> Salida no admitida en memoria</span> : null}</header><p>{message.content || (chatPending && index === messages.length - 1 ? <span className="efesto-generating"><i />Generando respuesta…</span> : null)}</p></div>
           </article>)}
-        </section>
-      </div> : <div className="chat-empty-state">
-        <div className="chat-empty-icon"><Image src="/efesto-smith.svg" alt="" width={64} height={64} /></div>
-        <small>CONVERSACIÓN PRIVADA</small>
-        <h2>Habla con Efesto</h2>
-        <p>{connected && chatAvailable ? 'Escribe una pregunta y deja que tu modelo te ayude a explorarla.' : 'La conversación necesita un modelo configurado en Models y una conexión al Kernel.'}</p>
-        <div className="chat-prompt-grid" aria-label="Sugerencias para empezar">{starterGoals.map((prompt) => <button type="button" key={prompt} onClick={() => onStarterChat(prompt)}><Sparkles /><span>{prompt}</span><ChevronRight /></button>)}</div>
-        <p className="chat-empty-note"><ShieldCheck /><span>Las respuestas del chat no se convierten automáticamente en Evidence ni en memoria.</span></p>
-      </div>}
+        </section> : <section className="efesto-chat-empty" aria-label="Nueva conversación">
+          <span className="efesto-chat-empty-mark"><Image src="/efesto-smith.svg" alt="" width={64} height={64} /></span>
+          <small>CONVERSACIÓN PRIVADA</small>
+          <h2>¿En qué trabajamos?</h2>
+          <p>Escribe una pregunta, pide un análisis o cambia a Goal cuando quieras convertir una intención en una misión controlada.</p>
+          <div className="efesto-prompt-grid" aria-label="Sugerencias para empezar">{starterGoals.map((prompt) => <button type="button" key={prompt} onClick={() => onStarterChat(prompt)}><Sparkles /><span>{prompt}</span><ChevronRight /></button>)}</div>
+          <p className="efesto-boundary-note"><ShieldCheck /><span>El chat conversa; el Kernel decide qué puede convertirse en Evidence o memoria.</span></p>
+        </section>}
+      </div>
 
-      <ComposerForm input={input} chatMode={chatMode} chatAvailable={chatAvailable} chatPending={chatPending} submitDisabled={submitDisabled} onInputChange={onInputChange} onSubmit={onSubmit} onToggleChat={onToggleChat} onStopChat={onStopChat} />
+      <ComposerForm input={input} chatMode={chatMode} chatAvailable={chatAvailable} chatPending={chatPending} submitDisabled={submitDisabled} onInputChange={onInputChange} onSubmit={onSubmit} onStopChat={onStopChat} onOpenModels={onOpenModels} modelLabel={modelLabel} />
     </section>;
   }
 
-  return <section className="home-view goal-workspace">
-    <ComposerForm input={input} chatMode={chatMode} chatAvailable={chatAvailable} chatPending={chatPending} submitDisabled={submitDisabled} onInputChange={onInputChange} onSubmit={onSubmit} onToggleChat={onToggleChat} onStopChat={onStopChat} />
-    <div className={'brain-stage phase-' + phase} role="img" aria-label={'Cerebro Efesto: ' + state.label}>
-      <div className="brain-caption"><span><Activity /> Forge state</span><small>Kernel-owned state</small></div>
-      <div className="brain-aura" />
-      <Image src="/internet-brain-core.webp" alt="" width={1060} height={454} priority unoptimized sizes="(max-width: 720px) 92vw, 720px" />
-      <div className="brain-status"><span /><div><small>EFESTO BRAIN</small><strong>{state.label}</strong><p>{state.detail}</p></div></div>
-    </div>
-    <div className="home-copy">
-      <div className="home-identity"><span><Image src="/efesto-smith.svg" alt="" width={48} height={48} /></span><div><small>EFESTO · INTELLIGENCE FORGE</small><strong>{state.label}</strong></div></div>
-      <span className="home-eyebrow"><Sparkles /> CONVERSACIÓN CON AUTORIDAD DEL KERNEL</span>
-      <h1>¿Qué quieres conseguir?</h1>
-      <p>Habla con Efesto para explorar una pregunta o convertirla en un Goal. Solo la Evidence que supera los gates del Kernel puede respaldar un resultado.</p>
-    </div>
-    {preparedGoal ? <section className="proposed-plan" aria-label="Plan propuesto"><header><span><Target /></span><div><small>PLAN PROPUESTO · AÚN NO EJECUTADO</small><h2>{preparedGoal}</h2></div></header><ol><li><b>1</b><span><strong>Crear Goal privado</strong><small>Persistido por el Kernel con el objetivo y palabras clave derivadas.</small></span></li><li><b>2</b><span><strong>Confirmar misión Hermes</strong><small>Cadencia manual; sin compras, logins ni formularios externos.</small></span></li><li><b>3</b><span><strong>Forjar Evidence y Finds</strong><small>Solo aparecen resultados devueltos por contratos verificables.</small></span></li></ol><div className="plan-actions"><button type="button" className="primary-action" disabled={!connected || goalPending} onClick={onConfirmGoal}>{goalPending ? 'Confirmando…' : connected ? 'Confirmar y ejecutar' : 'Conecta el Kernel para ejecutar'}</button><button type="button" className="secondary-action" onClick={onEditGoal}>Editar Goal</button></div></section>
-      : <div className="starter-goals">{starterGoals.map((goal) => <button type="button" key={goal} onClick={() => onStarterGoal(goal)}><Sparkles /><span>{goal}</span><ChevronRight /></button>)}</div>}
-    <p className="truth-note"><ShieldCheck /> El cerebro cambia solo con conexión, streaming o fases persistidas de misión.</p>
+  return <section className="efesto-goal-workspace" aria-label="Nuevo Goal">
+    <header className="efesto-workspace-header efesto-workspace-header--goal">
+      <div className="efesto-workspace-identity">
+        <span className="efesto-workspace-mark"><Target /></span>
+        <div><small>EFESTO · CONTROLLED MISSION</small><h1>Nuevo Goal</h1><p>Define el resultado; el Kernel prepara el plan antes de ejecutar.</p></div>
+      </div>
+      <div className="efesto-workspace-actions">
+        <span className={'efesto-phase-chip phase-' + phase}><i />{state.label}</span>
+        <ModeSwitcher chatMode={chatMode} onToggleChat={onToggleChat} />
+      </div>
+    </header>
 
-    <aside className="forge-context-panel" aria-label="Estado de Evidence y Finds">
-      <section className="context-section">
-        <header><span className="context-heading"><ShieldCheck /> Evidence</span><div className="context-header-actions"><span className="context-count">{snapshot ? cases.length : '—'}</span><button type="button" className="context-link" onClick={() => onOpenEvidence()}>Ver todo</button></div></header>
-        {cases.length ? <div className="context-records">{cases.slice(0, 5).map((record) => <button type="button" className="context-record" key={record.id} onClick={() => onOpenEvidence(record)} aria-label={'Abrir ' + record.title}><FileSearch /><span><strong>{record.title}</strong><small>{record.status} · {record.id}</small></span><StatePill state={record.status} /></button>)}</div> : <p className="context-empty">{snapshot ? 'No hay Evidence visible para este estado del Kernel.' : 'Conecta el Kernel para cargar Evidence persistida.'}</p>}
-      </section>
-      <section className="context-section">
-        <header><span className="context-heading"><Sparkles /> {featuredFindLabel}</span><div className="context-header-actions">{featuredFind ? <StatePill state={featuredFind.status} /> : null}<button type="button" className="context-link" onClick={onOpenFinds}>Ver todo</button></div></header>
-        {featuredFind ? <button type="button" className="verified-find" onClick={onOpenFinds} aria-label={'Abrir resultado ' + featuredFind.title}><h2>{featuredFind.title}</h2><p>{featuredFind.sourceHost} · relevancia {formatRelevance(featuredFind.relevance)}</p><small>El estado mostrado proviene del Kernel; el feedback no reescribe Evidence objetiva.</small></button> : <p className="context-empty">{snapshot ? 'Todavía no hay Finds publicados.' : 'Conecta el Kernel para cargar Finds reales.'}</p>}
-      </section>
-    </aside>
+    <div className="efesto-goal-layout">
+      <div className="efesto-goal-main">
+        <ComposerForm input={input} chatMode={chatMode} chatAvailable={chatAvailable} chatPending={chatPending} submitDisabled={submitDisabled} onInputChange={onInputChange} onSubmit={onSubmit} onStopChat={onStopChat} onOpenModels={onOpenModels} modelLabel={modelLabel} />
+        {preparedGoal ? <section className="efesto-proposed-plan" aria-label="Plan propuesto">
+          <header><span><Target /></span><div><small>PLAN PROPUESTO · AÚN NO EJECUTADO</small><h2>{preparedGoal}</h2></div></header>
+          <ol><li><b>1</b><span><strong>Crear Goal privado</strong><small>Persistido por el Kernel con el objetivo y palabras clave derivadas.</small></span></li><li><b>2</b><span><strong>Confirmar misión Hermes</strong><small>Cadencia manual; sin compras, logins ni formularios externos.</small></span></li><li><b>3</b><span><strong>Forjar Evidence y Finds</strong><small>Solo aparecen resultados devueltos por contratos verificables.</small></span></li></ol>
+          <div className="efesto-plan-actions"><button type="button" className="primary-action" disabled={!connected || goalPending} onClick={onConfirmGoal}>{goalPending ? 'Confirmando…' : connected ? 'Confirmar y ejecutar' : 'Conecta el Kernel para ejecutar'}</button><button type="button" className="secondary-action" onClick={onEditGoal}>Editar Goal</button></div>
+        </section> : <section className="efesto-suggestions" aria-label="Ideas para nuevos Goals">
+          <header><div><small>START HERE</small><h2>¿Qué quieres conseguir?</h2></div><span>Ejemplos de intención</span></header>
+          <div>{starterGoals.map((goal) => <button type="button" key={goal} onClick={() => onStarterGoal(goal)}><Sparkles /><span>{goal}</span><ChevronRight /></button>)}</div>
+        </section>}
+      </div>
+
+      <aside className="efesto-goal-rail" aria-label="Estado y contexto del Goal">
+        <section className="efesto-forge-state">
+          <header><div><small>FORGE STATE</small><strong>Estado del Kernel</strong></div><span className={'efesto-state-dot phase-' + phase}><i />{state.label}</span></header>
+          <div className="efesto-forge-visual"><Image src="/internet-brain-core.webp" alt="" width={660} height={280} unoptimized /><span><ShieldCheck /> {state.detail}</span></div>
+          <p>El estado cambia solo con conexión, streaming o fases persistidas de misión.</p>
+        </section>
+
+        <section className="efesto-context-card">
+          <header><span><ShieldCheck /> Evidence</span><button type="button" onClick={() => onOpenEvidence()}>Ver todo</button></header>
+          {cases.length ? <div className="efesto-context-list">{cases.slice(0, 4).map((record) => <button type="button" className="efesto-context-record" key={record.id} onClick={() => onOpenEvidence(record)} aria-label={'Abrir ' + record.title}><FileSearch /><span><strong>{record.title}</strong><small>{record.status} · {record.id}</small></span><StatePill state={record.status} /></button>)}</div> : <p className="efesto-context-empty">{snapshot ? 'No hay Evidence visible para este estado.' : 'Conecta el Kernel para cargar Evidence persistida.'}</p>}
+        </section>
+
+        <section className="efesto-context-card">
+          <header><span><Sparkles /> {featuredFindLabel}</span><button type="button" onClick={onOpenFinds}>Ver todo</button></header>
+          {featuredFind ? <button type="button" className="efesto-find-card" onClick={onOpenFinds} aria-label={'Abrir resultado ' + featuredFind.title}><strong>{featuredFind.title}</strong><small>{featuredFind.sourceHost} · relevancia {formatRelevance(featuredFind.relevance)}</small><em>El estado proviene del Kernel; no se convierte en Evidence por feedback.</em></button> : <p className="efesto-context-empty">{snapshot ? 'Todavía no hay Finds publicados.' : 'Conecta el Kernel para cargar Finds reales.'}</p>}
+        </section>
+      </aside>
+    </div>
   </section>;
 }
 
-function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisabled, onInputChange, onSubmit, onToggleChat, onStopChat }: {
+function ModeSwitcher({ chatMode, onToggleChat }: { chatMode: boolean; onToggleChat: (value: boolean) => void }) {
+  return <div className="efesto-mode-switcher" role="group" aria-label="Modo de trabajo">
+    <button type="button" aria-pressed={chatMode} className={chatMode ? 'active' : ''} onClick={() => onToggleChat(true)}><MessageSquare /> Chat</button>
+    <button type="button" aria-pressed={!chatMode} className={!chatMode ? 'active' : ''} onClick={() => onToggleChat(false)}><Target /> Goal</button>
+  </div>;
+}
+
+function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisabled, onInputChange, onSubmit, onStopChat, onOpenModels, modelLabel }: {
   input: string; chatMode: boolean; chatAvailable: boolean; chatPending: boolean; submitDisabled: boolean;
-  onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void; onToggleChat: (value: boolean) => void;
-  onStopChat: () => void;
+  onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void; onStopChat: () => void;
+  onOpenModels: () => void; modelLabel: string;
 }) {
-  return <form className="goal-dock" onSubmit={onSubmit}>
-    <header className="composer-heading">
-      <span className="composer-identity"><Image src="/efesto-smith.svg" alt="" width={34} height={34} /><span><strong>Efesto</strong><small>{chatMode ? 'Conversación privada' : 'Forjar un nuevo Goal'}</small></span></span>
-      <div className="composer-mode" role="group" aria-label="Modo del compositor"><button type="button" aria-pressed={chatMode} className={chatMode ? 'active' : ''} onClick={() => onToggleChat(true)}><MessageSquare /> Chat</button><button type="button" aria-pressed={!chatMode} className={!chatMode ? 'active' : ''} onClick={() => onToggleChat(false)}><Target /> Goal</button></div>
-    </header>
-    <textarea aria-label={chatMode ? 'Mensaje' : 'Goal'} value={input} onChange={(event) => onInputChange(event.target.value)} rows={1} placeholder={chatMode ? (chatAvailable ? 'Pregunta a tu modelo…' : 'Configura un modelo para conversar…') : 'Dile a Efesto qué quieres conseguir…'} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
-    {chatPending ? <button type="button" className="send-button stop" onClick={onStopChat} aria-label="Detener"><Pause /></button> : <button type="submit" className="send-button" disabled={submitDisabled} aria-label={chatMode ? 'Enviar' : 'Preparar Goal'}><Send /></button>}
-    <p><ShieldCheck /><span>{chatMode ? 'Chat no entra en memoria automáticamente.' : 'El Goal se prepara primero; ejecutar requiere confirmación explícita.'}</span><b>{chatMode ? 'Private' : 'Kernel-gated'}</b></p>
+  return <form className={'efesto-composer ' + (chatMode ? 'is-chat' : 'is-goal')} onSubmit={onSubmit}>
+    <div className="efesto-composer-topline">
+      <div className="efesto-composer-identity"><Image src="/efesto-smith.svg" alt="" width={32} height={32} /><span><strong>{chatMode ? 'Conversación privada' : 'Goal privado'}</strong><small>{chatMode ? 'Salida del modelo separada de memoria' : 'Preparación controlada por el Kernel'}</small></span></div>
+      {chatMode ? <button type="button" className="efesto-model-context" onClick={onOpenModels}><Bot /><span><small>{chatAvailable ? 'MODELO ACTIVO' : 'MODELO'}</small><strong>{chatAvailable ? modelLabel : 'Configurar modelo'}</strong></span><Settings /></button> : <span className="efesto-goal-context"><ShieldCheck /> Kernel-gated</span>}
+    </div>
+    <div className="efesto-composer-input">
+      <textarea aria-label={chatMode ? 'Mensaje' : 'Goal'} value={input} onChange={(event) => onInputChange(event.target.value)} rows={1} placeholder={chatMode ? (chatAvailable ? 'Escribe a Efesto…' : 'Configura un modelo para empezar…') : 'Describe el resultado que quieres conseguir…'} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
+      {chatPending ? <button type="button" className="efesto-send stop" onClick={onStopChat} aria-label="Detener generación"><Pause /></button> : <button type="submit" className="efesto-send" disabled={submitDisabled} aria-label={chatMode ? 'Enviar mensaje' : 'Preparar Goal'}><Send /></button>}
+    </div>
+    <footer><span><ShieldCheck />{chatMode ? 'El chat no entra en memoria automáticamente.' : 'Preparar primero; ejecutar siempre requiere confirmación.'}</span><small>Enter enviar · Shift+Enter nueva línea</small></footer>
   </form>;
 }
 export function MissionsView({ snapshot, onNew }: { snapshot?: OverviewSnapshot; onNew: () => void }) {
