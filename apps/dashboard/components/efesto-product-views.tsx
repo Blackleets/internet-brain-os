@@ -33,11 +33,12 @@ const starterGoals = [
   'Encuentra oportunidades públicas relevantes y evita duplicados.',
 ];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, snapshot, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, snapshot, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onOpenEvidence, onOpenFinds }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
   snapshot?: OverviewSnapshot; input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
   onConfirmGoal: () => void; onEditGoal: () => void; onStarterGoal: (goal: string) => void;
+  onOpenEvidence: (record?: CaseSummary) => void; onOpenFinds: () => void;
 }) {
   const state = brainState(phase);
   const cases = snapshot?.cases ?? [];
@@ -67,12 +68,12 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
 
     <aside className="forge-context-panel" aria-label="Estado de Evidence y Finds">
       <section className="context-section">
-        <header><span className="context-heading"><ShieldCheck /> Evidence</span><span className="context-count">{snapshot ? cases.length : '—'}</span></header>
-        {cases.length ? <div className="context-records">{cases.slice(0, 5).map((record) => <article className="context-record" key={record.id}><FileSearch /><div><strong>{record.title}</strong><small>{record.status} · {record.id}</small></div><StatePill state={record.status} /></article>)}</div> : <p className="context-empty">{snapshot ? 'No hay Evidence visible para este estado del Kernel.' : 'Conecta el Kernel para cargar Evidence persistida.'}</p>}
+        <header><span className="context-heading"><ShieldCheck /> Evidence</span><div className="context-header-actions"><span className="context-count">{snapshot ? cases.length : '—'}</span><button type="button" className="context-link" onClick={() => onOpenEvidence()}>Ver todo</button></div></header>
+        {cases.length ? <div className="context-records">{cases.slice(0, 5).map((record) => <button type="button" className="context-record" key={record.id} onClick={() => onOpenEvidence(record)} aria-label={`Abrir ${record.title}`}><FileSearch /><span><strong>{record.title}</strong><small>{record.status} · {record.id}</small></span><StatePill state={record.status} /></button>)}</div> : <p className="context-empty">{snapshot ? 'No hay Evidence visible para este estado del Kernel.' : 'Conecta el Kernel para cargar Evidence persistida.'}</p>}
       </section>
       <section className="context-section">
-        <header><span className="context-heading"><Sparkles /> {featuredFindLabel}</span>{featuredFind ? <StatePill state={featuredFind.status} /> : null}</header>
-        {featuredFind ? <article className="verified-find"><h2>{featuredFind.title}</h2><p>{featuredFind.sourceHost} · relevancia {formatRelevance(featuredFind.relevance)}</p><small>El estado mostrado proviene del Kernel; el feedback no reescribe Evidence objetiva.</small></article> : <p className="context-empty">{snapshot ? 'Todavía no hay Finds publicados.' : 'Conecta el Kernel para cargar Finds reales.'}</p>}
+        <header><span className="context-heading"><Sparkles /> {featuredFindLabel}</span><div className="context-header-actions">{featuredFind ? <StatePill state={featuredFind.status} /> : null}<button type="button" className="context-link" onClick={onOpenFinds}>Ver todo</button></div></header>
+        {featuredFind ? <button type="button" className="verified-find" onClick={onOpenFinds} aria-label={`Abrir resultado ${featuredFind.title}`}><h2>{featuredFind.title}</h2><p>{featuredFind.sourceHost} · relevancia {formatRelevance(featuredFind.relevance)}</p><small>El estado mostrado proviene del Kernel; el feedback no reescribe Evidence objetiva.</small></button> : <p className="context-empty">{snapshot ? 'Todavía no hay Finds publicados.' : 'Conecta el Kernel para cargar Finds reales.'}</p>}
       </section>
     </aside>
   </section>;
