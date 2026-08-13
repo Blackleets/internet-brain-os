@@ -344,6 +344,35 @@
   transform: scale(.88);
 }
 
+.brain-caption {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ef-redesign-copper-bright);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.brain-caption span,
+.brain-caption small {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.brain-caption svg {
+  width: 16px;
+}
+
+.brain-caption small {
+  color: #88817b;
+  font-size: 9px;
+  font-weight: 500;
+}
+
 .brain-aura {
   inset: 12% 18%;
   background: #2a180e;
