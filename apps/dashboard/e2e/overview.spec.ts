@@ -125,6 +125,19 @@ test('supports keyboard Goal preparation with visible focus and reduced motion',
 test.describe('mobile Efesto product shell', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
+  test('publishes install metadata for the mobile web surface', async ({ page, request }) => {
+    await page.goto('/');
+    const response = await request.get('/manifest.webmanifest');
+    expect(response.ok()).toBeTruthy();
+    const manifest = await response.json();
+    expect(manifest.name).toBe('Efesto · The Intelligence Forge');
+    expect(manifest.short_name).toBe('Efesto');
+    expect(manifest.display).toBe('standalone');
+    expect(manifest.start_url).toBe('/');
+    expect(manifest.icons).toEqual(expect.arrayContaining([expect.objectContaining({ src: '/efesto-smith.svg' })]));
+  });
+
+
   test('uses a drawer, single-column Goal surface and safe composer without horizontal overflow', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('button', { name: 'Abrir menú', exact: true })).toBeVisible();
