@@ -15,6 +15,7 @@ on:
       - main
     paths:
       - .github/workflows/hermes-live-public-web-acceptance.yml
+      - INTERNAL_RELEASE.json
       - apps/local-kernel/**
       - packages/connectors/src/**
       - packages/kernel/src/**
@@ -27,6 +28,7 @@ on:
       - main
     paths:
       - .github/workflows/hermes-live-public-web-acceptance.yml
+      - INTERNAL_RELEASE.json
       - apps/local-kernel/**
       - packages/connectors/src/**
       - packages/kernel/src/**

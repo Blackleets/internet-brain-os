@@ -96,7 +96,7 @@ PR #209 merged at `97f47669d8d0ef16a3127db63a503ce33a9cdaad`; `internal.59` is f
 
 The active `EfestoProductShell` consumes the Kernel-owned scorecard without recalculating KPI truth in React. `sourceOfTruth: local_kernel`, local-only privacy and `not_measurable → value:null` are fail-closed dashboard contracts. `internal.58` remains a frozen acceptance-fixture failure and must never be reused.
 
-## G5.3 — authentic public-web journey acceptance ✅ harness / 🟡 live proof
+## G5.3 — authentic public-web journey acceptance ✅ harness / ✅ live proof
 
 PR #210 merged at `b12f106155d1f3f2e0f771cf77cd04a7cb478bc4`; `internal.60` is frozen after the complete deterministic package matrix and 4/4 post-merge workflows passed.
 
@@ -110,7 +110,14 @@ The existing explicit `pnpm hermes:acceptance:live` path now requires:
 - L6 Find → Case/Evidence → Mission/candidate provenance proves `kernel-web-read-v1` + `web-read:` receipt + fetched content hash;
 - L7 Shared Goal Truth converges on the same forged Mission.
 
-Default CI remains deterministic/offline. **The harness is green; authentic Internet/Hermes L1→L7 is not claimed as live-proven until the explicit live command is run in a suitable environment.**
+Default CI remains deterministic/offline. The authentic remote Internet/Hermes L1→L7 proof is now green on the final `main` candidate:
+
+- GitHub run `31686750785` on SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb`;
+- sanitized report `14/14`, one bounded attempt and terminal `completed/forged`;
+- 14 bounded search candidates, 3 Kernel-verified Evidence records and 3 Evidence-backed Finds with provenance resolved to Kernel-fetched Evidence;
+- Shared Goal Truth converged on the same Kernel `forged` state.
+
+The report contains no provider credential or raw model output. This proves the remote authentic path; public launch still requires manual UAT on the exact packaged candidate.
 
 ## G5.4 — Kernel-owned one-line Goal intent ✅ implementation / internal.61 frozen failure
 
@@ -389,7 +396,14 @@ PR #215 head `07d77c839a90e862beb71a722d8eeb971050a18b` passed the complete CI/C
 
 Complete local qualification on 2026-08-11 was green for architecture, `release:verify`, production dependency audit, typecheck, 187 test files / 1077 tests, production build, `verify:first-run`, exact/altered replay, Replay Lab smoke, offline Hermes boundary acceptance `14/14`, extension packaging and diff validation. Regression coverage proves that a fetched body above 12,000 characters remains complete and hash-identical in Evidence while its bounded classifier projection reaches `completed/forged` and can still promote a Find.
 
-The exact candidate must pass the complete local and GitHub matrix and produce an authentic sanitized `14/14` report before merge.
+The immutable `internal.81` candidate is now qualified on final `main` SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb`:
+
+- CI run `31686750808` passed the release-readiness, typecheck, full test, build, first-run and dashboard browser gates;
+- Internal Test Package run `31686750792` passed exact candidate generation and packaged Windows 2022/2025 install-repair qualification;
+- Hermes live run `31686750785` passed the sanitized authentic `14/14` report with 14 candidates, 3 verified Evidence records and 3 Evidence-backed Finds;
+- the workflow coverage repair is merged in PR #219, and no founder-owned provider credential or PC installation was required.
+
+`publicLaunchApproved` remains `false`; UAT-1→UAT-6 on the founder's own exact installation is still required.
 
 ## Canonical CI/release gate
 
@@ -418,9 +432,9 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 
 ## What remains
 
-1. Qualify immutable `internal.81` across the complete local and GitHub release matrix, then merge only if the exact SHA and authentic sanitized L1→L7 report are green.
-2. Require the automatically triggered `Hermes live public-web acceptance` run on the merged SHA to produce a real green L1→L7 report; do not substitute deterministic CI or workflow presence for proof.
-3. Run UAT-1→UAT-6 on the same exact green packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
+1. ✅ Qualify and merge immutable `internal.81` on final `main` SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb`; the complete automated matrix is green.
+2. ✅ Require the exact-SHA credential-free remote `Hermes live public-web acceptance` report; run `31686750785` passed `14/14`.
+3. Run UAT-1→UAT-6 on the same exact packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
 4. Use the Kernel-owned local-installation scorecard to establish the first real activation, repeat usage and useful-Find baselines before growth/retention/willingness-to-pay claims.
 5. Treat notification delivery, aggregate sharing, scheduling expansion, cross-device authority and irreversible actions as separate security/privacy slices.
 
