@@ -33,11 +33,11 @@ const starterGoals = [
   'Encuentra oportunidades públicas relevantes y evita duplicados.',
 ];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, snapshot, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onOpenEvidence, onOpenFinds }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, snapshot, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenEvidence, onOpenFinds }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
   snapshot?: OverviewSnapshot; input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
-  onConfirmGoal: () => void; onEditGoal: () => void; onStarterGoal: (goal: string) => void;
+  onConfirmGoal: () => void; onEditGoal: () => void; onStarterGoal: (goal: string) => void; onStarterChat: (prompt: string) => void;
   onOpenEvidence: (record?: CaseSummary) => void; onOpenFinds: () => void;
 }) {
   const state = brainState(phase);
@@ -46,14 +46,38 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   const featuredFind = opportunities[0];
   const featuredFindLabel = featuredFind && ['forged', 'verified', 'completed'].includes(featuredFind.status) ? 'Verified Find' : 'Find';
 
-  if (chatMode && messages.length) {
-    return <>
-      <section className="chat-thread" aria-label="Conversación"><BrainHeader phase={phase} />{messages.map((message, index) => <article className={message.role} key={message.role + '-' + index}><div className="message-avatar">{message.role === 'user' ? 'Tú' : <BrainCircuit />}</div><div><header><strong>{message.role === 'user' ? 'Tú' : message.model ?? 'Modelo'}</strong>{message.role === 'assistant' ? <span><ShieldCheck /> No admitido en memoria</span> : null}</header><p>{message.content}</p></div></article>)}</section>
+  if (chatMode) {
+    return <section className="chat-workspace" aria-label="Conversación con Efesto">
+      <header className="chat-workspace-header">
+        <div className="chat-workspace-identity">
+          <span><Image src="/efesto-smith.svg" alt="" width={44} height={44} /></span>
+          <div><small>EFESTO · INTELLIGENCE FORGE</small><h1>Conversación</h1><p>{connected && chatAvailable ? 'Un espacio privado para pensar con tu modelo.' : 'Conecta un modelo para empezar a conversar.'}</p></div>
+        </div>
+        <span className={'chat-state phase-' + phase}><i />{state.label}</span>
+      </header>
+
+      {messages.length ? <div className="chat-scroll">
+        <section className="chat-thread" aria-label="Mensajes">
+          <BrainHeader phase={phase} />
+          {messages.map((message, index) => <article className={message.role} key={message.role + '-' + index}>
+            <div className="message-avatar">{message.role === 'user' ? 'Tú' : <BrainCircuit />}</div>
+            <div><header><strong>{message.role === 'user' ? 'Tú' : message.model ?? 'Modelo'}</strong>{message.role === 'assistant' ? <span><ShieldCheck /> No admitido en memoria</span> : null}</header><p>{message.content || (chatPending && index === messages.length - 1 ? <span className="chat-generating"><i />Generando respuesta…</span> : null)}</p></div>
+          </article>)}
+        </section>
+      </div> : <div className="chat-empty-state">
+        <div className="chat-empty-icon"><Image src="/efesto-smith.svg" alt="" width={64} height={64} /></div>
+        <small>CONVERSACIÓN PRIVADA</small>
+        <h2>Habla con Efesto</h2>
+        <p>{connected && chatAvailable ? 'Escribe una pregunta y deja que tu modelo te ayude a explorarla.' : 'La conversación necesita un modelo configurado en Models y una conexión al Kernel.'}</p>
+        <div className="chat-prompt-grid" aria-label="Sugerencias para empezar">{starterGoals.map((prompt) => <button type="button" key={prompt} onClick={() => onStarterChat(prompt)}><Sparkles /><span>{prompt}</span><ChevronRight /></button>)}</div>
+        <p className="chat-empty-note"><ShieldCheck /><span>Las respuestas del chat no se convierten automáticamente en Evidence ni en memoria.</span></p>
+      </div>}
+
       <ComposerForm input={input} chatMode={chatMode} chatAvailable={chatAvailable} chatPending={chatPending} submitDisabled={submitDisabled} onInputChange={onInputChange} onSubmit={onSubmit} onToggleChat={onToggleChat} onStopChat={onStopChat} />
-    </>;
+    </section>;
   }
 
-  return <section className="home-view">
+  return <section className="home-view goal-workspace">
     <ComposerForm input={input} chatMode={chatMode} chatAvailable={chatAvailable} chatPending={chatPending} submitDisabled={submitDisabled} onInputChange={onInputChange} onSubmit={onSubmit} onToggleChat={onToggleChat} onStopChat={onStopChat} />
     <div className={'brain-stage phase-' + phase} role="img" aria-label={'Cerebro Efesto: ' + state.label}>
       <div className="brain-caption"><span><Activity /> Forge state</span><small>Kernel-owned state</small></div>
@@ -74,11 +98,11 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
     <aside className="forge-context-panel" aria-label="Estado de Evidence y Finds">
       <section className="context-section">
         <header><span className="context-heading"><ShieldCheck /> Evidence</span><div className="context-header-actions"><span className="context-count">{snapshot ? cases.length : '—'}</span><button type="button" className="context-link" onClick={() => onOpenEvidence()}>Ver todo</button></div></header>
-        {cases.length ? <div className="context-records">{cases.slice(0, 5).map((record) => <button type="button" className="context-record" key={record.id} onClick={() => onOpenEvidence(record)} aria-label={`Abrir ${record.title}`}><FileSearch /><span><strong>{record.title}</strong><small>{record.status} · {record.id}</small></span><StatePill state={record.status} /></button>)}</div> : <p className="context-empty">{snapshot ? 'No hay Evidence visible para este estado del Kernel.' : 'Conecta el Kernel para cargar Evidence persistida.'}</p>}
+        {cases.length ? <div className="context-records">{cases.slice(0, 5).map((record) => <button type="button" className="context-record" key={record.id} onClick={() => onOpenEvidence(record)} aria-label={'Abrir ' + record.title}><FileSearch /><span><strong>{record.title}</strong><small>{record.status} · {record.id}</small></span><StatePill state={record.status} /></button>)}</div> : <p className="context-empty">{snapshot ? 'No hay Evidence visible para este estado del Kernel.' : 'Conecta el Kernel para cargar Evidence persistida.'}</p>}
       </section>
       <section className="context-section">
         <header><span className="context-heading"><Sparkles /> {featuredFindLabel}</span><div className="context-header-actions">{featuredFind ? <StatePill state={featuredFind.status} /> : null}<button type="button" className="context-link" onClick={onOpenFinds}>Ver todo</button></div></header>
-        {featuredFind ? <button type="button" className="verified-find" onClick={onOpenFinds} aria-label={`Abrir resultado ${featuredFind.title}`}><h2>{featuredFind.title}</h2><p>{featuredFind.sourceHost} · relevancia {formatRelevance(featuredFind.relevance)}</p><small>El estado mostrado proviene del Kernel; el feedback no reescribe Evidence objetiva.</small></button> : <p className="context-empty">{snapshot ? 'Todavía no hay Finds publicados.' : 'Conecta el Kernel para cargar Finds reales.'}</p>}
+        {featuredFind ? <button type="button" className="verified-find" onClick={onOpenFinds} aria-label={'Abrir resultado ' + featuredFind.title}><h2>{featuredFind.title}</h2><p>{featuredFind.sourceHost} · relevancia {formatRelevance(featuredFind.relevance)}</p><small>El estado mostrado proviene del Kernel; el feedback no reescribe Evidence objetiva.</small></button> : <p className="context-empty">{snapshot ? 'Todavía no hay Finds publicados.' : 'Conecta el Kernel para cargar Finds reales.'}</p>}
       </section>
     </aside>
   </section>;
