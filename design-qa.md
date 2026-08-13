@@ -1,3 +1,54 @@
+# Latest Design QA — Efesto Forge Command Center
+
+source visual truth path: first displayed ImageGen result, “Efesto Forge Command Center” (workspace reference: `generated_images/exec-5862317e-8f2c-4ade-b834-bc0d6c469e4f.png`)
+implementation screenshot path: not available in this environment
+viewport: target 1440x1024 reference; automated dashboard acceptance viewport 1536x1024
+source pixels: 1487x1058; implementation pixels: unavailable; CSS density normalization: not completed
+state: target reference shows connected Kernel, active investigation, Evidence and Find context; automated tests cover offline, connected, investigating, Goal confirmation, Finds, Evidence, Chat and mobile states
+
+## Full-view comparison evidence
+
+The source image was opened and inspected. The rendered implementation could not be captured locally because this runtime has no browser binary and the Playwright browser download was unavailable. GitHub Actions dashboard-browser passed on the implementation commit, but the workflow does not retain a screenshot artifact.
+
+## Focused-region comparison evidence
+
+Blocked for the same reason. No visual claim is made from code or automated acceptance alone.
+
+## Findings
+
+- [P2] Visual comparison is blocked.
+  - Location: whole dashboard.
+  - Evidence: source mockup is available; implementation screenshot is not.
+  - Impact: typography, spacing, color balance, asset crop and responsive polish cannot be verified honestly.
+  - Fix: capture the connected desktop dashboard at the reference viewport when a browser/preview is available, then rerun this QA.
+
+## Automated evidence
+
+- dashboard-browser: passed on implementation commit `8d64f4f975fd28af1515fd016b3878cef2cc82ec`
+- validate: passed on implementation commit `8d64f4f975fd28af1515fd016b3878cef2cc82ec`
+- packaged install Windows 2022: passed
+- packaged install Windows 2025: passed
+
+## Required fidelity surfaces
+
+- Fonts and typography: not visually compared; uses the existing system font stack.
+- Spacing and layout rhythm: not visually compared; layout contracts and responsive acceptance tests passed.
+- Colors and visual tokens: source-aligned tokens were added, but not screenshot-compared.
+- Image quality and asset fidelity: existing repository assets are reused; screenshot crop/scale remains unverified.
+- Copy and content: Goal, Kernel, Evidence, Finds, Local-first and truth-boundary copy remain wired to real states/contracts.
+
+## Comparison history
+
+- Initial implementation: dashboard acceptance exposed a 270px rail contract; fixed the redesign rail from 236px to 270px.
+- Post-fix implementation: dashboard-browser, validate and Windows package checks passed.
+- No P0/P1/P2 visual fixes were attempted after the functional/layout-contract fix because rendered screenshot comparison is blocked.
+
+final result: blocked
+
+---
+
+## Previous design QA history
+
 # Internet Brain OS dashboard — design QA
 
 ## Evidence
