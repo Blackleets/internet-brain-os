@@ -540,3 +540,24 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 - Do not imply phone→PC Kernel authority.
 - Do not merge the draft PR automatically.
 
+
+
+## Handoff 2026-08-13 - Codex - Chat-first web surface
+
+### What I changed
+
+- Kept PR #221 web-first and refined the Home surface around the familiar ChatGPT interaction model: welcome, composer, starter prompts and live context.
+- Added a distinctive Efesto identity layer through the “Intelligence Forge” eyebrow, copper/obsidian visual language and a compact Kernel-owned Forge state.
+- Kept Goal and Chat in the same real composer, with explicit `aria-pressed` state and the existing submit/confirmation rules.
+- Kept Evidence and Finds as real contextual navigation into the existing workspaces; no second store, fixture-only action or new authority path was introduced.
+
+### Checks on the exact head before this documentation commit
+
+- GitHub CI run `31708590296`: passed, including dashboard-browser.
+- GitHub Internal Test Package run `31708590258`: passed.
+- The new browser assertions cover the Efesto identity and Goal/Chat mode semantics.
+- Screenshot comparison remains blocked in this environment; no pixel-level visual claim is made from source alone.
+
+### Boundary
+
+This completes the web-first design slice. Responsive mobile use is included through the existing dashboard/PWA surface, but native Android/iOS and phone-to-PC Kernel transport remain outside this PR.
