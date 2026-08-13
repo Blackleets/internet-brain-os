@@ -16,7 +16,6 @@ import {
   AgentsView, AutomationsView, EvidenceView, FindsView, HomeView, MissionsView, ModelsView, SettingsView,
   type BrainPhase, type CaseDetail, type ChatMessage, type EvidenceRecord, type Provider,
 } from './efesto-product-views';
-import { ProductValueScorecardPanel } from './overview/product-value-scorecard';
 
 type View = 'home' | 'missions' | 'finds' | 'evidence' | 'models' | 'agents' | 'automations' | 'settings';
 type Connection = { baseUrl: string; token: string };
@@ -331,7 +330,7 @@ export default function EfestoProductShell() {
     finally { setChatPending(false); if (chatAbortRef.current === controller) chatAbortRef.current = undefined; }
   }
 
-  return <div className={`efesto-product ${navOpen ? 'nav-open' : ''}`}>
+  return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${view === 'home' ? 'efesto-home-active' : ''}`}>
     <aside className="efesto-sidebar" aria-label="Navegación principal">
       <div className="efesto-brand"><button type="button" onClick={() => navigate('home')} aria-label="Efesto, inicio"><span className="brand-mark"><Image src="/efesto-smith.svg" alt="" width={36} height={36} /></span><span><strong>EFESTO</strong><small>The Intelligence Forge</small></span></button><button type="button" className="mobile-close" onClick={() => setNavOpen(false)} aria-label="Cerrar menú"><X /></button></div>
       <button type="button" className="new-goal" onClick={newGoal}><Target /><span>Nuevo Goal</span></button>
@@ -348,8 +347,7 @@ export default function EfestoProductShell() {
         <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? 'Kernel ready' : 'Conectar'}</button></div>
       </header>
       <main className="efesto-main">
-        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} snapshot={snapshot} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} onOpenEvidence={openEvidence} onOpenFinds={openFinds} /> : null}
-        {view === 'home' && !chatMode ? <ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot || snapshot.issues.some((issue) => issue.endpoint === 'scorecard')} /> : null}
+        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} onOpenSettings={() => navigate('settings')} onOpenNav={() => setNavOpen(true)} /> : null}
         {view === 'missions' ? <MissionsView snapshot={snapshot} onNew={newGoal} /> : null}
         {view === 'finds' ? <FindsView opportunities={snapshot?.opportunities ?? []} connected={Boolean(connection)} onFeedback={(id, signal) => void recordFeedback(id, signal)} /> : null}
         {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} onOpen={(record) => void openCase(record)} /> : null}
