@@ -1265,3 +1265,30 @@
     white-space: nowrap;
   }
 }
+
+/* Efesto preview boundary: keep the compact conversation surface inside the viewport. */
+@media (max-width: 720px) {
+  .efesto-topbar > div:first-child {
+    min-width: 0;
+  }
+
+  .top-title {
+    min-width: 0;
+    max-width: min(42vw, 180px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .top-actions {
+    min-width: 0;
+    flex: 0 0 auto;
+  }
+
+  .connection-pill {
+    max-width: min(33vw, 132px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
