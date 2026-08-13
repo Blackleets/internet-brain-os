@@ -56,12 +56,12 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   return <section className="home-view">
     <ComposerForm input={input} chatMode={chatMode} chatAvailable={chatAvailable} chatPending={chatPending} submitDisabled={submitDisabled} onInputChange={onInputChange} onSubmit={onSubmit} onToggleChat={onToggleChat} onStopChat={onStopChat} />
     <div className={'brain-stage phase-' + phase} role="img" aria-label={'Cerebro Efesto: ' + state.label}>
-      <div className="brain-caption"><span><Activity /> Investigation</span><small>Kernel is the authority</small></div>
+      <div className="brain-caption"><span><Activity /> Forge state</span><small>Kernel-owned state</small></div>
       <div className="brain-aura" />
       <Image src="/internet-brain-core.webp" alt="" width={1060} height={454} priority sizes="(max-width: 720px) 92vw, 720px" />
       <div className="brain-status"><span /><div><small>EFESTO BRAIN</small><strong>{state.label}</strong><p>{state.detail}</p></div></div>
     </div>
-    <div className="home-copy"><h1>¿Qué quieres conseguir?</h1><p>Describe el resultado. Efesto prepara el trabajo, el Kernel aplica límites y solo conserva Evidence verificable.</p></div>
+    <div className="home-copy"><span className="home-eyebrow"><Sparkles /> EFESTO · INTELLIGENCE FORGE</span><h1>¿Qué quieres conseguir?</h1><p>Escribe como en ChatGPT. Efesto convierte tu intención en un Goal, mantiene el contexto y solo conserva Evidence que el Kernel puede respaldar.</p></div>
     {preparedGoal ? <section className="proposed-plan" aria-label="Plan propuesto"><header><span><Target /></span><div><small>PLAN PROPUESTO · AÚN NO EJECUTADO</small><h2>{preparedGoal}</h2></div></header><ol><li><b>1</b><span><strong>Crear Goal privado</strong><small>Persistido por el Kernel con el objetivo y palabras clave derivadas.</small></span></li><li><b>2</b><span><strong>Confirmar misión Hermes</strong><small>Cadencia manual; sin compras, logins ni formularios externos.</small></span></li><li><b>3</b><span><strong>Forjar Evidence y Finds</strong><small>Solo aparecen resultados devueltos por contratos verificables.</small></span></li></ol><div className="plan-actions"><button type="button" className="primary-action" disabled={!connected || goalPending} onClick={onConfirmGoal}>{goalPending ? 'Confirmando…' : connected ? 'Confirmar y ejecutar' : 'Conecta el Kernel para ejecutar'}</button><button type="button" className="secondary-action" onClick={onEditGoal}>Editar Goal</button></div></section>
       : <div className="starter-goals">{starterGoals.map((goal) => <button type="button" key={goal} onClick={() => onStarterGoal(goal)}><Sparkles /><span>{goal}</span><ChevronRight /></button>)}</div>}
     <p className="truth-note"><ShieldCheck /> El cerebro cambia solo con conexión, streaming o fases persistidas de misión.</p>
@@ -85,7 +85,7 @@ function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisab
   onStopChat: () => void;
 }) {
   return <form className="goal-dock" onSubmit={onSubmit}>
-    <div className="composer-mode" role="group" aria-label="Modo del compositor"><button type="button" className={!chatMode ? 'active' : ''} onClick={() => onToggleChat(false)}><Target /> Goal</button><button type="button" className={chatMode ? 'active' : ''} onClick={() => onToggleChat(true)}><MessageSquare /> Chat</button></div>
+    <div className="composer-mode" role="group" aria-label="Modo del compositor"><button type="button" aria-pressed={!chatMode} className={!chatMode ? 'active' : ''} onClick={() => onToggleChat(false)}><Target /> Goal</button><button type="button" aria-pressed={chatMode} className={chatMode ? 'active' : ''} onClick={() => onToggleChat(true)}><MessageSquare /> Chat</button></div>
     <textarea aria-label={chatMode ? 'Mensaje' : 'Goal'} value={input} onChange={(event) => onInputChange(event.target.value)} rows={1} placeholder={chatMode ? (chatAvailable ? 'Pregunta a tu modelo…' : 'Configura un modelo para conversar…') : 'Dile a Efesto qué quieres conseguir…'} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
     {chatPending ? <button type="button" className="send-button stop" onClick={onStopChat} aria-label="Detener"><Pause /></button> : <button type="submit" className="send-button" disabled={submitDisabled} aria-label={chatMode ? 'Enviar' : 'Preparar Goal'}><Send /></button>}
     <p><ShieldCheck /> {chatMode ? 'Chat no entra en memoria automáticamente.' : 'El Goal se prepara primero; ejecutar requiere confirmación explícita.'}</p>
