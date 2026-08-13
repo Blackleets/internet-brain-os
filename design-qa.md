@@ -1,132 +1,53 @@
-# Latest Design QA — Efesto Forge Command Center
+# Efesto professional conversation redesign — Design QA
 
-source visual truth path: first displayed ImageGen result, “Efesto Forge Command Center” (workspace reference: `generated_images/exec-5862317e-8f2c-4ade-b834-bc0d6c469e4f.png`)
-implementation screenshot path: not available in this environment
-viewport: target 1440x1024 reference; automated dashboard acceptance viewport 1536x1024
-source pixels: 1487x1058; implementation pixels: unavailable; CSS density normalization: not completed
-state: target reference shows connected Kernel, active investigation, Evidence and Find context; automated tests cover offline, connected, investigating, Goal confirmation, Finds, Evidence, Chat and mobile states
+source visual truth path: `docs/design/efesto-conversation-mobile-reference.png`
+implementation screenshot path: browser-rendered inline capture; the cloud browser did not expose a filesystem-backed screenshot path
+viewport: desktop 1363×936; responsive iframe 390×844
+source pixels: 944×1680; implementation CSS viewport: 390×844 at device scale 1
+state: offline/local-first Home; the source reference depicts a connected example state, so data content is not compared as if it were identical
 
 ## Full-view comparison evidence
 
-The source image was opened and inspected. The rendered implementation could not be captured locally because this runtime has no browser binary and the Playwright browser download was unavailable. GitHub Actions dashboard-browser passed on the implementation commit, but the workflow does not retain a screenshot artifact.
+The source mobile concept and the rendered implementation were both opened and inspected. The implementation preserves the selected atmosphere: obsidian surfaces, restrained copper, a compact Efesto smith identity, conversation-first hierarchy, persistent bottom composer, and explicit `Chat / Goal` modes.
+
+The first desktop render exposed one broken optimized-image request in the static QA server. The forge asset was changed to direct local delivery and a second browser pass confirmed zero broken images.
+
+The first 390×844 render exposed a 215 px composer and crowded top-bar metadata. The mobile rules were tightened: nonessential top metadata is hidden, the composer identity collapses to the smith mark, the trust note is hidden at this breakpoint, and the composer is now 134 px high with no horizontal overflow.
 
 ## Focused-region comparison evidence
 
-Blocked for the same reason. No visual claim is made from code or automated acceptance alone.
+- Composer: rendered at 351 px wide inside a 390 px viewport, with `Chat / Goal`, Efesto identity, real textarea, disabled submit state, and safe bottom inset.
+- Header: menu, page identity, refresh and Kernel connection remain reachable; desktop-only privacy copy is hidden at mobile width.
+- Forge presence: the existing smith and brain assets remain visible, while motion and status continue to depend on observable phases.
+- Evidence/Finds: the real context controls remain below the primary conversation and call the existing navigation handlers.
 
 ## Findings
 
-- [P2] Visual comparison is blocked.
-  - Location: whole dashboard.
-  - Evidence: source mockup is available; implementation screenshot is not.
-  - Impact: typography, spacing, color balance, asset crop and responsive polish cannot be verified honestly.
-  - Fix: capture the connected desktop dashboard at the reference viewport when a browser/preview is available, then rerun this QA.
-
-## Automated evidence
-
-- dashboard-browser: passed on implementation commit `8d64f4f975fd28af1515fd016b3878cef2cc82ec`
-- validate: passed on implementation commit `8d64f4f975fd28af1515fd016b3878cef2cc82ec`
-- packaged install Windows 2022: passed
-- packaged install Windows 2025: passed
+- [P2] The browser-rendered screenshot cannot be persisted from the cloud-browser session.
+  - Location: QA artifact pipeline.
+  - Evidence: both desktop and mobile captures rendered successfully inline, but no filesystem-backed image path was returned.
+  - Impact: a deterministic side-by-side image artifact cannot be committed for later pixel comparison.
+  - Fix: retain a screenshot artifact from GitHub browser acceptance or the next Vercel preview capture, then normalize it against the 390×844 viewport.
 
 ## Required fidelity surfaces
 
-- Fonts and typography: not visually compared; uses the existing system font stack.
-- Spacing and layout rhythm: not visually compared; layout contracts and responsive acceptance tests passed.
-- Colors and visual tokens: source-aligned tokens were added, but not screenshot-compared.
-- Image quality and asset fidelity: existing repository assets are reused; screenshot crop/scale remains unverified.
-- Copy and content: Goal, Kernel, Evidence, Finds, Local-first and truth-boundary copy remain wired to real states/contracts.
+- Fonts and typography: hierarchy, weights, wrapping and 16 px mobile input sizing were visually checked; the implementation intentionally retains the product's existing system font stack.
+- Spacing and layout rhythm: desktop and 390×844 layouts were checked; mobile scroll width equals viewport width and the sticky composer remains inside the viewport.
+- Colors and visual tokens: the implementation uses the existing Efesto obsidian/copper tokens with restrained green only for verified state.
+- Image quality and asset fidelity: existing repository smith and brain assets are reused; the direct local brain asset has zero broken-image requests.
+- Copy and content: the interface no longer names another product. It explains Efesto, Goal preparation, Kernel authority, Evidence, and memory boundaries in product-specific language.
+
+## Primary interactions tested
+
+- `Chat` selects the real Chat mode and exposes the truthful unavailable-provider placeholder when no model is configured.
+- `Goal` restores Goal mode and its explicit preparation contract.
+- A starter Goal populates the real Goal textarea.
+- Browser console inspection found no warnings or errors from `terminal.local`; unrelated cloud-browser extension diagnostics were excluded.
 
 ## Comparison history
 
-- Initial implementation: dashboard acceptance exposed a 270px rail contract; fixed the redesign rail from 236px to 270px.
-- Post-fix implementation: dashboard-browser, validate and Windows package checks passed.
-- No P0/P1/P2 visual fixes were attempted after the functional/layout-contract fix because rendered screenshot comparison is blocked.
+1. Initial render: broken optimized forge image, crowded mobile top bar and 215 px mobile composer.
+2. Fix pass: direct local image delivery, mobile metadata removed, compact identity, 134 px composer.
+3. Post-fix evidence: zero broken images, `390 px` document width at a `390 px` viewport, composer bounds `x=12`, `width=351`, `bottom=822`, and no app-origin console errors.
 
 final result: blocked
-
-## Mobile install surface QA
-
-- Mobile-width acceptance covers 390×844 drawer layout, single-column Goal surface, safe composer and zero horizontal overflow.
-- The install metadata is covered by `/manifest.webmanifest` checks for standalone display, home start URL and the existing Efesto mark.
-- Touch-safe controls, safe-area spacing, keyboard/focus and reduced-motion requirements remain part of the implementation contract.
-- No native Android/iOS screenshot or phone-to-PC runtime proof is claimed; this PR implements mobile web/PWA metadata only.
-- Screenshot comparison remains blocked because this runtime cannot capture the rendered dashboard; GitHub browser acceptance is functional evidence, not pixel-level visual evidence.
-
-
----
-
-## Previous design QA history
-
-# Internet Brain OS dashboard — design QA
-
-## Evidence
-
-- Source visual truth: `/workspace/scratch/263f39061984/upload/01-1000032245.png`.
-- Source pixels: 1536 × 1024.
-- Most recent browser-rendered implementation before this correction: `/workspace/scratch/263f39061984/dashboard-runtime-chat-real.png`.
-- Implementation pixels and CSS viewport: 1536 × 1024 at device scale factor 1.
-- State: connected to the deterministic loopback Kernel fixture, with one configured local model.
-- Full-view comparison evidence: the source and the previous implementation were opened at their original 1536 × 1024 dimensions.
-- Focused comparison evidence: hero/readiness column and persistent chat composer were inspected because they contained the visible P1/P2 drift.
-
-## Comparison history
-
-### Pass 1
-
-- P1: the readiness rail occupied the left side of the content, pushing the hero away from the sidebar. The reference places the secondary rail on the right.
-- P1: the conversation composer was sticky in document flow rather than persistently attached to the bottom of the working viewport.
-- P2: the page needed excessive vertical travel because the composer occupied a normal grid row before becoming sticky.
-
-### Corrections
-
-- The readiness rail now explicitly occupies grid columns 10–12 across the hero and module rows.
-- The connected hero and module grid remain in columns 1–9, matching the reference hierarchy.
-- The chat console is now fixed between the desktop sidebar and the right viewport edge.
-- Workspace bottom padding reserves the composer footprint so it cannot cover the last controls.
-- Tablet and mobile breakpoints reposition the fixed composer inside their actual viewport.
-
-## Required fidelity surfaces
-
-- Fonts and typography: the existing Inter/system stack, compact uppercase panel labels, weights and hierarchy remain aligned with the reference.
-- Spacing and layout rhythm: the principal left/main/right composition and bottom composer geometry were corrected; panel radii and compact gaps remain unchanged.
-- Colors and tokens: the black/navy surfaces, cyan data accents and violet AI accents remain consistent with the source.
-- Image quality: the supplied cognitive-core raster asset remains sharp, uncropped in its hero slot, and is not replaced by CSS art or a placeholder.
-- Copy and content: connected status, Kernel-backed counts, provider/model names and unverified-output boundary remain truthful; unavailable graph/scheduler data is not invented.
-
-## Functional validation
-
-- Dashboard component suite: 11 files / 80 tests passed.
-- TypeScript: passed.
-- Production build: passed.
-- Existing Kernel/provider/chat behavior remains unchanged by this visual correction.
-
-## Blocking verification issue
-
-The cloud browser refused permission to open `http://terminal.local:4173/`. The current corrected build therefore has no post-fix browser screenshot, interaction replay, or console inspection. Per the design-QA contract, the code cannot be declared visually identical until that browser-rendered comparison is available.
-
-final result: blocked
-
-## Streaming and local history pass — 2026-07-28
-
-- Added compact new-chat and history controls beside the provider/model selectors.
-- The send control changes to an explicit stop control only while generation is active.
-- Streamed assistant text renders incrementally inside the existing fixed composer.
-- Completed conversations can be reopened from the bounded local-history panel.
-- Cancelled partial output remains visible for operator context but is not committed to Kernel history.
-- Component/browser-contract coverage: dashboard 11 files / 82 tests; full repository 98 files / 561 tests.
-- TypeScript and production build passed.
-- Source visual remains `/workspace/scratch/263f39061984/upload/01-1000032245.png` at 1536 × 1024.
-- Post-change browser capture, interaction replay, and console inspection remain blocked because the saved browser permission denies `http://terminal.local:4173/`.
-
-final result: blocked
-
-
-## Web-first chat surface iteration — 2026-08-13
-
-- Home now leads with a centered Efesto welcome, the real Goal/Chat composer, starter goals, compact Forge state and proposed plan.
-- Evidence and Finds remain visible as a sticky desktop context rail and return to their existing workspaces through real handlers.
-- The responsive mobile order follows the same conversation-first hierarchy; native mobile runtime is not claimed.
-- Automated evidence before this documentation commit: CI `31708590296` and Internal Test Package `31708590258` passed on head `ed4bf8ac04eec5da970102098663710e817fbcf3`.
-- Visual screenshot comparison remains blocked because this runtime cannot capture the rendered dashboard.
-

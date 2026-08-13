@@ -58,10 +58,15 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
     <div className={'brain-stage phase-' + phase} role="img" aria-label={'Cerebro Efesto: ' + state.label}>
       <div className="brain-caption"><span><Activity /> Forge state</span><small>Kernel-owned state</small></div>
       <div className="brain-aura" />
-      <Image src="/internet-brain-core.webp" alt="" width={1060} height={454} priority sizes="(max-width: 720px) 92vw, 720px" />
+      <Image src="/internet-brain-core.webp" alt="" width={1060} height={454} priority unoptimized sizes="(max-width: 720px) 92vw, 720px" />
       <div className="brain-status"><span /><div><small>EFESTO BRAIN</small><strong>{state.label}</strong><p>{state.detail}</p></div></div>
     </div>
-    <div className="home-copy"><span className="home-eyebrow"><Sparkles /> EFESTO · INTELLIGENCE FORGE</span><h1>¿Qué quieres conseguir?</h1><p>Escribe como en ChatGPT. Efesto convierte tu intención en un Goal, mantiene el contexto y solo conserva Evidence que el Kernel puede respaldar.</p></div>
+    <div className="home-copy">
+      <div className="home-identity"><span><Image src="/efesto-smith.svg" alt="" width={48} height={48} /></span><div><small>EFESTO · INTELLIGENCE FORGE</small><strong>{state.label}</strong></div></div>
+      <span className="home-eyebrow"><Sparkles /> CONVERSACIÓN CON AUTORIDAD DEL KERNEL</span>
+      <h1>¿Qué quieres conseguir?</h1>
+      <p>Habla con Efesto para explorar una pregunta o convertirla en un Goal. Solo la Evidence que supera los gates del Kernel puede respaldar un resultado.</p>
+    </div>
     {preparedGoal ? <section className="proposed-plan" aria-label="Plan propuesto"><header><span><Target /></span><div><small>PLAN PROPUESTO · AÚN NO EJECUTADO</small><h2>{preparedGoal}</h2></div></header><ol><li><b>1</b><span><strong>Crear Goal privado</strong><small>Persistido por el Kernel con el objetivo y palabras clave derivadas.</small></span></li><li><b>2</b><span><strong>Confirmar misión Hermes</strong><small>Cadencia manual; sin compras, logins ni formularios externos.</small></span></li><li><b>3</b><span><strong>Forjar Evidence y Finds</strong><small>Solo aparecen resultados devueltos por contratos verificables.</small></span></li></ol><div className="plan-actions"><button type="button" className="primary-action" disabled={!connected || goalPending} onClick={onConfirmGoal}>{goalPending ? 'Confirmando…' : connected ? 'Confirmar y ejecutar' : 'Conecta el Kernel para ejecutar'}</button><button type="button" className="secondary-action" onClick={onEditGoal}>Editar Goal</button></div></section>
       : <div className="starter-goals">{starterGoals.map((goal) => <button type="button" key={goal} onClick={() => onStarterGoal(goal)}><Sparkles /><span>{goal}</span><ChevronRight /></button>)}</div>}
     <p className="truth-note"><ShieldCheck /> El cerebro cambia solo con conexión, streaming o fases persistidas de misión.</p>
@@ -85,10 +90,13 @@ function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisab
   onStopChat: () => void;
 }) {
   return <form className="goal-dock" onSubmit={onSubmit}>
-    <div className="composer-mode" role="group" aria-label="Modo del compositor"><button type="button" aria-pressed={!chatMode} className={!chatMode ? 'active' : ''} onClick={() => onToggleChat(false)}><Target /> Goal</button><button type="button" aria-pressed={chatMode} className={chatMode ? 'active' : ''} onClick={() => onToggleChat(true)}><MessageSquare /> Chat</button></div>
+    <header className="composer-heading">
+      <span className="composer-identity"><Image src="/efesto-smith.svg" alt="" width={34} height={34} /><span><strong>Efesto</strong><small>{chatMode ? 'Conversación privada' : 'Forjar un nuevo Goal'}</small></span></span>
+      <div className="composer-mode" role="group" aria-label="Modo del compositor"><button type="button" aria-pressed={chatMode} className={chatMode ? 'active' : ''} onClick={() => onToggleChat(true)}><MessageSquare /> Chat</button><button type="button" aria-pressed={!chatMode} className={!chatMode ? 'active' : ''} onClick={() => onToggleChat(false)}><Target /> Goal</button></div>
+    </header>
     <textarea aria-label={chatMode ? 'Mensaje' : 'Goal'} value={input} onChange={(event) => onInputChange(event.target.value)} rows={1} placeholder={chatMode ? (chatAvailable ? 'Pregunta a tu modelo…' : 'Configura un modelo para conversar…') : 'Dile a Efesto qué quieres conseguir…'} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
     {chatPending ? <button type="button" className="send-button stop" onClick={onStopChat} aria-label="Detener"><Pause /></button> : <button type="submit" className="send-button" disabled={submitDisabled} aria-label={chatMode ? 'Enviar' : 'Preparar Goal'}><Send /></button>}
-    <p><ShieldCheck /> {chatMode ? 'Chat no entra en memoria automáticamente.' : 'El Goal se prepara primero; ejecutar requiere confirmación explícita.'}</p>
+    <p><ShieldCheck /><span>{chatMode ? 'Chat no entra en memoria automáticamente.' : 'El Goal se prepara primero; ejecutar requiere confirmación explícita.'}</span><b>{chatMode ? 'Private' : 'Kernel-gated'}</b></p>
   </form>;
 }
 export function MissionsView({ snapshot, onNew }: { snapshot?: OverviewSnapshot; onNew: () => void }) {
@@ -139,7 +147,7 @@ export function SettingsView({ connected, connecting, rememberSession, snapshot,
   </Workspace>;
 }
 
-function BrainHeader({ phase }: { phase: BrainPhase }) { const state = brainState(phase); return <header className={`brain-header phase-${phase}`}><Image src="/internet-brain-core.webp" alt="" width={96} height={42} /><div><small>EFESTO LIVE</small><strong>{state.label}</strong><span>{state.detail}</span></div><i /></header>; }
+function BrainHeader({ phase }: { phase: BrainPhase }) { const state = brainState(phase); return <header className={`brain-header phase-${phase}`}><Image src="/efesto-smith.svg" alt="" width={52} height={52} /><div><small>EFESTO LIVE</small><strong>{state.label}</strong><span>{state.detail}</span></div><i /></header>; }
 function Workspace({ icon: Icon, eyebrow, title, copy, action, children }: { icon: typeof Target; eyebrow: string; title: string; copy: string; action?: ReactNode; children: ReactNode }) { return <section className="workspace"><header className="workspace-heading"><span><Icon /></span><div><small>{eyebrow}</small><h1>{title}</h1><p>{copy}</p></div>{action ? <div className="workspace-heading-action">{action}</div> : null}</header><div className="workspace-body">{children}</div></section>; }
 function Empty({ icon: Icon, title, copy }: { icon: typeof Target; title: string; copy: string }) { return <div className="empty-state"><Icon /><strong>{title}</strong><p>{copy}</p></div>; }
 function StatePill({ state }: { state: string }) { const tone = ['ready', 'completed', 'forged', 'available', 'new'].includes(state) ? 'good' : ['failed', 'invalid'].includes(state) ? 'bad' : ['running', 'investigating', 'verifying', 'queued', 'waiting_for_agent'].includes(state) ? 'working' : 'neutral'; return <span className={`state-pill ${tone}`}><i />{state.replaceAll('_', ' ')}</span>; }

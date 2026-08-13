@@ -44,7 +44,8 @@ test('runs the Goal-first journey only after explicit confirmation', async ({ pa
   await expect(page.getByRole('heading', { name: '¿Qué quieres conseguir?', exact: true })).toBeVisible();
   await expect(page.getByRole('img', { name: /Modo local desconectado/ })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Goal', exact: true })).toBeVisible();
-  await expect(page.locator('.home-eyebrow')).toHaveText('EFESTO · INTELLIGENCE FORGE');
+  await expect(page.locator('.home-eyebrow')).toHaveText('CONVERSACIÓN CON AUTORIDAD DEL KERNEL');
+  await expect(page.locator('.composer-identity')).toContainText('Forjar un nuevo Goal');
   await expect(page.getByRole('button', { name: 'Goal', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Chat', exact: true })).toHaveAttribute('aria-pressed', 'false');
 
@@ -155,6 +156,7 @@ test.describe('mobile Efesto product shell', () => {
     await expect(page.getByRole('img', { name: /Modo local desconectado/ })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Goal', exact: true })).toBeVisible();
     await expect(page.locator('.goal-dock')).toBeVisible();
+    await expect(page.locator('.composer-identity')).toContainText('Forjar un nuevo Goal');
 
     const initial = await page.evaluate(() => ({ viewportWidth: innerWidth, documentWidth: document.documentElement.scrollWidth }));
     expect(initial.documentWidth).toBe(initial.viewportWidth);

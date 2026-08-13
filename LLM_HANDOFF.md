@@ -561,3 +561,29 @@ To satisfy the requirements of GitHub Issue #1: Phase 0.1 — Create the minimum
 ### Boundary
 
 This completes the web-first design slice. Responsive mobile use is included through the existing dashboard/PWA surface, but native Android/iOS and phone-to-PC Kernel transport remain outside this PR.
+
+## Handoff 2026-08-13 - Codex - Professional Efesto conversation surface
+
+### What changed
+
+- Refined PR #221 around a persistent bottom composer with a professional `Chat / Goal` selector.
+- Removed visible comparison copy that named another AI product; the Home now explains Efesto, Goal preparation, Evidence and Kernel authority in its own language.
+- Integrated the existing pixel smith as compact product identity in the Home, composer and live Chat header.
+- Preserved the existing brain/forge asset because the living-forge state remains a release contract; its delivery is now direct/local in static previews.
+- Kept every action on its existing handler: Chat streaming, Goal preparation and confirmation, starter Goals, Evidence navigation and Finds navigation.
+- Tightened the 390×844 layout: no horizontal overflow, nonessential top metadata hidden, 134 px sticky composer and safe-area bottom offset.
+
+### Verification
+
+- Dashboard unit suite: 124/124 passed.
+- Dashboard production build: passed.
+- Cloud-browser desktop render: 1363×936, zero broken images and composer visible inside the viewport.
+- Cloud-browser mobile render: 390×844, document width 390, composer x=12 / width=351 / bottom=822.
+- Browser interaction: Chat and Goal mode semantics passed; starter Goal populated the real textarea; no app-origin console errors.
+- Exact screenshot artifact persistence remains blocked by the cloud-browser export boundary and is recorded in `design-qa.md`; PR #221 must remain draft until the final CI/browser artifact is available.
+
+### Boundaries
+
+- No Kernel, authentication, persistence, agent, Evidence, Find, replay or memory-authority contract changed.
+- No native app or phone→PC transport was added.
+- Do not merge the draft automatically.
