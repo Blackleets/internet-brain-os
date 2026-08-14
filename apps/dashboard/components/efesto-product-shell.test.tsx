@@ -20,6 +20,19 @@ const base = {
   '/api/chat/providers': { ok: true, providers: [{ id: 'fixture-local', type: 'ollama', label: 'Ollama local', models: ['qwen3:4b'], managedBy: 'environment' }] },
   '/api/model-forge': { ok: true, forge: { runtime: 'available', hardware: { ramGiB: 32, cpuCores: 12, tier: 'powerful' }, activeModel: 'qwen3:4b', recommended: 'qwen3:4b', models: [{ id: 'qwen3:4b', label: 'Qwen 3 4B', minRamGiB: 8, tier: 'light', uses: ['chat'], multilingual: true, compatible: true, installed: true, active: true }], setup: { action: 'configure', command: null, setting: null, restartRequired: false } } },
   '/api/preferences': preferencesResponse,
+  '/api/integrations': { ok: true, schemaVersion: 'efesto.integration-catalog.v1', authority: 'kernel', generatedAt: '2026-08-09T08:05:00.000Z', integrations: [
+    { id: 'kernel', kind: 'core', adapter: 'native', status: 'ready', capabilities: ['goal.prepare', 'mission.confirm', 'evidence.read'], scopes: ['local'], action: 'settings' },
+    { id: 'hermes', kind: 'agent', adapter: 'native', status: 'ready', capabilities: ['mission.execute'], scopes: ['public.read'], action: 'agents' },
+    { id: 'obsidian', kind: 'memory', adapter: 'native', status: 'ready', capabilities: ['memory.project'], scopes: ['local.memory'], action: 'settings' },
+    { id: 'browser-extension', kind: 'capture', adapter: 'native', status: 'ready', capabilities: ['capture.public_page'], scopes: ['public.read'], action: 'settings' },
+    { id: 'model-providers', kind: 'model', adapter: 'native', status: 'ready', capabilities: ['chat.generate'], scopes: ['model.input'], action: 'models', count: 1 },
+    { id: 'mcp-gateway', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['scoped.tool'], action: 'settings' },
+    { id: 'github', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['github.read'], action: 'settings' },
+    { id: 'gmail', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['gmail.read'], action: 'settings' },
+    { id: 'google-drive', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['drive.read'], action: 'settings' },
+    { id: 'notion', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['notion.read'], action: 'settings' },
+    { id: 'google-calendar', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['calendar.read'], action: 'settings' },
+  ] },
 } as const;
 
 function responseFor(path: string, method: string): Response {
@@ -68,9 +81,11 @@ describe('Efesto conversation-first product shell', () => {
     expect(screen.getByRole('button', { name: 'Conectar Kernel' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Configurar modelo' })).toBeTruthy();
     expect(screen.getByText('Enter para enviar')).toBeTruthy();
-    const initialSuggestion = screen.getByRole('button', { name: /^Sugerencia/ }).textContent;
-    fireEvent.click(screen.getByRole('button', { name: 'Cambiar sugerencia' }));
-    expect(screen.getByRole('button', { name: /^Sugerencia/ }).textContent).not.toBe(initialSuggestion);
+    expect(screen.queryByRole('button', { name: /^Sugerencia/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cambiar sugerencia' })).toBeNull();
+    expect(screen.getByLabelText('Mensaje').getAttribute('placeholder')).toBe('Configura un modelo para empezar…');
+    fireEvent.click(screen.getByRole('button', { name: /^Goal$/ }));
+    expect(screen.getByLabelText('Goal').getAttribute('placeholder')).toMatch(/Encuéntrame|Busca trabajos|Investiga una empresa|Encuentra oportunidades/);
     expect(requests).toHaveLength(0);
   });
 
@@ -129,6 +144,42 @@ describe('Efesto conversation-first product shell', () => {
     const source = await screen.findByRole('link', { name: /Abrir fuente/ });
     expect(source.getAttribute('href')).toBe('https://shop.example/drill');
     expect(requests.some((request) => new URL(request.url).pathname === '/api/browser/case/case-1')).toBe(true);
+  });
+
+  it('surfaces the authenticated integration catalog and routes actions to real views', async () => {
+    render(<EfestoProductShell />);
+    await connect();
+    fireEvent.click(screen.getByRole('button', { name: /^Integraciones$/ }));
+    expect(screen.getByRole('heading', { name: 'Integraciones' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Efesto Kernel' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'MCP Gateway' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'GitHub' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Gmail' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Google Drive' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Notion' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Google Calendar' })).toBeTruthy();
+    expect(screen.getAllByTestId('integration-logo-github').length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId('integration-logo-gmail').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('sin capacidades activas').length).toBeGreaterThan(0);
+    expect(requests.some((request) => request.method === 'GET' && new URL(request.url).pathname === '/api/integrations')).toBe(true);
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Complementos' }), { target: { value: 'local' } });
+    expect(screen.getByRole('heading', { name: 'Obsidian' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Efesto Kernel' })).toBeNull();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Complementos' }), { target: { value: 'all' } });
+
+    const integrationReadsBeforeRefresh = requests.filter((request) => new URL(request.url).pathname === '/api/integrations').length;
+    fireEvent.click(screen.getByRole('button', { name: 'Actualizar catálogo' }));
+    await waitFor(() => expect(requests.filter((request) => new URL(request.url).pathname === '/api/integrations').length).toBeGreaterThan(integrationReadsBeforeRefresh));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir modelos' }));
+    expect(screen.getByRole('heading', { name: 'Modelos' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /^Integraciones$/ }));
+    expect(screen.getAllByRole('button', { name: 'Configurar complemento' }).length).toBe(6);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Configurar complemento' })[0]);
+    expect(screen.getByRole('heading', { name: 'Ajustes' })).toBeTruthy();
+    expect(screen.getByText('Conectores externos')).toBeTruthy();
   });
 
   it('uses a configured model for Chat while keeping model output outside Evidence', async () => {

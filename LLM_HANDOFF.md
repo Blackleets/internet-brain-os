@@ -587,3 +587,40 @@ This completes the web-first design slice. Responsive mobile use is included thr
 - No Kernel, authentication, persistence, agent, Evidence, Find, replay or memory-authority contract changed.
 - No native app or phone→PC transport was added.
 - Do not merge the draft automatically.
+
+## Handoff 2026-08-14 - Codex - Efesto Complementos connector foundation
+
+### What changed
+
+- Added a Kernel-owned external MCP catalog for GitHub, Gmail, Google Drive,
+  Notion, and Google Calendar.
+- Kept every connector read-first with a narrow scope, explicit capabilities,
+  independent readiness, and a real Settings action.
+- Added local SVG logos and a responsive directory/icon strip in the dashboard.
+- Added a Settings connector ledger so each `+` action lands on a useful,
+  truthful configuration surface rather than a dead control.
+
+### Verification
+
+- Kernel integration-catalog tests: 3/3 passed.
+- Kernel server integration tests: included in the targeted 30-test run.
+- Dashboard suite: 126/126 passed.
+- Dashboard typecheck: passed.
+- Full repository gates still need to be run on this exact working tree before
+  publishing.
+
+### Boundary
+
+The connector catalog is wired to Efesto's Kernel read model, but no external
+OAuth/MCP account authorization is claimed yet. The local server does not
+instantiate provider connector statuses, so the five external entries remain
+`not_configured` until a reviewed gateway/auth adapter reports them. Do not
+mark them connected or add write scopes from the UI alone. Browser screenshot
+comparison remains unavailable in this environment because a Chromium binary
+is not installed.
+
+### Next recommended step
+
+Implement and test one real read-only adapter, preferably GitHub, with explicit
+consent, bounded capability receipts, provenance, revocation, and fail-closed
+status reporting; then reuse that contract for the remaining four connectors.

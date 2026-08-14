@@ -74,6 +74,19 @@ remain explicitly unavailable until their Kernel contracts and implementations
 exist; the dashboard must not invent graph records, schedules, progress, or
 future executions.
 
+The Complementos directory is a Kernel-backed read model, not a second
+integration authority. `apps/local-kernel/integration-catalog.mjs` publishes the
+curated MCP connector boundary for GitHub, Gmail, Google Drive, Notion, and
+Google Calendar. Each connector carries its own adapter, provider, read-only
+scope, capabilities, readiness state, and Settings action. The MCP gateway can
+transport these connectors, but gateway availability alone cannot mark a
+provider ready; only an exact connector status reported by the Kernel gateway
+may do that. Provider credentials, OAuth, external writes, and irreversible
+actions remain outside this UI slice until their adapter contracts and approval
+receipts exist. Local SVG marks live under
+`apps/dashboard/public/integrations/`, so the directory has no remote asset
+dependency.
+
 The persistent bottom composer is a provider-neutral conversation surface.
 Authenticated users may register loopback Ollama or HTTPS OpenAI-compatible
 providers; credentials are accepted only by the loopback Kernel, persisted in

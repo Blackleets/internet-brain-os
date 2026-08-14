@@ -74,6 +74,40 @@ describe('local Kernel HTTP receiver', () => {
     expect(JSON.stringify(body)).not.toContain(apiToken);
   });
 
+  it('serves an authenticated integration catalog with truthful adapter states', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-integrations-http-'));
+    const bootstrapStatus = () => ({
+      schemaVersion: 'efesto.bootstrap-status.v1',
+      ok: true,
+      kernel: 'ready', hermes: 'ready', obsidian: 'not_configured', pairing: 'required', overall: 'needs_setup',
+      message: 'needs setup', diagnostics: {}, actions: [],
+    });
+    const providers = new ModelProviderRegistry(join(dir, 'providers.json'), {
+      defaults: [{ id: 'local', type: 'ollama', label: 'Local', baseUrl: 'http://127.0.0.1:11434', models: ['qwen3:4b'], managedBy: 'environment' }],
+    });
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, { bootstrapStatus, modelProviderRegistry: providers });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const base = `http://127.0.0.1:${server.address().port}`;
+
+    expect((await fetch(`${base}/api/integrations`)).status).toBe(401);
+    const response = await fetch(`${base}/api/integrations`, { headers: authHeaders });
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({ ok: true, schemaVersion: 'efesto.integration-catalog.v1', authority: 'kernel' });
+    expect(body.integrations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'kernel', status: 'ready' }),
+      expect.objectContaining({ id: 'model-providers', status: 'ready', count: 1 }),
+      expect.objectContaining({ id: 'mcp-gateway', status: 'not_configured', capabilities: [] }),
+      expect.objectContaining({ id: 'github', status: 'not_configured', scopes: ['github.read'] }),
+      expect.objectContaining({ id: 'gmail', status: 'not_configured', scopes: ['gmail.read'] }),
+      expect.objectContaining({ id: 'google-drive', status: 'not_configured', scopes: ['drive.read'] }),
+      expect.objectContaining({ id: 'notion', status: 'not_configured', scopes: ['notion.read'] }),
+      expect.objectContaining({ id: 'google-calendar', status: 'not_configured', scopes: ['calendar.read'] }),
+    ]));
+    expect(JSON.stringify(body)).not.toContain('providers.json');
+    expect(JSON.stringify(body)).not.toContain(apiToken);
+  });
+
   it('reports Ollama configured only when the summarizer has a model', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));

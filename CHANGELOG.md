@@ -2,6 +2,8 @@
 
 ### Added
 - Canonical `CONSTITUTION.md` for Efesto's product identity, Kernel authority, safety boundaries, truthful autonomy, engineering discipline, agent preflight, and amendment process; `pnpm resume` now validates its required agent entry points before exposing the live checkpoint.
+- Kernel-owned Complementos directory with local logos and curated read-first connector entries for GitHub, Gmail, Google Drive, Notion, and Google Calendar behind MCP.
+- Independent external connector capability/status records and a Settings ledger that exposes each connector's scope and truthful `not_configured` state without implying authorization.
 - Credential-free remote Hermes L1→L7 acceptance using a checksum-verified, runner-local Ollama runtime and reviewed tool-capable Qwen3 model identity; no founder API key or PC installation is required.
 - Remote GitHub acceptance workflow for authentic Hermes v0.20 public-web L1→L7 proof, pinned to reviewed action/runtime commits and publishing only the sanitized acceptance report.
 - Private local-installation product cohort for trustworthy first-Goal activation and repeat-Goal measurement without global identifiers or external telemetry.

@@ -21,6 +21,21 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 - Search snippet/agent text ≠ Evidence.
 - Responsive mobile-width support does not imply phone → PC Kernel authority.
 
+## Current product surface — Complementos directory
+
+The dashboard's mobile-first Complementos view now exposes a curated external
+connector set: GitHub, Gmail, Google Drive, Notion, and Google Calendar, plus
+the MCP gateway and the existing local integrations. Logos are local static
+assets. External entries are read-first and each one has its own scope,
+capabilities, readiness state, and Settings destination.
+
+This is a truthful catalog/read-model foundation, not live account
+authorization. The current local bootstrap has no external MCP gateway
+connector statuses, so these five entries remain `not_configured`; no provider
+is presented as connected. The next implementation slice is one real,
+approval-aware read-only connector (GitHub is the smallest useful candidate)
+before adding write scopes or more providers.
+
 ## Verified foundation ✅
 
 ### Memory Safety v1

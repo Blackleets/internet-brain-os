@@ -2,24 +2,25 @@
 
 import Image from 'next/image';
 import {
-  Bot, BrainCircuit, ChevronRight, Home, Menu, RefreshCw, Settings,
+  Bot, BrainCircuit, ChevronRight, Home, Menu, Plug, RefreshCw, Settings,
   ShieldCheck, Sparkles, SquarePen, Target, Workflow, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { KernelClient, KernelClientError } from '../lib/kernel/client';
-import type { CaseSummary } from '../lib/kernel/contracts';
+import type { CaseSummary, IntegrationAction, IntegrationCatalog } from '../lib/kernel/contracts';
 import { loadGoalSurfaces, type GoalSurface, type GoalSurfaceWorkState } from '../lib/kernel/goal-surfaces';
+import { loadIntegrationCatalog } from '../lib/kernel/integrations';
 import { loadOverview, type OverviewSnapshot } from '../lib/kernel/overview';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { connectionStore } from '../lib/session/connection-store';
 import { EfestoLocaleProvider, useEfestoLocale } from '../lib/efesto-i18n';
 import {
-  AgentsView, AutomationsView, EvidenceView, FindsView, HomeView, MissionsView, ModelsView, SettingsView,
+  AgentsView, AutomationsView, EvidenceView, FindsView, HomeView, IntegrationsView, MissionsView, ModelsView, SettingsView,
   type BrainPhase, type CaseDetail, type ChatMessage, type EvidenceRecord, type Provider,
 } from './efesto-product-views';
 import { ProductValueScorecardPanel } from './overview/product-value-scorecard';
 
-type View = 'home' | 'missions' | 'finds' | 'evidence' | 'models' | 'agents' | 'automations' | 'settings';
+type View = 'home' | 'missions' | 'finds' | 'evidence' | 'models' | 'agents' | 'integrations' | 'automations' | 'settings';
 type Connection = { baseUrl: string; token: string };
 type StreamEvent = { type?: 'conversation' | 'delta' | 'done' | 'error'; delta?: string; error?: string; response?: { model?: string } };
 
@@ -35,6 +36,7 @@ const workspaceNav: NavItem[] = [
 const systemNav: NavItem[] = [
   { id: 'models', labelKey: 'nav.models', icon: BrainCircuit },
   { id: 'agents', labelKey: 'nav.agents', icon: Bot },
+  { id: 'integrations', labelKey: 'nav.integrations', icon: Plug },
   { id: 'automations', labelKey: 'nav.automations', icon: Workflow },
 ];
 const settingsNav: NavItem = { id: 'settings', labelKey: 'nav.settings', icon: Settings };
@@ -56,6 +58,7 @@ function EfestoProductShellContent() {
   const [connection, setConnection] = useState<Connection>();
   const [snapshot, setSnapshot] = useState<OverviewSnapshot>();
   const [goalSurfaces, setGoalSurfaces] = useState<GoalSurface[]>([]);
+  const [integrationCatalog, setIntegrationCatalog] = useState<IntegrationCatalog>();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [selectedProviderId, setSelectedProviderId] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
@@ -113,13 +116,15 @@ function EfestoProductShellContent() {
     const poll = async () => {
       try {
         const client = new KernelClient(connection);
-        const [nextSnapshot, nextGoalSurfaces] = await Promise.all([
+        const [nextSnapshot, nextGoalSurfaces, nextIntegrationCatalog] = await Promise.all([
           loadOverview(client),
           loadGoalSurfaces(client),
+          loadOptionalIntegrationCatalog(client),
         ]);
         if (cancelled) return;
         setSnapshot(nextSnapshot);
         setGoalSurfaces(nextGoalSurfaces);
+        setIntegrationCatalog(nextIntegrationCatalog);
       } catch {
         // The visible readiness state remains the last verified state until the next successful poll.
       }
@@ -155,6 +160,12 @@ function EfestoProductShellContent() {
     setPreparedGoal('');
     setInput('');
     navigate('home');
+  }
+
+  function navigateIntegration(action: IntegrationAction) {
+    if (action === 'settings') return navigate('settings');
+    if (action === 'agents') return navigate('agents');
+    if (action === 'models') return navigate('models');
   }
 
   async function connect(event: FormEvent<HTMLFormElement>) {
@@ -218,23 +229,25 @@ function EfestoProductShellContent() {
     try {
       const verified = { baseUrl: normalizeKernelBaseUrl(input.baseUrl), token: input.token };
       const client = new KernelClient(verified);
-      const [nextSnapshot, nextProviders, nextGoalSurfaces] = await Promise.all([
+      const [nextSnapshot, nextProviders, nextGoalSurfaces, nextIntegrationCatalog] = await Promise.all([
         loadOverview(client),
         client.get('/api/chat/providers', parseProviders),
         loadGoalSurfaces(client),
+        loadOptionalIntegrationCatalog(client),
       ]);
       if (nextSnapshot.readiness.kernel !== 'online') throw new KernelClientError('OFFLINE');
       setConnection(verified);
       setSnapshot(nextSnapshot);
       setProviders(nextProviders);
       setGoalSurfaces(nextGoalSurfaces);
+      setIntegrationCatalog(nextIntegrationCatalog);
       connectionStore.set(verified);
       if (remember) window.sessionStorage.setItem(SESSION_CONNECTION_KEY, JSON.stringify(verified));
       else window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
       setToast(t('toast.connectionSuccess'));
       return true;
     } catch (error) {
-      setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); connectionStore.clear();
+      setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); setIntegrationCatalog(undefined); connectionStore.clear();
       window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
       setToast(connectionMessage(error, t));
       return false;
@@ -243,7 +256,7 @@ function EfestoProductShellContent() {
 
   function disconnect() {
     chatAbortRef.current?.abort();
-    setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); setCaseDetails({}); setSelectedCaseId(''); setChatMessages([]);
+    setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); setIntegrationCatalog(undefined); setCaseDetails({}); setSelectedCaseId(''); setChatMessages([]);
     connectionStore.clear(); window.sessionStorage.removeItem(SESSION_CONNECTION_KEY); setRememberSession(false);
     setToast(t('toast.disconnected'));
   }
@@ -252,12 +265,13 @@ function EfestoProductShellContent() {
     if (!connection) return navigate('settings');
     try {
       const client = new KernelClient(connection);
-      const [nextSnapshot, nextProviders, nextGoalSurfaces] = await Promise.all([
+      const [nextSnapshot, nextProviders, nextGoalSurfaces, nextIntegrationCatalog] = await Promise.all([
         loadOverview(client),
         client.get('/api/chat/providers', parseProviders),
         loadGoalSurfaces(client),
+        loadOptionalIntegrationCatalog(client),
       ]);
-      setSnapshot(nextSnapshot); setProviders(nextProviders); setGoalSurfaces(nextGoalSurfaces); setToast(t('toast.refreshed'));
+      setSnapshot(nextSnapshot); setProviders(nextProviders); setGoalSurfaces(nextGoalSurfaces); setIntegrationCatalog(nextIntegrationCatalog); setToast(t('toast.refreshed'));
     } catch (error) { setToast(connectionMessage(error, t)); }
   }
 
@@ -414,14 +428,15 @@ function EfestoProductShellContent() {
         <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label={t('top.refresh')}><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? t('top.kernelReady') : t('top.connect')}</button></div>
       </header>
       <main className="efesto-main">
-        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} valueSurface={<ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot || !snapshot.productScorecard || snapshot.issues.some((issue) => issue.endpoint === 'scorecard')} />} /> : null}
+        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} valueSurface={<ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot || !snapshot.productScorecard || snapshot.issues.some((issue) => issue.endpoint === 'scorecard')} />} /> : null}
         {view === 'missions' ? <MissionsView snapshot={snapshot} onNew={newGoal} /> : null}
         {view === 'finds' ? <FindsView opportunities={snapshot?.opportunities ?? []} connected={Boolean(connection)} onFeedback={(id, signal) => void recordFeedback(id, signal)} /> : null}
         {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} onOpen={(record) => void openCase(record)} /> : null}
         {view === 'models' ? <ModelsView providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} modelForge={snapshot?.readiness.modelForge} connected={Boolean(connection)} onSelect={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); setChatMode(true); navigate('home'); }} onAdd={addProvider} /> : null}
         {view === 'agents' ? <AgentsView snapshot={snapshot} onSettings={() => navigate('settings')} onNewGoal={newGoal} /> : null}
+        {view === 'integrations' ? <IntegrationsView catalog={integrationCatalog} connected={Boolean(connection)} onNavigate={navigateIntegration} onRefresh={() => void refresh()} onBack={() => navigate('home')} /> : null}
         {view === 'automations' ? <AutomationsView missions={snapshot?.missions ?? []} connected={Boolean(connection)} onNewGoal={newGoal} /> : null}
-        {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} onConnect={connect} onDisconnect={disconnect} onRefresh={() => void refresh()} /> : null}
+        {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} catalog={integrationCatalog} onConnect={connect} onDisconnect={disconnect} onRefresh={() => void refresh()} /> : null}
       </main>
 
       {toast ? <div className="efesto-toast" role="status"><ShieldCheck /><span>{toast}</span><button type="button" onClick={() => setToast('')} aria-label={t('toast.close')}><X /></button></div> : null}
@@ -440,6 +455,10 @@ function brainPhaseFromWorkState(workState: GoalSurfaceWorkState | undefined): B
 function keywordsFromGoal(value: string) { return Array.from(new Set(value.toLocaleLowerCase('es').replace(/[^\p{L}\p{N}]+/gu, ' ').split(/\s+/).filter((word) => word.length > 2))).slice(0, 8); }
 function slug(value: string) { return value.toLocaleLowerCase('en').replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || `provider-${Date.now()}`; }
 function viewLabel(view: View, t: (key: string) => string) { return t(nav.find((item) => item.id === view)?.labelKey ?? 'nav.home'); }
+async function loadOptionalIntegrationCatalog(client: KernelClient): Promise<IntegrationCatalog | undefined> {
+  try { return await loadIntegrationCatalog(client); }
+  catch { return undefined; }
+}
 function connectionMessage(error: unknown, t: (key: string) => string) { if (error instanceof KernelClientError && error.code === 'UNAUTHORIZED') return t('error.unauthorized'); if (error instanceof KernelClientError && error.code === 'TIMEOUT') return t('error.timeout'); if (error instanceof KernelClientError && error.code === 'OFFLINE') return t('error.offline'); return t('error.connection'); }
 function parseObject(value: unknown): Record<string, unknown> { if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid response'); return value as Record<string, unknown>; }
 function parseOk(value: unknown) { const body = parseObject(value); if (body.ok !== true) throw new Error('Invalid response'); return body; }

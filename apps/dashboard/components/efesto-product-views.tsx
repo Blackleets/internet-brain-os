@@ -2,11 +2,11 @@
 
 import Image from 'next/image';
 import {
-  Activity, Bot, BrainCircuit, Check, ChevronDown, ChevronRight, CircleOff, ExternalLink, FileSearch, Languages,
-  History, Menu, MessageSquare, Pause, Plug, RefreshCw, Search, Send, Settings, ShieldCheck, Sparkles, Target, Workflow, X,
+  Activity, ArrowLeft, Bot, BrainCircuit, Check, ChevronDown, ChevronRight, CircleOff, ExternalLink, FileSearch, Languages,
+  History, Menu, MessageSquare, MoreHorizontal, Pause, Plug, Plus, RefreshCw, Search, Send, Settings, ShieldCheck, Sparkles, Target, Workflow, X,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import type { CaseSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
+import type { CaseSummary, IntegrationAction, IntegrationCatalog, IntegrationSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
 import { EFESTO_LOCALES, useEfestoLocale, type EfestoLocale } from '../lib/efesto-i18n';
 
@@ -29,11 +29,11 @@ export type BrainPhase = 'offline' | 'ready' | 'queued' | 'investigating' | 'ver
 
 const starterGoalKeys = ['starter.goal1', 'starter.goal2', 'starter.goal3', 'starter.goal4'];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, valueSurface }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, valueSurface }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
   input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
-  onConfirmGoal: () => void; onEditGoal: () => void; onStarterGoal: (goal: string) => void; onStarterChat: (prompt: string) => void;
+  onConfirmGoal: () => void; onEditGoal: () => void;
   onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
   onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenNav: () => void; valueSurface?: ReactNode;
 }) {
@@ -111,7 +111,6 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
       chatPending={chatPending}
       submitDisabled={submitDisabled}
       suggestions={showSuggestions ? starterGoals : []}
-      onSuggestion={chatMode ? onStarterChat : onStarterGoal}
       onInputChange={onInputChange}
       onSubmit={onSubmit}
       onStopChat={onStopChat}
@@ -135,9 +134,9 @@ function ModeSwitcher({ chatMode, onToggleChat }: { chatMode: boolean; onToggleC
   </div>;
 }
 
-function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisabled, suggestions, onSuggestion, onInputChange, onSubmit, onStopChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, connected, onSelectModel, onOpenSettings }: {
+function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisabled, suggestions, onInputChange, onSubmit, onStopChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, connected, onSelectModel, onOpenSettings }: {
   input: string; chatMode: boolean; chatAvailable: boolean; chatPending: boolean; submitDisabled: boolean; suggestions: string[];
-  onSuggestion: (value: string) => void; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onStopChat: () => void; onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
   connected: boolean; onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void;
 }) {
@@ -169,28 +168,11 @@ function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisab
   }, [suggestionSignature, suggestions.length, prefersReducedMotion]);
 
   const activeSuggestion = suggestions.length ? suggestions[suggestionIndex % suggestions.length] : undefined;
-  const rotateSuggestion = () => {
-    if (suggestions.length < 2) return;
-    setSuggestionIndex((current) => (current + 1) % suggestions.length);
-  };
+  const placeholder = chatMode
+    ? chatAvailable ? activeSuggestion ?? t('composer.chatPlaceholder') : t('composer.chatNeedsModel')
+    : activeSuggestion ?? t('composer.goalPlaceholder');
 
-  return <div className={'forge-composer-zone ' + (suggestions.length ? 'has-suggestions' : '')}>
-    {activeSuggestion ? <div className="forge-quick-prompts" aria-label={chatMode ? t('composer.startSuggestions') : t('composer.goalIdeas')}>
-      <div className="forge-suggestion-rail" aria-live="polite">
-        <button type="button" className="forge-quick-prompt" key={activeSuggestion} onClick={() => onSuggestion(activeSuggestion)}>
-          <span className="forge-quick-prompt-icon">{chatMode ? <Sparkles /> : <Target />}</span>
-          <span className="forge-quick-prompt-copy">
-            <small>{t('composer.suggestionLabel')} · {t('composer.suggestionCount', { current: suggestionIndex % suggestions.length + 1, total: suggestions.length })}</small>
-            <span>{activeSuggestion}</span>
-          </span>
-          <ChevronRight />
-        </button>
-        <button type="button" className="forge-suggestion-next" onClick={rotateSuggestion} aria-label={t('composer.nextSuggestion')} title={t('composer.nextSuggestion')}>
-          <RefreshCw />
-        </button>
-      </div>
-    </div> : null}
-
+  return <div className="forge-composer-zone">
     <form className={'forge-composer ' + (chatMode ? 'is-chat' : 'is-goal')} onSubmit={onSubmit}>
       <textarea
         aria-label={chatMode ? t('composer.message') : t('composer.goal')}
@@ -198,7 +180,7 @@ function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisab
         value={input}
         onChange={(event) => onInputChange(event.target.value)}
         rows={1}
-        placeholder={chatMode ? (chatAvailable ? t('composer.chatPlaceholder') : t('composer.chatNeedsModel')) : t('composer.goalPlaceholder')}
+        placeholder={placeholder}
         onKeyDown={(event) => {
           if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
             event.preventDefault();
@@ -383,6 +365,90 @@ export function AgentsView({ snapshot, onSettings, onNewGoal }: { snapshot?: Ove
   </Workspace>;
 }
 
+const integrationSections = [
+  { id: 'featured', itemIds: ['kernel', 'hermes', 'model-providers'] },
+  { id: 'local', itemIds: ['browser-extension', 'obsidian'] },
+  { id: 'external', itemIds: ['mcp-gateway', 'github', 'gmail', 'google-drive', 'notion', 'google-calendar'] },
+] as const;
+
+export function IntegrationsView({ catalog, connected, onNavigate, onRefresh, onBack }: { catalog?: IntegrationCatalog; connected: boolean; onNavigate: (action: IntegrationAction) => void; onRefresh: () => void; onBack: () => void }) {
+  const { t } = useEfestoLocale();
+  const [sectionFilter, setSectionFilter] = useState<'all' | 'featured' | 'local' | 'external'>('all');
+  const integrations = catalog?.integrations ?? [];
+  const integrationsById = new Map(integrations.map((integration) => [integration.id, integration]));
+  const visibleSections = sectionFilter === 'all' ? integrationSections : integrationSections.filter((section) => section.id === sectionFilter);
+  const scrollToIntegration = (id: string) => document.getElementById(`forge-addon-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  return <section className="workspace forge-integrations-workspace">
+    <header className="forge-integrations-toolbar">
+      <button type="button" className="forge-integrations-round-button" onClick={onBack} aria-label={t('integrations.back')}><ArrowLeft /></button>
+      <label className="forge-integrations-directory-title"><select value={sectionFilter} onChange={(event) => setSectionFilter(event.target.value as typeof sectionFilter)} aria-label={t('integrations.directoryTitle')}><option value="all">{t('integrations.directoryTitle')}</option><option value="featured">{t('integrations.section.featured')}</option><option value="local">{t('integrations.section.local')}</option><option value="external">{t('integrations.section.external')}</option></select><ChevronDown aria-hidden="true" /></label>
+      <button type="button" className="forge-integrations-round-button" onClick={() => onNavigate('settings')} aria-label={t('integrations.openSettings')}><Settings /></button>
+    </header>
+    <div className="forge-integrations-intro"><small>{t('integrations.eyebrow')}</small><h1>{t('integrations.title')}</h1><p>{t('integrations.copy')}</p></div>
+    {!connected ? <Empty icon={CircleOff} title={t('missions.offlineTitle')} copy={t('integrations.offlineCopy')} /> : !catalog ? <Empty icon={Plug} title={t('integrations.unavailableTitle')} copy={t('integrations.unavailableCopy')} /> : <>
+      <div className="forge-addon-icon-strip" aria-label={t('integrations.topAria')}>
+        {integrations.map((integration) => <button type="button" key={integration.id} className={`forge-addon-icon-chip status-${integration.status}`} onClick={() => scrollToIntegration(integration.id)} aria-label={t(`integrations.${integration.id}.name`)} title={t(`integrations.${integration.id}.name`)}><IntegrationMark id={integration.id} /></button>)}
+      </div>
+      <div className="forge-integrations-trustline"><ShieldCheck /><span>{t('integrations.boundaryCopy')}</span><button type="button" onClick={onRefresh} aria-label={t('integrations.refresh')}><RefreshCw /></button></div>
+      <div className="forge-addon-sections" aria-label={t('integrations.catalogAria')}>
+        {visibleSections.map((section) => {
+          const items = section.itemIds.map((id) => integrationsById.get(id)).filter((item): item is IntegrationSummary => Boolean(item));
+          if (!items.length) return null;
+          return <section className="forge-addon-section" key={section.id} aria-labelledby={`forge-addon-section-${section.id}`}>
+            <header><h2 id={`forge-addon-section-${section.id}`}>{t(`integrations.section.${section.id}`)}</h2><span>{items.length}</span></header>
+            <div className="forge-addon-list">{items.map((integration) => <IntegrationCard key={integration.id} integration={integration} onNavigate={onNavigate} />)}</div>
+          </section>;
+        })}
+      </div>
+    </>}
+  </section>;
+}
+
+function IntegrationCard({ integration, onNavigate }: { integration: IntegrationSummary; onNavigate: (action: IntegrationAction) => void }) {
+  const { t } = useEfestoLocale();
+  const nameKey = `integrations.${integration.id}.name`;
+  const copyKey = `integrations.${integration.id}.copy`;
+  const countLabel = integration.id === 'model-providers' && typeof integration.count === 'number'
+    ? t('integrations.modelsCount', { count: integration.count })
+    : undefined;
+  const configureMcp = integration.adapter === 'mcp' && integration.status !== 'ready';
+  const actionLabel = configureMcp ? t('integrations.configure') : integration.action ? t(`integrations.action.${integration.action}`) : undefined;
+  return <article id={`forge-addon-${integration.id}`} className={`forge-addon-row status-${integration.status}`}>
+    <div className="forge-integration-icon"><IntegrationMark id={integration.id} /></div>
+    <div className="forge-integration-copy"><small>{t(`integrations.kind.${integration.kind}`)}</small><h2>{t(nameKey)}</h2><p>{t(copyKey)}</p>{countLabel ? <span className="forge-integration-count">{countLabel}</span> : null}</div>
+    <div className="forge-addon-row-footer"><div className="forge-integration-meta"><span>{integration.action && integration.capabilities.length ? t('integrations.capabilities', { count: integration.capabilities.length }) : integration.action ? t('integrations.noCapabilities') : t('integrations.noAction')}</span></div><div className="forge-addon-row-status"><StatePill state={integration.status} /><small>{integration.adapter === 'mcp' ? t('integrations.adapter.mcp') : t('integrations.adapter.native')}</small></div></div>
+    {integration.action ? <button type="button" className="forge-addon-row-action" onClick={() => onNavigate(integration.action)} aria-label={actionLabel}>{configureMcp ? <Plus /> : <MoreHorizontal />}</button> : <span className="forge-integration-note" title={t('integrations.mcpPending')} role="img" aria-label={t('integrations.mcpPending')}><Plus /></span>}
+  </article>;
+}
+
+function IntegrationMark({ id }: { id: string }) {
+  const logo = integrationLogo(id);
+  if (logo) return <Image className="forge-integration-logo-image" src={logo} alt="" width={32} height={32} data-integration-logo={id} data-testid={`integration-logo-${id}`} />;
+  const Icon = integrationIcon(id);
+  return <Icon aria-hidden="true" />;
+}
+
+function integrationLogo(id: string) {
+  const logos: Record<string, string> = {
+    'mcp-gateway': '/integrations/mcp.svg',
+    github: '/integrations/github.svg',
+    gmail: '/integrations/gmail.svg',
+    'google-drive': '/integrations/google-drive.svg',
+    notion: '/integrations/notion.svg',
+    'google-calendar': '/integrations/google-calendar.svg',
+  };
+  return logos[id];
+}
+
+function integrationIcon(id: string) {
+  if (id === 'kernel') return ShieldCheck;
+  if (id === 'hermes') return Bot;
+  if (id === 'obsidian') return BrainCircuit;
+  if (id === 'browser-extension') return ExternalLink;
+  if (id === 'model-providers') return BrainCircuit;
+  return Workflow;
+}
+
 export function AutomationsView({ missions, connected, onNewGoal }: { missions: MissionSummary[]; connected: boolean; onNewGoal: () => void }) {
   const { t } = useEfestoLocale();
   const withCadence = missions.filter((mission) => typeof mission.cadence === 'string');
@@ -391,19 +457,20 @@ export function AutomationsView({ missions, connected, onNewGoal }: { missions: 
   </Workspace>;
 }
 
-export function SettingsView({ connected, connecting, rememberSession, snapshot, onConnect, onDisconnect, onRefresh }: { connected: boolean; connecting: boolean; rememberSession: boolean; snapshot?: OverviewSnapshot; onConnect: (event: FormEvent<HTMLFormElement>) => void; onDisconnect: () => void; onRefresh: () => void }) {
+export function SettingsView({ connected, connecting, rememberSession, snapshot, catalog, onConnect, onDisconnect, onRefresh }: { connected: boolean; connecting: boolean; rememberSession: boolean; snapshot?: OverviewSnapshot; catalog?: IntegrationCatalog; onConnect: (event: FormEvent<HTMLFormElement>) => void; onDisconnect: () => void; onRefresh: () => void }) {
   const { t, locale, setLocale } = useEfestoLocale();
   const bootstrap = snapshot?.readiness.bootstrap;
+  const mcpIntegrations = catalog?.integrations.filter((integration) => integration.adapter === 'mcp') ?? [];
   return <Workspace icon={Settings} eyebrow={t('settings.eyebrow')} title={t('settings.title')} copy={t('settings.copy')}>
-    <div className="settings-layout"><form className="connection-card" onSubmit={onConnect}><header><span className={`kernel-dot ${connected ? 'online' : 'offline'}`} /><div><small>{t('settings.currentDevice')}</small><strong>{connected ? t('settings.authorized') : t('settings.connectKernel')}</strong></div></header>{!connected ? <><label>{t('settings.kernelUrl')}<input name="baseUrl" aria-label={t('settings.kernelUrl')} type="url" defaultValue="http://127.0.0.1:4000" required /></label><label>{t('settings.privateToken')}<input name="token" aria-label={t('settings.privateToken')} type="password" autoComplete="off" placeholder={t('settings.tokenPlaceholder')} /></label><label>{t('settings.pairingCode')}<input name="pairingCode" aria-label={t('settings.pairingCode')} inputMode="text" autoComplete="off" placeholder={t('settings.pairingPlaceholder')} /></label><label className="remember-row"><input name="rememberSession" type="checkbox" defaultChecked={rememberSession} /><span><strong>{t('settings.remember')}</strong><small>{t('settings.rememberCopy')}</small></span></label><div className="connection-actions"><button type="submit" name="action" value="pair" className="primary-action" disabled={connecting}>{connecting ? t('settings.pairing') : t('settings.pair')}</button><button type="submit" name="action" value="token" className="secondary-action" disabled={connecting}>{t('settings.authorize')}</button></div></> : <div className="connection-actions"><button type="button" className="primary-action" onClick={onRefresh}><RefreshCw /> {t('settings.checkNow')}</button><button type="button" className="danger-action" onClick={onDisconnect}>{t('settings.disconnect')}</button></div>}</form><section className="readiness-card"><header><ShieldCheck /><div><small>{t('settings.realStatus')}</small><strong>{statusLabel(bootstrap?.overall ?? (connected ? 'connected' : 'offline'), t)}</strong></div></header><ReadinessRow label="Kernel" value={bootstrap?.kernel ?? (connected ? 'ready' : 'offline')} ready={connected} /><ReadinessRow label="Hermes" value={bootstrap?.hermes ?? t('status.noDiagnostic')} ready={bootstrap?.hermes === 'ready'} /><ReadinessRow label="Obsidian" value={bootstrap?.obsidian ?? t('status.notConfigured')} ready={bootstrap?.obsidian === 'ready'} /><ReadinessRow label={t('settings.extension')} value={bootstrap?.pairing ?? t('status.notPaired')} ready={bootstrap?.pairing === 'paired'} /><a href="http://127.0.0.1:4000/replay-lab" target="_blank" rel="noreferrer">{t('settings.openReplay')} <ExternalLink /></a><div className="language-preferences" aria-labelledby="efesto-language-title"><header><Languages /><div><small>{t('locale.language')}</small><strong id="efesto-language-title">{t('locale.interface')}</strong></div></header><label>{t('locale.interface')}<select value={locale} onChange={(event) => setLocale(event.target.value as EfestoLocale)} aria-label={t('locale.interface')}>{EFESTO_LOCALES.map((option) => <option value={option.id} key={option.id}>{option.label}</option>)}</select></label><p>{t('locale.help')}</p></div></section></div>
+    <div className="settings-layout"><form className="connection-card" onSubmit={onConnect}><header><span className={`kernel-dot ${connected ? 'online' : 'offline'}`} /><div><small>{t('settings.currentDevice')}</small><strong>{connected ? t('settings.authorized') : t('settings.connectKernel')}</strong></div></header>{!connected ? <><label>{t('settings.kernelUrl')}<input name="baseUrl" aria-label={t('settings.kernelUrl')} type="url" defaultValue="http://127.0.0.1:4000" required /></label><label>{t('settings.privateToken')}<input name="token" aria-label={t('settings.privateToken')} type="password" autoComplete="off" placeholder={t('settings.tokenPlaceholder')} /></label><label>{t('settings.pairingCode')}<input name="pairingCode" aria-label={t('settings.pairingCode')} inputMode="text" autoComplete="off" placeholder={t('settings.pairingPlaceholder')} /></label><label className="remember-row"><input name="rememberSession" type="checkbox" defaultChecked={rememberSession} /><span><strong>{t('settings.remember')}</strong><small>{t('settings.rememberCopy')}</small></span></label><div className="connection-actions"><button type="submit" name="action" value="pair" className="primary-action" disabled={connecting}>{connecting ? t('settings.pairing') : t('settings.pair')}</button><button type="submit" name="action" value="token" className="secondary-action" disabled={connecting}>{t('settings.authorize')}</button></div></> : <div className="connection-actions"><button type="button" className="primary-action" onClick={onRefresh}><RefreshCw /> {t('settings.checkNow')}</button><button type="button" className="danger-action" onClick={onDisconnect}>{t('settings.disconnect')}</button></div>}</form><section className="readiness-card"><header><ShieldCheck /><div><small>{t('settings.realStatus')}</small><strong>{statusLabel(bootstrap?.overall ?? (connected ? 'connected' : 'offline'), t)}</strong></div></header><ReadinessRow label="Kernel" value={bootstrap?.kernel ?? (connected ? 'ready' : 'offline')} ready={connected} /><ReadinessRow label="Hermes" value={bootstrap?.hermes ?? t('status.noDiagnostic')} ready={bootstrap?.hermes === 'ready'} /><ReadinessRow label="Obsidian" value={bootstrap?.obsidian ?? t('status.notConfigured')} ready={bootstrap?.obsidian === 'ready'} /><ReadinessRow label={t('settings.extension')} value={bootstrap?.pairing ?? t('status.notPaired')} ready={bootstrap?.pairing === 'paired'} /><a href="http://127.0.0.1:4000/replay-lab" target="_blank" rel="noreferrer">{t('settings.openReplay')} <ExternalLink /></a>{mcpIntegrations.length ? <section className="settings-addon-ledger" aria-labelledby="settings-addon-ledger-title"><header><Plug /><div><small>{t('integrations.adapter.mcp')}</small><strong id="settings-addon-ledger-title">{t('integrations.externalTitle')}</strong></div></header><p>{t('integrations.externalCopy')}</p><div>{mcpIntegrations.map((integration) => <article key={integration.id}><span className="settings-addon-mark"><IntegrationMark id={integration.id} /></span><span><strong>{t(`integrations.${integration.id}.name`)}</strong><small>{integration.scopes.join(' · ')}</small></span><StatePill state={integration.status} /></article>)}</div><small className="settings-addon-note"><ShieldCheck /> {t('integrations.mcpPending')}</small></section> : null}<div className="language-preferences" aria-labelledby="efesto-language-title"><header><Languages /><div><small>{t('locale.language')}</small><strong id="efesto-language-title">{t('locale.interface')}</strong></div></header><label>{t('locale.interface')}<select value={locale} onChange={(event) => setLocale(event.target.value as EfestoLocale)} aria-label={t('locale.interface')}>{EFESTO_LOCALES.map((option) => <option value={option.id} key={option.id}>{option.label}</option>)}</select></label><p>{t('locale.help')}</p></div></section></div>
   </Workspace>;
 }
 
 function Workspace({ icon: Icon, eyebrow, title, copy, action, children }: { icon: typeof Target; eyebrow: string; title: string; copy: string; action?: ReactNode; children: ReactNode }) { return <section className="workspace"><header className="workspace-heading"><span><Icon /></span><div><small>{eyebrow}</small><h1>{title}</h1><p>{copy}</p></div>{action ? <div className="workspace-heading-action">{action}</div> : null}</header><div className="workspace-body">{children}</div></section>; }
 function Empty({ icon: Icon, title, copy }: { icon: typeof Target; title: string; copy: string }) { return <div className="empty-state"><Icon /><strong>{title}</strong><p>{copy}</p></div>; }
-function StatePill({ state }: { state: string }) { const { t } = useEfestoLocale(); const tone = ['ready', 'completed', 'forged', 'available', 'new'].includes(state) ? 'good' : ['failed', 'invalid'].includes(state) ? 'bad' : ['running', 'investigating', 'verifying', 'queued', 'waiting_for_agent'].includes(state) ? 'working' : 'neutral'; return <span className={`state-pill ${tone}`}><i />{statusLabel(state, t)}</span>; }
+function StatePill({ state }: { state: string }) { const { t } = useEfestoLocale(); const tone = ['ready', 'completed', 'forged', 'available', 'new'].includes(state) ? 'good' : ['failed', 'invalid', 'degraded'].includes(state) ? 'bad' : ['running', 'investigating', 'verifying', 'queued', 'waiting_for_agent'].includes(state) ? 'working' : 'neutral'; return <span className={`state-pill ${tone}`}><i />{statusLabel(state, t)}</span>; }
 function ReadinessRow({ label, value, ready }: { label: string; value: string; ready: boolean }) { const { t } = useEfestoLocale(); return <div className="readiness-row"><span>{label}</span><strong className={ready ? 'ready' : ''}><i />{statusLabel(value, t)}</strong></div>; }
-function statusLabel(value: string, t: (key: string) => string) { const statusKeys: Record<string, string> = { active: 'status.active', available: 'status.available', completed: 'status.completed', configured: 'status.configured', connected: 'status.connected', failed: 'status.failed', forged: 'status.forged', invalid: 'status.invalid', new: 'status.new', offline: 'status.offline', paired: 'status.paired', queued: 'status.queued', ready: 'status.ready', running: 'status.running', verifying: 'status.verifying', investigating: 'status.investigating', waiting_for_agent: 'status.waitingForAgent', unconfigured: 'status.unconfigured', checking: 'status.checking' }; return statusKeys[value] ? t(statusKeys[value]) : value.replaceAll('_', ' '); }
+function statusLabel(value: string, t: (key: string) => string) { const statusKeys: Record<string, string> = { active: 'status.active', available: 'status.available', completed: 'status.completed', configured: 'status.configured', connected: 'status.connected', degraded: 'status.degraded', failed: 'status.failed', forged: 'status.forged', invalid: 'status.invalid', new: 'status.new', not_configured: 'status.notConfigured', offline: 'status.offline', paired: 'status.paired', queued: 'status.queued', ready: 'status.ready', running: 'status.running', unavailable: 'status.unavailable', verifying: 'status.verifying', investigating: 'status.investigating', waiting_for_agent: 'status.waitingForAgent', unconfigured: 'status.unconfigured', checking: 'status.checking' }; return statusKeys[value] ? t(statusKeys[value]) : value.replaceAll('_', ' '); }
 export function brainState(phase: BrainPhase, t: (key: string) => string) { if (phase === 'thinking') return { label: t('state.conversing'), detail: t('state.modelStreaming') }; if (phase === 'investigating') return { label: t('state.investigating'), detail: t('state.hermesMission') }; if (phase === 'verifying') return { label: t('state.verifyingEvidence'), detail: t('state.kernelGates') }; if (phase === 'queued') return { label: t('state.missionPrepared'), detail: t('state.waitingAgent') }; if (phase === 'forged') return { label: t('state.evidenceForged'), detail: t('state.persistedResult') }; if (phase === 'failed') return { label: t('state.attentionRequired'), detail: t('state.lastMissionFailed') }; if (phase === 'ready') return { label: t('state.forgeReady'), detail: t('state.newGoalReady') }; return { label: t('state.localOffline'), detail: t('state.noActivity') }; }
 function formatDate(value: string, locale: EfestoLocale) { const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : new Intl.DateTimeFormat(locale === 'pt' ? 'pt-PT' : locale === 'en' ? 'en-GB' : 'es-ES', { dateStyle: 'medium' }).format(date); }
 function formatRelevance(value: number) { return value <= 1 ? `${Math.round(value * 100)}%` : String(Math.round(value)); }
