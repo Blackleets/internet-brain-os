@@ -2,8 +2,8 @@
 
 import Image from 'next/image';
 import {
-  BrainCircuit, ChevronRight, Home, Menu, RefreshCw,
-  Settings, ShieldCheck, Sparkles, Target, Workflow, Bot, X,
+  Bot, BrainCircuit, ChevronRight, Home, Menu, RefreshCw, Settings,
+  ShieldCheck, Sparkles, SquarePen, Target, Workflow, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { KernelClient, KernelClientError } from '../lib/kernel/client';
@@ -23,16 +23,24 @@ type StreamEvent = { type?: 'conversation' | 'delta' | 'done' | 'error'; delta?:
 
 const SESSION_CONNECTION_KEY = 'hephaestus.owner.connection.session.v1';
 const DEFAULT_BASE_URL = 'http://127.0.0.1:4000';
-const nav: Array<{ id: View; label: string; icon: typeof Home }> = [
+type NavItem = { id: View; label: string; icon: typeof Home };
+const workspaceNav: NavItem[] = [
   { id: 'home', label: 'Inicio', icon: Home },
-  { id: 'missions', label: 'Missions', icon: Target },
-  { id: 'finds', label: 'Finds', icon: Sparkles },
-  { id: 'evidence', label: 'Evidence', icon: ShieldCheck },
+  { id: 'missions', label: 'Misiones', icon: Target },
+  { id: 'finds', label: 'Hallazgos', icon: Sparkles },
+  { id: 'evidence', label: 'Evidencia', icon: ShieldCheck },
+];
+const systemNav: NavItem[] = [
   { id: 'models', label: 'Modelos', icon: BrainCircuit },
   { id: 'agents', label: 'Agentes', icon: Bot },
   { id: 'automations', label: 'Automatizaciones', icon: Workflow },
-  { id: 'settings', label: 'Ajustes', icon: Settings },
 ];
+const settingsNav: NavItem = { id: 'settings', label: 'Ajustes', icon: Settings };
+const navGroups = [
+  { label: 'Inteligencia', items: workspaceNav },
+  { label: 'Sistema', items: systemNav },
+];
+const nav = [...workspaceNav, ...systemNav, settingsNav];
 
 export default function EfestoProductShell() {
   const [view, setView] = useState<View>('home');
@@ -124,7 +132,23 @@ export default function EfestoProductShell() {
     }
     setSidebarCollapsed((currentValue) => !currentValue);
   }
-  function newGoal() { setChatMode(false); setPreparedGoal(''); setInput(''); navigate('home'); }
+  function newChat() {
+    chatAbortRef.current?.abort();
+    setChatPending(false);
+    setChatMode(true);
+    setChatMessages([]);
+    setPreparedGoal('');
+    setInput('');
+    navigate('home');
+  }
+  function newGoal() {
+    chatAbortRef.current?.abort();
+    setChatPending(false);
+    setChatMode(false);
+    setPreparedGoal('');
+    setInput('');
+    navigate('home');
+  }
 
   async function connect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -340,10 +364,38 @@ export default function EfestoProductShell() {
 
   return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''}`}>
     <aside className="efesto-sidebar" aria-label="Navegación principal">
-      <div className="efesto-brand"><button type="button" onClick={() => navigate('home')} aria-label="Efesto, inicio"><span className="brand-mark"><Image src="/efesto-smith.svg" alt="" width={36} height={36} /></span><span><strong>EFESTO</strong><small>The Intelligence Forge</small></span></button><button type="button" className="mobile-close" onClick={() => setNavOpen(false)} aria-label="Cerrar menú"><X /></button></div>
-      <button type="button" className="new-goal" onClick={newGoal}><Target /><span>Nuevo Goal</span></button>
-      <nav>{nav.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined}><Icon /><span>{label}</span>{id === 'missions' && snapshot ? <b>{snapshot.missions.length}</b> : null}{id === 'finds' && snapshot ? <b>{snapshot.opportunities.filter((item) => item.status === 'new').length}</b> : null}</button>)}</nav>
+      <div className="efesto-brand">
+        <button type="button" onClick={() => navigate('home')} aria-label="Efesto, inicio">
+          <span className="brand-mark"><Image src="/efesto-smith.svg" alt="" width={36} height={36} /></span>
+          <span><strong>EFESTO</strong><small>The Intelligence Forge</small></span>
+        </button>
+        <button type="button" className="mobile-close" onClick={() => setNavOpen(false)} aria-label="Cerrar menú"><X /></button>
+      </div>
+
+      <div className="sidebar-actions" aria-label="Crear">
+        <button type="button" className="new-chat" onClick={newChat} title="Nueva conversación">
+          <SquarePen /><span>Nuevo chat</span>
+        </button>
+        <button type="button" className="new-goal" onClick={newGoal} title="Nuevo Goal">
+          <Target /><span>Nuevo Goal</span>
+        </button>
+      </div>
+
+      <nav aria-label="Áreas de Efesto">
+        {navGroups.map((group) => <div className="nav-group" key={group.label}>
+          <span className="nav-label">{group.label}</span>
+          {group.items.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} title={label}>
+            <Icon /><span>{label}</span>
+            {id === 'missions' && snapshot ? <b>{snapshot.missions.length}</b> : null}
+            {id === 'finds' && snapshot ? <b>{snapshot.opportunities.filter((item) => item.status === 'new').length}</b> : null}
+          </button>)}
+        </div>)}
+      </nav>
+
       <div className="sidebar-spacer" />
+      <button type="button" className={'sidebar-settings ' + (view === 'settings' ? 'active' : '')} onClick={() => navigate('settings')} aria-current={view === 'settings' ? 'page' : undefined} title="Ajustes">
+        <Settings /><span>Ajustes</span>
+      </button>
       <button type="button" className="kernel-summary" onClick={() => navigate('settings')}><span className={`kernel-dot ${snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} /><span><strong>{snapshot?.readiness.kernel === 'online' ? 'Kernel online' : 'Kernel local'}</strong><small>{snapshot?.readiness.bootstrap?.pairing === 'paired' ? 'Emparejado' : snapshot?.readiness.bootstrap?.pairing === 'required' ? 'Pairing requerido' : 'Sin conexión'}</small></span><ChevronRight /></button>
     </aside>
     {navOpen ? <button type="button" className="nav-scrim" onClick={() => setNavOpen(false)} aria-label="Cerrar menú" /> : null}
