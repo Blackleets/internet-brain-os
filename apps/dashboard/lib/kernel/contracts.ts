@@ -30,6 +30,61 @@ export type BootstrapStatus = KernelUnknownFields & {
   actions: Array<KernelUnknownFields & { id: string; label: string; recoverable: boolean }>;
 };
 
+export type IntegrationStatus = 'ready' | 'not_configured' | 'degraded' | 'unavailable';
+export type IntegrationKind = 'core' | 'agent' | 'memory' | 'capture' | 'model' | 'transport';
+export type IntegrationAdapter = 'native' | 'mcp';
+export type IntegrationAction = 'settings' | 'agents' | 'models' | null;
+
+export type IntegrationSummary = KernelUnknownFields & {
+  id: string;
+  kind: IntegrationKind;
+  adapter: IntegrationAdapter;
+  status: IntegrationStatus;
+  capabilities: string[];
+  scopes: string[];
+  action: IntegrationAction;
+  count?: number;
+};
+
+export type IntegrationCatalog = KernelUnknownFields & {
+  schemaVersion: 'efesto.integration-catalog.v1';
+  authority: 'kernel';
+  generatedAt: string;
+  integrations: IntegrationSummary[];
+};
+
+export type GoalIntelligenceSource = KernelUnknownFields & {
+  id: string;
+  adapter: IntegrationAdapter;
+  selected: true;
+  required: true;
+  reason: 'public_research' | 'goal_signal';
+  status: IntegrationStatus;
+  scopes: string[];
+  requiredCapabilities: string[];
+  activeCapabilities: string[];
+  action: IntegrationAction;
+};
+
+export type GoalIntelligencePlan = KernelUnknownFields & {
+  schemaVersion: 'efesto.goal-intelligence.v1';
+  authority: 'kernel';
+  generatedAt: string;
+  goal: {
+    title: string;
+    categories: string[];
+    keywords: string[];
+  };
+  intent: {
+    primaryCategory: string | null;
+    mode: 'public_research' | 'connector_research';
+  };
+  sources: GoalIntelligenceSource[];
+  readiness: 'ready' | 'needs_setup' | 'unavailable';
+  nextAction: 'confirm_goal' | 'configure_source';
+  limitations: string[];
+};
+
 export type CaseSummary = KernelUnknownFields & {
   id: string;
   title: string;
