@@ -2647,8 +2647,8 @@
 }
 
 .forge-composer textarea:focus-visible {
-  outline: 0;
-  outline-offset: 0;
+  outline: 1px solid rgb(193 122 81 / 72%);
+  outline-offset: 3px;
 }
 
 .forge-composer > footer {
