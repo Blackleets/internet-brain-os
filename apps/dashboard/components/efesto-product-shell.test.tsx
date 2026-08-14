@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { preferencesResponse } from '../test/fixtures';
+import { EFESTO_LOCALE_STORAGE_KEY } from '../lib/efesto-i18n';
 import EfestoProductShell from './efesto-product-shell';
 
 const token = 'test-token-that-is-long-enough-for-kernel-validation';
@@ -45,6 +46,7 @@ async function connect(): Promise<void> {
 beforeEach(() => {
   requests.length = 0;
   window.sessionStorage.clear();
+  window.localStorage.clear();
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, { ...init, signal: undefined });
     requests.push(request);
@@ -52,7 +54,7 @@ beforeEach(() => {
   }));
 });
 
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); window.sessionStorage.clear(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); window.sessionStorage.clear(); window.localStorage.clear(); });
 
 describe('Efesto conversation-first product shell', () => {
   it('starts honest and conversation-first without simulating Kernel activity', () => {
@@ -61,18 +63,33 @@ describe('Efesto conversation-first product shell', () => {
     expect(screen.getByText('EFESTO · INTELLIGENCE FORGE')).toBeTruthy();
     expect(screen.getByLabelText('Mensaje')).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Nueva conversación' }).textContent).toContain('Privado por diseño');
-    expect(screen.getByRole('button', { name: 'Goal', exact: true }).getAttribute('aria-pressed')).toBe('false');
-    expect(screen.getByRole('button', { name: 'Chat', exact: true }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: /^Goal$/ }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('button', { name: /^Chat$/ }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: 'Conectar Kernel' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Configurar modelo' })).toBeTruthy();
     expect(screen.getByText('Enter para enviar')).toBeTruthy();
     expect(requests).toHaveLength(0);
   });
 
+  it('switches the interface language from the gear settings and persists it locally', async () => {
+    render(<EfestoProductShell />);
+    fireEvent.click(screen.getByRole('button', { name: /^Ajustes$/ }));
+    expect(screen.getByRole('heading', { name: /^Ajustes$/ })).toBeTruthy();
+
+    fireEvent.change(screen.getByRole('combobox', { name: /^Idioma de la interfaz$/ }), { target: { value: 'en' } });
+    await waitFor(() => expect(screen.getByRole('heading', { name: /^Settings$/ })).toBeTruthy());
+    expect(window.localStorage.getItem(EFESTO_LOCALE_STORAGE_KEY)).toBe('en');
+    expect(screen.getByRole('button', { name: /^Home$/ })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /^Home$/ }));
+    expect(screen.getByRole('heading', { name: /^What are we working on\?$/ })).toBeTruthy();
+    expect(screen.getByText('Enter to send', { exact: true })).toBeTruthy();
+  });
+
   it('drives the Home forge from Shared Goal Truth when legacy Mission state conflicts', async () => {
     render(<EfestoProductShell />);
     await connect();
-    fireEvent.click(screen.getByRole('button', { name: 'Inicio', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: /^Inicio$/ }));
     expect(screen.getByRole('button', { name: 'Kernel conectado' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Valor del producto' })).toBeTruthy();
     expect(screen.getByText('Solo local · sin telemetría externa')).toBeTruthy();
@@ -83,8 +100,8 @@ describe('Efesto conversation-first product shell', () => {
   it('prepares a Goal locally and mutates the Kernel only after explicit confirmation', async () => {
     render(<EfestoProductShell />);
     await connect();
-    fireEvent.click(screen.getByRole('button', { name: 'Inicio', exact: true }));
-    fireEvent.click(screen.getByRole('button', { name: 'Goal', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: /^Inicio$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Goal$/ }));
     const goal = 'Encuéntrame un taladro bueno por 18 a 25 euros';
     fireEvent.change(screen.getByLabelText('Goal'), { target: { value: goal } });
     fireEvent.click(screen.getByRole('button', { name: 'Preparar Goal' }));
@@ -99,12 +116,12 @@ describe('Efesto conversation-first product shell', () => {
   it('wires Finds feedback and Evidence source inspection to real Kernel routes', async () => {
     render(<EfestoProductShell />);
     await connect();
-    fireEvent.click(screen.getByRole('button', { name: 'Hallazgos', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: /^Hallazgos$/ }));
     expect(screen.getByText('Taladro 21 €')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Útil' }));
     await waitFor(() => expect(requests.some((request) => request.method === 'POST' && new URL(request.url).pathname === '/api/opportunities/opp-1/feedback')).toBe(true));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Evidencia', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: /^Evidencia$/ }));
     fireEvent.click(screen.getByRole('button', { name: /Supplier research/ }));
     const source = await screen.findByRole('link', { name: /Abrir fuente/ });
     expect(source.getAttribute('href')).toBe('https://shop.example/drill');
@@ -114,7 +131,7 @@ describe('Efesto conversation-first product shell', () => {
   it('uses a configured model for Chat while keeping model output outside Evidence', async () => {
     render(<EfestoProductShell />);
     await connect();
-    fireEvent.click(screen.getByRole('button', { name: 'Modelos', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: /^Modelos$/ }));
     fireEvent.click(screen.getByRole('button', { name: /qwen3:4b/ }));
     fireEvent.change(screen.getByLabelText('Mensaje'), { target: { value: 'Resume el estado' } });
     fireEvent.click(screen.getByRole('button', { name: 'Enviar mensaje' }));

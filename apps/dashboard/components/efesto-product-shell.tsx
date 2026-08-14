@@ -12,6 +12,7 @@ import { loadGoalSurfaces, type GoalSurface, type GoalSurfaceWorkState } from '.
 import { loadOverview, type OverviewSnapshot } from '../lib/kernel/overview';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { connectionStore } from '../lib/session/connection-store';
+import { EfestoLocaleProvider, useEfestoLocale } from '../lib/efesto-i18n';
 import {
   AgentsView, AutomationsView, EvidenceView, FindsView, HomeView, MissionsView, ModelsView, SettingsView,
   type BrainPhase, type CaseDetail, type ChatMessage, type EvidenceRecord, type Provider,
@@ -24,26 +25,31 @@ type StreamEvent = { type?: 'conversation' | 'delta' | 'done' | 'error'; delta?:
 
 const SESSION_CONNECTION_KEY = 'hephaestus.owner.connection.session.v1';
 const DEFAULT_BASE_URL = 'http://127.0.0.1:4000';
-type NavItem = { id: View; label: string; icon: typeof Home };
+type NavItem = { id: View; labelKey: string; icon: typeof Home };
 const workspaceNav: NavItem[] = [
-  { id: 'home', label: 'Inicio', icon: Home },
-  { id: 'missions', label: 'Misiones', icon: Target },
-  { id: 'finds', label: 'Hallazgos', icon: Sparkles },
-  { id: 'evidence', label: 'Evidencia', icon: ShieldCheck },
+  { id: 'home', labelKey: 'nav.home', icon: Home },
+  { id: 'missions', labelKey: 'nav.missions', icon: Target },
+  { id: 'finds', labelKey: 'nav.finds', icon: Sparkles },
+  { id: 'evidence', labelKey: 'nav.evidence', icon: ShieldCheck },
 ];
 const systemNav: NavItem[] = [
-  { id: 'models', label: 'Modelos', icon: BrainCircuit },
-  { id: 'agents', label: 'Agentes', icon: Bot },
-  { id: 'automations', label: 'Automatizaciones', icon: Workflow },
+  { id: 'models', labelKey: 'nav.models', icon: BrainCircuit },
+  { id: 'agents', labelKey: 'nav.agents', icon: Bot },
+  { id: 'automations', labelKey: 'nav.automations', icon: Workflow },
 ];
-const settingsNav: NavItem = { id: 'settings', label: 'Ajustes', icon: Settings };
+const settingsNav: NavItem = { id: 'settings', labelKey: 'nav.settings', icon: Settings };
 const navGroups = [
-  { label: 'Inteligencia', items: workspaceNav },
-  { label: 'Sistema', items: systemNav },
+  { labelKey: 'nav.intelligence', items: workspaceNav },
+  { labelKey: 'nav.system', items: systemNav },
 ];
 const nav = [...workspaceNav, ...systemNav, settingsNav];
 
 export default function EfestoProductShell() {
+  return <EfestoLocaleProvider><EfestoProductShellContent /></EfestoLocaleProvider>;
+}
+
+function EfestoProductShellContent() {
+  const { t } = useEfestoLocale();
   const [view, setView] = useState<View>('home');
   const [navOpen, setNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -168,7 +174,7 @@ export default function EfestoProductShell() {
     const token = String(data.get('token') ?? '').trim();
     if (tokenInput instanceof HTMLInputElement) tokenInput.value = '';
     if (!token) {
-      setToast('Introduce el token privado o usa el código de emparejamiento.');
+      setToast(t('toast.tokenMissing'));
       return;
     }
     await connectWith({ baseUrl, token }, remember);
@@ -193,13 +199,13 @@ export default function EfestoProductShell() {
         throw new KernelClientError('HTTP_ERROR', response.status);
       }
       if (await connectWith({ baseUrl: verifiedBaseUrl, token: body.apiToken }, remember)) {
-        setToast('Kernel emparejado. La web ya puede controlar misiones y evidencia.');
+        setToast(t('toast.pairSuccess'));
       }
     } catch (error) {
       if (error instanceof KernelClientError && error.code === 'HTTP_ERROR') {
-        setToast('Código rechazado, expirado o ya utilizado. Genera otro en el Kernel.');
+        setToast(t('toast.pairRejected'));
       } else {
-        setToast(connectionMessage(error));
+        setToast(connectionMessage(error, t));
       }
     } finally {
       setConnecting(false);
@@ -225,12 +231,12 @@ export default function EfestoProductShell() {
       connectionStore.set(verified);
       if (remember) window.sessionStorage.setItem(SESSION_CONNECTION_KEY, JSON.stringify(verified));
       else window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
-      setToast('Kernel conectado. La interfaz muestra estado persistido real.');
+      setToast(t('toast.connectionSuccess'));
       return true;
     } catch (error) {
       setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); connectionStore.clear();
       window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
-      setToast(connectionMessage(error));
+      setToast(connectionMessage(error, t));
       return false;
     } finally { setConnecting(false); }
   }
@@ -239,7 +245,7 @@ export default function EfestoProductShell() {
     chatAbortRef.current?.abort();
     setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); setCaseDetails({}); setSelectedCaseId(''); setChatMessages([]);
     connectionStore.clear(); window.sessionStorage.removeItem(SESSION_CONNECTION_KEY); setRememberSession(false);
-    setToast('Dispositivo desconectado. El token ya no está en esta sesión.');
+    setToast(t('toast.disconnected'));
   }
 
   async function refresh() {
@@ -251,8 +257,8 @@ export default function EfestoProductShell() {
         client.get('/api/chat/providers', parseProviders),
         loadGoalSurfaces(client),
       ]);
-      setSnapshot(nextSnapshot); setProviders(nextProviders); setGoalSurfaces(nextGoalSurfaces); setToast('Estado actualizado desde el Kernel.');
-    } catch (error) { setToast(connectionMessage(error)); }
+      setSnapshot(nextSnapshot); setProviders(nextProviders); setGoalSurfaces(nextGoalSurfaces); setToast(t('toast.refreshed'));
+    } catch (error) { setToast(connectionMessage(error, t)); }
   }
 
   function prepareGoal(event: FormEvent<HTMLFormElement>) {
@@ -260,7 +266,7 @@ export default function EfestoProductShell() {
     const value = input.trim();
     if (!value) return;
     setPreparedGoal(value);
-    setToast(connection ? 'Plan preparado. Nada se ejecutará hasta que confirmes.' : 'Borrador preparado localmente. Conecta el Kernel para ejecutarlo.');
+    setToast(connection ? t('toast.goalPrepared') : t('toast.goalDraft'));
   }
 
   async function confirmGoal() {
@@ -277,8 +283,8 @@ export default function EfestoProductShell() {
         method: 'POST', body: JSON.stringify({ confirmed: true, agent: 'hermes', cadence: 'manual' }),
       }, parseOk);
       setInput(''); setPreparedGoal(''); await refresh(); navigate('missions');
-      setToast('Goal persistido y misión confirmada para Hermes.');
-    } catch { setToast('El Kernel rechazó la misión. No se creó actividad falsa ni trabajo parcial.'); }
+      setToast(t('toast.goalPersisted'));
+    } catch { setToast(t('toast.goalRejected')); }
     finally { setGoalPending(false); }
   }
 
@@ -287,8 +293,8 @@ export default function EfestoProductShell() {
     try {
       const client = new KernelClient(connection);
       await client.request(`/api/opportunities/${encodeURIComponent(opportunityId)}/feedback`, { method: 'POST', body: JSON.stringify({ signal }) }, parseOk);
-      await refresh(); setToast(signal === 'dismissed' ? 'Hallazgo descartado; la evidencia objetiva no fue reescrita.' : 'Preferencia guardada en el Kernel.');
-    } catch { setToast('No se pudo registrar el feedback. El estado anterior se conserva.'); }
+      await refresh(); setToast(signal === 'dismissed' ? t('toast.feedbackDismissed') : t('toast.feedbackSaved'));
+    } catch { setToast(t('toast.feedbackFailed')); }
   }
 
   async function openCase(record: CaseSummary) {
@@ -300,7 +306,7 @@ export default function EfestoProductShell() {
       const client = new KernelClient(connection);
       const detail = await client.get(`/api/browser/case/${encodeURIComponent(record.id)}`, parseCaseDetail);
       setCaseDetails((current) => ({ ...current, [record.id]: detail }));
-    } catch { setToast('No se pudo abrir el caso o su evidencia. No se muestran datos de relleno.'); }
+    } catch { setToast(t('toast.caseFailed')); }
     finally { setLoadingCaseId(''); }
   }
 
@@ -337,8 +343,8 @@ export default function EfestoProductShell() {
         ...(String(data.get('apiKey') ?? '').trim() ? { apiKey: String(data.get('apiKey')).trim() } : {}),
       }) }, parseOk);
       form.reset(); if (apiKeyInput instanceof HTMLInputElement) apiKeyInput.value = ''; await refresh();
-      setToast('Proveedor guardado de forma privada en el Kernel.');
-    } catch { if (apiKeyInput instanceof HTMLInputElement) apiKeyInput.value = ''; setToast('El proveedor fue rechazado. Revisa URL, modelos y credencial.'); }
+      setToast(t('toast.providerSaved'));
+    } catch { if (apiKeyInput instanceof HTMLInputElement) apiKeyInput.value = ''; setToast(t('toast.providerRejected')); }
   }
 
   async function sendChat(event: FormEvent<HTMLFormElement>) {
@@ -358,54 +364,54 @@ export default function EfestoProductShell() {
         if (streamEvent.type === 'done' && streamEvent.response?.model) setChatMessages((current) => current.map((message, index) => index === current.length - 1 ? { ...message, model: streamEvent.response?.model } : message));
         if (streamEvent.type === 'error') throw new Error(streamEvent.error ?? 'provider error');
       }, controller.signal);
-      setToast('Conversación completada. La salida del modelo sigue separada de la evidencia y la memoria.');
-    } catch { setToast(controller.signal.aborted ? 'Generación detenida por el usuario.' : 'El modelo no respondió. No se guardó una respuesta falsa.'); }
+      setToast(t('toast.chatComplete'));
+    } catch { setToast(controller.signal.aborted ? t('toast.generationStopped') : t('toast.modelFailed')); }
     finally { setChatPending(false); if (chatAbortRef.current === controller) chatAbortRef.current = undefined; }
   }
 
   return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''}`}>
-    <aside className="efesto-sidebar" aria-label="Navegación principal">
+    <aside className="efesto-sidebar" aria-label={t('nav.main')}>
       <div className="efesto-brand">
-        <button type="button" onClick={() => navigate('home')} aria-label="Efesto, inicio">
+        <button type="button" onClick={() => navigate('home')} aria-label={t('nav.brandHome')}>
           <span className="brand-mark"><Image src="/efesto-smith.svg" alt="" width={36} height={36} /></span>
           <span><strong>EFESTO</strong><small>The Intelligence Forge</small></span>
         </button>
-        <button type="button" className="mobile-close" onClick={() => setNavOpen(false)} aria-label="Cerrar menú"><X /></button>
+        <button type="button" className="mobile-close" onClick={() => setNavOpen(false)} aria-label={t('nav.closeMenu')}><X /></button>
       </div>
 
-      <div className="sidebar-actions" aria-label="Crear">
-        <button type="button" className="new-chat" onClick={newChat} title="Nueva conversación">
-          <SquarePen /><span>Nuevo chat</span>
+      <div className="sidebar-actions" aria-label={t('nav.create')}>
+        <button type="button" className="new-chat" onClick={newChat} title={t('nav.newChat')}>
+          <SquarePen /><span>{t('nav.newChat')}</span>
         </button>
-        <button type="button" className="new-goal" onClick={newGoal} title="Nuevo Goal">
-          <Target /><span>Nuevo Goal</span>
+        <button type="button" className="new-goal" onClick={newGoal} title={t('nav.newGoal')}>
+          <Target /><span>{t('nav.newGoal')}</span>
         </button>
       </div>
 
-      <nav aria-label="Áreas de Efesto">
-        {navGroups.map((group) => <div className="nav-group" key={group.label}>
-          <span className="nav-label">{group.label}</span>
-          {group.items.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} aria-label={label} title={label}>
+      <nav aria-label={t('nav.primaryAreas')}>
+        {navGroups.map((group) => <div className="nav-group" key={group.labelKey}>
+          <span className="nav-label">{t(group.labelKey)}</span>
+          {group.items.map(({ id, labelKey, icon: Icon }) => { const label = t(labelKey); return <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} aria-label={label} title={label}>
             <Icon /><span>{label}</span>
             {id === 'missions' && snapshot ? <b>{snapshot.missions.length}</b> : null}
             {id === 'finds' && snapshot ? <b>{snapshot.opportunities.filter((item) => item.status === 'new').length}</b> : null}
-          </button>)}
+          </button>; })}
         </div>)}
       </nav>
 
       <div className="sidebar-spacer" />
-      <button type="button" className={'sidebar-settings ' + (view === 'settings' ? 'active' : '')} onClick={() => navigate('settings')} aria-current={view === 'settings' ? 'page' : undefined} title="Ajustes">
-        <Settings /><span>Ajustes</span>
+      <button type="button" className={'sidebar-settings ' + (view === 'settings' ? 'active' : '')} onClick={() => navigate('settings')} aria-current={view === 'settings' ? 'page' : undefined} title={t('nav.settings')}>
+        <Settings /><span>{t('nav.settings')}</span>
       </button>
-      <button type="button" className="kernel-summary" onClick={() => navigate('settings')}><span className={`kernel-dot ${snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} /><span><strong>{snapshot?.readiness.kernel === 'online' ? 'Kernel conectado' : 'Kernel local'}</strong><small>{snapshot?.readiness.bootstrap?.pairing === 'paired' ? 'Emparejado' : snapshot?.readiness.bootstrap?.pairing === 'required' ? 'Emparejamiento requerido' : 'Sin conexión'}</small></span><ChevronRight /></button>
+      <button type="button" className="kernel-summary" onClick={() => navigate('settings')}><span className={`kernel-dot ${snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} /><span><strong>{snapshot?.readiness.kernel === 'online' ? t('kernel.connected') : t('kernel.local')}</strong><small>{snapshot?.readiness.bootstrap?.pairing === 'paired' ? t('kernel.paired') : snapshot?.readiness.bootstrap?.pairing === 'required' ? t('kernel.pairingRequired') : t('kernel.offline')}</small></span><ChevronRight /></button>
     </aside>
-    {navOpen ? <button type="button" className="nav-scrim" onClick={() => setNavOpen(false)} aria-label="Cerrar menú" /> : null}
+    {navOpen ? <button type="button" className="nav-scrim" onClick={() => setNavOpen(false)} aria-label={t('nav.closeMenu')} /> : null}
 
     <section className="efesto-stage">
       <header className="efesto-topbar">
-        <div><button type="button" className="menu-button" onClick={toggleNavigation} aria-label="Alternar navegación"><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view)}</button></div>
-        <div className="top-context"><span className="local-first-status"><ShieldCheck /> Diseño local</span><span className="private-status">Protección local</span></div>
-        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? 'Kernel listo' : 'Conectar'}</button></div>
+        <div><button type="button" className="menu-button" onClick={toggleNavigation} aria-label={t('nav.toggle')}><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view, t)}</button></div>
+        <div className="top-context"><span className="local-first-status"><ShieldCheck /> {t('top.localDesign')}</span><span className="private-status">{t('top.localProtection')}</span></div>
+        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label={t('top.refresh')}><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? t('top.kernelReady') : t('top.connect')}</button></div>
       </header>
       <main className="efesto-main">
         {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} valueSurface={<ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot || !snapshot.productScorecard || snapshot.issues.some((issue) => issue.endpoint === 'scorecard')} />} /> : null}
@@ -418,7 +424,7 @@ export default function EfestoProductShell() {
         {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} onConnect={connect} onDisconnect={disconnect} onRefresh={() => void refresh()} /> : null}
       </main>
 
-      {toast ? <div className="efesto-toast" role="status"><ShieldCheck /><span>{toast}</span><button type="button" onClick={() => setToast('')} aria-label="Cerrar aviso"><X /></button></div> : null}
+      {toast ? <div className="efesto-toast" role="status"><ShieldCheck /><span>{toast}</span><button type="button" onClick={() => setToast('')} aria-label={t('toast.close')}><X /></button></div> : null}
     </section>
   </div>;
 }
@@ -433,8 +439,8 @@ function brainPhaseFromWorkState(workState: GoalSurfaceWorkState | undefined): B
 }
 function keywordsFromGoal(value: string) { return Array.from(new Set(value.toLocaleLowerCase('es').replace(/[^\p{L}\p{N}]+/gu, ' ').split(/\s+/).filter((word) => word.length > 2))).slice(0, 8); }
 function slug(value: string) { return value.toLocaleLowerCase('en').replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || `provider-${Date.now()}`; }
-function viewLabel(view: View) { return nav.find((item) => item.id === view)?.label ?? 'Inicio'; }
-function connectionMessage(error: unknown) { if (error instanceof KernelClientError && error.code === 'UNAUTHORIZED') return 'El Kernel rechazó el token. No se guardó la credencial.'; if (error instanceof KernelClientError && error.code === 'TIMEOUT') return 'El Kernel tardó demasiado en responder.'; if (error instanceof KernelClientError && error.code === 'OFFLINE') return 'No se alcanzó el Kernel local. Comprueba que el Launcher esté activo.'; return 'No se pudo conectar. Revisa la URL local y el token.'; }
+function viewLabel(view: View, t: (key: string) => string) { return t(nav.find((item) => item.id === view)?.labelKey ?? 'nav.home'); }
+function connectionMessage(error: unknown, t: (key: string) => string) { if (error instanceof KernelClientError && error.code === 'UNAUTHORIZED') return t('error.unauthorized'); if (error instanceof KernelClientError && error.code === 'TIMEOUT') return t('error.timeout'); if (error instanceof KernelClientError && error.code === 'OFFLINE') return t('error.offline'); return t('error.connection'); }
 function parseObject(value: unknown): Record<string, unknown> { if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid response'); return value as Record<string, unknown>; }
 function parseOk(value: unknown) { const body = parseObject(value); if (body.ok !== true) throw new Error('Invalid response'); return body; }
 function parseProviders(value: unknown): Provider[] { const body = parseOk(value); if (!Array.isArray(body.providers)) throw new Error('Invalid providers'); return body.providers.map((value) => { const item = parseObject(value); if (typeof item.id !== 'string' || typeof item.label !== 'string' || !Array.isArray(item.models) || !item.models.every((model) => typeof model === 'string')) throw new Error('Invalid provider'); return item as unknown as Provider; }); }

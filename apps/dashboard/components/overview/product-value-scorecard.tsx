@@ -1,6 +1,7 @@
 import { Clock3, Gauge, LockKeyhole, Repeat2, ShieldCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { ProductMetric, ProductValueScorecard } from '../../lib/kernel/product-scorecard';
+import { useEfestoLocale } from '../../lib/efesto-i18n';
 
 export function ProductValueScorecardPanel({
   scorecard,
@@ -9,12 +10,13 @@ export function ProductValueScorecardPanel({
   scorecard?: ProductValueScorecard;
   unavailable: boolean;
 }) {
+  const { t } = useEfestoLocale();
   return <>
     <style>{scorecardStyles}</style>
     <section className="product-scorecard-view" aria-labelledby="product-scorecard-title">
       <header className="product-scorecard-header">
-        <div><small>SCORECARD LOCAL</small><h2 id="product-scorecard-title">Valor del producto</h2></div>
-        <span className="scorecard-privacy"><LockKeyhole size={14} aria-hidden="true" /> Solo local · sin telemetría externa</span>
+        <div><small>{t('scorecard.eyebrow')}</small><h2 id="product-scorecard-title">{t('scorecard.title')}</h2></div>
+        <span className="scorecard-privacy"><LockKeyhole size={14} aria-hidden="true" /> {t('scorecard.privacy')}</span>
       </header>
       {unavailable || !scorecard ? <Unavailable /> : <ScorecardBody scorecard={scorecard} />}
     </section>
@@ -22,71 +24,75 @@ export function ProductValueScorecardPanel({
 }
 
 function Unavailable() {
-  return <div className="product-value-unavailable" role="status"><ShieldCheck size={18} aria-hidden="true" /><div><strong>Métricas temporalmente no disponibles</strong><p>Efesto conserva el resto de datos verificados. No mostramos ceros inventados.</p></div></div>;
+  const { t } = useEfestoLocale();
+  return <div className="product-value-unavailable" role="status"><ShieldCheck size={18} aria-hidden="true" /><div><strong>{t('scorecard.unavailable')}</strong><p>{t('scorecard.unavailableCopy')}</p></div></div>;
 }
 
 function ScorecardBody({ scorecard }: { scorecard: ProductValueScorecard }) {
+  const { t } = useEfestoLocale();
   const unavailableCount = countUnavailable(scorecard);
   return <>
     <dl className="scorecard-primary">
-      <ScoreMetric icon={<Gauge size={17} aria-hidden="true" />} label="Goals con hallazgo útil" metric={scorecard.primary.goalUsefulFindRate} />
-      <ScoreMetric icon={<Clock3 size={17} aria-hidden="true" />} label="Tiempo al primer hallazgo útil" metric={scorecard.primary.timeToFirstUsefulFind} />
-      <ScoreMetric icon={<Repeat2 size={17} aria-hidden="true" />} label="Repetición de Goals" metric={scorecard.primary.repeatGoalUsage} />
+      <ScoreMetric icon={<Gauge size={17} aria-hidden="true" />} label={t('scorecard.goalUseful')} metric={scorecard.primary.goalUsefulFindRate} />
+      <ScoreMetric icon={<Clock3 size={17} aria-hidden="true" />} label={t('scorecard.timeToUseful')} metric={scorecard.primary.timeToFirstUsefulFind} />
+      <ScoreMetric icon={<Repeat2 size={17} aria-hidden="true" />} label={t('scorecard.repeatGoals')} metric={scorecard.primary.repeatGoalUsage} />
     </dl>
-    <div className="scorecard-secondary" aria-label="Cobertura y guardas del scorecard">
-      <span>Activación local <strong>{formatMetric(scorecard.drivers.installationToFirstGoalActivationRate)}</strong></span>
-      <span>Misiones completadas <strong>{formatMetric(scorecard.drivers.missionCompletionRate)}</strong></span>
-      <span>Hallazgos útiles <strong>{formatMetric(scorecard.drivers.usefulSavedFindShare)}</strong></span>
-      <span>Goals medidos <strong>{scorecard.coverage.executedGoals}</strong></span>
-      <span>Hallazgos con Goal <strong>{scorecard.coverage.goalLinkedFinds}</strong></span>
-      <span>Fallos de misión <strong>{formatMetric(scorecard.guardrails.missionFailureRate)}</strong></span>
-      <span>Descartados <strong>{formatMetric(scorecard.guardrails.findDismissalNotInterestedRate)}</strong></span>
+    <div className="scorecard-secondary" aria-label={t('scorecard.coverageLabel')}>
+      <span>{t('scorecard.localActivation')} <strong>{formatMetric(scorecard.drivers.installationToFirstGoalActivationRate, t)}</strong></span>
+      <span>{t('scorecard.completedMissions')} <strong>{formatMetric(scorecard.drivers.missionCompletionRate, t)}</strong></span>
+      <span>{t('scorecard.usefulFinds')} <strong>{formatMetric(scorecard.drivers.usefulSavedFindShare, t)}</strong></span>
+      <span>{t('scorecard.measuredGoals')} <strong>{scorecard.coverage.executedGoals}</strong></span>
+      <span>{t('scorecard.linkedFinds')} <strong>{scorecard.coverage.goalLinkedFinds}</strong></span>
+      <span>{t('scorecard.missionFailures')} <strong>{formatMetric(scorecard.guardrails.missionFailureRate, t)}</strong></span>
+      <span>{t('scorecard.dismissed')} <strong>{formatMetric(scorecard.guardrails.findDismissalNotInterestedRate, t)}</strong></span>
     </div>
-    {unavailableCount > 0 ? <p className="scorecard-caveat">{unavailableCount} métricas aún no tienen un ledger o cohorte fiable. Efesto muestra “Sin datos” en lugar de estimarlas.</p> : null}
+    {unavailableCount > 0 ? <p className="scorecard-caveat">{t('scorecard.caveat', { count: unavailableCount })}</p> : null}
   </>;
 }
 
 function ScoreMetric({ icon, label, metric }: { icon: ReactNode; label: string; metric: ProductMetric }) {
+  const { t } = useEfestoLocale();
   const measured = metric.status === 'measured';
-  return <div className={measured ? 'scorecard-metric measured' : 'scorecard-metric unavailable'}><dt>{icon}<span>{label}</span></dt><dd>{formatMetric(metric)}</dd><p>{measured ? metricContext(metric) : reasonCopy(metric.reason)}</p></div>;
+  return <div className={measured ? 'scorecard-metric measured' : 'scorecard-metric unavailable'}><dt>{icon}<span>{label}</span></dt><dd>{formatMetric(metric, t)}</dd><p>{measured ? metricContext(metric, t) : reasonCopy(metric.reason, t)}</p></div>;
 }
 
-function formatMetric(metric: ProductMetric): string {
-  if (metric.status !== 'measured' || metric.value === null) return 'Sin datos';
+function formatMetric(metric: ProductMetric, t: (key: string, values?: Record<string, string | number>) => string): string {
+  if (metric.status !== 'measured' || metric.value === null) return t('scorecard.noData');
   if (metric.unit === 'ratio') return `${Math.round(metric.value * 100)}%`;
-  if (metric.unit === 'milliseconds') return formatDuration(metric.value);
-  if (metric.unit === 'count_per_goal') return `${trimNumber(metric.value)} / Goal`;
+  if (metric.unit === 'milliseconds') return formatDuration(metric.value, t);
+  if (metric.unit === 'count_per_goal') return `${trimNumber(metric.value)}${t('scorecard.perGoal')}`;
   return trimNumber(metric.value);
 }
 
-function formatDuration(milliseconds: number): string {
-  if (milliseconds < 60_000) return '< 1 min';
+function formatDuration(milliseconds: number, t: (key: string, values?: Record<string, string | number>) => string): string {
+  if (milliseconds < 60_000) return t('scorecard.lessThanMinute');
   const minutes = Math.round(milliseconds / 60_000);
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 60) return t('scorecard.minutes', { count: minutes });
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
-  return remainingMinutes === 0 ? `${hours} h` : `${hours} h ${remainingMinutes} min`;
+  return remainingMinutes === 0 ? t('scorecard.hours', { count: hours }) : t('scorecard.hoursMinutes', { hours, minutes: remainingMinutes });
 }
 
 function trimNumber(value: number): string { return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, ''); }
-function metricContext(metric: ProductMetric): string {
+function metricContext(metric: ProductMetric, t: (key: string, values?: Record<string, string | number>) => string): string {
   const denominator = typeof metric.denominator === 'number' ? metric.denominator : undefined;
   const sampleCount = typeof metric.sampleCount === 'number' ? metric.sampleCount : undefined;
-  if (denominator !== undefined) return `Base local: ${denominator}`;
-  if (sampleCount !== undefined) return `Muestras locales: ${sampleCount}`;
-  return 'Medido desde la instancia local.';
+  if (denominator !== undefined) return t('scorecard.baseLocal', { value: denominator });
+  if (sampleCount !== undefined) return t('scorecard.localSamples', { value: sampleCount });
+  return t('scorecard.measuredLocal');
 }
-function reasonCopy(reason: string | null): string {
-  return ({
-    no_executed_goals: 'Aún no hay Goals autorizados ejecutados.',
-    no_useful_or_saved_find_feedback: 'Aún no hay hallazgos marcados como útiles o guardados.',
-    installation_cohort_not_recorded: 'La medición local aún no se ha iniciado en esta instalación.',
-    local_installation_cohort_invalid: 'El registro local de medición no es válido.',
-    no_local_goal_activation: 'Esta instalación aún no ha autorizado su primer Goal.',
-    no_missions: 'Aún no hay misiones medibles.',
-    no_completed_goals: 'Aún no hay Goals completados.',
-    no_goal_linked_finds: 'Aún no hay hallazgos ligados a un Goal verificado.',
-  } as Record<string, string>)[reason ?? ''] ?? 'El Kernel todavía no dispone del ledger necesario.';
+function reasonCopy(reason: string | null, t: (key: string, values?: Record<string, string | number>) => string): string {
+  const reasonKeys: Record<string, string> = {
+    no_executed_goals: 'scorecard.noExecutedGoals',
+    no_useful_or_saved_find_feedback: 'scorecard.noUsefulFeedback',
+    installation_cohort_not_recorded: 'scorecard.cohortNotRecorded',
+    local_installation_cohort_invalid: 'scorecard.invalidCohort',
+    no_local_goal_activation: 'scorecard.noActivation',
+    no_missions: 'scorecard.noMissions',
+    no_completed_goals: 'scorecard.noCompletedGoals',
+    no_goal_linked_finds: 'scorecard.noLinkedFinds',
+  };
+  return reasonKeys[reason ?? ''] ? t(reasonKeys[reason ?? '']) : t('scorecard.noLedger');
 }
 function countUnavailable(scorecard: ProductValueScorecard): number {
   return [...Object.values(scorecard.primary), ...Object.values(scorecard.drivers), ...Object.values(scorecard.guardrails)].filter((metric) => metric.status === 'not_measurable').length;

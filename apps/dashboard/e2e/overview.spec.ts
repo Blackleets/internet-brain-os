@@ -64,6 +64,21 @@ test('runs the conversation-first journey only after explicit confirmation', asy
   expect(writes).toEqual(['/api/goals', '/api/goals/goal-e2e/missions']);
 });
 
+test('switches the Efesto surface language from gear settings', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Ajustes', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Ajustes', exact: true })).toBeVisible();
+
+  await page.getByRole('combobox', { name: 'Idioma de la interfaz', exact: true }).selectOption('en');
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Home', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('efesto.locale.v1'))).toBe('en');
+
+  await page.getByRole('button', { name: 'Home', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'What are we working on?', exact: true })).toBeVisible();
+  await expect(page.getByText('Enter to send', { exact: true })).toBeVisible();
+});
+
 test('wires Finds, Evidence and model Chat to real product contracts', async ({ page }) => {
   const writes: string[] = [];
   page.on('request', (request) => { if (request.method() === 'POST') writes.push(new URL(request.url()).pathname); });
