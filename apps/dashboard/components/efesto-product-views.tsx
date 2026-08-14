@@ -2,10 +2,10 @@
 
 import Image from 'next/image';
 import {
-  Activity, Bot, BrainCircuit, Check, ChevronRight, CircleOff, ExternalLink, FileSearch,
+  Activity, Bot, BrainCircuit, Check, ChevronDown, ChevronRight, CircleOff, ExternalLink, FileSearch,
   History, Menu, MessageSquare, Pause, Plug, RefreshCw, Search, Send, Settings, ShieldCheck, Sparkles, Target, Workflow, X,
 } from 'lucide-react';
-import type { FormEvent, ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { CaseSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
 
@@ -33,12 +33,13 @@ const starterGoals = [
   'Encuentra oportunidades públicas relevantes y evita duplicados.',
 ];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, onOpenSettings, onOpenNav }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
   input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
   onConfirmGoal: () => void; onEditGoal: () => void; onStarterGoal: (goal: string) => void; onStarterChat: (prompt: string) => void;
-  onOpenModels: () => void; modelLabel: string; onOpenSettings: () => void; onOpenNav: () => void;
+  onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
+  onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenNav: () => void;
 }) {
   const state = brainState(phase);
   const showSuggestions = chatMode ? messages.length === 0 : !preparedGoal;
@@ -117,6 +118,12 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
       onStopChat={onStopChat}
       onOpenModels={onOpenModels}
       modelLabel={modelLabel}
+      providers={providers}
+      selectedProviderId={selectedProviderId}
+      selectedModel={selectedModel}
+      connected={connected}
+      onSelectModel={onSelectModel}
+      onOpenSettings={onOpenSettings}
     />
   </section>;
 }
@@ -128,10 +135,11 @@ function ModeSwitcher({ chatMode, onToggleChat }: { chatMode: boolean; onToggleC
   </div>;
 }
 
-function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisabled, suggestions, onSuggestion, onInputChange, onSubmit, onStopChat, onOpenModels, modelLabel }: {
+function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisabled, suggestions, onSuggestion, onInputChange, onSubmit, onStopChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, connected, onSelectModel, onOpenSettings }: {
   input: string; chatMode: boolean; chatAvailable: boolean; chatPending: boolean; submitDisabled: boolean; suggestions: string[];
   onSuggestion: (value: string) => void; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onStopChat: () => void; onOpenModels: () => void; modelLabel: string;
+  onStopChat: () => void; onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
+  connected: boolean; onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void;
 }) {
   return <div className={'forge-composer-zone ' + (suggestions.length ? 'has-suggestions' : '')}>
     {suggestions.length ? <div className="forge-quick-prompts" aria-label={chatMode ? 'Sugerencias para empezar' : 'Ideas para nuevos Goals'}>
@@ -159,13 +167,138 @@ function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisab
       />
       <footer>
         <div className="forge-composer-context">
-          {chatMode ? <button type="button" className="forge-model-button" onClick={onOpenModels}><Bot /><span>{chatAvailable ? modelLabel : 'Configurar modelo'}</span><Settings /></button> : <span className="forge-kernel-gate"><ShieldCheck /> Kernel-gated</span>}
+          {chatMode ? <ModelSelector
+            providers={providers}
+            selectedProviderId={selectedProviderId}
+            selectedModel={selectedModel}
+            connected={connected}
+            chatAvailable={chatAvailable}
+            modelLabel={modelLabel}
+            onSelectModel={onSelectModel}
+            onOpenModels={onOpenModels}
+            onOpenSettings={onOpenSettings}
+          /> : <span className="forge-kernel-gate"><ShieldCheck /> Kernel-gated</span>}
         </div>
         <span className="forge-shortcut">Enter para enviar</span>
         {chatPending ? <button type="button" className="forge-send stop" onClick={onStopChat} aria-label="Detener generación"><Pause /></button> : <button type="submit" className="forge-send" disabled={submitDisabled} aria-label={chatMode ? 'Enviar mensaje' : 'Preparar Goal'}><Send /></button>}
       </footer>
     </form>
     <p className="forge-composer-hint" id="forge-composer-note">{chatMode ? 'La conversación permanece separada de Evidence y memoria.' : 'Preparar no ejecuta ninguna acción externa.'}</p>
+  </div>;
+}
+
+function ModelSelector({ providers, selectedProviderId, selectedModel, connected, chatAvailable, modelLabel, onSelectModel, onOpenModels, onOpenSettings }: {
+  providers: Provider[]; selectedProviderId: string; selectedModel: string; connected: boolean; chatAvailable: boolean; modelLabel: string;
+  onSelectModel: (providerId: string, model: string) => void; onOpenModels: () => void; onOpenSettings: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const rootRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const modelCount = providers.reduce((total, provider) => total + provider.models.length, 0);
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const visibleProviders = providers
+    .map((provider) => ({
+      ...provider,
+      models: provider.models.filter((model) => (provider.label + ' ' + model).toLocaleLowerCase().includes(normalizedQuery)),
+    }))
+    .filter((provider) => provider.models.length > 0);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (rootRef.current && event.target instanceof Node && !rootRef.current.contains(event.target)) {
+        setOpen(false);
+        setQuery('');
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        setQuery('');
+      }
+    };
+    const frame = window.requestAnimationFrame(() => searchRef.current?.focus());
+
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  const closeAndRun = (action: () => void) => {
+    setOpen(false);
+    setQuery('');
+    action();
+  };
+
+  return <div className="forge-model-control" ref={rootRef}>
+    <button
+      type="button"
+      className={'forge-model-button ' + (chatAvailable ? 'has-model' : 'needs-model')}
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      aria-controls="forge-model-selector"
+      onClick={() => {
+        if (open) setQuery('');
+        setOpen(!open);
+      }}
+    >
+      <Bot />
+      <span className="forge-model-trigger-label">{chatAvailable ? modelLabel : connected ? 'Elegir modelo' : 'Configurar modelo'}</span>
+      <ChevronDown className="forge-model-chevron" />
+    </button>
+
+    {open ? <section className="forge-model-popover" id="forge-model-selector" role="dialog" aria-label="Seleccionar modelo">
+      <header className="forge-model-popover-header">
+        <span><small>MODELOS DEL KERNEL</small><strong>{connected ? modelCount === 1 ? '1 modelo disponible' : modelCount + ' modelos disponibles' : 'Kernel sin conexión'}</strong></span>
+        <button type="button" onClick={() => { setOpen(false); setQuery(''); }} aria-label="Cerrar selector"><X /></button>
+      </header>
+
+      {!connected ? <div className="forge-model-empty">
+        <span><Plug /></span>
+        <strong>Conecta el Kernel</strong>
+        <p>El selector solo carga proveedores y modelos configurados de verdad.</p>
+        <button type="button" onClick={() => closeAndRun(onOpenSettings)}>Conectar Kernel</button>
+      </div> : modelCount === 0 ? <div className="forge-model-empty">
+        <span><BrainCircuit /></span>
+        <strong>Sin modelos configurados</strong>
+        <p>Añade un proveedor para habilitar el chat privado de Efesto.</p>
+        <button type="button" onClick={() => closeAndRun(onOpenModels)}>Gestionar proveedores</button>
+      </div> : <>
+        <label className="forge-model-search">
+          <Search />
+          <input ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar modelo…" aria-label="Buscar modelo" />
+        </label>
+        <div className="forge-model-list" role="listbox" aria-label="Modelos disponibles">
+          {visibleProviders.length ? visibleProviders.map((provider) => <div className="forge-model-provider" role="group" aria-label={provider.label} key={provider.id}>
+            <header><span>{provider.label}</span><small>{provider.type === 'ollama' ? 'Ollama local' : 'API compatible'}</small></header>
+            {provider.models.map((model) => {
+              const active = provider.id === selectedProviderId && model === selectedModel;
+              return <button
+                type="button"
+                className={'forge-model-option ' + (active ? 'active' : '')}
+                role="option"
+                aria-selected={active}
+                key={provider.id + ':' + model}
+                onClick={() => closeAndRun(() => onSelectModel(provider.id, model))}
+              >
+                <span className="forge-model-option-icon"><BrainCircuit /></span>
+                <span><strong>{model}</strong><small>{provider.managedBy === 'environment' ? 'Entorno privado' : 'Kernel local'}</small></span>
+                {active ? <Check /> : null}
+              </button>;
+            })}
+          </div>) : <div className="forge-model-no-results"><Search /><span><strong>Sin coincidencias</strong><small>Prueba con otro nombre o proveedor.</small></span></div>}
+        </div>
+        <footer className="forge-model-popover-footer">
+          <button type="button" onClick={() => closeAndRun(onOpenModels)}><Settings /><span>Gestionar modelos y proveedores</span><ChevronRight /></button>
+        </footer>
+      </>}
+    </section> : null}
   </div>;
 }
 
