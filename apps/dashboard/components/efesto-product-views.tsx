@@ -40,7 +40,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   const { t } = useEfestoLocale();
   const starterGoals = starterGoalKeys.map((key) => t(key));
   const state = brainState(phase, t);
-  const showSuggestions = chatMode ? messages.length === 0 : !preparedGoal;
+  const showSuggestions = !input.trim() && (chatMode ? messages.length === 0 : !preparedGoal);
   const surfaceTitle = chatMode
     ? (messages.length ? t('home.conversation') : t('home.newConversation'))
     : (preparedGoal ? t('home.goalPrepared') : t('home.newGoal'));
@@ -142,13 +142,53 @@ function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisab
   connected: boolean; onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void;
 }) {
   const { t } = useEfestoLocale();
+  const suggestionSignature = suggestions.join('\u0000');
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    if (!suggestions.length) return;
+    setSuggestionIndex(Math.floor(Math.random() * suggestions.length));
+  }, [suggestionSignature, chatMode]);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const syncMotionPreference = () => setPrefersReducedMotion(mediaQuery.matches);
+    syncMotionPreference();
+    mediaQuery.addEventListener?.('change', syncMotionPreference);
+    return () => mediaQuery.removeEventListener?.('change', syncMotionPreference);
+  }, []);
+
+  useEffect(() => {
+    if (suggestions.length < 2 || prefersReducedMotion) return;
+    const interval = window.setInterval(() => {
+      setSuggestionIndex((current) => (current + 1) % suggestions.length);
+    }, 9000);
+    return () => window.clearInterval(interval);
+  }, [suggestionSignature, suggestions.length, prefersReducedMotion]);
+
+  const activeSuggestion = suggestions.length ? suggestions[suggestionIndex % suggestions.length] : undefined;
+  const rotateSuggestion = () => {
+    if (suggestions.length < 2) return;
+    setSuggestionIndex((current) => (current + 1) % suggestions.length);
+  };
+
   return <div className={'forge-composer-zone ' + (suggestions.length ? 'has-suggestions' : '')}>
-    {suggestions.length ? <div className="forge-quick-prompts" aria-label={chatMode ? t('composer.startSuggestions') : t('composer.goalIdeas')}>
-      {suggestions.map((suggestion) => <button type="button" key={suggestion} onClick={() => onSuggestion(suggestion)}>
-        {chatMode ? <Sparkles /> : <Target />}
-        <span>{suggestion}</span>
-        <ChevronRight />
-      </button>)}
+    {activeSuggestion ? <div className="forge-quick-prompts" aria-label={chatMode ? t('composer.startSuggestions') : t('composer.goalIdeas')}>
+      <div className="forge-suggestion-rail" aria-live="polite">
+        <button type="button" className="forge-quick-prompt" key={activeSuggestion} onClick={() => onSuggestion(activeSuggestion)}>
+          <span className="forge-quick-prompt-icon">{chatMode ? <Sparkles /> : <Target />}</span>
+          <span className="forge-quick-prompt-copy">
+            <small>{t('composer.suggestionLabel')} · {t('composer.suggestionCount', { current: suggestionIndex % suggestions.length + 1, total: suggestions.length })}</small>
+            <span>{activeSuggestion}</span>
+          </span>
+          <ChevronRight />
+        </button>
+        <button type="button" className="forge-suggestion-next" onClick={rotateSuggestion} aria-label={t('composer.nextSuggestion')} title={t('composer.nextSuggestion')}>
+          <RefreshCw />
+        </button>
+      </div>
     </div> : null}
 
     <form className={'forge-composer ' + (chatMode ? 'is-chat' : 'is-goal')} onSubmit={onSubmit}>

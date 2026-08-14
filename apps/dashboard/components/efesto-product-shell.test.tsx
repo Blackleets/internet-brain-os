@@ -68,6 +68,9 @@ describe('Efesto conversation-first product shell', () => {
     expect(screen.getByRole('button', { name: 'Conectar Kernel' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Configurar modelo' })).toBeTruthy();
     expect(screen.getByText('Enter para enviar')).toBeTruthy();
+    const initialSuggestion = screen.getByRole('button', { name: /^Sugerencia/ }).textContent;
+    fireEvent.click(screen.getByRole('button', { name: 'Cambiar sugerencia' }));
+    expect(screen.getByRole('button', { name: /^Sugerencia/ }).textContent).not.toBe(initialSuggestion);
     expect(requests).toHaveLength(0);
   });
 
