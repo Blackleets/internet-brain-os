@@ -15,6 +15,8 @@ import { loadOverview, type OverviewSnapshot } from '../lib/kernel/overview';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { connectionStore } from '../lib/session/connection-store';
 import { EfestoLocaleProvider, useEfestoLocale } from '../lib/efesto-i18n';
+import { loadWebGoalIntelligencePlan } from '../lib/web-runtime/client';
+import { detectEfestoRuntimeMode, type EfestoRuntimeMode } from '../lib/web-runtime/runtime';
 import {
   AgentsView, AutomationsView, EvidenceView, FindsView, HomeView, IntegrationsView, MissionsView, ModelsView, SettingsView,
   type BrainPhase, type CaseDetail, type ChatMessage, type EvidenceRecord, type Provider,
@@ -63,6 +65,7 @@ function EfestoProductShellContent() {
   const [view, setView] = useState<View>('home');
   const [navOpen, setNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [runtimeMode, setRuntimeMode] = useState<EfestoRuntimeMode>('local');
   const [connection, setConnection] = useState<Connection>();
   const [snapshot, setSnapshot] = useState<OverviewSnapshot>();
   const [goalSurfaces, setGoalSurfaces] = useState<GoalSurface[]>([]);
@@ -87,14 +90,22 @@ function EfestoProductShellContent() {
   const [githubAuthorizationBusy, setGithubAuthorizationBusy] = useState(false);
   const [rememberSession, setRememberSession] = useState(false);
   const chatAbortRef = useRef<AbortController | undefined>(undefined);
+  const webMode = runtimeMode === 'web';
 
   const selectedProvider = providers.find((item) => item.id === selectedProviderId);
   const focusedGoalSurface = goalSurfaces[0];
   const brainPhase = useMemo<BrainPhase>(() => {
+    if (webMode && !connection) return 'ready';
     if (!connection || snapshot?.readiness.kernel !== 'online') return 'offline';
     if (chatPending) return 'thinking';
     return brainPhaseFromWorkState(focusedGoalSurface?.mission?.workState);
-  }, [chatPending, connection, focusedGoalSurface?.mission?.workState, snapshot?.readiness.kernel]);
+  }, [chatPending, connection, focusedGoalSurface?.mission?.workState, snapshot?.readiness.kernel, webMode]);
+
+  useEffect(() => {
+    const nextMode = detectEfestoRuntimeMode();
+    setRuntimeMode(nextMode);
+    if (nextMode === 'web') setChatMode(false);
+  }, []);
 
   useEffect(() => {
     try {
@@ -306,21 +317,31 @@ function EfestoProductShellContent() {
     if (!value) return;
     setPreparedGoal(value);
     setGoalPlan(undefined);
-    setGoalPlanPending(Boolean(connection));
-    setToast(connection ? t('toast.goalPrepared') : t('toast.goalDraft'));
-    if (!connection) return;
+    const canPlan = Boolean(connection) || webMode;
+    setGoalPlanPending(canPlan);
+    setToast(connection ? t('toast.goalPrepared') : webMode ? t('toast.webGoalPreparing') : t('toast.goalDraft'));
+    if (!canPlan) return;
     try {
-      const client = new KernelClient({ ...connection, timeoutMs: 15_000 });
-      setGoalPlan(await loadGoalIntelligencePlan(client, value, keywordsFromGoal(value)));
+      if (webMode && !connection) {
+        setGoalPlan(await loadWebGoalIntelligencePlan(value, keywordsFromGoal(value)));
+      } else if (connection) {
+        const client = new KernelClient({ ...connection, timeoutMs: 15_000 });
+        setGoalPlan(await loadGoalIntelligencePlan(client, value, keywordsFromGoal(value)));
+      }
     } catch {
-      setToast(t('toast.goalPlanLimited'));
+      setToast(webMode && !connection ? t('toast.webGoalFailed') : t('toast.goalPlanLimited'));
     } finally {
       setGoalPlanPending(false);
     }
   }
 
   async function confirmGoal() {
-    if (!connection || !preparedGoal || goalPending) { if (!connection) navigate('settings'); return; }
+    if (!preparedGoal || goalPending) return;
+    if (!connection) {
+      setToast(webMode ? t('toast.webExecutionRequiresKernel') : t('toast.goalDraft'));
+      if (!webMode) navigate('settings');
+      return;
+    }
     setGoalPending(true);
     try {
       const client = new KernelClient({ ...connection, timeoutMs: 30_000 });
@@ -524,7 +545,7 @@ function EfestoProductShellContent() {
     finally { setChatPending(false); if (chatAbortRef.current === controller) chatAbortRef.current = undefined; }
   }
 
-  return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''}`}>
+  return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''} ${webMode ? 'runtime-web' : 'runtime-local'}`}>
     <aside className="efesto-sidebar" aria-label={t('nav.main')}>
       <div className="efesto-brand">
         <button type="button" onClick={() => navigate('home')} aria-label={t('nav.brandHome')}>
@@ -558,18 +579,22 @@ function EfestoProductShellContent() {
       <button type="button" className={'sidebar-settings ' + (view === 'settings' ? 'active' : '')} onClick={() => navigate('settings')} aria-current={view === 'settings' ? 'page' : undefined} title={t('nav.settings')}>
         <Settings /><span>{t('nav.settings')}</span>
       </button>
-      <button type="button" className="kernel-summary" onClick={() => navigate('settings')}><span className={`kernel-dot ${snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} /><span><strong>{snapshot?.readiness.kernel === 'online' ? t('kernel.connected') : t('kernel.local')}</strong><small>{snapshot?.readiness.bootstrap?.pairing === 'paired' ? t('kernel.paired') : snapshot?.readiness.bootstrap?.pairing === 'required' ? t('kernel.pairingRequired') : t('kernel.offline')}</small></span><ChevronRight /></button>
+      <button type="button" className="kernel-summary" onClick={() => navigate('settings')}>
+        <span className={`kernel-dot ${webMode && !connection ? 'online' : snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} />
+        <span><strong>{webMode && !connection ? t('runtime.webReady') : snapshot?.readiness.kernel === 'online' ? t('kernel.connected') : t('kernel.local')}</strong><small>{webMode && !connection ? t('runtime.localOptional') : snapshot?.readiness.bootstrap?.pairing === 'paired' ? t('kernel.paired') : snapshot?.readiness.bootstrap?.pairing === 'required' ? t('kernel.pairingRequired') : t('kernel.offline')}</small></span>
+        <ChevronRight />
+      </button>
     </aside>
     {navOpen ? <button type="button" className="nav-scrim" onClick={() => setNavOpen(false)} aria-label={t('nav.closeMenu')} /> : null}
 
     <section className="efesto-stage">
       <header className="efesto-topbar">
         <div><button type="button" className="menu-button" onClick={toggleNavigation} aria-label={t('nav.toggle')}><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view, t)}</button></div>
-        <div className="top-context"><span className="local-first-status"><ShieldCheck /> {t('top.localDesign')}</span><span className="private-status">{t('top.localProtection')}</span></div>
-        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label={t('top.refresh')}><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? t('top.kernelReady') : t('top.connect')}</button></div>
+        <div className="top-context"><span className="local-first-status"><ShieldCheck /> {webMode && !connection ? t('top.webReady') : t('top.localDesign')}</span><span className="private-status">{webMode && !connection ? t('top.localOptional') : t('top.localProtection')}</span></div>
+        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label={t('top.refresh')}><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : webMode ? 'online web' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? t('top.kernelReady') : webMode ? t('top.webReady') : t('top.connect')}</button></div>
       </header>
       <main className="efesto-main">
-        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} goalPlan={goalPlan} goalPlanPending={goalPlanPending} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={updateInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else void prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onRunGitHubEvidence={(githubInput) => void runGithubEvidence(githubInput)} onEditGoal={() => { setPreparedGoal(''); setGoalPlan(undefined); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenAgents={() => navigate('agents')} onOpenNav={toggleNavigation} valueSurface={<ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot || !snapshot.productScorecard || snapshot.issues.some((issue) => issue.endpoint === 'scorecard')} />} /> : null}
+        {view === 'home' ? <HomeView phase={brainPhase} webMode={webMode && !connection} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} goalPlan={goalPlan} goalPlanPending={goalPlanPending} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={updateInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else void prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onRunGitHubEvidence={(githubInput) => void runGithubEvidence(githubInput)} onEditGoal={() => { setPreparedGoal(''); setGoalPlan(undefined); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenAgents={() => navigate('agents')} onOpenNav={toggleNavigation} valueSurface={<ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot || !snapshot.productScorecard || snapshot.issues.some((issue) => issue.endpoint === 'scorecard')} />} /> : null}
         {view === 'missions' ? <MissionsView snapshot={snapshot} onNew={newGoal} /> : null}
         {view === 'finds' ? <FindsView opportunities={snapshot?.opportunities ?? []} connected={Boolean(connection)} onFeedback={(id, signal) => void recordFeedback(id, signal)} /> : null}
         {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} githubAuthorizationBusy={githubAuthorizationBusy} onOpen={(record) => void openCase(record)} onRevokeGithubAuthorization={(authorizationId) => void revokeGithubAuthorization(authorizationId)} /> : null}

@@ -72,7 +72,7 @@ export type GoalIntelligenceSource = KernelUnknownFields & {
 
 export type GoalIntelligencePlan = KernelUnknownFields & {
   schemaVersion: 'efesto.goal-intelligence.v1';
-  authority: 'kernel';
+  authority: 'kernel' | 'web-runtime';
   generatedAt: string;
   goal: {
     title: string;

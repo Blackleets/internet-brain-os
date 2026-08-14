@@ -68,6 +68,26 @@ test('runs the conversation-first journey only after explicit confirmation', asy
   expect(writes).toEqual(['/api/goals/plan', '/api/goals', '/api/goals/goal-e2e/missions']);
 });
 
+test('opens the zero-setup web path and keeps planning separate from execution', async ({ page }) => {
+  const writes: string[] = [];
+  page.on('request', (request) => { if (request.method() === 'POST') writes.push(new URL(request.url()).pathname); });
+
+  await page.goto('/?runtime=web');
+  await expect(page.getByRole('button', { name: 'Modo web listo', exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Goal', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('EFESTO · TRABAJO DESDE LA WEB', { exact: true })).toBeVisible();
+
+  await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Auditar fuentes públicas');
+  await page.getByRole('button', { name: 'Preparar Goal', exact: true }).click();
+  await expect(page.getByText('Ruta preparada en la web', { exact: true })).toBeVisible();
+  await expect(page.getByText('Vista previa web · sin credenciales, escritura ni ejecución.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Conectar modo privado para ejecutar', exact: true })).toBeDisabled();
+  expect(writes).toEqual(['/api/efesto/plan']);
+
+  await page.getByRole('button', { name: 'Integraciones', exact: true }).click();
+  await expect(page.getByText('Conecta el Kernel para leer adaptadores y capacidades disponibles.', { exact: true })).toBeVisible();
+});
+
 test('switches the Efesto surface language from gear settings', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Ajustes', exact: true }).click();

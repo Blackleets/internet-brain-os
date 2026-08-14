@@ -27,6 +27,7 @@ const HARDWARE_TIERS = ['light', 'balanced', 'powerful'] as const;
 const INTEGRATION_KINDS = ['core', 'agent', 'memory', 'capture', 'model', 'transport'] as const;
 const INTEGRATION_ADAPTERS = ['native', 'mcp'] as const;
 const INTEGRATION_STATUSES = ['ready', 'not_configured', 'degraded', 'unavailable'] as const;
+const GOAL_INTELLIGENCE_AUTHORITIES = ['kernel', 'web-runtime'] as const;
 const INTEGRATION_ACTIONS = ['settings', 'agents', 'models'] as const;
 const GOAL_INTELLIGENCE_REASONS = ['public_research', 'goal_signal'] as const;
 const GOAL_INTELLIGENCE_MODES = ['public_research', 'connector_research'] as const;
@@ -93,7 +94,7 @@ export function parseGoalIntelligencePlan(value: unknown): GoalIntelligencePlan 
   return {
     ...body,
     schemaVersion: literal(body.schemaVersion, 'goalIntelligence.schemaVersion', 'efesto.goal-intelligence.v1'),
-    authority: literal(body.authority, 'goalIntelligence.authority', 'kernel'),
+    authority: enumeration(body.authority, 'goalIntelligence.authority', GOAL_INTELLIGENCE_AUTHORITIES),
     generatedAt: string(body.generatedAt, 'goalIntelligence.generatedAt'),
     goal: {
       title: string(goal.title, 'goalIntelligence.goal.title'),

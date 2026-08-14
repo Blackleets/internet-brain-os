@@ -35,8 +35,8 @@ export type BrainPhase = 'offline' | 'ready' | 'queued' | 'investigating' | 'ver
 
 const starterGoalKeys = ['starter.goal1', 'starter.goal2', 'starter.goal3', 'starter.goal4'];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, goalPlan, goalPlanPending, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onRunGitHubEvidence, onEditGoal, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenAgents, onOpenNav, valueSurface }: {
-  phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; goalPlan?: GoalIntelligencePlan; goalPlanPending: boolean; connected: boolean; goalPending: boolean;
+export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goalPlan, goalPlanPending, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onRunGitHubEvidence, onEditGoal, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenAgents, onOpenNav, valueSurface }: {
+  phase: BrainPhase; webMode: boolean; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; goalPlan?: GoalIntelligencePlan; goalPlanPending: boolean; connected: boolean; goalPending: boolean;
   input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
   onConfirmGoal: () => void; onRunGitHubEvidence: (input: { owner: string; repo: string; operation: GitHubReadOperation; ref?: string; consent: boolean }) => void; onEditGoal: () => void;
@@ -44,6 +44,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, goalPlan, go
   onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenAgents: () => void; onOpenNav: () => void; valueSurface?: ReactNode;
 }) {
   const { t } = useEfestoLocale();
+  const webPreview = webMode || goalPlan?.authority === 'web-runtime';
   const starterGoals = starterGoalKeys.map((key) => t(key));
   const state = brainState(phase, t);
   const showSuggestions = !input.trim() && (chatMode ? messages.length === 0 : !preparedGoal);
@@ -63,9 +64,9 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, goalPlan, go
 
       <ModeSwitcher chatMode={chatMode} onToggleChat={onToggleChat} />
 
-      <button type="button" className={'forge-state-action phase-' + phase} onClick={onOpenSettings} aria-label={connected ? t('kernel.connected') : t('settings.connectKernel')}>
+      <button type="button" className={'forge-state-action phase-' + phase} onClick={onOpenSettings} aria-label={connected ? t('kernel.connected') : webPreview ? t('runtime.webReady') : t('settings.connectKernel')}>
         <i />
-        <span>{connected ? state.label : t('settings.connectKernel')}</span>
+        <span>{connected ? state.label : webPreview ? t('runtime.webReady') : t('settings.connectKernel')}</span>
         <Plug />
       </button>
     </header>
@@ -88,25 +89,25 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, goalPlan, go
       </section> : preparedGoal ? <section className="forge-goal-plan" aria-label={t('home.planAria')}>
         <header>
           <span className="forge-plan-icon"><Target /></span>
-          <div><small>{t('home.planEyebrow')}</small><h1>{preparedGoal}</h1><p>{t('home.reviewScope')}</p></div>
+          <div><small>{t('home.planEyebrow')}</small><h1>{preparedGoal}</h1><p>{webPreview ? t('home.webReviewScope') : t('home.reviewScope')}</p></div>
         </header>
         <ol>
           <li><b>1</b><span><strong>{t('home.createGoal')}</strong><small>{t('home.goalKeywords')}</small></span></li>
           <li><b>2</b><span><strong>{t('home.confirmMission')}</strong><small>{t('home.confirmAfter')}</small></span></li>
           <li><b>3</b><span><strong>{t('home.forgeEvidence')}</strong><small>{t('home.forgeEvidenceCopy')}</small></span></li>
         </ol>
-        <GoalIntelligenceBrief plan={goalPlan} pending={goalPlanPending} connected={connected} goalPending={goalPending} onOpenSettings={onOpenSettings} onOpenAgents={onOpenAgents} onRunGitHubEvidence={onRunGitHubEvidence} />
+        <GoalIntelligenceBrief plan={goalPlan} pending={goalPlanPending} webMode={webPreview} connected={connected} goalPending={goalPending} onOpenSettings={onOpenSettings} onOpenAgents={onOpenAgents} onRunGitHubEvidence={onRunGitHubEvidence} />
         <div className="forge-plan-actions">
-          <button type="button" className="primary-action" disabled={!connected || goalPending} onClick={onConfirmGoal}>{goalPending ? t('home.confirming') : connected ? goalPlan?.readiness === 'needs_setup' ? t('home.confirmWithPending') : t('home.confirmAndExecute') : t('home.connectToExecute')}</button>
+          <button type="button" className="primary-action" disabled={!connected || webPreview || goalPending} onClick={onConfirmGoal}>{goalPending ? t('home.confirming') : webPreview ? t('home.connectPrivateToExecute') : connected ? goalPlan?.readiness === 'needs_setup' ? t('home.confirmWithPending') : t('home.confirmAndExecute') : t('home.connectToExecute')}</button>
           <button type="button" className="secondary-action" onClick={onEditGoal}>{t('home.editGoal')}</button>
         </div>
-        <p className="forge-plan-boundary"><ShieldCheck /> {t('home.boundary')}</p>
+        <p className="forge-plan-boundary"><ShieldCheck /> {webPreview ? t('home.webBoundary') : t('home.boundary')}</p>
       </section> : <section className="forge-empty forge-goal-empty" aria-label={t('home.newGoalAria')}>
         <span className="forge-empty-mark"><Target /></span>
-        <small>{t('home.controlledMissionEyebrow')}</small>
+        <small>{webPreview ? t('home.webMissionEyebrow') : t('home.controlledMissionEyebrow')}</small>
         <h1>{t('home.defineResult')}</h1>
-        <p>{t('home.prepareCopy')}</p>
-        <div className="forge-empty-meta"><span><ShieldCheck /> {t('home.kernelGated')}</span><span><i /> {t('home.humanConfirmation')}</span></div>
+        <p>{webPreview ? t('home.webPrepareCopy') : t('home.prepareCopy')}</p>
+        <div className="forge-empty-meta"><span><ShieldCheck /> {webPreview ? t('runtime.webReady') : t('home.kernelGated')}</span><span><i /> {webPreview ? t('runtime.localOptional') : t('home.humanConfirmation')}</span></div>
       </section>}
       {valueSurface ? <div className="forge-value-surface" aria-label={t('home.valueSurface')}>{valueSurface}</div> : null}
     </div>
@@ -133,9 +134,10 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, goalPlan, go
   </section>;
 }
 
-function GoalIntelligenceBrief({ plan, pending, connected, goalPending, onOpenSettings, onOpenAgents, onRunGitHubEvidence }: {
+function GoalIntelligenceBrief({ plan, pending, webMode, connected, goalPending, onOpenSettings, onOpenAgents, onRunGitHubEvidence }: {
   plan?: GoalIntelligencePlan;
   pending: boolean;
+  webMode: boolean;
   connected: boolean;
   goalPending: boolean;
   onOpenSettings: () => void;
@@ -143,18 +145,19 @@ function GoalIntelligenceBrief({ plan, pending, connected, goalPending, onOpenSe
   onRunGitHubEvidence: (input: { owner: string; repo: string; operation: GitHubReadOperation; ref?: string; consent: boolean }) => void;
 }) {
   const { t } = useEfestoLocale();
+  const webPreview = webMode || plan?.authority === 'web-runtime';
   if (pending) {
     return <section className="forge-intelligence-brief is-loading" aria-label={t('home.intelligenceAria')} aria-busy="true">
-      <header><span className="forge-intelligence-icon"><Sparkles /></span><div><small>{t('home.intelligenceEyebrow')}</small><strong>{t('home.intelligenceThinking')}</strong></div><span className="forge-intelligence-loader"><i /><i /><i /></span></header>
-      <p>{t('home.intelligenceThinkingCopy')}</p>
+      <header><span className="forge-intelligence-icon"><Sparkles /></span><div><small>{t('home.intelligenceEyebrow')}</small><strong>{webPreview ? t('home.webIntelligenceThinking') : t('home.intelligenceThinking')}</strong></div><span className="forge-intelligence-loader"><i /><i /><i /></span></header>
+      <p>{webPreview ? t('home.webIntelligenceThinkingCopy') : t('home.intelligenceThinkingCopy')}</p>
     </section>;
   }
 
   if (!plan) {
     return <section className="forge-intelligence-brief is-limited" aria-label={t('home.intelligenceAria')}>
-      <header><span className="forge-intelligence-icon"><Sparkles /></span><div><small>{t('home.intelligenceEyebrow')}</small><strong>{t('home.intelligenceWaiting')}</strong></div><StatePill state={connected ? 'unavailable' : 'offline'} /></header>
-      <p>{connected ? t('home.intelligenceUnavailable') : t('home.intelligenceConnectCopy')}</p>
-      <button type="button" className="forge-intelligence-link" onClick={onOpenSettings}><Plug /> {connected ? t('home.openSettings') : t('home.connectKernel')}</button>
+      <header><span className="forge-intelligence-icon"><Sparkles /></span><div><small>{t('home.intelligenceEyebrow')}</small><strong>{webMode ? t('home.webIntelligenceWaiting') : t('home.intelligenceWaiting')}</strong></div><StatePill state={connected ? 'unavailable' : 'offline'} /></header>
+      <p>{webMode ? t('home.webIntelligenceCopy') : connected ? t('home.intelligenceUnavailable') : t('home.intelligenceConnectCopy')}</p>
+      <button type="button" className="forge-intelligence-link" onClick={onOpenSettings}><Plug /> {webMode ? t('home.openPrivateMode') : connected ? t('home.openSettings') : t('home.connectKernel')}</button>
     </section>;
   }
 
@@ -166,8 +169,8 @@ function GoalIntelligenceBrief({ plan, pending, connected, goalPending, onOpenSe
   return <section className={`forge-intelligence-brief readiness-${plan.readiness}`} aria-label={t('home.intelligenceAria')}>
     <header>
       <span className="forge-intelligence-icon"><Sparkles /></span>
-      <div><small>{t('home.intelligenceEyebrow')}</small><strong>{t('home.intelligenceTitle')}</strong></div>
-      <StatePill state={readinessState} />
+      <div><small>{t('home.intelligenceEyebrow')}</small><strong>{webPreview ? t('home.webIntelligenceTitle') : t('home.intelligenceTitle')}</strong></div>
+      <StatePill state={webPreview ? 'unavailable' : readinessState} />
     </header>
     <div className="forge-intelligence-intent"><small>{t('home.intentEyebrow')}</small><strong>{t('home.intentDetected', { category: primaryCategory })}</strong><span>{plan.intent.mode === 'connector_research' ? t('home.intentConnector') : t('home.intentPublic')}</span></div>
     <div className="forge-intelligence-sources">
@@ -176,11 +179,11 @@ function GoalIntelligenceBrief({ plan, pending, connected, goalPending, onOpenSe
         <span className="forge-intelligence-source-mark"><IntegrationMark id={source.id} /></span>
         <div><strong>{t(`integrations.${source.id}.name`)}</strong><small>{source.reason === 'public_research' ? t('home.sourceReason.publicResearch') : t('home.sourceReason.goalSignal')} · {source.scopes.join(' · ')}</small></div>
         <StatePill state={source.status} />
-        {source.status !== 'ready' && source.action ? <button type="button" className="forge-intelligence-source-action" onClick={source.action === 'agents' ? onOpenAgents : onOpenSettings}>{t('home.configure')}</button> : null}
+        {source.status !== 'ready' && source.action ? <button type="button" className="forge-intelligence-source-action" onClick={source.action === 'agents' ? onOpenAgents : onOpenSettings}>{webPreview ? t('home.openPrivateMode') : t('home.configure')}</button> : null}
       </article>)}
     </div>
     {githubSource?.status === 'ready' ? <GitHubEvidenceAction pending={goalPending} onSubmit={onRunGitHubEvidence} /> : null}
-    <footer><ShieldCheck /> <span>{plan.readiness === 'ready' ? t('home.sourcePlanReady') : t('home.sourcePlanLimited')}</span></footer>
+    <footer><ShieldCheck /> <span>{webPreview ? t('home.webSourcePlanLimited') : plan.readiness === 'ready' ? t('home.sourcePlanReady') : t('home.sourcePlanLimited')}</span></footer>
   </section>;
 }
 

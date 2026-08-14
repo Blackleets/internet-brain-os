@@ -40,6 +40,15 @@ const base = {
 } as const;
 
 function responseFor(path: string, method: string): Response {
+  if (method === 'POST' && path === '/api/efesto/plan') {
+    const plan = JSON.parse(JSON.stringify(base['/api/goals/plan'])) as Record<string, unknown> & { sources: Array<Record<string, unknown>> };
+    plan.authority = 'web-runtime';
+    plan.readiness = 'needs_setup';
+    plan.nextAction = 'configure_source';
+    plan.limitations = ['preview_only', 'kernel_required_for_execution', 'read_only_sources'];
+    plan.sources = plan.sources.map((source) => ({ ...source, status: 'not_configured', activeCapabilities: [] }));
+    return Response.json({ ok: true, ...plan });
+  }
   if (method === 'POST' && path === '/api/goals') return Response.json({ ok: true, goal: { id: 'goal-created' } });
   if (method === 'POST' && path === '/api/goals/goal-created/missions') return Response.json({ ok: true, mission: { id: 'mission-created' } });
   if (method === 'POST' && path === '/api/integrations/github/credentials') return Response.json({ ok: true, id: 'github', adapter: 'native', status: 'ready', configured: true, capabilities: ['github.repository.read'], scopes: ['github.read'] });
@@ -96,14 +105,16 @@ beforeEach(() => {
   githubAuthorizationRevoked = false;
   window.sessionStorage.clear();
   window.localStorage.clear();
+  window.history.replaceState({}, '', '/');
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const request = new Request(input, { ...init, signal: undefined });
+    const resolvedInput = typeof input === 'string' && input.startsWith('/') ? new URL(input, window.location.href) : input;
+    const request = new Request(resolvedInput, { ...init, signal: undefined });
     requests.push(request);
     return responseFor(new URL(request.url).pathname, request.method);
   }));
 });
 
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); window.sessionStorage.clear(); window.localStorage.clear(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); window.sessionStorage.clear(); window.localStorage.clear(); window.history.replaceState({}, '', '/'); });
 
 describe('Efesto conversation-first product shell', () => {
   it('starts honest and conversation-first without simulating Kernel activity', () => {
@@ -123,6 +134,22 @@ describe('Efesto conversation-first product shell', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Goal$/ }));
     expect(screen.getByLabelText('Goal').getAttribute('placeholder')).toMatch(/Encuéntrame|Busca trabajos|Investiga una empresa|Encuentra oportunidades/);
     expect(requests).toHaveLength(0);
+  });
+
+  it('opens the zero-setup web mode and keeps the preview non-authoritative', async () => {
+    window.history.replaceState({}, '', '/?runtime=web');
+    render(<EfestoProductShell />);
+
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Modo web listo' }).length).toBeGreaterThan(0));
+    expect(screen.getByRole('button', { name: /^Goal$/ }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByText('EFESTO · TRABAJO DESDE LA WEB')).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Goal'), { target: { value: 'Audita un repositorio de GitHub' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Preparar Goal' }));
+    await waitFor(() => expect(screen.getByText('Ruta preparada en la web')).toBeTruthy());
+    expect(screen.getByText('Vista previa web · sin credenciales, escritura ni ejecución.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Conectar modo privado para ejecutar' })).toHaveProperty('disabled', true);
+    expect(requests.filter((request) => request.method === 'POST').map((request) => new URL(request.url).pathname)).toEqual(['/api/efesto/plan']);
   });
 
   it('switches the interface language from the gear settings and persists it locally', async () => {
