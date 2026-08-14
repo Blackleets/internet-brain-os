@@ -125,6 +125,8 @@ export type WebSearchClient = Pick<PublicWebSearchClient, 'search'>;
 
 /**
  * Runs one bounded, read-only public search for an explicit hosted-web order.
+ * The native connector may use its credential-free HTML fallback chain, but
+ * only query-relevant links are exposed to the hosted preview.
  * The result is unverified preview data: it is not Evidence, is not persisted,
  * and does not grant the web shell authority to execute anything.
  */
