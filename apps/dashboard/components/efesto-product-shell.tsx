@@ -193,7 +193,7 @@ export default function EfestoProductShell() {
         throw new KernelClientError('HTTP_ERROR', response.status);
       }
       if (await connectWith({ baseUrl: verifiedBaseUrl, token: body.apiToken }, remember)) {
-        setToast('Kernel emparejado. La web ya puede controlar Missions y Evidence.');
+        setToast('Kernel emparejado. La web ya puede controlar misiones y evidencia.');
       }
     } catch (error) {
       if (error instanceof KernelClientError && error.code === 'HTTP_ERROR') {
@@ -287,7 +287,7 @@ export default function EfestoProductShell() {
     try {
       const client = new KernelClient(connection);
       await client.request(`/api/opportunities/${encodeURIComponent(opportunityId)}/feedback`, { method: 'POST', body: JSON.stringify({ signal }) }, parseOk);
-      await refresh(); setToast(signal === 'dismissed' ? 'Find descartado; Evidence objetiva no fue reescrita.' : 'Preferencia guardada en el Kernel.');
+      await refresh(); setToast(signal === 'dismissed' ? 'Hallazgo descartado; la evidencia objetiva no fue reescrita.' : 'Preferencia guardada en el Kernel.');
     } catch { setToast('No se pudo registrar el feedback. El estado anterior se conserva.'); }
   }
 
@@ -300,7 +300,7 @@ export default function EfestoProductShell() {
       const client = new KernelClient(connection);
       const detail = await client.get(`/api/browser/case/${encodeURIComponent(record.id)}`, parseCaseDetail);
       setCaseDetails((current) => ({ ...current, [record.id]: detail }));
-    } catch { setToast('No se pudo abrir el Case o su Evidence. No se muestran datos de relleno.'); }
+    } catch { setToast('No se pudo abrir el caso o su evidencia. No se muestran datos de relleno.'); }
     finally { setLoadingCaseId(''); }
   }
 
@@ -358,7 +358,7 @@ export default function EfestoProductShell() {
         if (streamEvent.type === 'done' && streamEvent.response?.model) setChatMessages((current) => current.map((message, index) => index === current.length - 1 ? { ...message, model: streamEvent.response?.model } : message));
         if (streamEvent.type === 'error') throw new Error(streamEvent.error ?? 'provider error');
       }, controller.signal);
-      setToast('Conversación completada. La salida del modelo sigue separada de Evidence y memoria.');
+      setToast('Conversación completada. La salida del modelo sigue separada de la evidencia y la memoria.');
     } catch { setToast(controller.signal.aborted ? 'Generación detenida por el usuario.' : 'El modelo no respondió. No se guardó una respuesta falsa.'); }
     finally { setChatPending(false); if (chatAbortRef.current === controller) chatAbortRef.current = undefined; }
   }
@@ -397,15 +397,15 @@ export default function EfestoProductShell() {
       <button type="button" className={'sidebar-settings ' + (view === 'settings' ? 'active' : '')} onClick={() => navigate('settings')} aria-current={view === 'settings' ? 'page' : undefined} title="Ajustes">
         <Settings /><span>Ajustes</span>
       </button>
-      <button type="button" className="kernel-summary" onClick={() => navigate('settings')}><span className={`kernel-dot ${snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} /><span><strong>{snapshot?.readiness.kernel === 'online' ? 'Kernel online' : 'Kernel local'}</strong><small>{snapshot?.readiness.bootstrap?.pairing === 'paired' ? 'Emparejado' : snapshot?.readiness.bootstrap?.pairing === 'required' ? 'Pairing requerido' : 'Sin conexión'}</small></span><ChevronRight /></button>
+      <button type="button" className="kernel-summary" onClick={() => navigate('settings')}><span className={`kernel-dot ${snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} /><span><strong>{snapshot?.readiness.kernel === 'online' ? 'Kernel conectado' : 'Kernel local'}</strong><small>{snapshot?.readiness.bootstrap?.pairing === 'paired' ? 'Emparejado' : snapshot?.readiness.bootstrap?.pairing === 'required' ? 'Emparejamiento requerido' : 'Sin conexión'}</small></span><ChevronRight /></button>
     </aside>
     {navOpen ? <button type="button" className="nav-scrim" onClick={() => setNavOpen(false)} aria-label="Cerrar menú" /> : null}
 
     <section className="efesto-stage">
       <header className="efesto-topbar">
         <div><button type="button" className="menu-button" onClick={toggleNavigation} aria-label="Alternar navegación"><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view)}</button></div>
-        <div className="top-context"><span className="local-first-status"><ShieldCheck /> Local-first</span><span className="private-status">Private by design</span></div>
-        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? 'Kernel ready' : 'Conectar'}</button></div>
+        <div className="top-context"><span className="local-first-status"><ShieldCheck /> Diseño local</span><span className="private-status">Protección local</span></div>
+        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? 'Kernel listo' : 'Conectar'}</button></div>
       </header>
       <main className="efesto-main">
         {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} valueSurface={<ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot || !snapshot.productScorecard || snapshot.issues.some((issue) => issue.endpoint === 'scorecard')} />} /> : null}

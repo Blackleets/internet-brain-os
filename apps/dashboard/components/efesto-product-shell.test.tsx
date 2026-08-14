@@ -39,7 +39,7 @@ async function connect(): Promise<void> {
   fireEvent.click(screen.getByRole('button', { name: 'Conectar Kernel' }));
   fireEvent.change(screen.getByLabelText('Token privado'), { target: { value: token } });
   fireEvent.click(screen.getByRole('button', { name: 'Autorizar dispositivo' }));
-  await waitFor(() => expect(screen.getByRole('button', { name: /Kernel ready/ })).toBeTruthy());
+  await waitFor(() => expect(screen.getByRole('button', { name: /Kernel listo/ })).toBeTruthy());
 }
 
 beforeEach(() => {
@@ -60,11 +60,12 @@ describe('Efesto conversation-first product shell', () => {
     expect(screen.getByRole('heading', { name: '¿En qué trabajamos?' })).toBeTruthy();
     expect(screen.getByText('EFESTO · INTELLIGENCE FORGE')).toBeTruthy();
     expect(screen.getByLabelText('Mensaje')).toBeTruthy();
-    expect(screen.getByText('Privado por diseño')).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Nueva conversación' }).textContent).toContain('Privado por diseño');
     expect(screen.getByRole('button', { name: 'Goal', exact: true }).getAttribute('aria-pressed')).toBe('false');
     expect(screen.getByRole('button', { name: 'Chat', exact: true }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: 'Conectar Kernel' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Configurar modelo' })).toBeTruthy();
+    expect(screen.getByText('Enter para enviar')).toBeTruthy();
     expect(requests).toHaveLength(0);
   });
 
@@ -92,7 +93,7 @@ describe('Efesto conversation-first product shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar y ejecutar' }));
     await waitFor(() => expect(requests.filter((request) => request.method === 'POST').map((request) => new URL(request.url).pathname)).toEqual(['/api/goals', '/api/goals/goal-created/missions']));
-    expect(await screen.findByRole('heading', { name: 'Missions' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Misiones' })).toBeTruthy();
   });
 
   it('wires Finds feedback and Evidence source inspection to real Kernel routes', async () => {
@@ -118,7 +119,7 @@ describe('Efesto conversation-first product shell', () => {
     fireEvent.change(screen.getByLabelText('Mensaje'), { target: { value: 'Resume el estado' } });
     fireEvent.click(screen.getByRole('button', { name: 'Enviar mensaje' }));
     expect(await screen.findByText('Respuesta real del fixture.')).toBeTruthy();
-    expect(screen.getByText('La conversación permanece separada de Evidence y memoria.')).toBeTruthy();
+    expect(screen.getByText('La conversación permanece separada de la evidencia y la memoria.')).toBeTruthy();
     expect(requests.some((request) => request.method === 'POST' && new URL(request.url).pathname === '/api/chat/stream')).toBe(true);
     expect(window.sessionStorage.getItem('hephaestus.owner.connection.session.v1')).toBeNull();
   });

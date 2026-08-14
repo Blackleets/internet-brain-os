@@ -19,18 +19,18 @@ test.afterEach(async ({ page }) => { expect(browserProblems.get(page) ?? []).toE
 
 async function connect(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Conectar Kernel', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ajustes', exact: true })).toBeVisible();
   await page.getByRole('textbox', { name: 'URL del Kernel', exact: true }).fill('http://127.0.0.1:4100');
   await page.getByLabel('Token privado', { exact: true }).fill(token);
   await page.getByRole('button', { name: 'Autorizar dispositivo', exact: true }).click();
-  await expect(page.getByRole('button', { name: /Kernel ready/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Kernel listo/ })).toBeVisible();
 }
 
 async function expectLocalScorecard(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Valor del producto', exact: true })).toBeVisible();
   await expect(page.getByText('Solo local · sin telemetría externa', { exact: true })).toBeVisible();
-  await expect(page.getByText('Goals con Find útil', { exact: true })).toBeVisible();
-  await expect(page.getByText('Tiempo al primer Find útil', { exact: true })).toBeVisible();
+  await expect(page.getByText('Goals con hallazgo útil', { exact: true })).toBeVisible();
+  await expect(page.getByText('Tiempo al primer hallazgo útil', { exact: true })).toBeVisible();
   await expect(page.getByText('50%', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('5 min', { exact: true })).toBeVisible();
 }
@@ -60,7 +60,7 @@ test('runs the conversation-first journey only after explicit confirmation', asy
   expect(writes).toEqual([]);
 
   await page.getByRole('button', { name: 'Confirmar y ejecutar', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Missions', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Misiones', exact: true })).toBeVisible();
   expect(writes).toEqual(['/api/goals', '/api/goals/goal-e2e/missions']);
 });
 
@@ -71,30 +71,33 @@ test('wires Finds, Evidence and model Chat to real product contracts', async ({ 
   await connect(page);
 
   await page.getByRole('button', { name: 'Hallazgos', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Hallazgos', exact: true })).toBeVisible();
   await expect(page.getByText('AI automation project', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Útil', exact: true }).click();
   await expect.poll(() => writes).toContain('/api/opportunities/opportunity-1/feedback');
 
   await page.getByRole('button', { name: 'Evidencia', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Evidencia', exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Supplier research/ }).click();
   const source = page.getByRole('link', { name: /Abrir fuente/ });
   await expect(source).toBeVisible();
   await expect(source).toHaveAttribute('href', 'https://supplier.example/source');
 
   await page.getByRole('button', { name: 'Modelos', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Modelos', exact: true })).toBeVisible();
   await page.getByRole('button', { name: /qwen3:4b/ }).click();
   await expect(page.getByRole('textbox', { name: 'Mensaje', exact: true })).toBeVisible();
   await page.getByRole('textbox', { name: 'Mensaje', exact: true }).fill('Resume el estado');
   await page.getByRole('button', { name: 'Enviar mensaje', exact: true }).click();
   await expect(page.getByText('Fixture response from the selected local model.', { exact: true })).toBeVisible();
-  await expect(page.getByText('La conversación permanece separada de Evidence y memoria.', { exact: true })).toBeVisible();
+  await expect(page.getByText('La conversación permanece separada de la evidencia y la memoria.', { exact: true })).toBeVisible();
   expect(writes).toContain('/api/chat/stream');
 });
 
 test('disconnect removes the session credential and returns truthful offline state', async ({ page }) => {
   await page.goto('/');
   await connect(page);
-  await page.getByRole('button', { name: /Kernel ready/ }).click();
+  await page.getByRole('button', { name: /Kernel listo/ }).click();
   await page.getByRole('button', { name: 'Desconectar', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Conectar', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
@@ -110,6 +113,7 @@ test('supports keyboard Goal preparation with visible focus and reduced motion',
   await page.goto('/');
 
   await page.getByRole('button', { name: 'Goal', exact: true }).click();
+  await expect(page.getByText('Enter para preparar', { exact: true })).toBeVisible();
   const goal = page.getByRole('textbox', { name: 'Goal', exact: true });
   await goal.focus();
   await expect(goal).toBeFocused();

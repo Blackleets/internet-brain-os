@@ -29,16 +29,16 @@ function ScorecardBody({ scorecard }: { scorecard: ProductValueScorecard }) {
   const unavailableCount = countUnavailable(scorecard);
   return <>
     <dl className="scorecard-primary">
-      <ScoreMetric icon={<Gauge size={17} aria-hidden="true" />} label="Goals con Find útil" metric={scorecard.primary.goalUsefulFindRate} />
-      <ScoreMetric icon={<Clock3 size={17} aria-hidden="true" />} label="Tiempo al primer Find útil" metric={scorecard.primary.timeToFirstUsefulFind} />
+      <ScoreMetric icon={<Gauge size={17} aria-hidden="true" />} label="Goals con hallazgo útil" metric={scorecard.primary.goalUsefulFindRate} />
+      <ScoreMetric icon={<Clock3 size={17} aria-hidden="true" />} label="Tiempo al primer hallazgo útil" metric={scorecard.primary.timeToFirstUsefulFind} />
       <ScoreMetric icon={<Repeat2 size={17} aria-hidden="true" />} label="Repetición de Goals" metric={scorecard.primary.repeatGoalUsage} />
     </dl>
     <div className="scorecard-secondary" aria-label="Cobertura y guardas del scorecard">
       <span>Activación local <strong>{formatMetric(scorecard.drivers.installationToFirstGoalActivationRate)}</strong></span>
       <span>Misiones completadas <strong>{formatMetric(scorecard.drivers.missionCompletionRate)}</strong></span>
-      <span>Finds útiles <strong>{formatMetric(scorecard.drivers.usefulSavedFindShare)}</strong></span>
+      <span>Hallazgos útiles <strong>{formatMetric(scorecard.drivers.usefulSavedFindShare)}</strong></span>
       <span>Goals medidos <strong>{scorecard.coverage.executedGoals}</strong></span>
-      <span>Finds con Goal <strong>{scorecard.coverage.goalLinkedFinds}</strong></span>
+      <span>Hallazgos con Goal <strong>{scorecard.coverage.goalLinkedFinds}</strong></span>
       <span>Fallos de misión <strong>{formatMetric(scorecard.guardrails.missionFailureRate)}</strong></span>
       <span>Descartados <strong>{formatMetric(scorecard.guardrails.findDismissalNotInterestedRate)}</strong></span>
     </div>
@@ -79,13 +79,13 @@ function metricContext(metric: ProductMetric): string {
 function reasonCopy(reason: string | null): string {
   return ({
     no_executed_goals: 'Aún no hay Goals autorizados ejecutados.',
-    no_useful_or_saved_find_feedback: 'Aún no hay Finds marcados como útiles o guardados.',
+    no_useful_or_saved_find_feedback: 'Aún no hay hallazgos marcados como útiles o guardados.',
     installation_cohort_not_recorded: 'La medición local aún no se ha iniciado en esta instalación.',
     local_installation_cohort_invalid: 'El registro local de medición no es válido.',
     no_local_goal_activation: 'Esta instalación aún no ha autorizado su primer Goal.',
     no_missions: 'Aún no hay misiones medibles.',
     no_completed_goals: 'Aún no hay Goals completados.',
-    no_goal_linked_finds: 'Aún no hay Finds ligados a un Goal verificado.',
+    no_goal_linked_finds: 'Aún no hay hallazgos ligados a un Goal verificado.',
   } as Record<string, string>)[reason ?? ''] ?? 'El Kernel todavía no dispone del ledger necesario.';
 }
 function countUnavailable(scorecard: ProductValueScorecard): number {
