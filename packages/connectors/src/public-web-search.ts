@@ -32,15 +32,21 @@ export class PublicWebSearchClient {
   async search(query: string, requestedLimit?: number): Promise<PublicWebSearchResponse> {
     const normalizedQuery = normalizeQuery(query);
     const limit = normalizeLimit(requestedLimit ?? this.options.maxResults ?? 10);
-    let duckDuckGoError: unknown;
-    try {
-      const endpoint = new URL('https://html.duckduckgo.com/html/');
-      endpoint.searchParams.set('q', normalizedQuery);
-      const html = await this.fetchHtml(endpoint);
-      const results = parseDuckDuckGoHtml(html, limit);
-      if (results.length > 0) return this.response(normalizedQuery, 'duckduckgo-html', results);
-    } catch (error) {
-      duckDuckGoError = error;
+    let lastProviderError: unknown;
+    const duckDuckGoProviders = [
+      { endpoint: 'https://html.duckduckgo.com/html/', parse: parseDuckDuckGoHtml },
+      { endpoint: 'https://lite.duckduckgo.com/lite/', parse: parseDuckDuckGoLiteHtml },
+    ] as const;
+    for (const provider of duckDuckGoProviders) {
+      try {
+        const endpoint = new URL(provider.endpoint);
+        endpoint.searchParams.set('q', normalizedQuery);
+        const html = await this.fetchHtml(endpoint);
+        const results = filterRelevantResults(normalizedQuery, provider.parse(html, limit));
+        if (results.length > 0) return this.response(normalizedQuery, 'duckduckgo-html', results);
+      } catch (error) {
+        lastProviderError = error;
+      }
     }
 
     try {
@@ -50,9 +56,9 @@ export class PublicWebSearchClient {
       endpoint.searchParams.set('cc', this.options.market ?? 'es');
       endpoint.searchParams.set('setlang', this.options.language ?? 'es');
       const html = await this.fetchHtml(endpoint);
-      return this.response(normalizedQuery, 'bing-html', parseBingHtml(html, limit));
+      return this.response(normalizedQuery, 'bing-html', filterRelevantResults(normalizedQuery, parseBingHtml(html, limit)));
     } catch (error) {
-      throw error ?? duckDuckGoError ?? new Error('Public search provider unavailable');
+      throw error ?? lastProviderError ?? new Error('Public search provider unavailable');
     }
   }
 
@@ -113,6 +119,39 @@ export function parseDuckDuckGoHtml(html: string, limit = 10): readonly PublicWe
   return results;
 }
 
+export function parseDuckDuckGoLiteHtml(html: string, limit = 10): readonly PublicWebSearchResult[] {
+  const anchorPattern = /<a\b[^>]*class=["'][^"']*\bresult-link\b[^"']*["'][^>]*>([\s\S]*?)<\/a>/gi;
+  const results: PublicWebSearchResult[] = [];
+  const seen = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = anchorPattern.exec(html)) && results.length < normalizeLimit(limit)) {
+    const tagStart = html.lastIndexOf('<a', match.index);
+    const tagEnd = html.indexOf('>', tagStart);
+    if (tagStart < 0 || tagEnd < 0) continue;
+    const tag = html.slice(tagStart, tagEnd + 1);
+    const href = /\bhref=["']([^"']+)["']/i.exec(tag)?.[1] ?? '';
+    if (!href.includes('uddg=')) continue;
+    const target = normalizeResultUrl(decodeEntities(href));
+    if (!target || seen.has(target)) continue;
+    let parsed: URL;
+    try { parsed = new URL(target); } catch { continue; }
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) continue;
+    const title = cleanText(match[1] ?? '');
+    if (!title) continue;
+    const following = html.slice(anchorPattern.lastIndex, anchorPattern.lastIndex + 5000);
+    const snippet = /<(?:td|div)\b[^>]*class=["'][^"']*\bresult-snippet\b[^"']*["'][^>]*>([\s\S]*?)<\/(?:td|div)>/i.exec(following)?.[1] ?? '';
+    seen.add(target);
+    results.push({
+      rank: results.length + 1,
+      title,
+      url: parsed.toString(),
+      snippet: cleanText(snippet).slice(0, 500),
+      sourceHost: parsed.hostname.toLowerCase(),
+    });
+  }
+  return results;
+}
+
 export function parseBingHtml(html: string, limit = 10): readonly PublicWebSearchResult[] {
   const resultPattern = /<li[^>]+class=["'][^"']*\bb_algo\b[^"']*["'][^>]*>([\s\S]*?)<\/li>/gi;
   const results: PublicWebSearchResult[] = [];
@@ -148,10 +187,11 @@ function normalizeResultUrl(raw: string): string | undefined {
   try {
     const candidate = value.startsWith('//') ? `https:${value}` : value;
     const parsed = new URL(candidate, 'https://duckduckgo.com');
-    if (parsed.hostname.endsWith('duckduckgo.com') && parsed.pathname.startsWith('/l/')) {
+    if (isProviderHost(parsed.hostname, 'duckduckgo.com') && parsed.pathname.startsWith('/l/')) {
       const unwrapped = parsed.searchParams.get('uddg');
-      return unwrapped ? decodeURIComponent(unwrapped) : undefined;
+      return unwrapped ? normalizeResultUrl(decodeURIComponent(unwrapped)) : undefined;
     }
+    if (isProviderHost(parsed.hostname, 'duckduckgo.com')) return undefined;
     return parsed.toString();
   } catch {
     return undefined;
@@ -163,12 +203,12 @@ function normalizeBingResultUrl(raw: string): string | undefined {
   if (!value) return undefined;
   try {
     const parsed = new URL(value, 'https://www.bing.com');
-    if (parsed.hostname.endsWith('bing.com') && parsed.pathname.startsWith('/ck/')) {
+    if (isProviderHost(parsed.hostname, 'bing.com') && parsed.pathname.startsWith('/ck/')) {
       const encoded = parsed.searchParams.get('u');
       const decoded = encoded ? decodeBingRedirect(encoded) : undefined;
       return decoded ? normalizeResultUrl(decoded) : undefined;
     }
-    if (parsed.hostname.endsWith('bing.com')) return undefined;
+    if (isProviderHost(parsed.hostname, 'bing.com')) return undefined;
     return parsed.toString();
   } catch {
     return undefined;
@@ -193,6 +233,34 @@ function normalizeQuery(value: string): string {
     throw new Error('Search query is invalid');
   }
   return normalized;
+}
+
+const SEARCH_STOP_WORDS = new Set([
+  'a', 'al', 'an', 'and', 'busca', 'by', 'con', 'de', 'del', 'el', 'en', 'find', 'for', 'from', 'give', 'la', 'las', 'los', 'me', 'my', 'of', 'para', 'por', 'que', 'the', 'to', 'un', 'una', 'with', 'y',
+]);
+
+function filterRelevantResults(query: string, results: readonly PublicWebSearchResult[]): readonly PublicWebSearchResult[] {
+  const queryTokens = tokenizeSearchText(query).filter((token) => !SEARCH_STOP_WORDS.has(token));
+  if (queryTokens.length === 0) return results;
+  return results
+    .filter((result) => {
+      const resultTokens = new Set(tokenizeSearchText(`${result.title} ${result.snippet} ${result.sourceHost}`));
+      return queryTokens.some((token) => resultTokens.has(token));
+    })
+    .map((result, index) => ({ ...result, rank: index + 1 }));
+}
+
+function tokenizeSearchText(value: string): string[] {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+}
+
+function isProviderHost(hostname: string, provider: string): boolean {
+  return hostname === provider || hostname.endsWith(`.${provider}`);
 }
 
 function normalizeLimit(value: number): number {

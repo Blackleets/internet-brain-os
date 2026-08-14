@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PublicWebSearchClient, parseBingHtml, parseDuckDuckGoHtml } from '../src';
+import { PublicWebSearchClient, parseBingHtml, parseDuckDuckGoHtml, parseDuckDuckGoLiteHtml } from '../src';
 
 const fixture = `
 <html><body>
@@ -62,7 +62,22 @@ describe('PublicWebSearchClient', () => {
 
     expect(result.provider).toBe('bing-html');
     expect(result.results).toEqual([expect.objectContaining({ url: 'https://example.com/iphone', sourceHost: 'example.com' })]);
-    expect(requests).toHaveLength(2);
+    expect(requests).toHaveLength(3);
+  });
+
+  it('rejects unrelated provider pages instead of presenting them as matches', async () => {
+    const client = new PublicWebSearchClient({
+      fetchImpl: (async (input: URL | RequestInfo) => {
+        const url = String(input);
+        if (url.includes('duckduckgo.com')) return new Response('<html><body>challenge</body></html>', { status: 202, headers: { 'content-type': 'text/html' } });
+        return new Response('<li class="b_algo"><h2><a href="https://support.example.com/hotmail">Hotmail help</a></h2><div class="b_caption"><p>Unrelated page.</p></div></li>', { status: 200, headers: { 'content-type': 'text/html' } });
+      }) as typeof fetch,
+    });
+
+    const result = await client.search('used iphone', 3);
+
+    expect(result.provider).toBe('bing-html');
+    expect(result.results).toEqual([]);
   });
 });
 
@@ -81,5 +96,13 @@ describe('parseBingHtml', () => {
     const results = parseBingHtml(`<li class="b_algo"><h2><a href="https://example.com/one">One</a></h2><div class="b_caption"><p>First result.</p></div></li><li class="b_algo"><h2><a href="https://www.bing.com/ck/a?u=a1aHR0cHM6Ly9leGFtcGxlLmNvbS90d28">Two</a></h2><div class="b_caption"><p>Second result.</p></div></li>`, 2);
 
     expect(results.map((result) => result.url)).toEqual(['https://example.com/one', 'https://example.com/two']);
+  });
+});
+
+describe('parseDuckDuckGoLiteHtml', () => {
+  it('extracts external result links and their adjacent snippets', () => {
+    const results = parseDuckDuckGoLiteHtml(`<tr><td><a class="result-link" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fiphone">Used iPhone</a></td></tr><tr><td class="result-snippet">Good <b>used</b> iPhone listing.</td></tr><tr class="result-sponsored"><td><a class="result-link" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fduckduckgo.com%2Fy.js%3Fad%3D1">Ad</a></td></tr>`, 5);
+
+    expect(results).toEqual([expect.objectContaining({ title: 'Used iPhone', url: 'https://example.com/iphone', snippet: 'Good used iPhone listing.' })]);
   });
 });
