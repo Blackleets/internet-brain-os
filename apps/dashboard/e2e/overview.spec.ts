@@ -179,6 +179,7 @@ test.describe('mobile Efesto product shell', () => {
     await expect(page.locator('.forge-composer')).toBeVisible();
     await expect(page.locator('.forge-quick-prompt')).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Cambiar sugerencia', exact: true })).toBeVisible();
+    await expect(page.locator('.forge-suggestion-next svg')).toBeVisible();
     await expect(page.getByText('Privado por diseño', { exact: true })).toBeVisible();
 
     const initial = await page.evaluate(() => ({ viewportWidth: innerWidth, documentWidth: document.documentElement.scrollWidth }));
