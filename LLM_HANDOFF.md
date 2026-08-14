@@ -606,8 +606,9 @@ This completes the web-first design slice. Responsive mobile use is included thr
 - Kernel server integration tests: included in the targeted 30-test run.
 - Dashboard suite: 126/126 passed.
 - Dashboard typecheck: passed.
-- Full repository gates still need to be run on this exact working tree before
-  publishing.
+- Full repository gates: architecture check, typecheck, build and 1,086/1,086
+  tests passed.
+- Vercel preview deployment is `READY` for commit `d1fc5f2a40bf8436126ac78f877961d0869353c5`.
 
 ### Boundary
 
