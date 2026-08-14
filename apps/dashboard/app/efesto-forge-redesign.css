@@ -1695,6 +1695,11 @@
   top: 16px;
   border-color: #493226;
   background: #1d1511;
+  pointer-events: none;
+}
+
+.efesto-toast button {
+  pointer-events: auto;
 }
 
 @keyframes forge-pulse {
