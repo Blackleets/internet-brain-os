@@ -51,8 +51,12 @@ record with provenance, content hash, authorization, and replay protection.
 Evidence now also exposes the public status of the Goal-bound authorization,
 its approved scope/capabilities and expiry, with an inline two-step revoke
 flow. Revocation closes future reads while preserving already-captured
-Evidence. The next slice is to exercise this complete path with a real
-user-owned read-scoped token before reviewing another provider contract.
+Evidence. Shared connector definitions now feed both catalog status and Goal
+source routing, and the Goal GitHub action maps repository, issues, pull
+requests, and checks to their exact capabilities; checks require an explicit
+branch, tag, or commit reference. The next slice is to exercise this complete
+path with a real user-owned read-scoped token before reviewing another
+provider contract.
 
 The Goal flow now adds a Kernel-owned `efesto.goal-intelligence.v1` preview
 before confirmation. It routes generic public Goals to Hermes and explicit

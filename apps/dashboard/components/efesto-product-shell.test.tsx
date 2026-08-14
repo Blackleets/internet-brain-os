@@ -29,12 +29,12 @@ const base = {
     { id: 'obsidian', kind: 'memory', adapter: 'native', status: 'ready', capabilities: ['memory.project'], scopes: ['local.memory'], action: 'settings' },
     { id: 'browser-extension', kind: 'capture', adapter: 'native', status: 'ready', capabilities: ['capture.public_page'], scopes: ['public.read'], action: 'settings' },
     { id: 'model-providers', kind: 'model', adapter: 'native', status: 'ready', capabilities: ['chat.generate'], scopes: ['model.input'], action: 'models', count: 1 },
-    { id: 'mcp-gateway', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['scoped.tool'], action: 'settings' },
-    { id: 'github', kind: 'transport', adapter: 'native', status: 'not_configured', capabilities: [], scopes: ['github.read'], action: 'settings', requiresExplicitConsent: true },
-    { id: 'gmail', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['gmail.read'], action: 'settings' },
-    { id: 'google-drive', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['drive.read'], action: 'settings' },
-    { id: 'notion', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['notion.read'], action: 'settings' },
-    { id: 'google-calendar', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['calendar.read'], action: 'settings' },
+    { id: 'mcp-gateway', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['scoped.tool'], action: 'settings', readOnly: true, requiresExplicitConsent: true, statusReason: 'gateway_not_configured' },
+    { id: 'github', kind: 'transport', adapter: 'native', status: 'not_configured', capabilities: [], scopes: ['github.read'], action: 'settings', readOnly: true, requiresExplicitConsent: true, statusReason: 'credential_required' },
+    { id: 'gmail', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['gmail.read'], action: 'settings', readOnly: true, requiresExplicitConsent: true, statusReason: 'gateway_not_configured' },
+    { id: 'google-drive', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['drive.read'], action: 'settings', readOnly: true, requiresExplicitConsent: true, statusReason: 'gateway_not_configured' },
+    { id: 'notion', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['notion.read'], action: 'settings', readOnly: true, requiresExplicitConsent: true, statusReason: 'gateway_not_configured' },
+    { id: 'google-calendar', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['calendar.read'], action: 'settings', readOnly: true, requiresExplicitConsent: true, statusReason: 'gateway_not_configured' },
   ] },
   '/api/goals/plan': { ok: true, schemaVersion: 'efesto.goal-intelligence.v1', authority: 'kernel', generatedAt: '2026-08-09T08:05:00.000Z', goal: { title: 'Encuéntrame un taladro bueno por 18 a 25 euros', categories: ['tool', 'offer'], keywords: ['18', '25'] }, intent: { primaryCategory: 'tool', mode: 'public_research' }, sources: [{ id: 'hermes', adapter: 'native', selected: true, required: true, reason: 'public_research', status: 'ready', scopes: ['public.read'], requiredCapabilities: ['mission.execute', 'public.read'], activeCapabilities: ['mission.execute', 'public.read'], action: 'agents' }], readiness: 'ready', nextAction: 'confirm_goal', limitations: ['read_only_sources'] },
 } as const;
@@ -201,6 +201,8 @@ describe('Efesto conversation-first product shell', () => {
     expect(screen.getByLabelText('Resumen de conexiones')).toBeTruthy();
     expect(screen.getByText('Accesos rápidos')).toBeTruthy();
     expect(screen.getAllByText('sin acceso activo').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('MCP Gateway aún no configurado')).toHaveLength(5);
+    expect(screen.getByText('Falta una credencial autorizada')).toBeTruthy();
     expect(requests.some((request) => request.method === 'GET' && new URL(request.url).pathname === '/api/integrations')).toBe(true);
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Directorio' }), { target: { value: 'local' } });
@@ -279,5 +281,31 @@ describe('Efesto conversation-first product shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar revocación' }));
     await waitFor(() => expect(requests.some((request) => request.method === 'DELETE' && new URL(request.url).pathname === '/api/integrations/github/authorizations/github-auth-created')).toBe(true));
     expect(await screen.findByText('Esta autorización ya está revocada.')).toBeTruthy();
+  });
+
+  it('maps a GitHub checks read to its capability and reference payload', async () => {
+    githubFixtureMode = true;
+    githubGoalMode = true;
+    render(<EfestoProductShell />);
+    await connect();
+    fireEvent.click(screen.getByRole('button', { name: /^Inicio$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Goal$/ }));
+    fireEvent.change(screen.getByLabelText('Goal'), { target: { value: 'Audita los checks de un repositorio de GitHub' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Preparar Goal' }));
+    await waitFor(() => expect(screen.getByText('Analizar un repositorio', { exact: true })).toBeTruthy());
+
+    fireEvent.change(screen.getByLabelText('Propietario'), { target: { value: 'Blackleets' } });
+    fireEvent.change(screen.getByLabelText('Repositorio'), { target: { value: 'internet-brain-os' } });
+    fireEvent.change(screen.getByLabelText('Lectura'), { target: { value: 'checks' } });
+    fireEvent.change(screen.getByLabelText('Rama, tag o commit'), { target: { value: 'main' } });
+    fireEvent.click(screen.getByLabelText(/Autorizo a Efesto/));
+    await waitFor(() => expect(screen.getByText(/github\.checks\.read/)).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Autorizar y crear Evidence' }));
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Evidencia' })).toBeTruthy());
+    const authorizationRequest = requests.find((request) => request.method === 'POST' && new URL(request.url).pathname === '/api/integrations/github/authorizations');
+    const evidenceRequest = requests.find((request) => request.method === 'POST' && new URL(request.url).pathname === '/api/integrations/github/evidence');
+    expect(await authorizationRequest?.clone().json()).toMatchObject({ capabilities: ['github.checks.read'] });
+    expect(await evidenceRequest?.clone().json()).toMatchObject({ operation: 'checks', ref: 'main' });
   });
 });

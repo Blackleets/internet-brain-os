@@ -98,6 +98,17 @@ until their adapter contracts and approval receipts exist. Local SVG marks live 
 `apps/dashboard/public/integrations/`, so the directory has no remote asset
 dependency.
 
+The five external definitions are centralized in
+`apps/local-kernel/integration-definitions.mjs` and are consumed by both the
+catalog and Goal Intelligence routing. This keeps scope, capability, consent,
+and adapter identity aligned without making the definitions an account-status
+authority. The Goal GitHub action exposes the same bounded native contract as
+an operation selector: repository, issues, pull requests, or checks; checks
+also require an explicit branch, tag, or commit reference. The dashboard maps
+each operation to its exact capability before the Kernel authorization and
+Evidence requests, while preserving the read-only and explicit-consent
+disclosures.
+
 The persistent bottom composer is a provider-neutral conversation surface.
 Authenticated users may register loopback Ollama or HTTPS OpenAI-compatible
 providers; credentials are accepted only by the loopback Kernel, persisted in

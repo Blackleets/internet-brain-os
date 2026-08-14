@@ -4,6 +4,39 @@ This file records major product and technical decisions.
 
 Do not delete old decisions. If a decision changes, add a new entry explaining why.
 
+## 2026-08-14 - One contract for curated connectors and GitHub read modes
+
+Decision: the five curated external connector definitions live in one
+Kernel-local contract module and are reused by the integration catalog and Goal
+Intelligence routing. The dashboard may expose the bounded GitHub read modes
+repository, issues, pull requests, and checks, but it must derive the exact
+capability from the selected operation and require a branch, tag, or commit
+reference for checks.
+
+Reason:
+
+The first connector slice had begun to repeat provider metadata in separate
+catalog and planner arrays, while the UI exposed only the repository read even
+though the reviewed adapter already supported four bounded GET operations.
+Centralizing definitions removes drift without turning them into readiness
+authority; operation-scoped requests make the user's consent and the Kernel
+authorization receipt match the actual read.
+
+Change request / rollback:
+
+- Behavior: no provider becomes ready from this change; MCP entries remain
+  `not_configured` without a provider status, and GitHub remains read-only and
+  Goal-bound.
+- Files: `apps/local-kernel/integration-definitions.mjs`, catalog/planner
+  wiring, dashboard contracts/parser/views/shell/translations/CSS, and focused
+  regression tests.
+- Breakage risk: a malformed shared definition or unsupported operation must
+  fail validation/tests before release; removing the shared module restores the
+  prior arrays, while removing the selector restores repository-only UI
+  behavior without changing stored authority or Evidence.
+- Proof: catalog/planner parity, status-reason sanitization, parser/UI state,
+  and checks capability/reference payload tests cover the boundary.
+
 ## 2026-08-14 - Kernel-owned Goal Intelligence Brief
 
 Decision: Efesto now prepares a non-mutating `efesto.goal-intelligence.v1`

@@ -871,3 +871,51 @@ Exercise one real user-owned read-scoped GitHub token through the local Kernel,
 confirm the Case/Evidence authority card and revocation behavior manually,
 then review a second provider only if it can follow the same Goal-bound,
 read-only, Kernel-receipt contract.
+
+## Handoff 2026-08-14 - Codex - Shared connector contract and GitHub read modes
+
+### What changed
+
+- Centralized the five curated external connector definitions in
+  `apps/local-kernel/integration-definitions.mjs` and reused them from the
+  Kernel catalog and Goal Intelligence planner. This removes duplicated scope,
+  capability, consent, and adapter metadata without turning definitions into
+  provider readiness authority.
+- Added truthful, sanitized `statusReason` records to the catalog and surfaced
+  their localized explanations in the Complementos directory and Settings
+  ledger. MCP gateway readiness still cannot mark an individual provider ready.
+- Expanded the Goal GitHub Evidence action from repository-only to the reviewed
+  bounded reads for repository, issues, pull requests, and checks. The selected
+  operation determines the exact authorization capability; checks require an
+  explicit branch, tag, or commit reference, and the idempotency/evidence
+  payload preserves that selection.
+- Added regression coverage for catalog reason sanitization, shared-definition
+  parity, and the GitHub checks capability/reference request path.
+
+### Verification
+
+- Focused integration/planner/server/parser/dashboard slice: 66/66 passed.
+- Full repository suite: 194 test files / 1,116 tests passed.
+- Architecture boundary check, TypeScript, production build,
+  `verify:first-run`, Hermes validation/smoke/attack checks, Replay Lab API
+  smoke, `git diff --check`, and `pnpm release:verify` passed.
+- Production build smoke on an isolated local port returned HTTP 200 for `/`
+  and `/manifest.webmanifest`, with the Efesto identity present in the page.
+
+### Risks / uncertainties
+
+- No live GitHub credential was used; the provider path remains contract- and
+  fixture-verified, not a live account read.
+- Playwright could start its fixture/server pair after removing a stale
+  generated Next lock, but all seven browser scenarios were blocked before
+  launch because the environment lacks the Chromium executable. No visual
+  browser pass is claimed from source or unit tests.
+- Vercel/production remains untouched until the exact candidate is published;
+  public launch remains blocked pending manual UAT.
+
+### Next recommended step
+
+Publish the verified branch through the connected GitHub path, obtain a READY
+preview, then manually run one real user-owned GitHub read token through the
+Goal → explicit capability → bounded read → Kernel receipt → Evidence path.
+Only after that proof should another provider leave the MCP catalog-only state.

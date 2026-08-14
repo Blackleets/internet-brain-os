@@ -2280,6 +2280,14 @@
   font-size: 9px;
 }
 
+.forge-addon-row .forge-integration-status-note {
+  display: block;
+  margin-top: 5px;
+  color: #77757c;
+  font-size: 8px;
+  line-height: 1.35;
+}
+
 .forge-addon-row-footer {
   display: flex;
   align-items: center;
@@ -3277,6 +3285,10 @@
   font-size: 8px;
 }
 
+.settings-addon-ledger article .settings-addon-status-note {
+  color: #8a877f;
+}
+
 .settings-addon-ledger article .state-pill {
   padding: 4px 6px;
   font-size: 7px;
@@ -3849,6 +3861,22 @@
   background: #141415;
   color: #e7e3de;
   font: inherit;
+}
+
+.forge-github-repository-fields select {
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid #343437;
+  border-radius: 8px;
+  outline: 0;
+  background: #141415;
+  color: #e7e3de;
+  font: inherit;
+}
+
+.forge-github-repository-fields select:focus-visible {
+  border-color: #63805c;
+  box-shadow: 0 0 0 3px rgb(126 179 139 / 13%);
 }
 
 .forge-github-repository-fields input:focus-visible {

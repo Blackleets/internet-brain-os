@@ -1,5 +1,5 @@
 import { validateGoalDraft } from './goals.mjs';
-import { GITHUB_READ_CAPABILITIES } from './github-readonly-contract.mjs';
+import { EXTERNAL_INTEGRATION_DEFINITIONS } from './integration-definitions.mjs';
 
 export const GOAL_INTELLIGENCE_SCHEMA_VERSION = 'efesto.goal-intelligence.v1';
 
@@ -13,51 +13,15 @@ const SOURCE_DEFINITIONS = Object.freeze([
     requiredCapabilities: ['mission.execute', 'public.read'],
     action: 'agents',
   },
-  {
-    id: 'github',
-    adapter: 'mcp',
-    reason: 'goal_signal',
-    pattern: /\b(github|git hub|repository|repositories|repo|repos|pull request|pull requests|issue|issues|commit|commits|ci|open source|codigo|código|software)\b/u,
-    scopes: ['github.read'],
-    requiredCapabilities: [...GITHUB_READ_CAPABILITIES],
-    action: 'settings',
-  },
-  {
-    id: 'gmail',
-    adapter: 'mcp',
-    reason: 'goal_signal',
-    pattern: /\b(gmail|email|emails|e-mail|correo|correos|inbox|bandeja|mensaje|mensajes)\b/u,
-    scopes: ['gmail.read'],
-    requiredCapabilities: ['gmail.message.read', 'gmail.thread.read'],
-    action: 'settings',
-  },
-  {
-    id: 'google-drive',
-    adapter: 'mcp',
-    reason: 'goal_signal',
-    pattern: /\b(google drive|drive|documento|documentos|document|documents|hoja|hojas|sheet|sheets)\b/u,
-    scopes: ['drive.read'],
-    requiredCapabilities: ['drive.file.read', 'drive.search'],
-    action: 'settings',
-  },
-  {
-    id: 'notion',
-    adapter: 'mcp',
-    reason: 'goal_signal',
-    pattern: /\b(notion|pagina de notion|página de notion|notas|note|notes|wiki|base de conocimiento|knowledge base)\b/u,
-    scopes: ['notion.read'],
-    requiredCapabilities: ['notion.page.read', 'notion.search'],
-    action: 'settings',
-  },
-  {
-    id: 'google-calendar',
-    adapter: 'mcp',
-    reason: 'goal_signal',
-    pattern: /\b(google calendar|calendar|calendario|evento|eventos|event|events|reunion|reunión|reuniones|meeting|meetings|agenda|disponibilidad|availability)\b/u,
-    scopes: ['calendar.read'],
-    requiredCapabilities: ['calendar.event.read', 'calendar.search'],
-    action: 'settings',
-  },
+  ...EXTERNAL_INTEGRATION_DEFINITIONS.map((definition) => ({
+    id: definition.id,
+    adapter: definition.adapter,
+    reason: definition.reason,
+    pattern: definition.pattern,
+    scopes: [...definition.scopes],
+    requiredCapabilities: [...definition.capabilities],
+    action: definition.action,
+  })),
 ]);
 
 /**

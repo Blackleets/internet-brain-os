@@ -27,7 +27,13 @@ type StreamEvent = { type?: 'conversation' | 'delta' | 'done' | 'error'; delta?:
 
 const SESSION_CONNECTION_KEY = 'hephaestus.owner.connection.session.v1';
 const DEFAULT_BASE_URL = 'http://127.0.0.1:4000';
-const GITHUB_REPOSITORY_CAPABILITY = 'github.repository.read';
+type GitHubReadOperation = 'repository' | 'issues' | 'pull_requests' | 'checks';
+const GITHUB_CAPABILITY_BY_OPERATION: Record<GitHubReadOperation, string> = {
+  repository: 'github.repository.read',
+  issues: 'github.issue.read',
+  pull_requests: 'github.pull_request.read',
+  checks: 'github.checks.read',
+};
 type NavItem = { id: View; labelKey: string; icon: typeof Home };
 const workspaceNav: NavItem[] = [
   { id: 'home', labelKey: 'nav.home', icon: Home },
@@ -390,7 +396,7 @@ function EfestoProductShellContent() {
     }
   }
 
-  async function runGithubEvidence({ owner, repo, consent }: { owner: string; repo: string; consent: boolean }) {
+  async function runGithubEvidence({ owner, repo, operation, ref, consent }: { owner: string; repo: string; operation: GitHubReadOperation; ref?: string; consent: boolean }) {
     if (!connection || !preparedGoal || goalPending) {
       if (!connection) navigate('settings');
       return;
@@ -410,14 +416,14 @@ function EfestoProductShellContent() {
       if (typeof goal.id !== 'string' || !goal.id) throw new Error('Goal id missing');
       const authorizationResponse = await client.request('/api/integrations/github/authorizations', {
         method: 'POST',
-        body: JSON.stringify({ goalId: goal.id, capabilities: [GITHUB_REPOSITORY_CAPABILITY] }),
+        body: JSON.stringify({ goalId: goal.id, capabilities: [GITHUB_CAPABILITY_BY_OPERATION[operation]] }),
       }, parseObject);
       const authorization = parseObject(authorizationResponse.authorization);
       if (typeof authorization.id !== 'string' || !authorization.id) throw new Error('GitHub authorization missing');
-      const idempotencyKey = 'github-evidence:' + goal.id + ':' + owner + '/' + repo;
+      const idempotencyKey = 'github-evidence:' + goal.id + ':' + operation + ':' + owner + '/' + repo + (ref ? ':' + ref : '');
       const evidenceResponse = await client.request('/api/integrations/github/evidence', {
         method: 'POST',
-        body: JSON.stringify({ goalId: goal.id, authorizationId: authorization.id, idempotencyKey, operation: 'repository', owner, repo }),
+        body: JSON.stringify({ goalId: goal.id, authorizationId: authorization.id, idempotencyKey, operation, owner, repo, ...(ref ? { ref } : {}) }),
       }, parseObject);
       const caseId = typeof evidenceResponse.caseId === 'string' ? evidenceResponse.caseId : '';
       if (!caseId) throw new Error('GitHub Case missing');

@@ -44,6 +44,10 @@ export type IntegrationSummary = KernelUnknownFields & {
   scopes: string[];
   action: IntegrationAction;
   count?: number;
+  readOnly?: boolean;
+  requiresExplicitConsent?: boolean;
+  statusReason?: string;
+  managedBy?: string | null;
 };
 
 export type IntegrationCatalog = KernelUnknownFields & {

@@ -29,6 +29,7 @@ export type GitHubAuthorizationSummary = {
   id: string; goalId: string; scope: string; approvedCapabilities: string[]; issuedAt: string; expiresAt: string;
   status: 'active' | 'expired' | 'revoked' | 'invalid'; revokedAt?: string;
 };
+type GitHubReadOperation = 'repository' | 'issues' | 'pull_requests' | 'checks';
 export type CaseDetail = { case: Record<string, unknown>; evidence: EvidenceRecord[]; githubAuthorization?: GitHubAuthorizationSummary };
 export type BrainPhase = 'offline' | 'ready' | 'queued' | 'investigating' | 'verifying' | 'forged' | 'thinking' | 'failed';
 
@@ -38,7 +39,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, goalPlan, go
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; goalPlan?: GoalIntelligencePlan; goalPlanPending: boolean; connected: boolean; goalPending: boolean;
   input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
-  onConfirmGoal: () => void; onRunGitHubEvidence: (input: { owner: string; repo: string; consent: boolean }) => void; onEditGoal: () => void;
+  onConfirmGoal: () => void; onRunGitHubEvidence: (input: { owner: string; repo: string; operation: GitHubReadOperation; ref?: string; consent: boolean }) => void; onEditGoal: () => void;
   onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
   onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenAgents: () => void; onOpenNav: () => void; valueSurface?: ReactNode;
 }) {
@@ -139,7 +140,7 @@ function GoalIntelligenceBrief({ plan, pending, connected, goalPending, onOpenSe
   goalPending: boolean;
   onOpenSettings: () => void;
   onOpenAgents: () => void;
-  onRunGitHubEvidence: (input: { owner: string; repo: string; consent: boolean }) => void;
+  onRunGitHubEvidence: (input: { owner: string; repo: string; operation: GitHubReadOperation; ref?: string; consent: boolean }) => void;
 }) {
   const { t } = useEfestoLocale();
   if (pending) {
@@ -183,28 +184,42 @@ function GoalIntelligenceBrief({ plan, pending, connected, goalPending, onOpenSe
   </section>;
 }
 
-function GitHubEvidenceAction({ pending, onSubmit }: { pending: boolean; onSubmit: (input: { owner: string; repo: string; consent: boolean }) => void }) {
+function GitHubEvidenceAction({ pending, onSubmit }: { pending: boolean; onSubmit: (input: { owner: string; repo: string; operation: GitHubReadOperation; ref?: string; consent: boolean }) => void }) {
   const { t } = useEfestoLocale();
   const [owner, setOwner] = useState('');
   const [repo, setRepo] = useState('');
+  const [operation, setOperation] = useState<GitHubReadOperation>('repository');
+  const [ref, setRef] = useState('');
   const [consent, setConsent] = useState(false);
   const normalizedOwner = owner.trim();
   const normalizedRepo = repo.trim();
-  const ready = Boolean(normalizedOwner && normalizedRepo && consent);
+  const normalizedRef = ref.trim();
+  const ready = Boolean(normalizedOwner && normalizedRepo && consent && (operation !== 'checks' || normalizedRef));
 
   return <form className="forge-github-action" onSubmit={(event) => {
     event.preventDefault();
-    if (ready) onSubmit({ owner: normalizedOwner, repo: normalizedRepo, consent });
+    if (ready) onSubmit({ owner: normalizedOwner, repo: normalizedRepo, operation, ...(normalizedRef ? { ref: normalizedRef } : {}), consent });
   }}>
     <header><span className="forge-github-action-mark"><IntegrationMark id="github" /></span><div><small>{t('home.githubActionEyebrow')}</small><strong>{t('home.githubActionTitle')}</strong></div><span className="forge-github-readonly-pill">{t('home.githubReadOnly')}</span></header>
     <p>{t('home.githubActionCopy')}</p>
     <div className="forge-github-repository-fields">
       <label>{t('home.githubOwner')}<input value={owner} onChange={(event) => setOwner(event.target.value)} placeholder={t('home.githubOwnerPlaceholder')} autoComplete="off" spellCheck={false} required /></label>
       <label>{t('home.githubRepository')}<input value={repo} onChange={(event) => setRepo(event.target.value)} placeholder={t('home.githubRepositoryPlaceholder')} autoComplete="off" spellCheck={false} required /></label>
+      <label>{t('home.githubOperation')}<select value={operation} onChange={(event) => setOperation(event.target.value as GitHubReadOperation)} aria-label={t('home.githubOperation')}>
+        <option value="repository">{t('home.githubOperation.repository')}</option>
+        <option value="issues">{t('home.githubOperation.issues')}</option>
+        <option value="pull_requests">{t('home.githubOperation.pullRequests')}</option>
+        <option value="checks">{t('home.githubOperation.checks')}</option>
+      </select></label>
+      {operation === 'checks' ? <label>{t('home.githubRef')}<input value={ref} onChange={(event) => setRef(event.target.value)} placeholder={t('home.githubRefPlaceholder')} autoComplete="off" spellCheck={false} required /></label> : null}
     </div>
     <label className="forge-github-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span>{t('home.githubConsent')}</span></label>
-    <div className="forge-github-action-footer"><small><ShieldCheck /> {t('home.githubReadScope')}</small><button type="submit" className="secondary-action" disabled={!ready || pending}>{pending ? t('home.githubAnalyzing') : t('home.githubAnalyze')}</button></div>
+    <div className="forge-github-action-footer"><small><ShieldCheck /> {t('home.githubReadScopeForOperation', { capability: githubCapabilityForOperation(operation) })}</small><button type="submit" className="secondary-action" disabled={!ready || pending}>{pending ? t('home.githubAnalyzing') : t('home.githubAnalyze')}</button></div>
   </form>;
+}
+
+function githubCapabilityForOperation(operation: GitHubReadOperation) {
+  return { repository: 'github.repository.read', issues: 'github.issue.read', pull_requests: 'github.pull_request.read', checks: 'github.checks.read' }[operation];
 }
 
 function goalCategoryLabel(category: string, t: (key: string, values?: Record<string, string | number>) => string) {
@@ -531,9 +546,10 @@ function IntegrationCard({ integration, onNavigate }: { integration: Integration
   const actionLabel = configureMcp ? t('integrations.configure') : integration.action ? t(`integrations.action.${integration.action}`) : undefined;
   const scopeLabel = integration.scopes.length ? integration.scopes.join(' · ') : t('integrations.noAction');
   const capabilityLabel = integration.capabilities.length ? t('integrations.capabilities', { count: integration.capabilities.length }) : t('integrations.noCapabilities');
+  const statusNote = integration.statusReason ? integrationStatusNote(integration.statusReason, t) : undefined;
   return <article id={`forge-addon-${integration.id}`} className={`forge-addon-row status-${integration.status}`}>
     <div className="forge-integration-icon"><IntegrationMark id={integration.id} /></div>
-    <div className="forge-integration-copy"><div className="forge-integration-topline"><small>{t(`integrations.kind.${integration.kind}`)}</small><span>{integration.adapter === 'mcp' ? t('integrations.adapter.mcp') : t('integrations.adapter.native')}</span></div><h2>{t(nameKey)}</h2><p>{t(copyKey)}</p>{countLabel ? <span className="forge-integration-count">{countLabel}</span> : null}</div>
+    <div className="forge-integration-copy"><div className="forge-integration-topline"><small>{t(`integrations.kind.${integration.kind}`)}</small><span>{integration.adapter === 'mcp' ? t('integrations.adapter.mcp') : t('integrations.adapter.native')}</span></div><h2>{t(nameKey)}</h2><p>{t(copyKey)}</p>{statusNote ? <small className="forge-integration-status-note">{statusNote}</small> : null}{countLabel ? <span className="forge-integration-count">{countLabel}</span> : null}</div>
     <div className="forge-addon-row-status"><StatePill state={integration.status} /></div>
     <div className="forge-addon-row-footer"><div className="forge-integration-meta"><span>{scopeLabel}</span><span>{capabilityLabel}</span></div>{integration.action ? <button type="button" className="forge-addon-row-action" onClick={() => onNavigate(integration.action)} aria-label={actionLabel}><span>{actionLabel}</span><ChevronRight /></button> : <span className="forge-integration-note" title={t('integrations.mcpPending')} role="img" aria-label={t('integrations.mcpPending')}>{t('integrations.mcpPending')}</span>}</div>
   </article>;
@@ -603,7 +619,7 @@ export function SettingsView({ connected, connecting, rememberSession, snapshot,
         {mcpIntegrations.length ? <section className="settings-addon-ledger" aria-labelledby="settings-addon-ledger-title">
           <header><Plug /><div><small>{t('integrations.adapter.mcp')}</small><strong id="settings-addon-ledger-title">{t('integrations.externalTitle')}</strong></div></header>
           <p>{t('integrations.externalCopy')}</p>
-          <div>{mcpIntegrations.map((integration) => <article key={integration.id}><span className="settings-addon-mark"><IntegrationMark id={integration.id} /></span><span><strong>{t('integrations.' + integration.id + '.name')}</strong><small>{integration.scopes.join(' · ')}</small></span><StatePill state={integration.status} /></article>)}</div>
+          <div>{mcpIntegrations.map((integration) => <article key={integration.id}><span className="settings-addon-mark"><IntegrationMark id={integration.id} /></span><span><strong>{t('integrations.' + integration.id + '.name')}</strong><small>{integration.scopes.join(' · ')}</small>{integration.statusReason ? <small className="settings-addon-status-note">{integrationStatusNote(integration.statusReason, t)}</small> : null}</span><StatePill state={integration.status} /></article>)}</div>
           <small className="settings-addon-note"><ShieldCheck /> {t('integrations.mcpPending')}</small>
         </section> : null}
         {github ? <GitHubSettingsCard github={github} busy={githubBusy} onConfigure={onConfigureGithub} onRevoke={onRevokeGithub} /> : null}
@@ -635,6 +651,7 @@ function Empty({ icon: Icon, title, copy }: { icon: typeof Target; title: string
 function StatePill({ state }: { state: string }) { const { t } = useEfestoLocale(); const tone = ['ready', 'completed', 'forged', 'available', 'new'].includes(state) ? 'good' : ['failed', 'invalid', 'degraded', 'expired', 'revoked'].includes(state) ? 'bad' : ['running', 'investigating', 'verifying', 'queued', 'waiting_for_agent'].includes(state) ? 'working' : 'neutral'; return <span className={`state-pill ${tone}`}><i />{statusLabel(state, t)}</span>; }
 function ReadinessRow({ label, value, ready }: { label: string; value: string; ready: boolean }) { const { t } = useEfestoLocale(); return <div className="readiness-row"><span>{label}</span><strong className={ready ? 'ready' : ''}><i />{statusLabel(value, t)}</strong></div>; }
 function statusLabel(value: string, t: (key: string) => string) { const statusKeys: Record<string, string> = { active: 'status.active', available: 'status.available', completed: 'status.completed', configured: 'status.configured', connected: 'status.connected', degraded: 'status.degraded', expired: 'status.expired', failed: 'status.failed', forged: 'status.forged', invalid: 'status.invalid', new: 'status.new', not_configured: 'status.notConfigured', offline: 'status.offline', paired: 'status.paired', queued: 'status.queued', ready: 'status.ready', revoked: 'status.revoked', running: 'status.running', unavailable: 'status.unavailable', verifying: 'status.verifying', investigating: 'status.investigating', waiting_for_agent: 'status.waitingForAgent', unconfigured: 'status.unconfigured', checking: 'status.checking' }; return statusKeys[value] ? t(statusKeys[value]) : value.replaceAll('_', ' '); }
+function integrationStatusNote(value: string, t: (key: string) => string) { const statusKeys: Record<string, string> = { connector_verified: 'integrations.status.connectorVerified', credential_degraded: 'integrations.status.credentialDegraded', credential_required: 'integrations.status.credentialRequired', gateway_not_configured: 'integrations.status.gatewayNotConfigured', gateway_verified: 'integrations.status.gatewayVerified', kernel_boundary: 'integrations.status.kernelBoundary', kernel_verified: 'integrations.status.kernelVerified', local_projection: 'integrations.status.localProjection', model_not_configured: 'integrations.status.modelNotConfigured', pairing_required: 'integrations.status.pairingRequired', paired_extension: 'integrations.status.pairedExtension', provider_configured: 'integrations.status.providerConfigured', provider_degraded: 'integrations.status.providerDegraded', provider_not_configured: 'integrations.status.providerNotConfigured', provider_unavailable: 'integrations.status.providerUnavailable', runtime_not_configured: 'integrations.status.runtimeNotConfigured', runtime_verified: 'integrations.status.runtimeVerified' }; return statusKeys[value] ? t(statusKeys[value]) : value.replaceAll('_', ' '); }
 export function brainState(phase: BrainPhase, t: (key: string) => string) { if (phase === 'thinking') return { label: t('state.conversing'), detail: t('state.modelStreaming') }; if (phase === 'investigating') return { label: t('state.investigating'), detail: t('state.hermesMission') }; if (phase === 'verifying') return { label: t('state.verifyingEvidence'), detail: t('state.kernelGates') }; if (phase === 'queued') return { label: t('state.missionPrepared'), detail: t('state.waitingAgent') }; if (phase === 'forged') return { label: t('state.evidenceForged'), detail: t('state.persistedResult') }; if (phase === 'failed') return { label: t('state.attentionRequired'), detail: t('state.lastMissionFailed') }; if (phase === 'ready') return { label: t('state.forgeReady'), detail: t('state.newGoalReady') }; return { label: t('state.localOffline'), detail: t('state.noActivity') }; }
 function formatDate(value: string, locale: EfestoLocale) { const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : new Intl.DateTimeFormat(locale === 'pt' ? 'pt-PT' : locale === 'en' ? 'en-GB' : 'es-ES', { dateStyle: 'medium' }).format(date); }
 function formatRelevance(value: number) { return value <= 1 ? `${Math.round(value * 100)}%` : String(Math.round(value)); }

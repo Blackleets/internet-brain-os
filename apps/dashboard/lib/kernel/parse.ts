@@ -115,6 +115,10 @@ function parseIntegration(value: unknown, path: string): IntegrationSummary {
   const item = record(value, path);
   const action = item.action === null ? null : enumeration(item.action, `${path}.action`, INTEGRATION_ACTIONS);
   const count = item.count === undefined ? undefined : nonNegativeNumber(item.count, `${path}.count`);
+  const readOnly = item.readOnly === undefined ? undefined : boolean(item.readOnly, `${path}.readOnly`);
+  const requiresExplicitConsent = item.requiresExplicitConsent === undefined ? undefined : boolean(item.requiresExplicitConsent, `${path}.requiresExplicitConsent`);
+  const statusReason = item.statusReason === undefined ? undefined : string(item.statusReason, `${path}.statusReason`);
+  const managedBy = item.managedBy === undefined || item.managedBy === null ? item.managedBy : string(item.managedBy, `${path}.managedBy`);
   return {
     ...item,
     id: string(item.id, `${path}.id`),
@@ -125,6 +129,10 @@ function parseIntegration(value: unknown, path: string): IntegrationSummary {
     scopes: array(item.scopes, `${path}.scopes`).map((scope, index) => string(scope, `${path}.scopes[${index}]`)),
     action,
     ...(count === undefined ? {} : { count }),
+    ...(readOnly === undefined ? {} : { readOnly }),
+    ...(requiresExplicitConsent === undefined ? {} : { requiresExplicitConsent }),
+    ...(statusReason === undefined ? {} : { statusReason }),
+    ...(managedBy === undefined ? {} : { managedBy }),
   };
 }
 
