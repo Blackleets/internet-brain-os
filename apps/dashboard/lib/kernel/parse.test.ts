@@ -15,6 +15,7 @@ import {
   parseCases,
   parseGoals,
   parseHealth,
+  parseGoalIntelligencePlan,
   parseMissions,
   parseModelForge,
   parseOpportunities,
@@ -34,6 +35,28 @@ describe('Kernel response parsers', () => {
     expect(parseMissions(missionsResponse)).toMatchObject([{ id: 'mission-1', executionPhase: 'investigating', attempt: 1 }]);
     expect(parseOpportunities(opportunitiesResponse)).toMatchObject([{ id: 'opportunity-1', personalizedRelevance: 92 }]);
     expect(parseModelForge(modelForgeResponse)).toMatchObject({ runtime: 'available', recommended: 'qwen3:4b' });
+  });
+
+  it('accepts the Kernel-owned Goal intelligence contract and its truthful source states', () => {
+    expect(parseGoalIntelligencePlan({
+      ok: true,
+      schemaVersion: 'efesto.goal-intelligence.v1',
+      authority: 'kernel',
+      generatedAt: '2026-08-14T14:00:00.000Z',
+      goal: { title: 'Audita GitHub', categories: ['client'], keywords: ['github'] },
+      intent: { primaryCategory: 'client', mode: 'connector_research' },
+      sources: [{
+        id: 'hermes', adapter: 'native', selected: true, required: true, reason: 'public_research', status: 'ready',
+        scopes: ['public.read'], requiredCapabilities: ['mission.execute', 'public.read'], activeCapabilities: ['mission.execute', 'public.read'], action: 'agents',
+      }, {
+        id: 'github', adapter: 'mcp', selected: true, required: true, reason: 'goal_signal', status: 'not_configured',
+        scopes: ['github.read'], requiredCapabilities: ['github.repository.read'], activeCapabilities: [], action: 'settings',
+      }],
+      readiness: 'needs_setup', nextAction: 'configure_source', limitations: ['read_only_sources', 'source_not_configured'],
+    })).toMatchObject({
+      authority: 'kernel',
+      sources: [{ id: 'hermes', status: 'ready' }, { id: 'github', status: 'not_configured', activeCapabilities: [] }],
+    });
   });
 
   it('preserves optional Kernel fields that the Phase 1 view may render', () => {
@@ -65,6 +88,7 @@ describe('Kernel response parsers', () => {
     ['invalid mission phase', () => parseMissions({ ok: true, missions: [{ ...missionsResponse.missions[0], executionPhase: 'invented' }] })],
     ['invalid opportunity state', () => parseOpportunities({ ok: true, opportunities: [{ ...opportunitiesResponse.opportunities[0], status: 'verified' }] })],
     ['invalid model runtime', () => parseModelForge({ ok: true, forge: { ...modelForgeResponse.forge, runtime: 'running' } })],
+    ['invalid intelligence readiness', () => parseGoalIntelligencePlan({ ok: true, schemaVersion: 'efesto.goal-intelligence.v1', authority: 'kernel', generatedAt: '2026-08-14T14:00:00.000Z', goal: { title: 'Goal', categories: [], keywords: [] }, intent: { primaryCategory: null, mode: 'public_research' }, sources: [], readiness: 'invented', nextAction: 'confirm_goal', limitations: [] })],
   ])('rejects an invalid %s', (_breakName, parse) => {
     expect(parse).toThrow(KernelContractError);
   });
