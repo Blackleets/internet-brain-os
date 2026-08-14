@@ -105,6 +105,18 @@ reference for navigation. This store is conversation history, not Hephaestus
 memory: partial cancelled output is not committed, and no stored message gains
 Evidence, Claim, admission, or memory authority.
 
+The Goal surface also consumes the authenticated, non-mutating
+`POST /api/goals/plan` read model (`efesto.goal-intelligence.v1`). The Kernel
+uses the same bounded Goal intent enrichment as Goal creation, selects Hermes
+public research by default, and adds a curated MCP connector only when the
+Goal contains an explicit signal for GitHub, Gmail, Google Drive, Notion, or
+Google Calendar. Each selected source reports required scopes/capabilities
+separately from capabilities that are active in the current integration
+catalog. The dashboard renders this as an Intelligence Brief inside the
+proposed plan; it never treats the brief as authorization or Evidence. A
+missing preview route from an older Kernel becomes an explicit limited state,
+not a fabricated source plan.
+
 Accepted public-page Evidence passes through an extensible deterministic Opportunity classifier in the local Kernel. It promotes only sufficiently strong, explainable signals across work, grants, clients, savings, food, public aid, learning, events, housing, travel, collaboration, rewards, and useful tools. A promoted record retains its Case and Evidence identifiers, canonical public source, category, concrete benefit type, bounded relevance score, matching signals, raw deadline text when present, and a cautious next action. Ordinary captures remain Evidence and do not pollute the Opportunity Inbox. The authenticated local Inbox is rendered by the extension and synchronized as separate Opportunity notes into the user's vault. This classifier is a lead filter, not a verification, financial-advice, or recommendation engine; Hermes investigation and human review remain separate stages.
 
 Users may define private Goals with a title, bounded categories and keywords, optional location, and explicit priority. Goals remain in the local Kernel and are synchronized into the user's own Obsidian-compatible vault. Opportunity detection keeps its original evidence relevance score; a separate explainable personalization score links Inbox records to matching Goals and changes ordering without rewriting provenance. Explicit dismissal atomically marks the persisted Opportunity so it leaves the Inbox while retaining its feedback history. Goals never trigger external browsing merely by being created. The extension can request a separately confirmed, idempotent Hermes research mission containing only the Goal's authorized scope. A disconnected adapter leaves that mission visibly waiting; queued status is used only when the real local Hermes boundary is configured. An authenticated local worker boundary now leases queued Hermes missions, accepts at most 20 validated public HTTP(S) findings, rejects sensitive/private IPv4 and IPv6 URLs, preserves returned material as unverified Evidence, re-runs Kernel-owned classification, removes out-of-scope promotions, synchronizes accepted records to the private vault, counts only newly created Evidence in the Forge Ledger, and records bounded failures across at most three observable attempts. This is the transport contract for a real Hermes runtime; it does not fabricate external discovery when no Hermes worker is connected.

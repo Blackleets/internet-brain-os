@@ -61,12 +61,23 @@ const fixtures = {
       },
     },
   },
+  goalPlan: {
+    ok: true,
+    schemaVersion: 'efesto.goal-intelligence.v1',
+    authority: 'kernel',
+    generatedAt: '2026-08-14T14:00:00.000Z',
+    goal: { title: 'Auditar fuentes públicas', categories: [], keywords: ['auditar', 'fuentes', 'públicas'] },
+    intent: { primaryCategory: null, mode: 'public_research' },
+    sources: [{ id: 'hermes', adapter: 'native', selected: true, required: true, reason: 'public_research', status: 'ready', scopes: ['public.read'], requiredCapabilities: ['mission.execute', 'public.read'], activeCapabilities: ['mission.execute', 'public.read'], action: 'agents' }],
+    readiness: 'ready', nextAction: 'confirm_goal', limitations: ['read_only_sources'],
+  },
 };
 
 const routes = new Map([
   ['/health', fixtures.health], ['/status', fixtures.status], ['/bootstrap/status', fixtures.bootstrap],
   ['/api/cases', fixtures.cases], ['/api/goals', fixtures.goals], ['/api/agent-missions', fixtures.missions], ['/api/goal-surfaces', fixtures.goalSurfaces],
   ['/api/opportunities', fixtures.opportunities], ['/api/chat/providers', fixtures.providers], ['/api/model-forge', fixtures.modelForge], ['/api/preferences', fixtures.preferences],
+  ['/api/goals/plan', fixtures.goalPlan],
 ]);
 
 const server = createServer((request, response) => {
@@ -84,6 +95,9 @@ const server = createServer((request, response) => {
 
   if (request.method === 'POST' && path === '/api/goals') {
     response.writeHead(200, headers).end(JSON.stringify({ ok: true, goal: { id: 'goal-e2e', title: 'Auditar fuentes públicas' } })); return;
+  }
+  if (request.method === 'POST' && path === '/api/goals/plan') {
+    response.writeHead(200, headers).end(JSON.stringify(fixtures.goalPlan)); return;
   }
   if (request.method === 'POST' && path === '/api/goals/goal-e2e/missions') {
     response.writeHead(200, headers).end(JSON.stringify({ ok: true, mission: { id: 'mission-e2e', status: 'queued' } })); return;

@@ -6,7 +6,7 @@ import {
   History, Menu, MessageSquare, MoreHorizontal, Pause, Plug, Plus, RefreshCw, Search, Send, Settings, ShieldCheck, Sparkles, Target, Workflow, X,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import type { CaseSummary, IntegrationAction, IntegrationCatalog, IntegrationSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
+import type { CaseSummary, GoalIntelligencePlan, IntegrationAction, IntegrationCatalog, IntegrationSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
 import { EFESTO_LOCALES, useEfestoLocale, type EfestoLocale } from '../lib/efesto-i18n';
 
@@ -29,13 +29,13 @@ export type BrainPhase = 'offline' | 'ready' | 'queued' | 'investigating' | 'ver
 
 const starterGoalKeys = ['starter.goal1', 'starter.goal2', 'starter.goal3', 'starter.goal4'];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, valueSurface }: {
-  phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
+export function HomeView({ phase, chatMode, messages, preparedGoal, goalPlan, goalPlanPending, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenAgents, onOpenNav, valueSurface }: {
+  phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; goalPlan?: GoalIntelligencePlan; goalPlanPending: boolean; connected: boolean; goalPending: boolean;
   input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
   onConfirmGoal: () => void; onEditGoal: () => void;
   onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
-  onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenNav: () => void; valueSurface?: ReactNode;
+  onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenAgents: () => void; onOpenNav: () => void; valueSurface?: ReactNode;
 }) {
   const { t } = useEfestoLocale();
   const starterGoals = starterGoalKeys.map((key) => t(key));
@@ -89,8 +89,9 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
           <li><b>2</b><span><strong>{t('home.confirmMission')}</strong><small>{t('home.confirmAfter')}</small></span></li>
           <li><b>3</b><span><strong>{t('home.forgeEvidence')}</strong><small>{t('home.forgeEvidenceCopy')}</small></span></li>
         </ol>
+        <GoalIntelligenceBrief plan={goalPlan} pending={goalPlanPending} connected={connected} onOpenSettings={onOpenSettings} onOpenAgents={onOpenAgents} />
         <div className="forge-plan-actions">
-          <button type="button" className="primary-action" disabled={!connected || goalPending} onClick={onConfirmGoal}>{goalPending ? t('home.confirming') : connected ? t('home.confirmAndExecute') : t('home.connectToExecute')}</button>
+          <button type="button" className="primary-action" disabled={!connected || goalPending} onClick={onConfirmGoal}>{goalPending ? t('home.confirming') : connected ? goalPlan?.readiness === 'needs_setup' ? t('home.confirmWithPending') : t('home.confirmAndExecute') : t('home.connectToExecute')}</button>
           <button type="button" className="secondary-action" onClick={onEditGoal}>{t('home.editGoal')}</button>
         </div>
         <p className="forge-plan-boundary"><ShieldCheck /> {t('home.boundary')}</p>
@@ -124,6 +125,59 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
       onOpenSettings={onOpenSettings}
     />
   </section>;
+}
+
+function GoalIntelligenceBrief({ plan, pending, connected, onOpenSettings, onOpenAgents }: {
+  plan?: GoalIntelligencePlan;
+  pending: boolean;
+  connected: boolean;
+  onOpenSettings: () => void;
+  onOpenAgents: () => void;
+}) {
+  const { t } = useEfestoLocale();
+  if (pending) {
+    return <section className="forge-intelligence-brief is-loading" aria-label={t('home.intelligenceAria')} aria-busy="true">
+      <header><span className="forge-intelligence-icon"><Sparkles /></span><div><small>{t('home.intelligenceEyebrow')}</small><strong>{t('home.intelligenceThinking')}</strong></div><span className="forge-intelligence-loader"><i /><i /><i /></span></header>
+      <p>{t('home.intelligenceThinkingCopy')}</p>
+    </section>;
+  }
+
+  if (!plan) {
+    return <section className="forge-intelligence-brief is-limited" aria-label={t('home.intelligenceAria')}>
+      <header><span className="forge-intelligence-icon"><Sparkles /></span><div><small>{t('home.intelligenceEyebrow')}</small><strong>{t('home.intelligenceWaiting')}</strong></div><StatePill state={connected ? 'unavailable' : 'offline'} /></header>
+      <p>{connected ? t('home.intelligenceUnavailable') : t('home.intelligenceConnectCopy')}</p>
+      <button type="button" className="forge-intelligence-link" onClick={onOpenSettings}><Plug /> {connected ? t('home.openSettings') : t('home.connectKernel')}</button>
+    </section>;
+  }
+
+  const primaryCategory = plan.intent.primaryCategory
+    ? goalCategoryLabel(plan.intent.primaryCategory, t)
+    : t('home.intentResearch');
+  const readinessState = plan.readiness === 'ready' ? 'ready' : plan.readiness === 'needs_setup' ? 'checking' : 'unavailable';
+  return <section className={`forge-intelligence-brief readiness-${plan.readiness}`} aria-label={t('home.intelligenceAria')}>
+    <header>
+      <span className="forge-intelligence-icon"><Sparkles /></span>
+      <div><small>{t('home.intelligenceEyebrow')}</small><strong>{t('home.intelligenceTitle')}</strong></div>
+      <StatePill state={readinessState} />
+    </header>
+    <div className="forge-intelligence-intent"><small>{t('home.intentEyebrow')}</small><strong>{t('home.intentDetected', { category: primaryCategory })}</strong><span>{plan.intent.mode === 'connector_research' ? t('home.intentConnector') : t('home.intentPublic')}</span></div>
+    <div className="forge-intelligence-sources">
+      <div className="forge-intelligence-sources-heading"><span>{t('home.sourcesSelected')}</span><b>{plan.sources.length}</b></div>
+      {plan.sources.map((source) => <article key={source.id} className={`forge-intelligence-source status-${source.status}`}>
+        <span className="forge-intelligence-source-mark"><IntegrationMark id={source.id} /></span>
+        <div><strong>{t(`integrations.${source.id}.name`)}</strong><small>{source.reason === 'public_research' ? t('home.sourceReason.publicResearch') : t('home.sourceReason.goalSignal')} · {source.scopes.join(' · ')}</small></div>
+        <StatePill state={source.status} />
+        {source.status !== 'ready' && source.action ? <button type="button" className="forge-intelligence-source-action" onClick={source.action === 'agents' ? onOpenAgents : onOpenSettings}>{t('home.configure')}</button> : null}
+      </article>)}
+    </div>
+    <footer><ShieldCheck /> <span>{plan.readiness === 'ready' ? t('home.sourcePlanReady') : t('home.sourcePlanLimited')}</span></footer>
+  </section>;
+}
+
+function goalCategoryLabel(category: string, t: (key: string, values?: Record<string, string | number>) => string) {
+  const key = `home.category.${category}`;
+  const label = t(key);
+  return label === key ? category : label;
 }
 
 function ModeSwitcher({ chatMode, onToggleChat }: { chatMode: boolean; onToggleChat: (value: boolean) => void }) {

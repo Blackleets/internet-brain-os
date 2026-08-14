@@ -33,6 +33,7 @@ const base = {
     { id: 'notion', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['notion.read'], action: 'settings' },
     { id: 'google-calendar', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['calendar.read'], action: 'settings' },
   ] },
+  '/api/goals/plan': { ok: true, schemaVersion: 'efesto.goal-intelligence.v1', authority: 'kernel', generatedAt: '2026-08-09T08:05:00.000Z', goal: { title: 'Encuéntrame un taladro bueno por 18 a 25 euros', categories: ['tool', 'offer'], keywords: ['18', '25'] }, intent: { primaryCategory: 'tool', mode: 'public_research' }, sources: [{ id: 'hermes', adapter: 'native', selected: true, required: true, reason: 'public_research', status: 'ready', scopes: ['public.read'], requiredCapabilities: ['mission.execute', 'public.read'], activeCapabilities: ['mission.execute', 'public.read'], action: 'agents' }], readiness: 'ready', nextAction: 'confirm_goal', limitations: ['read_only_sources'] },
 } as const;
 
 function responseFor(path: string, method: string): Response {
@@ -124,10 +125,12 @@ describe('Efesto conversation-first product shell', () => {
     fireEvent.change(screen.getByLabelText('Goal'), { target: { value: goal } });
     fireEvent.click(screen.getByRole('button', { name: 'Preparar Goal' }));
     expect(screen.getByText('PLAN PROPUESTO · AÚN NO EJECUTADO')).toBeTruthy();
-    expect(requests.filter((request) => request.method === 'POST')).toHaveLength(0);
+    await waitFor(() => expect(screen.getByText('Ruta de investigación')).toBeTruthy());
+    expect(screen.getByText('Hermes Agent')).toBeTruthy();
+    expect(requests.filter((request) => request.method === 'POST').map((request) => new URL(request.url).pathname)).toEqual(['/api/goals/plan']);
 
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar y ejecutar' }));
-    await waitFor(() => expect(requests.filter((request) => request.method === 'POST').map((request) => new URL(request.url).pathname)).toEqual(['/api/goals', '/api/goals/goal-created/missions']));
+    await waitFor(() => expect(requests.filter((request) => request.method === 'POST').map((request) => new URL(request.url).pathname)).toEqual(['/api/goals/plan', '/api/goals', '/api/goals/goal-created/missions']));
     expect(await screen.findByRole('heading', { name: 'Misiones' })).toBeTruthy();
   });
 

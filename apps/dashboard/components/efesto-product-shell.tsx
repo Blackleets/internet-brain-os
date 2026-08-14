@@ -7,8 +7,9 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { KernelClient, KernelClientError } from '../lib/kernel/client';
-import type { CaseSummary, IntegrationAction, IntegrationCatalog } from '../lib/kernel/contracts';
+import type { CaseSummary, GoalIntelligencePlan, IntegrationAction, IntegrationCatalog } from '../lib/kernel/contracts';
 import { loadGoalSurfaces, type GoalSurface, type GoalSurfaceWorkState } from '../lib/kernel/goal-surfaces';
+import { loadGoalIntelligencePlan } from '../lib/kernel/goal-intelligence';
 import { loadIntegrationCatalog } from '../lib/kernel/integrations';
 import { loadOverview, type OverviewSnapshot } from '../lib/kernel/overview';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
@@ -64,6 +65,8 @@ function EfestoProductShellContent() {
   const [selectedModel, setSelectedModel] = useState('');
   const [input, setInput] = useState('');
   const [preparedGoal, setPreparedGoal] = useState('');
+  const [goalPlan, setGoalPlan] = useState<GoalIntelligencePlan>();
+  const [goalPlanPending, setGoalPlanPending] = useState(false);
   const [goalPending, setGoalPending] = useState(false);
   const [chatMode, setChatMode] = useState(true);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -150,6 +153,8 @@ function EfestoProductShellContent() {
     setChatMode(true);
     setChatMessages([]);
     setPreparedGoal('');
+    setGoalPlan(undefined);
+    setGoalPlanPending(false);
     setInput('');
     navigate('home');
   }
@@ -158,6 +163,8 @@ function EfestoProductShellContent() {
     setChatPending(false);
     setChatMode(false);
     setPreparedGoal('');
+    setGoalPlan(undefined);
+    setGoalPlanPending(false);
     setInput('');
     navigate('home');
   }
@@ -257,6 +264,7 @@ function EfestoProductShellContent() {
   function disconnect() {
     chatAbortRef.current?.abort();
     setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); setIntegrationCatalog(undefined); setCaseDetails({}); setSelectedCaseId(''); setChatMessages([]);
+    setGoalPlan(undefined); setGoalPlanPending(false);
     connectionStore.clear(); window.sessionStorage.removeItem(SESSION_CONNECTION_KEY); setRememberSession(false);
     setToast(t('toast.disconnected'));
   }
@@ -275,12 +283,31 @@ function EfestoProductShellContent() {
     } catch (error) { setToast(connectionMessage(error, t)); }
   }
 
-  function prepareGoal(event: FormEvent<HTMLFormElement>) {
+  function updateInput(value: string) {
+    setInput(value);
+    if (preparedGoal && value.trim() !== preparedGoal) {
+      setPreparedGoal('');
+      setGoalPlan(undefined);
+    }
+  }
+
+  async function prepareGoal(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const value = input.trim();
     if (!value) return;
     setPreparedGoal(value);
+    setGoalPlan(undefined);
+    setGoalPlanPending(Boolean(connection));
     setToast(connection ? t('toast.goalPrepared') : t('toast.goalDraft'));
+    if (!connection) return;
+    try {
+      const client = new KernelClient({ ...connection, timeoutMs: 15_000 });
+      setGoalPlan(await loadGoalIntelligencePlan(client, value, keywordsFromGoal(value)));
+    } catch {
+      setToast(t('toast.goalPlanLimited'));
+    } finally {
+      setGoalPlanPending(false);
+    }
   }
 
   async function confirmGoal() {
@@ -428,7 +455,7 @@ function EfestoProductShellContent() {
         <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label={t('top.refresh')}><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? t('top.kernelReady') : t('top.connect')}</button></div>
       </header>
       <main className="efesto-main">
-        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} valueSurface={<ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot || !snapshot.productScorecard || snapshot.issues.some((issue) => issue.endpoint === 'scorecard')} />} /> : null}
+        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} goalPlan={goalPlan} goalPlanPending={goalPlanPending} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={updateInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else void prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => { setPreparedGoal(''); setGoalPlan(undefined); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenAgents={() => navigate('agents')} onOpenNav={toggleNavigation} valueSurface={<ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot || !snapshot.productScorecard || snapshot.issues.some((issue) => issue.endpoint === 'scorecard')} />} /> : null}
         {view === 'missions' ? <MissionsView snapshot={snapshot} onNew={newGoal} /> : null}
         {view === 'finds' ? <FindsView opportunities={snapshot?.opportunities ?? []} connected={Boolean(connection)} onFeedback={(id, signal) => void recordFeedback(id, signal)} /> : null}
         {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} onOpen={(record) => void openCase(record)} /> : null}

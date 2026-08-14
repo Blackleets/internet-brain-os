@@ -61,11 +61,11 @@ test('runs the conversation-first journey only after explicit confirmation', asy
   await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Auditar fuentes públicas');
   await page.getByRole('button', { name: 'Preparar Goal', exact: true }).click();
   await expect(page.getByText('PLAN PROPUESTO · AÚN NO EJECUTADO', { exact: true })).toBeVisible();
-  expect(writes).toEqual([]);
+  expect(writes).toEqual(['/api/goals/plan']);
 
   await page.getByRole('button', { name: 'Confirmar y ejecutar', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Misiones', exact: true })).toBeVisible();
-  expect(writes).toEqual(['/api/goals', '/api/goals/goal-e2e/missions']);
+  expect(writes).toEqual(['/api/goals/plan', '/api/goals', '/api/goals/goal-e2e/missions']);
 });
 
 test('switches the Efesto surface language from gear settings', async ({ page }) => {

@@ -3208,3 +3208,328 @@
     height: 34px;
   }
 }
+
+/* Goal intelligence brief: evidence-aware routing without adding dashboard noise. */
+.forge-intelligence-brief {
+  margin: 20px 0 18px;
+  padding: 14px;
+  border: 1px solid #2f302f;
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgb(142 183 122 / 7%), #151616 54%, #131314);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 3%), 0 12px 30px rgb(0 0 0 / 14%);
+}
+
+.forge-intelligence-brief.readiness-needs_setup {
+  border-color: #493c2f;
+  background: linear-gradient(145deg, rgb(233 130 69 / 7%), #151616 54%, #131314);
+}
+
+.forge-intelligence-brief.readiness-unavailable,
+.forge-intelligence-brief.is-limited {
+  border-color: #303137;
+  background: linear-gradient(145deg, rgb(127 138 152 / 7%), #151616 54%, #131314);
+}
+
+.forge-intelligence-brief > header {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.forge-intelligence-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border: 1px solid #40533d;
+  border-radius: 9px;
+  background: #182018;
+  color: #a9ca9b;
+}
+
+.readiness-needs_setup .forge-intelligence-icon {
+  border-color: #63452c;
+  background: #24180f;
+  color: var(--forge-accent);
+}
+
+.forge-intelligence-icon svg {
+  width: 15px;
+}
+
+.forge-intelligence-brief > header > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.forge-intelligence-brief header small,
+.forge-intelligence-intent small {
+  display: block;
+  color: #7f9180;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.readiness-needs_setup header small {
+  color: #a77b59;
+}
+
+.forge-intelligence-brief header strong {
+  display: block;
+  margin-top: 3px;
+  color: #e3e0db;
+  font-size: 11px;
+  font-weight: 680;
+}
+
+.forge-intelligence-brief header .state-pill {
+  flex: 0 0 auto;
+}
+
+.forge-intelligence-intent {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 8px;
+  margin: 14px 0 11px 40px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgb(255 255 255 / 5%);
+}
+
+.forge-intelligence-intent strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #dedbd6;
+  font-size: 11px;
+  font-weight: 630;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.forge-intelligence-intent > span {
+  color: #777d78;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.forge-intelligence-sources {
+  display: grid;
+  gap: 5px;
+}
+
+.forge-intelligence-sources-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 2px 2px;
+  color: #777a77;
+  font-size: 8px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.forge-intelligence-sources-heading b {
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 1px solid #354137;
+  border-radius: 999px;
+  color: #a8c19e;
+  font-size: 8px;
+}
+
+.forge-intelligence-source {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 25px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 39px;
+  padding: 5px 6px;
+  border: 1px solid rgb(255 255 255 / 4%);
+  border-radius: 9px;
+  background: rgb(0 0 0 / 13%);
+}
+
+.forge-intelligence-source.status-not_configured,
+.forge-intelligence-source.status-degraded {
+  border-color: rgb(233 130 69 / 17%);
+}
+
+.forge-intelligence-source-mark {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 7px;
+  background: #232426;
+  color: #a9a6a0;
+}
+
+.forge-intelligence-source-mark svg {
+  width: 14px;
+}
+
+.forge-intelligence-source-mark .forge-integration-logo-image {
+  width: 20px;
+  height: 20px;
+}
+
+.forge-intelligence-source > div {
+  min-width: 0;
+}
+
+.forge-intelligence-source strong,
+.forge-intelligence-source small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.forge-intelligence-source strong {
+  color: #d8d4cf;
+  font-size: 10px;
+  font-weight: 640;
+}
+
+.forge-intelligence-source small {
+  margin-top: 2px;
+  color: #6f726f;
+  font-size: 8px;
+}
+
+.forge-intelligence-source .state-pill {
+  white-space: nowrap;
+}
+
+.forge-intelligence-source-action,
+.forge-intelligence-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 25px;
+  border: 1px solid #4b3a2e;
+  border-radius: 7px;
+  background: #211710;
+  color: #d99467;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 650;
+}
+
+.forge-intelligence-source-action {
+  padding: 0 7px;
+}
+
+.forge-intelligence-source-action:hover,
+.forge-intelligence-source-action:focus-visible,
+.forge-intelligence-link:hover,
+.forge-intelligence-link:focus-visible {
+  border-color: #8b5b3e;
+  background: #2a1b12;
+}
+
+.forge-intelligence-brief > footer {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 11px 2px 0;
+  color: #7b847b;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.forge-intelligence-brief > footer svg {
+  width: 12px;
+  flex: 0 0 12px;
+  color: #83a879;
+}
+
+.forge-intelligence-brief.is-loading > p,
+.forge-intelligence-brief.is-limited > p {
+  margin: 12px 2px 0 40px;
+  color: #858685;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.forge-intelligence-link {
+  margin: 11px 0 0 40px;
+  padding: 0 9px;
+}
+
+.forge-intelligence-link svg {
+  width: 12px;
+}
+
+.forge-intelligence-loader {
+  display: inline-flex;
+  gap: 4px;
+  padding: 0 4px;
+}
+
+.forge-intelligence-loader i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #8eb77a;
+  animation: forge-pulse 1.1s ease-in-out infinite;
+}
+
+.forge-intelligence-loader i:nth-child(2) {
+  animation-delay: .14s;
+}
+
+.forge-intelligence-loader i:nth-child(3) {
+  animation-delay: .28s;
+}
+
+@media (max-width: 720px) {
+  .forge-intelligence-brief {
+    margin: 16px 0 15px;
+    padding: 11px;
+  }
+
+  .forge-intelligence-intent {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    margin-left: 35px;
+  }
+
+  .forge-intelligence-intent > span {
+    white-space: normal;
+  }
+
+  .forge-intelligence-source {
+    grid-template-columns: 25px minmax(0, 1fr) auto;
+  }
+
+  .forge-intelligence-source-action {
+    grid-column: 2 / -1;
+    justify-self: start;
+    margin: 0 0 2px;
+  }
+
+  .forge-intelligence-brief.is-loading > p,
+  .forge-intelligence-brief.is-limited > p {
+    margin-left: 35px;
+  }
+
+  .forge-intelligence-link {
+    margin-left: 35px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forge-intelligence-loader i {
+    animation: none;
+  }
+}

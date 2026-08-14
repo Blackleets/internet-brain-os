@@ -625,3 +625,72 @@ is not installed.
 Implement and test one real read-only adapter, preferably GitHub, with explicit
 consent, bounded capability receipts, provenance, revocation, and fail-closed
 status reporting; then reuse that contract for the remaining four connectors.
+
+## Handoff 2026-08-14 - Codex - Goal Intelligence Brief
+
+### What changed
+
+- Added the non-mutating authenticated `POST /api/goals/plan` Kernel contract
+  (`efesto.goal-intelligence.v1`).
+- Reused Kernel Goal intent enrichment and added deterministic, explicit-signal
+  routing for Hermes/public research, GitHub, Gmail, Google Drive, Notion, and
+  Google Calendar.
+- Returned required scopes/capabilities separately from active capabilities and
+  kept connector readiness independent from MCP gateway readiness.
+- Added the premium Intelligence Brief inside the Goal plan with intent,
+  selected sources, read-only boundary, pending configuration state, and real
+  Settings/Agents actions.
+- Added Spanish, English, and Portuguese copy, mobile layout, reduced-motion
+  handling, parser/HTTP/planner/dashboard tests, and updated the E2E fixture for
+  the read-only preview request.
+
+### Files changed
+
+- `apps/local-kernel/goal-intelligence.mjs`
+- `apps/local-kernel/goals.mjs`
+- `apps/local-kernel/server.mjs`
+- `apps/local-kernel/goal-intelligence.test.mjs`
+- `apps/local-kernel/server.test.mjs`
+- `apps/dashboard/lib/kernel/contracts.ts`
+- `apps/dashboard/lib/kernel/parse.ts`
+- `apps/dashboard/lib/kernel/goal-intelligence.ts`
+- `apps/dashboard/components/efesto-product-shell.tsx`
+- `apps/dashboard/components/efesto-product-views.tsx`
+- `apps/dashboard/components/efesto-product-shell.test.tsx`
+- `apps/dashboard/lib/kernel/parse.test.ts`
+- `apps/dashboard/app/efesto-forge-redesign.css`
+- `apps/dashboard/lib/efesto-i18n.tsx`
+- `apps/dashboard/e2e/kernel-fixture.mjs`
+- `apps/dashboard/e2e/overview.spec.ts`
+- `ARCHITECTURE.md`, `DECISIONS.md`, `PROJECT_STATE.md`
+
+### Why
+
+Efesto needed to feel more intelligent at the moment of decision, not by
+adding decorative assistant behavior but by explaining how a Goal maps to
+sources and permissions. The brief reduces tool choice while preserving
+Kernel sovereignty, evidence provenance, and human confirmation.
+
+### Verification
+
+- Targeted planner, Kernel HTTP, parser, and dashboard tests: 53/53 passed.
+- TypeScript typecheck: passed after the implementation slice.
+- Full architecture, test, build, and deployed-preview verification remain
+  pending for this commit.
+
+### Risks / uncertainties
+
+- The planner is deterministic and bounded; it is a source-routing preview,
+  not semantic model reasoning and not proof that a provider account is
+  authorized.
+- A running old Kernel without `/api/goals/plan` shows the explicit limited
+  state and keeps the existing Goal confirmation path.
+- The web preview still cannot reach a user's loopback Kernel unless the user
+  opens it from a compatible local environment; the preview must not imply
+  phone-to-PC authority.
+
+### Next recommended step
+
+Run the complete repository gates, inspect the rendered desktop/mobile brief,
+then publish a new draft preview. After visual review, implement one genuine
+read-only GitHub adapter behind the same source/capability/receipt contract.

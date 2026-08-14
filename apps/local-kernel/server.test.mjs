@@ -108,6 +108,52 @@ describe('local Kernel HTTP receiver', () => {
     expect(JSON.stringify(body)).not.toContain(apiToken);
   });
 
+  it('serves a non-mutating Kernel-owned Goal intelligence plan with connector readiness', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-goal-plan-http-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    const goals = new GoalManager(store);
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, {
+      goalManager: goals,
+      hermesRoute: {},
+      bootstrapStatus: () => ({
+        schemaVersion: 'efesto.bootstrap-status.v1',
+        ok: true,
+        kernel: 'ready', hermes: 'ready', obsidian: 'not_configured', pairing: 'paired', overall: 'ready',
+        message: 'ready', diagnostics: {}, actions: [],
+      }),
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const endpoint = `http://127.0.0.1:${server.address().port}`;
+    const before = await store.read();
+
+    expect((await fetch(`${endpoint}/api/goals/plan`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: 'Audita este repositorio de GitHub' }),
+    })).status).toBe(401);
+
+    const response = await fetch(`${endpoint}/api/goals/plan`, {
+      method: 'POST',
+      headers: { ...authHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({ title: 'Audita este repositorio de GitHub' }),
+    });
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      ok: true,
+      schemaVersion: 'efesto.goal-intelligence.v1',
+      authority: 'kernel',
+      intent: { mode: 'connector_research' },
+      sources: expect.arrayContaining([
+        expect.objectContaining({ id: 'hermes', status: 'ready' }),
+        expect.objectContaining({ id: 'github', status: 'not_configured', activeCapabilities: [], required: true }),
+      ]),
+      readiness: 'needs_setup',
+      nextAction: 'configure_source',
+    });
+    expect(await store.read()).toEqual(before);
+  });
+
   it('reports Ollama configured only when the summarizer has a model', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hephaestus-http-'));
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));

@@ -4,6 +4,45 @@ This file records major product and technical decisions.
 
 Do not delete old decisions. If a decision changes, add a new entry explaining why.
 
+## 2026-08-14 - Kernel-owned Goal Intelligence Brief
+
+Decision: Efesto now prepares a non-mutating `efesto.goal-intelligence.v1`
+preview before a Goal is confirmed. The Kernel classifies the bounded Goal
+intent, selects the minimum relevant read-only sources, and returns each
+source's required scopes, required capabilities, active capabilities, and
+real readiness state. The dashboard renders that result as the Intelligence
+Brief inside the existing Goal plan.
+
+The planner always starts with Hermes/public research for a normal public Goal.
+Explicit signals for GitHub, Gmail, Google Drive, Notion, or Google Calendar
+add only that connector. A gateway being present does not make a provider
+ready; only the connector status in the Kernel catalog can activate its
+capabilities. A pending connector remains visible and can route to Settings,
+while the Goal remains subject to the existing explicit mission confirmation.
+
+Reason:
+
+This makes Efesto feel materially more intelligent by reducing tool choice to
+the user's objective, while preserving the product's core boundary: planning
+is not authorization, source selection is not evidence, and unconfigured
+providers are never presented as connected.
+
+Change request / rollback:
+
+- Behavior: add authenticated, read-only `POST /api/goals/plan`; no store,
+  Goal, mission, connector, or credential mutation occurs.
+- Files: `apps/local-kernel/goal-intelligence.mjs`, `goals.mjs`, `server.mjs`,
+  dashboard Kernel contract/parser/loader, Goal plan UI, translations, CSS,
+  and regression fixtures/tests.
+- Breakage risk: older Kernels may not expose the preview route; the dashboard
+  falls back to an explicit limited brief and preserves the existing Goal
+  flow. The route can be removed independently without changing Goal or
+  mission persistence.
+- Proof: planner unit tests cover generic routing, every curated connector,
+  inactive-capability suppression, and invalid input; HTTP tests prove
+  authentication and no mutation; dashboard parser/shell tests cover the
+  rendered brief and confirmation boundary.
+
 ## 2026-08-14 - Complementos externos read-first
 
 Decision: the Efesto Complementos directory exposes five curated external connectors behind the MCP boundary: GitHub, Gmail, Google Drive, Notion, and Google Calendar. Each connector starts with a narrow read-only scope, a local logo, an explicit capability list, and an independent Kernel-owned readiness state.

@@ -26,6 +26,7 @@ import { ChatConversationError, ChatConversationStore } from './chat-conversatio
 import { defaultEfestoPaths, inspectEfestoBootstrap, readLauncherConfig } from '../../scripts/efesto-bootstrap.mjs';
 import { LocalProductCohortLedger } from './product-cohort.mjs';
 import { buildIntegrationCatalog } from './integration-catalog.mjs';
+import { buildGoalIntelligencePlan } from './goal-intelligence.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
@@ -239,6 +240,37 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         });
       } catch {
         return send(response, 500, { ok: false, code: 'INTEGRATION_CATALOG_FAILED' });
+      }
+    }
+    if (request.method === 'POST' && request.url === '/api/goals/plan') {
+      if (!goals) return send(response, 404, { ok: false, code: 'GOALS_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try {
+        const body = await readJson(request);
+        const bootstrap = await readBootstrapStatus();
+        let providerCount;
+        if (providers) {
+          try { providerCount = (await providers.list()).length; } catch { providerCount = undefined; }
+        }
+        const catalog = buildIntegrationCatalog({
+          bootstrap,
+          hermesAvailable: Boolean(hermesRoute),
+          obsidianAvailable: Boolean(obsidianProjector),
+          providerCount,
+          mcpGateway,
+        });
+        return send(response, 200, {
+          ok: true,
+          ...buildGoalIntelligencePlan({
+            title: body?.title,
+            categories: body?.categories,
+            keywords: body?.keywords,
+            integrations: catalog.integrations,
+          }),
+        });
+      } catch (error) {
+        if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'GOAL_PLAN_FAILED' });
       }
     }
     if (request.method === 'GET' && request.url === '/api/cases' && captureProjector) {

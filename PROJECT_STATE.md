@@ -36,6 +36,15 @@ is presented as connected. The next implementation slice is one real,
 approval-aware read-only connector (GitHub is the smallest useful candidate)
 before adding write scopes or more providers.
 
+The Goal flow now adds a Kernel-owned `efesto.goal-intelligence.v1` preview
+before confirmation. It routes generic public Goals to Hermes and explicit
+GitHub/Gmail/Drive/Notion/Calendar signals to the matching read-only connector.
+Required capabilities are shown separately from active capabilities, so the
+dashboard can explain a pending integration without implying it is connected.
+The preview is non-mutating; Goal persistence and mission authorization still
+only happen after the existing explicit confirmation. Older Kernels degrade to
+an explicit limited brief.
+
 ## Verified foundation ✅
 
 ### Memory Safety v1
