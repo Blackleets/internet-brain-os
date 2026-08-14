@@ -1,4 +1,4 @@
-export { PublicWebSearchClient, parseBingHtml, parseDuckDuckGoHtml, parseDuckDuckGoLiteHtml } from './public-web-search';
+export { PublicWebSearchClient, parseBingHtml, parseBraveHtml, parseDuckDuckGoHtml, parseDuckDuckGoLiteHtml } from './public-web-search';
 export type { PublicWebSearchOptions, PublicWebSearchResponse, PublicWebSearchResult } from './public-web-search';
 export { WebPageFetcher } from './web-page';
 export type { WebPageDocument, WebPageFetcherOptions } from './web-page';

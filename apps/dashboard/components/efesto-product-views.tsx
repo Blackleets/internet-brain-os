@@ -191,7 +191,7 @@ function GoalIntelligenceBrief({ plan, pending, webMode, connected, goalPending,
 
 function PublicSearchResults({ search }: { search: PublicSearchSnapshot }) {
   const { t } = useEfestoLocale();
-  const providerLabel = search.provider === 'bing-html' ? 'Bing' : search.provider === 'duckduckgo-html' ? 'DuckDuckGo' : t('status.unavailable');
+  const providerLabel = search.provider === 'bing-html' ? 'Bing' : search.provider === 'brave-html' ? 'Brave Search' : search.provider === 'duckduckgo-html' ? 'DuckDuckGo' : t('status.unavailable');
   return <section className={`forge-public-search status-${search.status}`} aria-label={t('home.webSearchAria')}>
     <header>
       <span className="forge-public-search-mark"><Search /></span>

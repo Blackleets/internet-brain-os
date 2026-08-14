@@ -79,7 +79,7 @@ export type PublicSearchResult = {
 };
 
 export type PublicSearchSnapshot = {
-  provider: 'duckduckgo-html' | 'bing-html' | 'unavailable';
+  provider: 'duckduckgo-html' | 'brave-html' | 'bing-html' | 'unavailable';
   query: string;
   searchedAt: string;
   status: 'ready' | 'unavailable';

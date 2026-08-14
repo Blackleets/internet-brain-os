@@ -9,7 +9,7 @@ export interface PublicWebSearchResult {
 export interface PublicWebSearchResponse {
   readonly query: string;
   readonly searchedAt: string;
-  readonly provider: 'duckduckgo-html' | 'bing-html';
+  readonly provider: 'duckduckgo-html' | 'brave-html' | 'bing-html';
   readonly results: readonly PublicWebSearchResult[];
 }
 
@@ -47,6 +47,17 @@ export class PublicWebSearchClient {
       } catch (error) {
         lastProviderError = error;
       }
+    }
+
+    try {
+      const endpoint = new URL('https://search.brave.com/search');
+      endpoint.searchParams.set('q', normalizedQuery);
+      endpoint.searchParams.set('source', 'web');
+      const html = await this.fetchHtml(endpoint);
+      const results = filterRelevantResults(normalizedQuery, parseBraveHtml(html, limit));
+      if (results.length > 0) return this.response(normalizedQuery, 'brave-html', results);
+    } catch (error) {
+      lastProviderError = error;
     }
 
     try {
@@ -140,6 +151,33 @@ export function parseDuckDuckGoLiteHtml(html: string, limit = 10): readonly Publ
     if (!title) continue;
     const following = html.slice(anchorPattern.lastIndex, anchorPattern.lastIndex + 5000);
     const snippet = /<(?:td|div)\b[^>]*class=["'][^"']*\bresult-snippet\b[^"']*["'][^>]*>([\s\S]*?)<\/(?:td|div)>/i.exec(following)?.[1] ?? '';
+    seen.add(target);
+    results.push({
+      rank: results.length + 1,
+      title,
+      url: parsed.toString(),
+      snippet: cleanText(snippet).slice(0, 500),
+      sourceHost: parsed.hostname.toLowerCase(),
+    });
+  }
+  return results;
+}
+
+export function parseBraveHtml(html: string, limit = 10): readonly PublicWebSearchResult[] {
+  const resultPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>\s*[\s\S]*?<div[^>]+class=["'][^"']*\btitle\b[^"']*\bsearch-snippet-title\b[^"']*["'][^>]*>([\s\S]*?)<\/div>\s*<\/a>/gi;
+  const results: PublicWebSearchResult[] = [];
+  const seen = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = resultPattern.exec(html)) && results.length < normalizeLimit(limit)) {
+    const target = normalizeResultUrl(decodeEntities(match[1] ?? ''));
+    if (!target || seen.has(target)) continue;
+    let parsed: URL;
+    try { parsed = new URL(target); } catch { continue; }
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) continue;
+    const title = cleanText(match[2] ?? '');
+    if (!title) continue;
+    const following = html.slice(resultPattern.lastIndex, resultPattern.lastIndex + 4000);
+    const snippet = /<div[^>]+class=["'][^"']*\bgeneric-snippet\b[^"']*["'][^>]*>[\s\S]*?<div[^>]+class=["'][^"']*\bcontent\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i.exec(following)?.[1] ?? '';
     seen.add(target);
     results.push({
       rank: results.length + 1,
