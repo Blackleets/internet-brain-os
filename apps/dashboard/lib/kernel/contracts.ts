@@ -30,6 +30,29 @@ export type BootstrapStatus = KernelUnknownFields & {
   actions: Array<KernelUnknownFields & { id: string; label: string; recoverable: boolean }>;
 };
 
+export type IntegrationStatus = 'ready' | 'not_configured' | 'degraded' | 'unavailable';
+export type IntegrationKind = 'core' | 'agent' | 'memory' | 'capture' | 'model' | 'transport';
+export type IntegrationAdapter = 'native' | 'mcp';
+export type IntegrationAction = 'settings' | 'agents' | 'models' | null;
+
+export type IntegrationSummary = KernelUnknownFields & {
+  id: string;
+  kind: IntegrationKind;
+  adapter: IntegrationAdapter;
+  status: IntegrationStatus;
+  capabilities: string[];
+  scopes: string[];
+  action: IntegrationAction;
+  count?: number;
+};
+
+export type IntegrationCatalog = KernelUnknownFields & {
+  schemaVersion: 'efesto.integration-catalog.v1';
+  authority: 'kernel';
+  generatedAt: string;
+  integrations: IntegrationSummary[];
+};
+
 export type CaseSummary = KernelUnknownFields & {
   id: string;
   title: string;

@@ -25,6 +25,7 @@ import { ChatServiceError, KernelChatService } from './chat-service.mjs';
 import { ChatConversationError, ChatConversationStore } from './chat-conversation-store.mjs';
 import { defaultEfestoPaths, inspectEfestoBootstrap, readLauncherConfig } from '../../scripts/efesto-bootstrap.mjs';
 import { LocalProductCohortLedger } from './product-cohort.mjs';
+import { buildIntegrationCatalog } from './integration-catalog.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
@@ -125,9 +126,17 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const providers = options.modelProviderRegistry;
   const chat = options.chatService;
   const conversations = options.chatConversationStore;
+  const mcpGateway = options.mcpGateway;
   const bootstrapStatus = options.bootstrapStatus;
   const allowedDashboardOrigins = new Set(options.allowedDashboardOrigins ?? []);
   const hermesMaxBodyBytes = Number(options.hermesMaxBodyBytes ?? 256 * 1024);
+  const readBootstrapStatus = () => bootstrapStatus
+    ? bootstrapStatus()
+    : inspectEfestoBootstrap({
+      ...(options.bootstrapProbeOptions ?? {}),
+      env: options.bootstrapProbeOptions?.env ?? process.env,
+      cwd: options.bootstrapProbeOptions?.cwd ?? process.cwd(),
+    });
   return createServer(async (request, response) => {
     if (!isLoopbackHost(request.headers.host)) {
       return send(response, 403, { ok: false, code: 'HOST_FORBIDDEN' });
@@ -154,13 +163,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     }
     if (request.method === 'GET' && request.url === '/bootstrap/status') {
       try {
-        const body = bootstrapStatus
-          ? await bootstrapStatus()
-          : await inspectEfestoBootstrap({
-            ...(options.bootstrapProbeOptions ?? {}),
-            env: options.bootstrapProbeOptions?.env ?? process.env,
-            cwd: options.bootstrapProbeOptions?.cwd ?? process.cwd(),
-          });
+        const body = await readBootstrapStatus();
         return send(response, 200, body);
       } catch {
         return send(response, 500, { ok: false, code: 'BOOTSTRAP_STATUS_FAILED' });
@@ -215,6 +218,27 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         if (!(await identities.allows(origin))) return send(response, 403, { ok: false, code: 'EXTENSION_NOT_AUTHORIZED' });
       } catch {
         return send(response, 500, { ok: false, code: 'IDENTITY_REGISTRY_UNAVAILABLE' });
+      }
+    }
+    if (request.method === 'GET' && request.url === '/api/integrations') {
+      try {
+        const bootstrap = await readBootstrapStatus();
+        let providerCount;
+        if (providers) {
+          try { providerCount = (await providers.list()).length; } catch { providerCount = undefined; }
+        }
+        return send(response, 200, {
+          ok: true,
+          ...buildIntegrationCatalog({
+            bootstrap,
+            hermesAvailable: Boolean(hermesRoute),
+            obsidianAvailable: Boolean(obsidianProjector),
+            providerCount,
+            mcpGateway,
+          }),
+        });
+      } catch {
+        return send(response, 500, { ok: false, code: 'INTEGRATION_CATALOG_FAILED' });
       }
     }
     if (request.method === 'GET' && request.url === '/api/cases' && captureProjector) {

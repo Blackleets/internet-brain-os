@@ -2,6 +2,8 @@ import type {
   BootstrapStatus,
   CaseSummary,
   GoalSummary,
+  IntegrationCatalog,
+  IntegrationSummary,
   KernelHealth,
   KernelStatus,
   MissionSummary,
@@ -21,6 +23,10 @@ const MISSION_STATUSES = ['waiting_for_agent', 'queued', 'running', 'completed',
 const MISSION_PHASES = ['queued', 'investigating', 'verifying', 'forged', 'failed'] as const;
 const OPPORTUNITY_STATUSES = ['new', 'dismissed'] as const;
 const HARDWARE_TIERS = ['light', 'balanced', 'powerful'] as const;
+const INTEGRATION_KINDS = ['core', 'agent', 'memory', 'capture', 'model', 'transport'] as const;
+const INTEGRATION_ADAPTERS = ['native', 'mcp'] as const;
+const INTEGRATION_STATUSES = ['ready', 'not_configured', 'degraded', 'unavailable'] as const;
+const INTEGRATION_ACTIONS = ['settings', 'agents', 'models'] as const;
 
 export function parseHealth(value: unknown): KernelHealth {
   const body = envelope(value, 'health');
@@ -61,6 +67,34 @@ export function parseBootstrap(value: unknown): BootstrapStatus {
     message: string(body.message, 'bootstrap.message'),
     diagnostics: record(body.diagnostics, 'bootstrap.diagnostics'),
     actions: array(body.actions, 'bootstrap.actions').map((action, index) => parseBootstrapAction(action, `bootstrap.actions[${index}]`)),
+  };
+}
+
+export function parseIntegrationCatalog(value: unknown): IntegrationCatalog {
+  const body = envelope(value, 'integrations');
+  return {
+    ...body,
+    schemaVersion: literal(body.schemaVersion, 'integrations.schemaVersion', 'efesto.integration-catalog.v1'),
+    authority: literal(body.authority, 'integrations.authority', 'kernel'),
+    generatedAt: string(body.generatedAt, 'integrations.generatedAt'),
+    integrations: array(body.integrations, 'integrations.integrations').map((item, index) => parseIntegration(item, `integrations.integrations[${index}]`)),
+  };
+}
+
+function parseIntegration(value: unknown, path: string): IntegrationSummary {
+  const item = record(value, path);
+  const action = item.action === null ? null : enumeration(item.action, `${path}.action`, INTEGRATION_ACTIONS);
+  const count = item.count === undefined ? undefined : nonNegativeNumber(item.count, `${path}.count`);
+  return {
+    ...item,
+    id: string(item.id, `${path}.id`),
+    kind: enumeration(item.kind, `${path}.kind`, INTEGRATION_KINDS),
+    adapter: enumeration(item.adapter, `${path}.adapter`, INTEGRATION_ADAPTERS),
+    status: enumeration(item.status, `${path}.status`, INTEGRATION_STATUSES),
+    capabilities: array(item.capabilities, `${path}.capabilities`).map((capability, index) => string(capability, `${path}.capabilities[${index}]`)),
+    scopes: array(item.scopes, `${path}.scopes`).map((scope, index) => string(scope, `${path}.scopes[${index}]`)),
+    action,
+    ...(count === undefined ? {} : { count }),
   };
 }
 

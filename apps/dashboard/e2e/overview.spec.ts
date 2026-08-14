@@ -47,14 +47,10 @@ test('runs the conversation-first journey only after explicit confirmation', asy
   await expect(page.getByText('Privado por diseño', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Goal', exact: true })).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByRole('button', { name: 'Chat', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('.forge-quick-prompt')).toHaveCount(1);
-  const initialSuggestion = await page.locator('.forge-quick-prompt').innerText();
-  await page.getByRole('button', { name: 'Cambiar sugerencia', exact: true }).click();
-  await expect.poll(() => page.locator('.forge-quick-prompt').innerText()).not.toBe(initialSuggestion);
-  await page.getByRole('textbox', { name: 'Mensaje', exact: true }).fill('Quiero investigar una idea');
-  await expect(page.locator('.forge-quick-prompt')).toHaveCount(0);
-  await page.getByRole('textbox', { name: 'Mensaje', exact: true }).fill('');
-  await expect(page.locator('.forge-quick-prompt')).toHaveCount(1);
+  await expect(page.locator('.forge-quick-prompts, .forge-suggestion-rail, .forge-suggestion-next')).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Mensaje', exact: true })).toHaveAttribute('placeholder', 'Configura un modelo para empezar…');
+  await page.getByRole('button', { name: 'Goal', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Goal', exact: true })).toHaveAttribute('placeholder', /Encuéntrame|Busca trabajos|Investiga una empresa|Encuentra oportunidades/);
 
   await connect(page);
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
@@ -177,9 +173,10 @@ test.describe('mobile Efesto product shell', () => {
     await expect(page.getByRole('heading', { name: '¿En qué trabajamos?', exact: true })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Mensaje', exact: true })).toBeVisible();
     await expect(page.locator('.forge-composer')).toBeVisible();
-    await expect(page.locator('.forge-quick-prompt')).toHaveCount(1);
-    await expect(page.getByRole('button', { name: 'Cambiar sugerencia', exact: true })).toBeVisible();
-    await expect(page.locator('.forge-suggestion-next svg')).toBeVisible();
+    await expect(page.locator('.forge-quick-prompts, .forge-suggestion-rail, .forge-suggestion-next')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Goal', exact: true }).click();
+    const goal = page.getByRole('textbox', { name: 'Goal', exact: true });
+    await expect(goal).toHaveAttribute('placeholder', /Encuéntrame|Busca trabajos|Investiga una empresa|Encuentra oportunidades/);
     await expect(page.getByText('Privado por diseño', { exact: true })).toBeVisible();
 
     const initial = await page.evaluate(() => ({ viewportWidth: innerWidth, documentWidth: document.documentElement.scrollWidth }));
