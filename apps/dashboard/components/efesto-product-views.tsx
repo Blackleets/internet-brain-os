@@ -41,17 +41,19 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   onOpenModels: () => void; modelLabel: string; onOpenSettings: () => void; onOpenNav: () => void;
 }) {
   const state = brainState(phase);
-  const surfaceTitle = chatMode ? 'Chat' : 'Goal';
+  const showSuggestions = chatMode ? messages.length === 0 : !preparedGoal;
+  const surfaceTitle = chatMode
+    ? (messages.length ? 'Conversación' : 'Nueva conversación')
+    : (preparedGoal ? 'Goal preparado' : 'Nuevo Goal');
 
   return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal')} aria-label={chatMode ? 'Conversación con Efesto' : 'Nuevo Goal'}>
     <header className="forge-surface-bar">
       <div className="forge-surface-leading">
-        <button type="button" className="forge-menu-button" onClick={onOpenNav} aria-label="Abrir menú"><Menu /></button>
-        <button type="button" className="forge-agent-picker" onClick={onOpenModels} aria-label="Configurar modelo">
+        <button type="button" className="forge-menu-button" onClick={onOpenNav} aria-label="Alternar navegación"><Menu /></button>
+        <div className="forge-product-title">
           <span className="forge-agent-mark"><Image src="/efesto-smith.svg" alt="" width={28} height={28} /></span>
-          <span className="forge-agent-copy"><strong>Efesto</strong><small>{chatMode ? (chatAvailable ? modelLabel : 'Configurar modelo') : 'Controlled mission'}</small></span>
-          <Settings />
-        </button>
+          <span><strong>{surfaceTitle}</strong><small>Efesto · {chatMode ? (chatAvailable ? modelLabel : 'modelo sin configurar') : 'misión controlada'}</small></span>
+        </div>
       </div>
 
       <ModeSwitcher chatMode={chatMode} onToggleChat={onToggleChat} />
@@ -65,7 +67,6 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
 
     <div className="forge-scroll">
       {chatMode ? messages.length ? <section className="forge-thread" aria-label="Mensajes">
-        <header className="forge-thread-heading"><span>{surfaceTitle}</span><small>Conversación privada</small></header>
         {messages.map((message, index) => <article className={'forge-message ' + message.role} key={message.role + '-' + index}>
           <div className="forge-message-avatar">{message.role === 'user' ? 'Tú' : <Image src="/efesto-smith.svg" alt="" width={24} height={24} />}</div>
           <div className="forge-message-body">
@@ -78,9 +79,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
         <small>EFESTO · INTELLIGENCE FORGE</small>
         <h1>¿En qué trabajamos?</h1>
         <p>Pregunta, analiza o convierte una intención en un Goal cuando necesites una misión controlada.</p>
-        <div className="forge-suggestions" aria-label="Sugerencias para empezar">
-          {starterGoals.map((prompt) => <button type="button" key={prompt} onClick={() => onStarterChat(prompt)}><Sparkles /><span>{prompt}</span><ChevronRight /></button>)}
-        </div>
+        <div className="forge-empty-meta"><span><ShieldCheck /> Privado por diseño</span><span><i /> Sin memoria automática</span></div>
       </section> : preparedGoal ? <section className="forge-goal-plan" aria-label="Plan propuesto">
         <header>
           <span className="forge-plan-icon"><Target /></span>
@@ -95,18 +94,30 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
           <button type="button" className="primary-action" disabled={!connected || goalPending} onClick={onConfirmGoal}>{goalPending ? 'Confirmando…' : connected ? 'Confirmar y ejecutar' : 'Conecta el Kernel para ejecutar'}</button>
           <button type="button" className="secondary-action" onClick={onEditGoal}>Editar Goal</button>
         </div>
+        <p className="forge-plan-boundary"><ShieldCheck /> Nada se ejecuta sin tu confirmación explícita.</p>
       </section> : <section className="forge-empty forge-goal-empty" aria-label="Crear un Goal">
         <span className="forge-empty-mark"><Target /></span>
-        <small>CONTROLLED MISSION</small>
+        <small>EFESTO · CONTROLLED MISSION</small>
         <h1>Define el resultado</h1>
         <p>Efesto prepara el plan. Tú decides si se ejecuta.</p>
-        <div className="forge-suggestions" aria-label="Ideas para nuevos Goals">
-          {starterGoals.map((goal) => <button type="button" key={goal} onClick={() => onStarterGoal(goal)}><Target /><span>{goal}</span><ChevronRight /></button>)}
-        </div>
+        <div className="forge-empty-meta"><span><ShieldCheck /> Kernel-gated</span><span><i /> Confirmación humana</span></div>
       </section>}
     </div>
 
-    <ComposerForm input={input} chatMode={chatMode} chatAvailable={chatAvailable} chatPending={chatPending} submitDisabled={submitDisabled} onInputChange={onInputChange} onSubmit={onSubmit} onStopChat={onStopChat} onOpenModels={onOpenModels} modelLabel={modelLabel} />
+    <ComposerForm
+      input={input}
+      chatMode={chatMode}
+      chatAvailable={chatAvailable}
+      chatPending={chatPending}
+      submitDisabled={submitDisabled}
+      suggestions={showSuggestions ? starterGoals : []}
+      onSuggestion={chatMode ? onStarterChat : onStarterGoal}
+      onInputChange={onInputChange}
+      onSubmit={onSubmit}
+      onStopChat={onStopChat}
+      onOpenModels={onOpenModels}
+      modelLabel={modelLabel}
+    />
   </section>;
 }
 
@@ -117,21 +128,30 @@ function ModeSwitcher({ chatMode, onToggleChat }: { chatMode: boolean; onToggleC
   </div>;
 }
 
-function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisabled, onInputChange, onSubmit, onStopChat, onOpenModels, modelLabel }: {
-  input: string; chatMode: boolean; chatAvailable: boolean; chatPending: boolean; submitDisabled: boolean;
-  onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void; onStopChat: () => void;
-  onOpenModels: () => void; modelLabel: string;
+function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisabled, suggestions, onSuggestion, onInputChange, onSubmit, onStopChat, onOpenModels, modelLabel }: {
+  input: string; chatMode: boolean; chatAvailable: boolean; chatPending: boolean; submitDisabled: boolean; suggestions: string[];
+  onSuggestion: (value: string) => void; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onStopChat: () => void; onOpenModels: () => void; modelLabel: string;
 }) {
-  return <div className="forge-composer-zone">
+  return <div className={'forge-composer-zone ' + (suggestions.length ? 'has-suggestions' : '')}>
+    {suggestions.length ? <div className="forge-quick-prompts" aria-label={chatMode ? 'Sugerencias para empezar' : 'Ideas para nuevos Goals'}>
+      {suggestions.map((suggestion) => <button type="button" key={suggestion} onClick={() => onSuggestion(suggestion)}>
+        {chatMode ? <Sparkles /> : <Target />}
+        <span>{suggestion}</span>
+        <ChevronRight />
+      </button>)}
+    </div> : null}
+
     <form className={'forge-composer ' + (chatMode ? 'is-chat' : 'is-goal')} onSubmit={onSubmit}>
       <textarea
         aria-label={chatMode ? 'Mensaje' : 'Goal'}
+        aria-describedby="forge-composer-note"
         value={input}
         onChange={(event) => onInputChange(event.target.value)}
         rows={1}
-        placeholder={chatMode ? (chatAvailable ? 'Escribe a Efesto…' : 'Configura un modelo para empezar…') : 'Describe el resultado que quieres conseguir…'}
+        placeholder={chatMode ? (chatAvailable ? 'Pregunta lo que quieras…' : 'Configura un modelo para empezar…') : 'Describe el resultado que quieres conseguir…'}
         onKeyDown={(event) => {
-          if (event.key === 'Enter' && !event.shiftKey) {
+          if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
             event.preventDefault();
             event.currentTarget.form?.requestSubmit();
           }
@@ -141,11 +161,11 @@ function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisab
         <div className="forge-composer-context">
           {chatMode ? <button type="button" className="forge-model-button" onClick={onOpenModels}><Bot /><span>{chatAvailable ? modelLabel : 'Configurar modelo'}</span><Settings /></button> : <span className="forge-kernel-gate"><ShieldCheck /> Kernel-gated</span>}
         </div>
-        <span className="forge-boundary">{chatMode ? 'Sin memoria automática' : 'Requiere confirmación'}</span>
+        <span className="forge-shortcut">Enter para enviar</span>
         {chatPending ? <button type="button" className="forge-send stop" onClick={onStopChat} aria-label="Detener generación"><Pause /></button> : <button type="submit" className="forge-send" disabled={submitDisabled} aria-label={chatMode ? 'Enviar mensaje' : 'Preparar Goal'}><Send /></button>}
       </footer>
     </form>
-    <p className="forge-composer-hint">{chatMode ? 'La conversación permanece separada de Evidence y memoria.' : 'Preparar no ejecuta ninguna acción externa.'}</p>
+    <p className="forge-composer-hint" id="forge-composer-note">{chatMode ? 'La conversación permanece separada de Evidence y memoria.' : 'Preparar no ejecuta ninguna acción externa.'}</p>
   </div>;
 }
 
