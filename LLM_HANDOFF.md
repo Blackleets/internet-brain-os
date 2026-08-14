@@ -675,8 +675,13 @@ Kernel sovereignty, evidence provenance, and human confirmation.
 
 - Targeted planner, Kernel HTTP, parser, and dashboard tests: 53/53 passed.
 - TypeScript typecheck: passed after the implementation slice.
-- Full architecture, test, build, and deployed-preview verification remain
-  pending for this commit.
+- Full architecture check, typecheck, build, and repository test suite passed:
+  190 test files / 1,096 tests.
+- Vercel preview is `READY` for the published branch commit
+  `74e89e43390f2e405f78ef7dd528ad2f942b2653`.
+- Browser screenshot comparison remains blocked in this environment because
+  the Playwright Chromium binary is not installed; the deployed HTML smoke
+  check returned HTTP 200.
 
 ### Risks / uncertainties
 
@@ -691,6 +696,6 @@ Kernel sovereignty, evidence provenance, and human confirmation.
 
 ### Next recommended step
 
-Run the complete repository gates, inspect the rendered desktop/mobile brief,
-then publish a new draft preview. After visual review, implement one genuine
-read-only GitHub adapter behind the same source/capability/receipt contract.
+Inspect the rendered desktop/mobile brief on the preview, then implement one
+genuine read-only GitHub adapter behind the same source/capability/receipt
+contract. Keep the adapter bounded, consented, revocable, and fail-closed.
