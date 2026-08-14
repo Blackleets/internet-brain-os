@@ -88,6 +88,21 @@ test('opens the zero-setup web path and keeps planning separate from execution',
   await expect(page.getByText('Conecta el Kernel para leer adaptadores y capacidades disponibles.', { exact: true })).toBeVisible();
 });
 
+test('answers a web Chat order with a bounded preview instead of staying inert', async ({ page }) => {
+  const writes: string[] = [];
+  page.on('request', (request) => { if (request.method() === 'POST') writes.push(new URL(request.url()).pathname); });
+
+  await page.goto('/?runtime=web');
+  await expect(page.getByRole('button', { name: 'Modo web listo', exact: true }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Mensaje', exact: true }).fill('Encuentra oportunidades de negocio en Madrid');
+  await expect(page.getByRole('button', { name: 'Enviar mensaje', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Enviar mensaje', exact: true }).click();
+  await expect(page.getByText(/He recibido tu orden/)).toBeVisible();
+  await expect(page.getByText('Vista previa web · sin modelo externo', { exact: true })).toBeVisible();
+  expect(writes).toEqual(['/api/efesto/plan']);
+});
+
 test('switches the Efesto surface language from gear settings', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Ajustes', exact: true }).click();

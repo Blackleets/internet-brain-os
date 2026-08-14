@@ -527,12 +527,36 @@ function EfestoProductShellContent() {
     event.preventDefault();
     const content = input.trim();
     if (!content || chatPending) return;
-    if (!connection) return navigate('settings');
-    if (!selectedProvider || !selectedModel) return navigate('models');
+    const webChatAvailable = webMode && !connection;
     const controller = new AbortController();
     chatAbortRef.current = controller;
     const before: ChatMessage[] = [...chatMessages, { role: 'user', content }];
-    setChatMessages([...before, { role: 'assistant', content: '', model: selectedModel }]); setInput(''); setChatPending(true);
+    setChatMessages([...before, { role: 'assistant', content: '', model: webChatAvailable ? t('composer.webPreview') : selectedModel }]); setInput(''); setChatPending(true);
+    if (webChatAvailable) {
+      try {
+        const plan = await loadWebGoalIntelligencePlan(content, keywordsFromGoal(content), controller.signal);
+        setChatMessages((current) => current.map((message, index) => index === current.length - 1
+          ? { ...message, content: t('chat.webPreviewResponse', { count: plan.sources.length }) }
+          : message));
+        setToast(t('toast.webChatPrepared'));
+      } catch {
+        if (controller.signal.aborted) {
+          setChatMessages((current) => current.slice(0, -1));
+          setToast(t('toast.generationStopped'));
+        } else {
+          setChatMessages((current) => current.map((message, index) => index === current.length - 1
+            ? { ...message, content: t('chat.webPreviewFailed'), model: t('composer.webPreview') }
+            : message));
+          setToast(t('toast.webChatFailed'));
+        }
+      } finally {
+        setChatPending(false);
+        if (chatAbortRef.current === controller) chatAbortRef.current = undefined;
+      }
+      return;
+    }
+    if (!connection) return navigate('settings');
+    if (!selectedProvider || !selectedModel) return navigate('models');
     try {
       const client = new KernelClient({ ...connection, timeoutMs: 120_000 });
       await client.streamNdjson<StreamEvent>('/api/chat/stream', { method: 'POST', body: JSON.stringify({ providerId: selectedProvider.id, model: selectedModel, messages: before.map(({ role, content: text }) => ({ role, content: text })) }) }, (streamEvent) => {
@@ -594,7 +618,7 @@ function EfestoProductShellContent() {
         <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label={t('top.refresh')}><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : webMode ? 'online web' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? t('top.kernelReady') : webMode ? t('top.webReady') : t('top.connect')}</button></div>
       </header>
       <main className="efesto-main">
-        {view === 'home' ? <HomeView phase={brainPhase} webMode={webMode && !connection} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} goalPlan={goalPlan} goalPlanPending={goalPlanPending} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={updateInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else void prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onRunGitHubEvidence={(githubInput) => void runGithubEvidence(githubInput)} onEditGoal={() => { setPreparedGoal(''); setGoalPlan(undefined); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenAgents={() => navigate('agents')} onOpenNav={toggleNavigation} valueSurface={<ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot || !snapshot.productScorecard || snapshot.issues.some((issue) => issue.endpoint === 'scorecard')} />} /> : null}
+        {view === 'home' ? <HomeView phase={brainPhase} webMode={webMode && !connection} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} goalPlan={goalPlan} goalPlanPending={goalPlanPending} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={updateInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else void prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean((connection && selectedProvider && selectedModel) || (webMode && !connection))} submitDisabled={!input.trim() || (chatMode && !(webMode && !connection) && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onRunGitHubEvidence={(githubInput) => void runGithubEvidence(githubInput)} onEditGoal={() => { setPreparedGoal(''); setGoalPlan(undefined); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenAgents={() => navigate('agents')} onOpenNav={toggleNavigation} valueSurface={<ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot || !snapshot.productScorecard || snapshot.issues.some((issue) => issue.endpoint === 'scorecard')} />} /> : null}
         {view === 'missions' ? <MissionsView snapshot={snapshot} onNew={newGoal} /> : null}
         {view === 'finds' ? <FindsView opportunities={snapshot?.opportunities ?? []} connected={Boolean(connection)} onFeedback={(id, signal) => void recordFeedback(id, signal)} /> : null}
         {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} githubAuthorizationBusy={githubAuthorizationBusy} onOpen={(record) => void openCase(record)} onRevokeGithubAuthorization={(authorizationId) => void revokeGithubAuthorization(authorizationId)} /> : null}

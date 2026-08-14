@@ -58,7 +58,7 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
         <button type="button" className="forge-menu-button" onClick={onOpenNav} aria-label={t('nav.toggle')}><Menu /></button>
         <div className="forge-product-title">
           <span className="forge-agent-mark"><Image src="/efesto-smith.svg" alt="" width={28} height={28} /></span>
-          <span><strong>{surfaceTitle}</strong><small>Efesto · {chatMode ? (chatAvailable ? modelLabel : t('home.modelNotConfigured')) : t('home.controlledMission')}</small></span>
+          <span><strong>{surfaceTitle}</strong><small>Efesto · {chatMode ? (webMode ? t('runtime.webReady') : chatAvailable ? modelLabel : t('home.modelNotConfigured')) : t('home.controlledMission')}</small></span>
         </div>
       </div>
 
@@ -122,6 +122,7 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
       onInputChange={onInputChange}
       onSubmit={onSubmit}
       onStopChat={onStopChat}
+      webMode={webMode}
       onOpenModels={onOpenModels}
       modelLabel={modelLabel}
       providers={providers}
@@ -239,10 +240,10 @@ function ModeSwitcher({ chatMode, onToggleChat }: { chatMode: boolean; onToggleC
   </div>;
 }
 
-function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisabled, suggestions, onInputChange, onSubmit, onStopChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, connected, onSelectModel, onOpenSettings }: {
+function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisabled, suggestions, onInputChange, onSubmit, onStopChat, webMode, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, connected, onSelectModel, onOpenSettings }: {
   input: string; chatMode: boolean; chatAvailable: boolean; chatPending: boolean; submitDisabled: boolean; suggestions: string[];
   onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onStopChat: () => void; onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
+  onStopChat: () => void; webMode: boolean; onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
   connected: boolean; onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void;
 }) {
   const { t } = useEfestoLocale();
@@ -295,7 +296,7 @@ function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisab
       />
       <footer>
         <div className="forge-composer-context">
-          {chatMode ? <ModelSelector
+          {chatMode && webMode ? <span className="forge-kernel-gate"><ShieldCheck /> {t('composer.webPreview')}</span> : chatMode ? <ModelSelector
             providers={providers}
             selectedProviderId={selectedProviderId}
             selectedModel={selectedModel}

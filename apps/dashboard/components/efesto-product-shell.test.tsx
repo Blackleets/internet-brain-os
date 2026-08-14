@@ -152,6 +152,22 @@ describe('Efesto conversation-first product shell', () => {
     expect(requests.filter((request) => request.method === 'POST').map((request) => new URL(request.url).pathname)).toEqual(['/api/efesto/plan']);
   });
 
+  it('makes a web Chat order produce a bounded preview without a Kernel or model', async () => {
+    window.history.replaceState({}, '', '/?runtime=web');
+    render(<EfestoProductShell />);
+
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Modo web listo' }).length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole('button', { name: /^Chat$/ }));
+    fireEvent.change(screen.getByLabelText('Mensaje'), { target: { value: 'Encuentra oportunidades de negocio en Madrid' } });
+    expect(screen.getByRole('button', { name: 'Enviar mensaje' })).toHaveProperty('disabled', false);
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar mensaje' }));
+
+    await waitFor(() => expect(screen.getByText(/He recibido tu orden/)).toBeTruthy());
+    expect(screen.getAllByText('Vista previa web · sin modelo externo').length).toBeGreaterThan(0);
+    expect(screen.getByText(/no se han usado credenciales ni se ha ejecutado ninguna acción/)).toBeTruthy();
+    expect(requests.filter((request) => request.method === 'POST').map((request) => new URL(request.url).pathname)).toEqual(['/api/efesto/plan']);
+  });
+
   it('switches the interface language from the gear settings and persists it locally', async () => {
     render(<EfestoProductShell />);
     fireEvent.click(screen.getByRole('button', { name: /^Ajustes$/ }));

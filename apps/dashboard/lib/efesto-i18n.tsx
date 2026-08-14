@@ -852,6 +852,9 @@ Object.assign(es, {
   'runtime.localOptional': 'Kernel local opcional',
   'top.webReady': 'Entrada web',
   'top.localOptional': 'Ejecución privada opcional',
+  'composer.webPreview': 'Vista previa web · sin modelo externo',
+  'chat.webPreviewResponse': 'He recibido tu orden. He preparado una vista previa web con {{count}} fuente(s) candidata(s). No se ha guardado nada, no se han usado credenciales ni se ha ejecutado ninguna acción. Cambia a Goal para revisar el alcance o conecta tu Kernel privado para trabajar de verdad.',
+  'chat.webPreviewFailed': 'No pude preparar la vista previa web. No se ha guardado nada; inténtalo de nuevo.',
   'home.webReviewScope': 'Vista previa web: revisa el alcance; ejecutar requiere tu Kernel privado.',
   'home.webMissionEyebrow': 'EFESTO · TRABAJO DESDE LA WEB',
   'home.webPrepareCopy': 'Define un Goal sin instalar nada. La web prepara la ruta; el modo privado guarda y ejecuta.',
@@ -867,6 +870,8 @@ Object.assign(es, {
   'toast.webGoalPreparing': 'Preparando vista previa web… No se guardará nada.',
   'toast.webGoalFailed': 'No se pudo preparar la vista previa web. No se guardó nada.',
   'toast.webExecutionRequiresKernel': 'La ejecución requiere el Kernel privado. El plan web no autoriza acciones.',
+  'toast.webChatPrepared': 'Orden recibida: vista previa web preparada.',
+  'toast.webChatFailed': 'No se pudo preparar la orden web. No se guardó nada.',
 });
 
 Object.assign(en, {
@@ -874,6 +879,9 @@ Object.assign(en, {
   'runtime.localOptional': 'Optional local Kernel',
   'top.webReady': 'Web entry',
   'top.localOptional': 'Optional private execution',
+  'composer.webPreview': 'Web preview · no external model',
+  'chat.webPreviewResponse': 'I received your order and prepared a web preview with {{count}} candidate source(s). Nothing was stored, no credentials were used, and no action was executed. Switch to Goal to review the scope or connect your private Kernel to work for real.',
+  'chat.webPreviewFailed': 'I could not prepare the web preview. Nothing was stored; try again.',
   'home.webReviewScope': 'Web preview: review the scope; execution requires your private Kernel.',
   'home.webMissionEyebrow': 'EFESTO · WORK FROM THE WEB',
   'home.webPrepareCopy': 'Define a Goal without installing anything. The web prepares the route; private mode stores and executes it.',
@@ -889,6 +897,8 @@ Object.assign(en, {
   'toast.webGoalPreparing': 'Preparing web preview… Nothing will be stored.',
   'toast.webGoalFailed': 'The web preview could not be prepared. Nothing was stored.',
   'toast.webExecutionRequiresKernel': 'Execution requires the private Kernel. The web plan grants no authority.',
+  'toast.webChatPrepared': 'Order received: web preview prepared.',
+  'toast.webChatFailed': 'The web order could not be prepared. Nothing was stored.',
 });
 
 Object.assign(pt, {
@@ -896,6 +906,9 @@ Object.assign(pt, {
   'runtime.localOptional': 'Kernel local opcional',
   'top.webReady': 'Entrada web',
   'top.localOptional': 'Execução privada opcional',
+  'composer.webPreview': 'Prévia web · sem modelo externo',
+  'chat.webPreviewResponse': 'Recebi sua ordem e preparei uma prévia web com {{count}} fonte(s) candidata(s). Nada foi salvo, nenhuma credencial foi usada e nenhuma ação foi executada. Mude para Goal para revisar o escopo ou conecte seu Kernel privado para trabalhar de verdade.',
+  'chat.webPreviewFailed': 'Não foi possível preparar a prévia web. Nada foi salvo; tente novamente.',
   'home.webReviewScope': 'Prévia web: revise o escopo; executar requer seu Kernel privado.',
   'home.webMissionEyebrow': 'EFESTO · TRABALHO PELA WEB',
   'home.webPrepareCopy': 'Defina um Goal sem instalar nada. A web prepara a rota; o modo privado salva e executa.',
@@ -911,6 +924,8 @@ Object.assign(pt, {
   'toast.webGoalPreparing': 'Preparando prévia web… Nada será salvo.',
   'toast.webGoalFailed': 'Não foi possível preparar a prévia web. Nada foi salvo.',
   'toast.webExecutionRequiresKernel': 'A execução requer o Kernel privado. O plano web não concede autoridade.',
+  'toast.webChatPrepared': 'Ordem recebida: prévia web preparada.',
+  'toast.webChatFailed': 'Não foi possível preparar a ordem web. Nada foi salvo.',
 });
 
 const dictionaries: Record<EfestoLocale, Record<string, string>> = { es, en, pt };
