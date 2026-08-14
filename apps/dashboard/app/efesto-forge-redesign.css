@@ -504,7 +504,9 @@
   display: none;
 }
 
-.efesto-home-active .efesto-main {
+.efesto-product.efesto-home-active .efesto-main,
+.efesto-product.efesto-home-active.sidebar-collapsed .efesto-main {
+  width: 100%;
   height: 100dvh;
   min-height: 0;
   overflow: hidden;
@@ -1433,7 +1435,9 @@
     padding: 24px 15px 72px;
   }
 
-  .efesto-home-active .efesto-main {
+  .efesto-product.efesto-home-active .efesto-main,
+  .efesto-product.efesto-home-active.sidebar-collapsed .efesto-main {
+    width: 100%;
     height: 100dvh;
     padding: 0;
   }
