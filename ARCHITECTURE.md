@@ -76,14 +76,25 @@ future executions.
 
 The Complementos directory is a Kernel-backed read model, not a second
 integration authority. `apps/local-kernel/integration-catalog.mjs` publishes the
-curated MCP connector boundary for GitHub, Gmail, Google Drive, Notion, and
-Google Calendar. Each connector carries its own adapter, provider, read-only
-scope, capabilities, readiness state, and Settings action. The MCP gateway can
-transport these connectors, but gateway availability alone cannot mark a
-provider ready; only an exact connector status reported by the Kernel gateway
-may do that. Provider credentials, OAuth, external writes, and irreversible
-actions remain outside this UI slice until their adapter contracts and approval
-receipts exist. Local SVG marks live under
+curated connector boundary for GitHub, Gmail, Google Drive, Notion, and Google
+Calendar. The first real provider adapter is
+`apps/local-kernel/github-readonly-integration.mjs` plus the typed
+`packages/connectors/src/github-readonly.ts` client. It is strictly read-only:
+only bounded GitHub API `GET` operations for repositories, issues, pull
+requests, and checks are exposed. An owner-private Kernel credential is verified
+before saving; an interactive actor must authorize an explicit `github.read`
+scope against an active Goal; every read is bounded, idempotent, Goal-bound, and
+retained as a provenance receipt with a content hash. Authorization receipts
+expire and can be revoked; revoking the credential revokes all outstanding
+GitHub authorizations. The public catalog exposes the native adapter only from
+this Kernel status, never from UI intent alone.
+
+The remaining four entries stay behind the MCP boundary and carry independent
+read-only scopes, capabilities, readiness state, and Settings action. MCP
+gateway availability alone cannot mark a provider ready; only an exact
+connector status reported by the Kernel may do that. Provider credentials,
+OAuth, external writes, and irreversible actions remain outside this UI slice
+until their adapter contracts and approval receipts exist. Local SVG marks live under
 `apps/dashboard/public/integrations/`, so the directory has no remote asset
 dependency.
 

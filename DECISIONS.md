@@ -53,6 +53,47 @@ Reason:
 
 This gives Efesto a premium, understandable first connector surface without an unbounded marketplace or false connected states. The read-first boundary keeps provider-specific credentials and future write actions outside the product domain until each adapter has a reviewed authorization and receipt contract.
 
+## 2026-08-14 - First real external adapter: GitHub read-only
+
+Decision: implement GitHub as the first native external adapter, while keeping
+Gmail, Google Drive, Notion, and Google Calendar as independent MCP catalog
+entries. The adapter is a Kernel-local authority boundary over a typed provider
+client; it is not a provider dependency in the domain modules.
+
+The adapter accepts only bounded GitHub API `GET` reads for repositories,
+issues, pull requests, and checks. A credential is verified before it is saved
+to an owner-private local file (or may be supplied read-only by
+`HEPHAESTUS_GITHUB_TOKEN`). An interactive actor must authorize the
+`github.read` scope and selected read capabilities for an active Goal. The
+Kernel persists a Goal revision-bound authorization receipt, enforces a short
+expiry, supports explicit revocation, and records deterministic idempotent read
+receipts with source URL and content hash. No remote write, comment, merge,
+dispatch, OAuth exchange, or automatic Goal authorization is exposed.
+
+Reason:
+
+This gives Efesto one genuinely useful integration without pretending that a
+logo or MCP gateway is an account connection. The contract is small enough to
+test end-to-end, preserves local credential ownership, and creates a reusable
+review bar for future adapters.
+
+Change request / rollback:
+
+- Behavior: add authenticated `/api/integrations/github/*` routes and publish
+  native GitHub status only when the local Kernel instantiates the adapter.
+- Files: `apps/local-kernel/github-readonly-contract.mjs`,
+  `apps/local-kernel/github-readonly-integration.mjs`,
+  `packages/connectors/src/github-readonly.ts`, the catalog/plan wiring, and
+  focused provider, integration, catalog, and HTTP tests.
+- Breakage risk: the adapter fails closed when the connector build or
+  credential is unavailable; existing MCP entries retain their prior
+  `not_configured` behavior. Removing the new routes and catalog status hook
+  restores the previous catalog while leaving existing Goal and mission data
+  intact.
+- Proof: targeted tests cover GET-only provider behavior, normalization,
+  credential secrecy, active-Goal consent, expiry, revocation, idempotent
+  receipts, authenticated routes, and unchanged MCP connector states.
+
 ## 2026-08-14 - Universal integration boundary, curated first surface
 
 Decision: Efesto remains open to any compatible tool through typed adapters and MCP, but the product surface starts with a curated set of five integration entry points. MCP is a discovery/transport boundary; it never receives authority over the Kernel, Evidence, or Memory.

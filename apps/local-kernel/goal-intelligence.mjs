@@ -1,4 +1,5 @@
 import { validateGoalDraft } from './goals.mjs';
+import { GITHUB_READ_CAPABILITIES } from './github-readonly-contract.mjs';
 
 export const GOAL_INTELLIGENCE_SCHEMA_VERSION = 'efesto.goal-intelligence.v1';
 
@@ -18,7 +19,7 @@ const SOURCE_DEFINITIONS = Object.freeze([
     reason: 'goal_signal',
     pattern: /\b(github|git hub|repository|repositories|repo|repos|pull request|pull requests|issue|issues|commit|commits|ci|open source|codigo|código|software)\b/u,
     scopes: ['github.read'],
-    requiredCapabilities: ['github.repository.read', 'github.issue.read', 'github.pull_request.read', 'github.checks.read'],
+    requiredCapabilities: [...GITHUB_READ_CAPABILITIES],
     action: 'settings',
   },
   {

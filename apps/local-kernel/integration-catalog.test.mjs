@@ -56,4 +56,25 @@ describe('Efesto integration catalog', () => {
       expect.objectContaining({ id: 'google-calendar', status: 'not_configured', capabilities: [] }),
     ]));
   });
+
+  it('publishes the native GitHub adapter without changing the other external integrations', () => {
+    const catalog = buildIntegrationCatalog({
+      githubStatus: {
+        adapter: 'native',
+        status: 'ready',
+        scopes: ['github.read'],
+        capabilities: ['github.repository.read'],
+        requiresExplicitConsent: true,
+        managedBy: 'local',
+      },
+    });
+
+    expect(catalog.integrations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'github', adapter: 'native', status: 'ready', capabilities: ['github.repository.read'], requiresExplicitConsent: true, managedBy: 'local' }),
+      expect.objectContaining({ id: 'gmail', adapter: 'mcp', status: 'not_configured', capabilities: [] }),
+      expect.objectContaining({ id: 'google-drive', adapter: 'mcp', status: 'not_configured', capabilities: [] }),
+      expect.objectContaining({ id: 'notion', adapter: 'mcp', status: 'not_configured', capabilities: [] }),
+      expect.objectContaining({ id: 'google-calendar', adapter: 'mcp', status: 'not_configured', capabilities: [] }),
+    ]));
+  });
 });

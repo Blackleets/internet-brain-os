@@ -29,12 +29,24 @@ the MCP gateway and the existing local integrations. Logos are local static
 assets. External entries are read-first and each one has its own scope,
 capabilities, readiness state, and Settings destination.
 
-This is a truthful catalog/read-model foundation, not live account
-authorization. The current local bootstrap has no external MCP gateway
-connector statuses, so these five entries remain `not_configured`; no provider
-is presented as connected. The next implementation slice is one real,
-approval-aware read-only connector (GitHub is the smallest useful candidate)
-before adding write scopes or more providers.
+This is a truthful catalog/read-model foundation, not a broad account
+authorization surface. GitHub now has the first native read-only adapter:
+the local Kernel can verify a server-side credential, authorize a bounded
+read scope against an active Goal, execute repository/issues/pull-request/check
+reads, and retain revocable authorization plus provenance receipts. A fresh
+bootstrap without `HEPHAESTUS_GITHUB_TOKEN` or a local GitHub credential still
+shows GitHub as `not_configured`; Gmail, Google Drive, Notion, and Google
+Calendar remain MCP catalog-only and `not_configured`. No write capability or
+provider is implied by the catalog.
+
+The authenticated local endpoints are deliberately narrow:
+`/api/integrations/github/credentials`,
+`/api/integrations/github/authorizations`, and
+`/api/integrations/github/read`. Credential material never leaves the Kernel;
+reads are GET-only, bounded, Goal-bound, idempotent, and revocable. The next
+slice is to project the first GitHub receipt into the existing Evidence/Goal
+journey and add the same reviewed contract to another provider only after this
+path is exercised with a real user-owned token.
 
 The Goal flow now adds a Kernel-owned `efesto.goal-intelligence.v1` preview
 before confirmation. It routes generic public Goals to Hermes and explicit

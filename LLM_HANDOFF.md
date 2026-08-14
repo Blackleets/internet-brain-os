@@ -699,3 +699,53 @@ Kernel sovereignty, evidence provenance, and human confirmation.
 Inspect the rendered desktop/mobile brief on the preview, then implement one
 genuine read-only GitHub adapter behind the same source/capability/receipt
 contract. Keep the adapter bounded, consented, revocable, and fail-closed.
+
+## Handoff 2026-08-14 - Codex - Governed GitHub read-only adapter
+
+### What changed
+
+- Added a typed `GitHubReadOnlyClient` under `packages/connectors` with a fixed
+  HTTPS GitHub API base, bounded timeout/response/list limits, GET-only
+  repository/issues/pull-request/check reads, input validation, normalized
+  provider data, and safe provider errors.
+- Added the Kernel-owned `GitHubReadOnlyIntegration` with owner-private
+  credential storage, credential verification, active-Goal authorization,
+  `github.read` capabilities, 15-minute authorization expiry, explicit
+  revocation, deterministic idempotent read receipts, source provenance and
+  content hashes.
+- Added authenticated local routes for GitHub credential status/configure/
+  revoke, authorization/revoke, and bounded reads. The integration catalog and
+  Goal Intelligence Brief publish GitHub as `native` only from this verified
+  Kernel status. Gmail, Google Drive, Notion, and Google Calendar remain
+  unchanged MCP catalog entries.
+
+### Files changed
+
+- `apps/local-kernel/github-readonly-contract.mjs`
+- `apps/local-kernel/github-readonly-integration.mjs`
+- `apps/local-kernel/github-readonly-integration.test.mjs`
+- `apps/local-kernel/server.mjs`
+- `apps/local-kernel/server.test.mjs`
+- `apps/local-kernel/integration-catalog.mjs`
+- `apps/local-kernel/integration-catalog.test.mjs`
+- `apps/local-kernel/goal-intelligence.mjs`
+- `packages/connectors/src/github-readonly.ts`
+- `packages/connectors/src/index.ts`
+- `packages/connectors/test/github-readonly.test.ts`
+- `ARCHITECTURE.md`, `DECISIONS.md`, `PROJECT_STATE.md`, `LLM_HANDOFF.md`
+
+### Verification
+
+- Targeted provider, integration, catalog, and Kernel HTTP tests: 42/42 passed.
+- `pnpm architecture:check`: passed.
+- `pnpm typecheck`: passed after the implementation and export wiring.
+- Run the full repository test/build gates before publishing the PR update.
+
+### Boundary / residual risk
+
+No live GitHub credential is available in this workspace, so the real provider
+was verified through the typed client contract and deterministic HTTP fixtures,
+not a live account read. Do not claim live GitHub data until an owner supplies
+a read-scoped token through the local Kernel. The adapter does not yet project
+GitHub receipts into the Evidence/Goal UI; that is the next bounded product
+slice. Do not add write scopes or alter the other four connectors in that step.

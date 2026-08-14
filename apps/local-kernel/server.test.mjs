@@ -19,6 +19,7 @@ import { ModelForge } from './model-forge.mjs';
 import { ModelProviderRegistry } from './model-provider-registry.mjs';
 import { KernelChatService } from './chat-service.mjs';
 import { ChatConversationStore } from './chat-conversation-store.mjs';
+import { GitHubCredentialStore, GitHubReadOnlyIntegration } from './github-readonly-integration.mjs';
 
 let server;
 const apiToken = 'test-token-that-is-at-least-32-characters';
@@ -106,6 +107,92 @@ describe('local Kernel HTTP receiver', () => {
     ]));
     expect(JSON.stringify(body)).not.toContain('providers.json');
     expect(JSON.stringify(body)).not.toContain(apiToken);
+  });
+
+  it('keeps GitHub consent, reads, receipts, and revocation behind the authenticated Kernel boundary', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-github-http-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    const goals = new GoalManager(store);
+    const goal = await goals.create({ title: 'Audit GitHub repository', keywords: ['github', 'repository'] });
+    let readCalls = 0;
+    const github = new GitHubReadOnlyIntegration({
+      store,
+      credentials: new GitHubCredentialStore(join(dir, 'github-credential.json')),
+      reader: {
+        verifyToken: async () => undefined,
+        read: async (input, token) => {
+          readCalls += 1;
+          expect(token).toBe('github-test-token-123');
+          return {
+            schemaVersion: 'efesto.github-readonly.v1',
+            operation: input.operation,
+            resource: { owner: input.owner, repo: input.repo, limit: input.limit ?? 20 },
+            provider: 'github-api',
+            fetchedAt: '2026-08-14T12:00:00.000Z',
+            data: { kind: input.operation, fullName: `${input.owner}/${input.repo}` },
+          };
+        },
+      },
+      now: () => new Date('2026-08-14T12:00:00.000Z'),
+    });
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, {
+      goalManager: goals,
+      githubIntegration: github,
+      mcpGateway: { status: 'ready', connectors: {} },
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const endpoint = `http://127.0.0.1:${server.address().port}`;
+    const dashboardHeaders = { ...authHeaders, origin: 'http://localhost:3000' };
+
+    expect((await fetch(`${endpoint}/api/integrations/github`)).status).toBe(401);
+    const before = await fetch(`${endpoint}/api/integrations/github`, { headers: authHeaders });
+    expect(await before.json()).toMatchObject({ ok: true, id: 'github', adapter: 'native', status: 'not_configured', capabilities: [] });
+
+    const configured = await fetch(`${endpoint}/api/integrations/github/credentials`, {
+      method: 'POST',
+      headers: { ...dashboardHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({ token: 'github-test-token-123' }),
+    });
+    expect(configured.status).toBe(200);
+    expect(JSON.stringify(await configured.json())).not.toContain('github-test-token-123');
+
+    const catalog = await (await fetch(`${endpoint}/api/integrations`, { headers: authHeaders })).json();
+    expect(catalog.integrations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'github', adapter: 'native', status: 'ready', requiresExplicitConsent: true }),
+      expect.objectContaining({ id: 'gmail', adapter: 'mcp', status: 'not_configured' }),
+      expect.objectContaining({ id: 'google-drive', adapter: 'mcp', status: 'not_configured' }),
+      expect.objectContaining({ id: 'notion', adapter: 'mcp', status: 'not_configured' }),
+      expect.objectContaining({ id: 'google-calendar', adapter: 'mcp', status: 'not_configured' }),
+    ]));
+
+    const authorizationResponse = await fetch(`${endpoint}/api/integrations/github/authorizations`, {
+      method: 'POST',
+      headers: { ...dashboardHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({ goalId: goal.id, capabilities: ['github.repository.read'] }),
+    });
+    const authorizationBody = await authorizationResponse.json();
+    expect(authorizationResponse.status).toBe(201);
+    expect(authorizationBody.authorization).toMatchObject({ goalId: goal.id, scope: 'github.read', decision: 'approved' });
+
+    const readResponse = await fetch(`${endpoint}/api/integrations/github/read`, {
+      method: 'POST',
+      headers: { ...authHeaders, 'content-type': 'application/json', 'x-ibos-idempotency-key': 'http-read-1' },
+      body: JSON.stringify({ authorizationId: authorizationBody.authorization.id, operation: 'repository', owner: 'acme', repo: 'repo' }),
+    });
+    const readBody = await readResponse.json();
+    expect(readResponse.status).toBe(200);
+    expect(readBody).toMatchObject({ ok: true, schemaVersion: 'efesto.github-readonly.v1', replayed: false, receipt: { goalId: goal.id, capability: 'github.repository.read' }, result: { fullName: 'acme/repo' } });
+    expect(readCalls).toBe(1);
+
+    const revoked = await fetch(`${endpoint}/api/integrations/github/authorizations/${encodeURIComponent(authorizationBody.authorization.id)}`, { method: 'DELETE', headers: dashboardHeaders });
+    expect(revoked.status).toBe(200);
+    const blocked = await fetch(`${endpoint}/api/integrations/github/read`, {
+      method: 'POST',
+      headers: { ...authHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({ authorizationId: authorizationBody.authorization.id, idempotencyKey: 'http-read-2', operation: 'repository', owner: 'acme', repo: 'repo' }),
+    });
+    expect(blocked.status).toBe(403);
+    expect(await blocked.json()).toMatchObject({ ok: false, code: 'GITHUB_AUTHORIZATION_REVOKED' });
   });
 
   it('serves a non-mutating Kernel-owned Goal intelligence plan with connector readiness', async () => {

@@ -1,3 +1,5 @@
+import { GITHUB_READ_CAPABILITIES, GITHUB_READ_SCOPE } from './github-readonly-contract.mjs';
+
 const SCHEMA_VERSION = 'efesto.integration-catalog.v1';
 
 const STATUS_VALUES = new Set(['ready', 'not_configured', 'degraded', 'unavailable']);
@@ -7,7 +9,7 @@ const STATUS_VALUES = new Set(['ready', 'not_configured', 'degraded', 'unavailab
 // as configured; a ready gateway alone must not imply ready access to every
 // provider.
 export const EXTERNAL_MCP_INTEGRATIONS = Object.freeze([
-  { id: 'github', scopes: ['github.read'], capabilities: ['github.repository.read', 'github.issue.read', 'github.pull_request.read', 'github.checks.read'] },
+  { id: 'github', scopes: [GITHUB_READ_SCOPE], capabilities: [...GITHUB_READ_CAPABILITIES] },
   { id: 'gmail', scopes: ['gmail.read'], capabilities: ['gmail.message.read', 'gmail.thread.read'] },
   { id: 'google-drive', scopes: ['drive.read'], capabilities: ['drive.file.read', 'drive.search'] },
   { id: 'notion', scopes: ['notion.read'], capabilities: ['notion.page.read', 'notion.search'] },
@@ -26,6 +28,7 @@ export function buildIntegrationCatalog({
   obsidianAvailable = false,
   providerCount,
   mcpGateway,
+  githubStatus,
   now = () => new Date().toISOString(),
 } = {}) {
   const kernelStatus = statusFromBootstrap(bootstrap?.kernel, 'ready');
@@ -52,14 +55,29 @@ export function buildIntegrationCatalog({
       integration('browser-extension', 'capture', 'native', extensionStatus, ['capture.public_page'], ['public.read'], 'settings'),
       integration('model-providers', 'model', 'native', modelsStatus, ['chat.generate'], ['model.input'], 'models', { count: providerCount ?? 0 }),
       integration('mcp-gateway', 'transport', 'mcp', mcpStatus, mcpStatus === 'ready' ? ['tools.discover', 'tools.invoke'] : [], ['scoped.tool'], 'settings'),
-      ...buildExternalMcpIntegrations(mcpGateway),
+      ...buildExternalMcpIntegrations(mcpGateway, githubStatus),
     ],
   };
 }
 
-function buildExternalMcpIntegrations(mcpGateway) {
+function buildExternalMcpIntegrations(mcpGateway, githubStatus) {
   const connectors = mcpGateway?.connectors && typeof mcpGateway.connectors === 'object' ? mcpGateway.connectors : {};
   return EXTERNAL_MCP_INTEGRATIONS.map((definition) => {
+    if (definition.id === 'github' && githubStatus && typeof githubStatus === 'object') {
+      return integration(
+        definition.id,
+        'transport',
+        githubStatus.adapter === 'native' ? 'native' : 'mcp',
+        githubStatus.status,
+        Array.isArray(githubStatus.capabilities) ? githubStatus.capabilities : definition.capabilities,
+        Array.isArray(githubStatus.scopes) && githubStatus.scopes.length ? githubStatus.scopes : definition.scopes,
+        'settings',
+        {
+          requiresExplicitConsent: githubStatus.requiresExplicitConsent !== false,
+          managedBy: githubStatus.managedBy ?? null,
+        },
+      );
+    }
     const connector = connectors[definition.id];
     const status = normalizeStatus(connector?.status ?? 'not_configured');
     const capabilities = Array.isArray(connector?.capabilities) ? connector.capabilities : definition.capabilities;
