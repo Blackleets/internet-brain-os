@@ -739,7 +739,13 @@ contract. Keep the adapter bounded, consented, revocable, and fail-closed.
 - Targeted provider, integration, catalog, and Kernel HTTP tests: 42/42 passed.
 - `pnpm architecture:check`: passed.
 - `pnpm typecheck`: passed after the implementation and export wiring.
-- Run the full repository test/build gates before publishing the PR update.
+- Full repository gates: 192 test files / 1,107 tests passed; architecture
+  check, typecheck, and production build passed.
+- Remote PR head: `8b477b70be2e3bb6f689c5c6a5196ecd1d089466`.
+- Vercel preview is `READY` at
+  `https://efesto-git-agent-premium-forge-v-093946-nfyns-projects-b0cc0f41.vercel.app`.
+- Automated preview fetch is SSO-protected and returned HTTP 302; no visual
+  or HTML smoke pass is claimed from that response.
 
 ### Boundary / residual risk
 
