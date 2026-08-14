@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PublicWebSearchClient, parseBingHtml, parseBraveHtml, parseDuckDuckGoHtml, parseDuckDuckGoLiteHtml } from '../src';
+import { PublicWebSearchClient, parseBingHtml, parseBraveHtml, parseDuckDuckGoHtml, parseDuckDuckGoLiteHtml, parseJinaSearchMarkdown } from '../src';
 
 const fixture = `
 <html><body>
@@ -44,7 +44,7 @@ describe('PublicWebSearchClient', () => {
     const failed = new PublicWebSearchClient({ fetchImpl: (async () => new Response('no', { status: 503 })) as typeof fetch });
     await expect(failed.search('drill deals')).rejects.toThrow('HTTP 503');
     const json = new PublicWebSearchClient({ fetchImpl: (async () => new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } })) as typeof fetch });
-    await expect(json.search('drill deals')).rejects.toThrow('non-HTML');
+    await expect(json.search('drill deals')).rejects.toThrow('unsupported response');
   });
 
   it('falls back to Bing when DuckDuckGo returns no parseable results', async () => {
@@ -62,7 +62,7 @@ describe('PublicWebSearchClient', () => {
 
     expect(result.provider).toBe('bing-html');
     expect(result.results).toEqual([expect.objectContaining({ url: 'https://example.com/iphone', sourceHost: 'example.com' })]);
-    expect(requests).toHaveLength(4);
+    expect(requests).toHaveLength(5);
   });
 
   it('rejects unrelated provider pages instead of presenting them as matches', async () => {
@@ -78,6 +78,21 @@ describe('PublicWebSearchClient', () => {
 
     expect(result.provider).toBe('bing-html');
     expect(result.results).toEqual([]);
+  });
+
+  it('uses the public reader fallback when direct search pages are challenged', async () => {
+    const client = new PublicWebSearchClient({
+      fetchImpl: (async (input: URL | RequestInfo) => {
+        const url = String(input);
+        if (url.includes('duckduckgo.com') || url.includes('brave.com')) return new Response('<html><body>challenge</body></html>', { status: 202, headers: { 'content-type': 'text/html' } });
+        if (url.includes('r.jina.ai')) return new Response('## [Used iPhone](https://example.com/iphone)\n\nGood used iPhone listing.', { status: 200, headers: { 'content-type': 'text/plain' } });
+        throw new Error('direct Bing should not be called');
+      }) as typeof fetch,
+    });
+
+    const result = await client.search('used iphone', 3);
+
+    expect(result).toMatchObject({ provider: 'jina-bing', results: [expect.objectContaining({ url: 'https://example.com/iphone' })] });
   });
 });
 
@@ -110,6 +125,14 @@ describe('parseDuckDuckGoLiteHtml', () => {
 describe('parseBraveHtml', () => {
   it('extracts external result cards and adjacent snippets', () => {
     const results = parseBraveHtml(`<a href="https://example.com/iphone"><div class="title search-snippet-title">Used iPhone</div></a><div class="generic-snippet"><div class="content">Good <strong>used</strong> iPhone listing.</div></div>`, 5);
+
+    expect(results).toEqual([expect.objectContaining({ title: 'Used iPhone', url: 'https://example.com/iphone', snippet: 'Good used iPhone listing.' })]);
+  });
+});
+
+describe('parseJinaSearchMarkdown', () => {
+  it('unwraps Bing links from the public reader response', () => {
+    const results = parseJinaSearchMarkdown(`Title: query - Bing\n\n## [Used iPhone](https://example.com/iphone)\n\nGood **used** iPhone listing.`, 5);
 
     expect(results).toEqual([expect.objectContaining({ title: 'Used iPhone', url: 'https://example.com/iphone', snippet: 'Good used iPhone listing.' })]);
   });

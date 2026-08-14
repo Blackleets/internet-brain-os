@@ -131,7 +131,7 @@ function parsePublicSearch(value: unknown, path: string): PublicSearchSnapshot {
   const error = body.error === undefined ? undefined : string(body.error, `${path}.error`);
   return {
     ...body,
-    provider: enumeration(body.provider, `${path}.provider`, ['duckduckgo-html', 'brave-html', 'bing-html', 'unavailable'] as const),
+    provider: enumeration(body.provider, `${path}.provider`, ['duckduckgo-html', 'jina-bing', 'brave-html', 'bing-html', 'unavailable'] as const),
     query: string(body.query, `${path}.query`),
     searchedAt: string(body.searchedAt, `${path}.searchedAt`),
     status: enumeration(body.status, `${path}.status`, ['ready', 'unavailable'] as const),

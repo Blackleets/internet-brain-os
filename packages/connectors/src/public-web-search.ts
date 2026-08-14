@@ -9,7 +9,7 @@ export interface PublicWebSearchResult {
 export interface PublicWebSearchResponse {
   readonly query: string;
   readonly searchedAt: string;
-  readonly provider: 'duckduckgo-html' | 'brave-html' | 'bing-html';
+  readonly provider: 'duckduckgo-html' | 'jina-bing' | 'brave-html' | 'bing-html';
   readonly results: readonly PublicWebSearchResult[];
 }
 
@@ -50,6 +50,15 @@ export class PublicWebSearchClient {
     }
 
     try {
+      const endpoint = new URL(`https://r.jina.ai/http://www.bing.com/search?q=${encodeURIComponent(normalizedQuery)}`);
+      const text = await this.fetchHtml(endpoint, true);
+      const results = filterRelevantResults(normalizedQuery, parseJinaSearchMarkdown(text, limit));
+      if (results.length > 0) return this.response(normalizedQuery, 'jina-bing', results);
+    } catch (error) {
+      lastProviderError = error;
+    }
+
+    try {
       const endpoint = new URL('https://search.brave.com/search');
       endpoint.searchParams.set('q', normalizedQuery);
       endpoint.searchParams.set('source', 'web');
@@ -73,7 +82,7 @@ export class PublicWebSearchClient {
     }
   }
 
-  private async fetchHtml(endpoint: string | URL): Promise<string> {
+  private async fetchHtml(endpoint: string | URL, allowPlainText = false): Promise<string> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 12_000);
     try {
@@ -88,7 +97,8 @@ export class PublicWebSearchClient {
       });
       if (!response.ok) throw new Error(`Public search provider returned HTTP ${response.status}`);
       const contentType = response.headers.get('content-type') ?? '';
-      if (!contentType.toLowerCase().includes('html')) throw new Error('Public search provider returned a non-HTML response');
+      const normalizedContentType = contentType.toLowerCase();
+      if (!normalizedContentType.includes('html') && !(allowPlainText && normalizedContentType.includes('text/plain'))) throw new Error('Public search provider returned an unsupported response');
       return readBoundedText(response, 1024 * 1024);
     } finally {
       clearTimeout(timeout);
@@ -184,6 +194,36 @@ export function parseBraveHtml(html: string, limit = 10): readonly PublicWebSear
       title,
       url: parsed.toString(),
       snippet: cleanText(snippet).slice(0, 500),
+      sourceHost: parsed.hostname.toLowerCase(),
+    });
+  }
+  return results;
+}
+
+export function parseJinaSearchMarkdown(markdown: string, limit = 10): readonly PublicWebSearchResult[] {
+  const headingPattern = /^(?:\d+\.\s+)?##\s+\[([^\]]+)\]\(([^)]+)\)\s*$/gm;
+  const results: PublicWebSearchResult[] = [];
+  const seen = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = headingPattern.exec(markdown)) && results.length < normalizeLimit(limit)) {
+    const target = normalizeBingResultUrl(decodeEntities(match[2] ?? ''));
+    if (!target || seen.has(target)) continue;
+    let parsed: URL;
+    try { parsed = new URL(target); } catch { continue; }
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) continue;
+    const title = cleanMarkdownText(match[1] ?? '');
+    if (!title) continue;
+    const following = markdown.slice(headingPattern.lastIndex, headingPattern.lastIndex + 3000);
+    const snippet = following
+      .split(/\r?\n/)
+      .map((line) => cleanMarkdownText(line))
+      .find((line) => line && !line.startsWith('[') && !line.startsWith('!') && line !== 'Ad' && !line.startsWith('Viewing ads')) ?? '';
+    seen.add(target);
+    results.push({
+      rank: results.length + 1,
+      title,
+      url: parsed.toString(),
+      snippet: snippet.slice(0, 500),
       sourceHost: parsed.hostname.toLowerCase(),
     });
   }
@@ -332,6 +372,10 @@ async function readBoundedText(response: Response, maximumBytes: number): Promis
 
 function cleanText(value: string): string {
   return decodeEntities(value.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+}
+
+function cleanMarkdownText(value: string): string {
+  return cleanText(value.replace(/\*\*/g, '').replace(/`/g, ''));
 }
 
 function decodeEntities(value: string): string {

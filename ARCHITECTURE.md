@@ -145,11 +145,12 @@ not a fabricated source plan.
 
 The hosted web runtime extends this brief with one explicit public-search call
 through `packages/connectors/src/public-web-search.ts`. It uses credential-free
-HTML discovery with a bounded result count and a Bing fallback when the primary
-provider is unavailable. Titles, snippets, domains, and links are displayed as
-unverified public results with provider and failure state visible. The response
-is not persisted, does not fetch private resources, and does not create a Goal,
-mission, Case, Evidence, memory record, or external action. Private/local Goal
+HTML discovery with a bounded result count, DuckDuckGo/Brave fallbacks, and a
+public-reader Bing fallback when direct providers are challenged. Query-relevant
+titles, snippets, domains, and links are displayed as unverified public results
+with provider and failure state visible. The response is not persisted, does
+not fetch private resources, and does not create a Goal, mission, Case, Evidence,
+memory record, or external action. Private/local Goal
 creation still does not browse merely because a Goal exists; discovery remains
 an explicit user action and the Kernel/Hermes path remains authoritative for
 real work.
