@@ -70,6 +70,23 @@ export type GoalIntelligenceSource = KernelUnknownFields & {
   action: IntegrationAction;
 };
 
+export type PublicSearchResult = {
+  rank: number;
+  title: string;
+  url: string;
+  snippet: string;
+  sourceHost: string;
+};
+
+export type PublicSearchSnapshot = {
+  provider: 'duckduckgo-html' | 'bing-html' | 'unavailable';
+  query: string;
+  searchedAt: string;
+  status: 'ready' | 'unavailable';
+  results: readonly PublicSearchResult[];
+  error?: string;
+};
+
 export type GoalIntelligencePlan = KernelUnknownFields & {
   schemaVersion: 'efesto.goal-intelligence.v1';
   authority: 'kernel' | 'web-runtime';
@@ -87,6 +104,7 @@ export type GoalIntelligencePlan = KernelUnknownFields & {
   readiness: 'ready' | 'needs_setup' | 'unavailable';
   nextAction: 'confirm_goal' | 'configure_source';
   limitations: string[];
+  publicSearch?: PublicSearchSnapshot;
 };
 
 export type CaseSummary = KernelUnknownFields & {

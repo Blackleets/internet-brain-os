@@ -536,7 +536,7 @@ function EfestoProductShellContent() {
       try {
         const plan = await loadWebGoalIntelligencePlan(content, keywordsFromGoal(content), controller.signal);
         setChatMessages((current) => current.map((message, index) => index === current.length - 1
-          ? { ...message, content: t('chat.webPreviewResponse', { count: plan.sources.length }) }
+          ? { ...message, content: t('chat.webPreviewResponse', { count: plan.publicSearch?.results.length ?? 0 }) }
           : message));
         setToast(t('toast.webChatPrepared'));
       } catch {

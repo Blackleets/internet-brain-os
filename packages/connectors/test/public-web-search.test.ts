@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PublicWebSearchClient, parseDuckDuckGoHtml } from '../src';
+import { PublicWebSearchClient, parseBingHtml, parseDuckDuckGoHtml } from '../src';
 
 const fixture = `
 <html><body>
@@ -46,6 +46,24 @@ describe('PublicWebSearchClient', () => {
     const json = new PublicWebSearchClient({ fetchImpl: (async () => new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } })) as typeof fetch });
     await expect(json.search('drill deals')).rejects.toThrow('non-HTML');
   });
+
+  it('falls back to Bing when DuckDuckGo returns no parseable results', async () => {
+    const requests: string[] = [];
+    const client = new PublicWebSearchClient({
+      fetchImpl: (async (input: URL | RequestInfo) => {
+        const url = String(input);
+        requests.push(url);
+        if (url.includes('duckduckgo.com')) return new Response('<html><body>challenge</body></html>', { status: 202, headers: { 'content-type': 'text/html' } });
+        return new Response(`<li class="b_algo"><h2><a href="https://www.bing.com/ck/a/?u=a1aHR0cHM6Ly9leGFtcGxlLmNvbS9pcGhvbmU">Used iPhone</a></h2><div class="b_caption"><p>Public listing.</p></div></li>`, { status: 200, headers: { 'content-type': 'text/html' } });
+      }) as typeof fetch,
+    });
+
+    const result = await client.search('used iphone', 3);
+
+    expect(result.provider).toBe('bing-html');
+    expect(result.results).toEqual([expect.objectContaining({ url: 'https://example.com/iphone', sourceHost: 'example.com' })]);
+    expect(requests).toHaveLength(2);
+  });
 });
 
 describe('parseDuckDuckGoHtml', () => {
@@ -55,5 +73,13 @@ describe('parseDuckDuckGoHtml', () => {
       <a class="result__a" href="javascript:alert(1)">Unsafe</a><div class="result__snippet">unsafe</div>`;
     const results = parseDuckDuckGoHtml(html, 10);
     expect(results.map((item) => item.url)).toEqual(['https://example.com/drill', 'https://shop.example.org/item']);
+  });
+});
+
+describe('parseBingHtml', () => {
+  it('extracts bounded result cards and rejects provider tracking URLs', () => {
+    const results = parseBingHtml(`<li class="b_algo"><h2><a href="https://example.com/one">One</a></h2><div class="b_caption"><p>First result.</p></div></li><li class="b_algo"><h2><a href="https://www.bing.com/ck/a?u=a1aHR0cHM6Ly9leGFtcGxlLmNvbS90d28">Two</a></h2><div class="b_caption"><p>Second result.</p></div></li>`, 2);
+
+    expect(results.map((result) => result.url)).toEqual(['https://example.com/one', 'https://example.com/two']);
   });
 });

@@ -79,8 +79,8 @@ test('opens the zero-setup web path and keeps planning separate from execution',
 
   await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Auditar fuentes públicas');
   await page.getByRole('button', { name: 'Preparar Goal', exact: true }).click();
-  await expect(page.getByText('Ruta preparada en la web', { exact: true })).toBeVisible();
-  await expect(page.getByText('Vista previa web · sin credenciales, escritura ni ejecución.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Resultados encontrados en la web', { exact: true })).toBeVisible();
+  await expect(page.getByText('Resultados públicos no verificados · sin credenciales, escritura ni ejecución.', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Conectar modo privado para ejecutar', exact: true })).toBeDisabled();
   expect(writes).toEqual(['/api/efesto/plan']);
 

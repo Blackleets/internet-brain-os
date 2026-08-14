@@ -6,7 +6,7 @@ import {
   History, Menu, MessageSquare, Pause, Plug, RefreshCw, Search, Send, Settings, ShieldCheck, Sparkles, Target, Workflow, X,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import type { CaseSummary, GoalIntelligencePlan, IntegrationAction, IntegrationCatalog, IntegrationSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
+import type { CaseSummary, GoalIntelligencePlan, IntegrationAction, IntegrationCatalog, IntegrationSummary, MissionSummary, ModelForgeSummary, OpportunitySummary, PublicSearchSnapshot } from '../lib/kernel/contracts';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
 import { EFESTO_LOCALES, useEfestoLocale, type EfestoLocale } from '../lib/efesto-i18n';
 
@@ -171,7 +171,7 @@ function GoalIntelligenceBrief({ plan, pending, webMode, connected, goalPending,
     <header>
       <span className="forge-intelligence-icon"><Sparkles /></span>
       <div><small>{t('home.intelligenceEyebrow')}</small><strong>{webPreview ? t('home.webIntelligenceTitle') : t('home.intelligenceTitle')}</strong></div>
-      <StatePill state={webPreview ? 'unavailable' : readinessState} />
+      <StatePill state={webPreview ? plan.publicSearch?.status ?? 'unavailable' : readinessState} />
     </header>
     <div className="forge-intelligence-intent"><small>{t('home.intentEyebrow')}</small><strong>{t('home.intentDetected', { category: primaryCategory })}</strong><span>{plan.intent.mode === 'connector_research' ? t('home.intentConnector') : t('home.intentPublic')}</span></div>
     <div className="forge-intelligence-sources">
@@ -184,7 +184,28 @@ function GoalIntelligenceBrief({ plan, pending, webMode, connected, goalPending,
       </article>)}
     </div>
     {githubSource?.status === 'ready' ? <GitHubEvidenceAction pending={goalPending} onSubmit={onRunGitHubEvidence} /> : null}
+    {plan.publicSearch ? <PublicSearchResults search={plan.publicSearch} /> : null}
     <footer><ShieldCheck /> <span>{webPreview ? t('home.webSourcePlanLimited') : plan.readiness === 'ready' ? t('home.sourcePlanReady') : t('home.sourcePlanLimited')}</span></footer>
+  </section>;
+}
+
+function PublicSearchResults({ search }: { search: PublicSearchSnapshot }) {
+  const { t } = useEfestoLocale();
+  const providerLabel = search.provider === 'bing-html' ? 'Bing' : search.provider === 'duckduckgo-html' ? 'DuckDuckGo' : t('status.unavailable');
+  return <section className={`forge-public-search status-${search.status}`} aria-label={t('home.webSearchAria')}>
+    <header>
+      <span className="forge-public-search-mark"><Search /></span>
+      <div><small>{t('home.webSearchEyebrow')}</small><strong>{t('home.webSearchTitle', { count: search.results.length })}</strong><span>{providerLabel} · {search.query}</span></div>
+      <span className="forge-public-search-provider">{search.status === 'ready' ? t('home.webSearchLive') : t('status.unavailable')}</span>
+    </header>
+    {search.status === 'unavailable' ? <p className="forge-public-search-empty">{t('home.webSearchUnavailable')}</p> : search.results.length === 0 ? <p className="forge-public-search-empty">{t('home.webSearchEmpty')}</p> : <div className="forge-public-search-results">
+      {search.results.map((result) => <a key={`${result.rank}-${result.url}`} href={result.url} target="_blank" rel="noreferrer" className="forge-public-search-result">
+        <span className="forge-public-search-rank">{result.rank}</span>
+        <span><strong>{result.title}</strong><small>{result.sourceHost}</small><p>{result.snippet || t('home.webSearchNoSnippet')}</p></span>
+        <ExternalLink />
+      </a>)}
+    </div>}
+    <footer><ShieldCheck /> <span>{t('home.webSearchDisclaimer')}</span></footer>
   </section>;
 }
 
@@ -584,6 +605,7 @@ function integrationIcon(id: string) {
   if (id === 'obsidian') return BrainCircuit;
   if (id === 'browser-extension') return ExternalLink;
   if (id === 'model-providers') return BrainCircuit;
+  if (id === 'public-web') return Search;
   return Workflow;
 }
 

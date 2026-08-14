@@ -1,4 +1,4 @@
-import { buildWebGoalPlan, WebPlanInputError } from '../../../../lib/web-runtime/goal-plan';
+import { prepareWebGoalPlan, WebPlanInputError, type WebSearchClient } from '../../../../lib/web-runtime/goal-plan';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -6,12 +6,16 @@ export const dynamic = 'force-dynamic';
 const MAX_BODY_BYTES = 8 * 1024;
 
 export async function POST(request: Request) {
+  return postGoalPlan(request);
+}
+
+export async function postGoalPlan(request: Request, searcher?: WebSearchClient) {
   try {
     const rawBody = await request.text();
     if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) return json({ ok: false, error: 'request_too_large' }, 413);
     const body = JSON.parse(rawBody) as unknown;
     if (!body || typeof body !== 'object' || Array.isArray(body)) return json({ ok: false, error: 'invalid_request' }, 400);
-    const plan = buildWebGoalPlan(body as { title?: unknown; keywords?: unknown });
+    const plan = await prepareWebGoalPlan(body as { title?: unknown; keywords?: unknown }, searcher);
     return json({ ok: true, ...plan });
   } catch (error) {
     if (error instanceof WebPlanInputError || error instanceof SyntaxError) return json({ ok: false, error: 'invalid_request' }, 400);

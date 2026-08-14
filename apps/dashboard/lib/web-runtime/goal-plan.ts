@@ -1,4 +1,5 @@
-import type { GoalIntelligencePlan, IntegrationAdapter, IntegrationAction } from '../kernel/contracts';
+import { PublicWebSearchClient, type PublicWebSearchResponse } from '../../../../packages/connectors/src/public-web-search';
+import type { GoalIntelligencePlan, IntegrationAdapter, IntegrationAction, PublicSearchSnapshot } from '../kernel/contracts';
 
 type WebGoalPlanInput = {
   title?: unknown;
@@ -18,13 +19,13 @@ type WebSourceDefinition = {
 
 const WEB_SOURCE_DEFINITIONS: WebSourceDefinition[] = [
   {
-    id: 'hermes',
+    id: 'public-web',
     adapter: 'native',
     reason: 'public_research',
     pattern: null,
     scopes: ['public.read'],
-    requiredCapabilities: ['mission.execute', 'public.read'],
-    action: 'agents',
+    requiredCapabilities: ['web.search', 'public.read'],
+    action: null,
   },
   {
     id: 'github',
@@ -117,6 +118,43 @@ export function buildWebGoalPlan({ title, keywords, now = () => new Date().toISO
     readiness: 'needs_setup',
     nextAction: 'configure_source',
     limitations: ['preview_only', 'kernel_required_for_execution', 'read_only_sources'],
+  };
+}
+
+export type WebSearchClient = Pick<PublicWebSearchClient, 'search'>;
+
+/**
+ * Runs one bounded, read-only public search for an explicit hosted-web order.
+ * The result is unverified preview data: it is not Evidence, is not persisted,
+ * and does not grant the web shell authority to execute anything.
+ */
+export async function prepareWebGoalPlan(input: WebGoalPlanInput, searcher: WebSearchClient = new PublicWebSearchClient()): Promise<GoalIntelligencePlan> {
+  const basePlan = buildWebGoalPlan(input);
+  try {
+    const search = await searcher.search(basePlan.goal.title, 6);
+    return withSearchSnapshot(basePlan, search, 'ready');
+  } catch {
+    return withSearchSnapshot(basePlan, {
+      query: basePlan.goal.title,
+      searchedAt: new Date().toISOString(),
+      provider: 'unavailable',
+      results: [],
+    }, 'unavailable');
+  }
+}
+
+function withSearchSnapshot(plan: GoalIntelligencePlan, response: PublicWebSearchResponse | Omit<PublicSearchSnapshot, 'status'>, status: PublicSearchSnapshot['status']): GoalIntelligencePlan {
+  const publicSearch: PublicSearchSnapshot = { ...response, status };
+  const publicSourceStatus = status === 'ready' ? 'ready' : 'unavailable';
+  return {
+    ...plan,
+    sources: plan.sources.map((source) => source.id === 'public-web'
+      ? { ...source, status: publicSourceStatus, activeCapabilities: status === 'ready' ? ['web.search', 'public.read'] : [] }
+      : source),
+    readiness: status === 'ready' ? 'ready' : 'unavailable',
+    nextAction: 'confirm_goal',
+    limitations: status === 'ready' ? plan.limitations : [...plan.limitations, 'public_search_unavailable'],
+    publicSearch,
   };
 }
 

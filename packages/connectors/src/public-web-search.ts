@@ -9,7 +9,7 @@ export interface PublicWebSearchResult {
 export interface PublicWebSearchResponse {
   readonly query: string;
   readonly searchedAt: string;
-  readonly provider: 'duckduckgo-html';
+  readonly provider: 'duckduckgo-html' | 'bing-html';
   readonly results: readonly PublicWebSearchResult[];
 }
 
@@ -18,6 +18,8 @@ export interface PublicWebSearchOptions {
   readonly maxResults?: number;
   readonly fetchImpl?: typeof fetch;
   readonly now?: () => Date;
+  readonly market?: string;
+  readonly language?: string;
 }
 
 /**
@@ -30,11 +32,34 @@ export class PublicWebSearchClient {
   async search(query: string, requestedLimit?: number): Promise<PublicWebSearchResponse> {
     const normalizedQuery = normalizeQuery(query);
     const limit = normalizeLimit(requestedLimit ?? this.options.maxResults ?? 10);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 12_000);
+    let duckDuckGoError: unknown;
     try {
       const endpoint = new URL('https://html.duckduckgo.com/html/');
       endpoint.searchParams.set('q', normalizedQuery);
+      const html = await this.fetchHtml(endpoint);
+      const results = parseDuckDuckGoHtml(html, limit);
+      if (results.length > 0) return this.response(normalizedQuery, 'duckduckgo-html', results);
+    } catch (error) {
+      duckDuckGoError = error;
+    }
+
+    try {
+      const endpoint = new URL('https://www.bing.com/search');
+      endpoint.searchParams.set('q', normalizedQuery);
+      endpoint.searchParams.set('count', String(limit));
+      endpoint.searchParams.set('cc', this.options.market ?? 'es');
+      endpoint.searchParams.set('setlang', this.options.language ?? 'es');
+      const html = await this.fetchHtml(endpoint);
+      return this.response(normalizedQuery, 'bing-html', parseBingHtml(html, limit));
+    } catch (error) {
+      throw error ?? duckDuckGoError ?? new Error('Public search provider unavailable');
+    }
+  }
+
+  private async fetchHtml(endpoint: string | URL): Promise<string> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 12_000);
+    try {
       const response = await (this.options.fetchImpl ?? fetch)(endpoint, {
         method: 'GET',
         redirect: 'error',
@@ -47,16 +72,19 @@ export class PublicWebSearchClient {
       if (!response.ok) throw new Error(`Public search provider returned HTTP ${response.status}`);
       const contentType = response.headers.get('content-type') ?? '';
       if (!contentType.toLowerCase().includes('html')) throw new Error('Public search provider returned a non-HTML response');
-      const html = await readBoundedText(response, 1024 * 1024);
-      return {
-        query: normalizedQuery,
-        searchedAt: (this.options.now ?? (() => new Date()))().toISOString(),
-        provider: 'duckduckgo-html',
-        results: parseDuckDuckGoHtml(html, limit),
-      };
+      return readBoundedText(response, 1024 * 1024);
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  private response(query: string, provider: PublicWebSearchResponse['provider'], results: readonly PublicWebSearchResult[]): PublicWebSearchResponse {
+    return {
+      query,
+      searchedAt: (this.options.now ?? (() => new Date()))().toISOString(),
+      provider,
+      results,
+    };
   }
 }
 
@@ -85,6 +113,35 @@ export function parseDuckDuckGoHtml(html: string, limit = 10): readonly PublicWe
   return results;
 }
 
+export function parseBingHtml(html: string, limit = 10): readonly PublicWebSearchResult[] {
+  const resultPattern = /<li[^>]+class=["'][^"']*\bb_algo\b[^"']*["'][^>]*>([\s\S]*?)<\/li>/gi;
+  const results: PublicWebSearchResult[] = [];
+  const seen = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = resultPattern.exec(html)) && results.length < normalizeLimit(limit)) {
+    const block = match[1] ?? '';
+    const link = /<h2[^>]*>\s*<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i.exec(block);
+    if (!link) continue;
+    const target = normalizeBingResultUrl(decodeEntities(link[1] ?? ''));
+    if (!target || seen.has(target)) continue;
+    let parsed: URL;
+    try { parsed = new URL(target); } catch { continue; }
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) continue;
+    const title = cleanText(link[2] ?? '');
+    if (!title) continue;
+    const snippetMatch = /<div[^>]+class=["'][^"']*\bb_caption\b[^"']*["'][^>]*>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/i.exec(block);
+    seen.add(target);
+    results.push({
+      rank: results.length + 1,
+      title,
+      url: parsed.toString(),
+      snippet: cleanText(snippetMatch?.[1] ?? '').slice(0, 500),
+      sourceHost: parsed.hostname.toLowerCase(),
+    });
+  }
+  return results;
+}
+
 function normalizeResultUrl(raw: string): string | undefined {
   const value = raw.trim();
   if (!value) return undefined;
@@ -96,6 +153,34 @@ function normalizeResultUrl(raw: string): string | undefined {
       return unwrapped ? decodeURIComponent(unwrapped) : undefined;
     }
     return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeBingResultUrl(raw: string): string | undefined {
+  const value = raw.trim();
+  if (!value) return undefined;
+  try {
+    const parsed = new URL(value, 'https://www.bing.com');
+    if (parsed.hostname.endsWith('bing.com') && parsed.pathname.startsWith('/ck/')) {
+      const encoded = parsed.searchParams.get('u');
+      const decoded = encoded ? decodeBingRedirect(encoded) : undefined;
+      return decoded ? normalizeResultUrl(decoded) : undefined;
+    }
+    if (parsed.hostname.endsWith('bing.com')) return undefined;
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function decodeBingRedirect(value: string): string | undefined {
+  const encoded = value.startsWith('a1') ? value.slice(2) : value;
+  const normalized = encoded.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+  try {
+    return Buffer.from(padded, 'base64').toString('utf8');
   } catch {
     return undefined;
   }
@@ -150,5 +235,7 @@ function decodeEntities(value: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&#x27;/gi, "'");
+    .replace(/&#x27;/gi, "'")
+    .replace(/&#(\d+);/g, (_match, code: string) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([\da-f]+);/gi, (_match, code: string) => String.fromCodePoint(Number.parseInt(code, 16)));
 }

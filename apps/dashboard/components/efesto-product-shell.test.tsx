@@ -43,10 +43,11 @@ function responseFor(path: string, method: string): Response {
   if (method === 'POST' && path === '/api/efesto/plan') {
     const plan = JSON.parse(JSON.stringify(base['/api/goals/plan'])) as Record<string, unknown> & { sources: Array<Record<string, unknown>> };
     plan.authority = 'web-runtime';
-    plan.readiness = 'needs_setup';
-    plan.nextAction = 'configure_source';
+    plan.readiness = 'ready';
+    plan.nextAction = 'confirm_goal';
     plan.limitations = ['preview_only', 'kernel_required_for_execution', 'read_only_sources'];
-    plan.sources = plan.sources.map((source) => ({ ...source, status: 'not_configured', activeCapabilities: [] }));
+    plan.sources = [{ id: 'public-web', adapter: 'native', selected: true, required: true, reason: 'public_research', status: 'ready', scopes: ['public.read'], requiredCapabilities: ['web.search', 'public.read'], activeCapabilities: ['web.search', 'public.read'], action: null }];
+    plan.publicSearch = { provider: 'bing-html', query: 'Audita un repositorio de GitHub', searchedAt: '2026-08-15T10:00:00.000Z', status: 'ready', results: [{ rank: 1, title: 'Resultado público de prueba', url: 'https://example.com/result', snippet: 'Fuente pública devuelta por el proveedor.', sourceHost: 'example.com' }] };
     return Response.json({ ok: true, ...plan });
   }
   if (method === 'POST' && path === '/api/goals') return Response.json({ ok: true, goal: { id: 'goal-created' } });
@@ -146,8 +147,9 @@ describe('Efesto conversation-first product shell', () => {
 
     fireEvent.change(screen.getByLabelText('Goal'), { target: { value: 'Audita un repositorio de GitHub' } });
     fireEvent.click(screen.getByRole('button', { name: 'Preparar Goal' }));
-    await waitFor(() => expect(screen.getByText('Ruta preparada en la web')).toBeTruthy());
-    expect(screen.getByText('Vista previa web · sin credenciales, escritura ni ejecución.')).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('Resultados encontrados en la web')).toBeTruthy());
+    expect(screen.getByText('Resultados públicos no verificados · sin credenciales, escritura ni ejecución.')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Resultado público de prueba/ })).toHaveProperty('href', 'https://example.com/result');
     expect(screen.getByRole('button', { name: 'Conectar modo privado para ejecutar' })).toHaveProperty('disabled', true);
     expect(requests.filter((request) => request.method === 'POST').map((request) => new URL(request.url).pathname)).toEqual(['/api/efesto/plan']);
   });

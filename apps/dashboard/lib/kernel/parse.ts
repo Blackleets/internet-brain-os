@@ -10,6 +10,7 @@ import type {
   MissionSummary,
   ModelForgeSummary,
   OpportunitySummary,
+  PublicSearchSnapshot,
 } from './contracts';
 
 export class KernelContractError extends Error {
@@ -91,6 +92,7 @@ export function parseGoalIntelligencePlan(value: unknown): GoalIntelligencePlan 
   const body = envelope(value, 'goalIntelligence');
   const goal = record(body.goal, 'goalIntelligence.goal');
   const intent = record(body.intent, 'goalIntelligence.intent');
+  const publicSearch = body.publicSearch === undefined ? undefined : parsePublicSearch(body.publicSearch, 'goalIntelligence.publicSearch');
   return {
     ...body,
     schemaVersion: literal(body.schemaVersion, 'goalIntelligence.schemaVersion', 'efesto.goal-intelligence.v1'),
@@ -109,6 +111,32 @@ export function parseGoalIntelligencePlan(value: unknown): GoalIntelligencePlan 
     readiness: enumeration(body.readiness, 'goalIntelligence.readiness', GOAL_INTELLIGENCE_READINESS),
     nextAction: enumeration(body.nextAction, 'goalIntelligence.nextAction', GOAL_INTELLIGENCE_ACTIONS),
     limitations: array(body.limitations, 'goalIntelligence.limitations').map((item, index) => string(item, `goalIntelligence.limitations[${index}]`)),
+    ...(publicSearch ? { publicSearch } : {}),
+  };
+}
+
+function parsePublicSearch(value: unknown, path: string): PublicSearchSnapshot {
+  const body = record(value, path);
+  const results = array(body.results, `${path}.results`).map((item, index) => {
+    const result = record(item, `${path}.results[${index}]`);
+    return {
+      ...result,
+      rank: integer(result.rank, `${path}.results[${index}].rank`),
+      title: string(result.title, `${path}.results[${index}].title`),
+      url: string(result.url, `${path}.results[${index}].url`),
+      snippet: string(result.snippet, `${path}.results[${index}].snippet`),
+      sourceHost: string(result.sourceHost, `${path}.results[${index}].sourceHost`),
+    };
+  });
+  const error = body.error === undefined ? undefined : string(body.error, `${path}.error`);
+  return {
+    ...body,
+    provider: enumeration(body.provider, `${path}.provider`, ['duckduckgo-html', 'bing-html', 'unavailable'] as const),
+    query: string(body.query, `${path}.query`),
+    searchedAt: string(body.searchedAt, `${path}.searchedAt`),
+    status: enumeration(body.status, `${path}.status`, ['ready', 'unavailable'] as const),
+    results,
+    ...(error === undefined ? {} : { error }),
   };
 }
 

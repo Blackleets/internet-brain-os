@@ -56,12 +56,16 @@ The local Kernel remains the privacy boundary and projects accepted Evidence int
 
 ## Control Center Dashboard
 
-`apps/dashboard` is a presentation-only authenticated client for the existing
-loopback Kernel. It runs locally at `http://127.0.0.1:3000` and only connects to
-the local Kernel API with the operator-provided `x-hephaestus-token`; it has no
-cloud proxy, analytics transport, duplicate store, or authority to write around
-Kernel contracts. The token remains in the browser tab's memory by default and
-is never embedded in URLs or build output.
+`apps/dashboard` has two explicit runtime boundaries. Its private/local mode is
+a presentation-only authenticated client for the existing loopback Kernel and
+runs locally at `http://127.0.0.1:3000`; it connects to the local Kernel API with
+the operator-provided `x-hephaestus-token`, has no analytics transport, duplicate
+store, or authority to write around Kernel contracts, and keeps the token in the
+browser tab's memory by default. Its hosted `?runtime=web` mode is a bounded,
+read-only onboarding surface: an explicit submitted Goal may query the public
+web through the native connector, but the result is unverified preview data,
+never Evidence or memory, and the hosted surface cannot save, authorize, or
+execute anything. The token is never embedded in URLs or build output.
 
 The dashboard exposes the connection flow, truthful Overview, persisted Cases
 and Goals, Hermes mission state, Opportunity Inbox, existing bounded automation
@@ -138,6 +142,17 @@ catalog. The dashboard renders this as an Intelligence Brief inside the
 proposed plan; it never treats the brief as authorization or Evidence. A
 missing preview route from an older Kernel becomes an explicit limited state,
 not a fabricated source plan.
+
+The hosted web runtime extends this brief with one explicit public-search call
+through `packages/connectors/src/public-web-search.ts`. It uses credential-free
+HTML discovery with a bounded result count and a Bing fallback when the primary
+provider is unavailable. Titles, snippets, domains, and links are displayed as
+unverified public results with provider and failure state visible. The response
+is not persisted, does not fetch private resources, and does not create a Goal,
+mission, Case, Evidence, memory record, or external action. Private/local Goal
+creation still does not browse merely because a Goal exists; discovery remains
+an explicit user action and the Kernel/Hermes path remains authoritative for
+real work.
 
 Accepted public-page Evidence passes through an extensible deterministic Opportunity classifier in the local Kernel. It promotes only sufficiently strong, explainable signals across work, grants, clients, savings, food, public aid, learning, events, housing, travel, collaboration, rewards, and useful tools. A promoted record retains its Case and Evidence identifiers, canonical public source, category, concrete benefit type, bounded relevance score, matching signals, raw deadline text when present, and a cautious next action. Ordinary captures remain Evidence and do not pollute the Opportunity Inbox. The authenticated local Inbox is rendered by the extension and synchronized as separate Opportunity notes into the user's vault. This classifier is a lead filter, not a verification, financial-advice, or recommendation engine; Hermes investigation and human review remain separate stages.
 
