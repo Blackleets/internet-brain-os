@@ -1244,7 +1244,7 @@
 
 .forge-model-button:focus-visible,
 .forge-model-popover button:focus-visible {
-  outline: 2px solid #9a5d36;
+  outline: 2px solid var(--forge-focus);
   outline-offset: 2px;
 }
 
@@ -2484,8 +2484,8 @@
 }
 
 .language-preferences select:focus-visible {
-  border-color: #8b5b3e;
-  box-shadow: 0 0 0 3px rgb(233 130 69 / 8%);
+  border-color: var(--forge-focus);
+  box-shadow: 0 0 0 3px var(--forge-focus-ring);
 }
 
 .language-preferences > p {
@@ -2544,7 +2544,7 @@
 
 .forge-quick-prompt:focus-visible,
 .forge-suggestion-next:focus-visible {
-  outline: 2px solid #c17a51;
+  outline: 2px solid var(--forge-focus);
   outline-offset: 2px;
 }
 

@@ -1,14 +1,14 @@
 # Efesto composer premium pass — Design QA
 
 source visual truth path: `/workspace/scratch/b089e0142119/upload/01-1000034867.jpg` (707 × 1439 Android screenshot; empty composer with keyboard open)
-implementation screenshot path: `/workspace/scratch/b089e0142119/efesto-composer-premium-preview.png` (focused composer crop from the live Vercel preview)
+implementation screenshot path: `/workspace/scratch/b089e0142119/efesto-composer-neutral-focus.png` (focused composer crop from the live Vercel preview)
 implementation preview: `https://efesto-nd1nkd9ah-nfyns-projects-b0cc0f41.vercel.app/`
 viewport: 1363 × 936 CSS px for the live preview; focused crop is 900 × 236 px
 state: empty Chat, disconnected Kernel, no configured model, one visible starter suggestion
 
 ## Composer comparison
 
-The reference showed two heavy fixed suggestion cards and an oversized orange textarea focus frame. The implementation now uses one calm suggestion rail above a compact composer, keeps the text field as the visual anchor, and uses a restrained copper focus ring that remains visible without dominating the surface.
+The reference showed two heavy fixed suggestion cards and an oversized orange textarea focus frame. The implementation now uses one calm suggestion rail above a compact composer, keeps the text field as the visual anchor, and uses a restrained graphite focus ring that remains visible without dominating the surface.
 
 The starter prompt is selected per surface entry, rotates automatically every 9 seconds when motion is allowed, and can be changed manually. Suggestions disappear as soon as the user starts typing and return when the field is cleared. The behavior is presentation-only: selecting a prompt fills the draft and does not execute a Goal or mutate Kernel state.
 
