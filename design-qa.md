@@ -24,7 +24,7 @@ No actionable P0, P1 or P2 visual differences remain for the focused composer su
 - Browser console contained no application-origin errors; observed extension metadata and Google One Tap messages were third-party noise.
 - Dashboard unit tests: 18 files, 125 tests passed.
 - Dashboard typecheck and production build passed.
-- GitHub package validation passed; the follow-up CI browser check is being refreshed after preserving visible focus styling.
+- GitHub `CI #808` and `Internal Test Package #304` passed after preserving visible focus styling.
 
 final result: passed
 
