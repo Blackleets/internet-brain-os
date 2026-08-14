@@ -16,6 +16,8 @@
   --forge-accent: #e98245;
   --forge-accent-hover: #f09a66;
   --forge-accent-soft: #26170f;
+  --forge-focus: #7f8a98;
+  --forge-focus-ring: rgb(148 163 184 / 18%);
   --forge-green: #8eb77a;
   --forge-red: #e27a72;
   --forge-sidebar: 236px;
@@ -51,7 +53,7 @@
 .efesto-product input:focus-visible,
 .efesto-product select:focus-visible,
 .efesto-product a:focus-visible {
-  outline: 2px solid #f0a578;
+  outline: 2px solid var(--forge-focus);
   outline-offset: 2px;
 }
 
@@ -2375,8 +2377,8 @@
 }
 
 .forge-composer:focus-within {
-  border-color: #8b5b3e;
-  box-shadow: 0 0 0 3px rgb(233 130 69 / 8%), 0 18px 50px rgb(0 0 0 / 38%), inset 0 1px 0 rgb(255 255 255 / 4%);
+  border-color: #5c646e;
+  box-shadow: 0 0 0 3px var(--forge-focus-ring), 0 18px 50px rgb(0 0 0 / 38%), inset 0 1px 0 rgb(255 255 255 / 4%);
 }
 
 .forge-model-popover {
@@ -2634,8 +2636,8 @@
 }
 
 .forge-composer:focus-within {
-  border-color: #4b4644;
-  box-shadow: 0 0 0 3px rgb(233 130 69 / 5%), 0 15px 42px rgb(0 0 0 / 34%), inset 0 1px 0 rgb(255 255 255 / 4%);
+  border-color: #5c646e;
+  box-shadow: 0 0 0 3px var(--forge-focus-ring), 0 15px 42px rgb(0 0 0 / 34%), inset 0 1px 0 rgb(255 255 255 / 4%);
 }
 
 .forge-composer textarea {
@@ -2647,8 +2649,8 @@
 }
 
 .forge-composer textarea:focus-visible {
-  outline: 1px solid rgb(193 122 81 / 72%);
-  outline-offset: 3px;
+  outline: 0;
+  outline-offset: 0;
 }
 
 .forge-composer > footer {

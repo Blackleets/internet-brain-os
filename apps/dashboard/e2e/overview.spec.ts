@@ -140,7 +140,8 @@ test('supports keyboard Goal preparation with visible focus and reduced motion',
   const goal = page.getByRole('textbox', { name: 'Goal', exact: true });
   await goal.focus();
   await expect(goal).toBeFocused();
-  expect(await goal.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none');
+  expect(await goal.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('none');
+  expect(await page.locator('.forge-composer').evaluate((element) => getComputedStyle(element).boxShadow)).not.toBe('none');
   await goal.fill('Busca una oportunidad pública y verificable');
   await goal.press('Enter');
   await expect(page.getByText('PLAN PROPUESTO · AÚN NO EJECUTADO', { exact: true })).toBeVisible();
