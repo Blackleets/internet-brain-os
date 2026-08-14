@@ -1,27 +1,38 @@
-/* Efesto workspace — one calm, full-height AI surface.
-   This file intentionally replaces the previous stack of redesign overrides. */
+/* Efesto AI workspace
+   Geometry follows the official vercel/chatbot shell:
+   collapsible navigation, one scroll surface, and a bottom-owned composer. */
 
 :root {
-  --forge-bg: #0a0a0b;
-  --forge-panel: #111112;
-  --forge-panel-raised: #161617;
-  --forge-line: #252527;
-  --forge-line-strong: #343437;
-  --forge-text: #f4f1ec;
-  --forge-muted: #9b9894;
-  --forge-dim: #6d6b69;
-  --forge-accent: #ee8647;
-  --forge-accent-soft: #2a1a12;
+  --forge-bg: #0b0b0c;
+  --forge-sidebar-bg: #101011;
+  --forge-surface: #0c0c0d;
+  --forge-panel: #151516;
+  --forge-panel-raised: #1a1a1c;
+  --forge-line: #262628;
+  --forge-line-strong: #39393c;
+  --forge-text: #f2efea;
+  --forge-muted: #a09c97;
+  --forge-dim: #6f6c69;
+  --forge-accent: #e98245;
+  --forge-accent-hover: #f09a66;
+  --forge-accent-soft: #26170f;
   --forge-green: #8eb77a;
   --forge-red: #e27a72;
-  --forge-sidebar: 248px;
-  --forge-content: 780px;
+  --forge-sidebar: 236px;
+  --forge-sidebar-collapsed: 64px;
+  --forge-content: 768px;
+  --forge-radius: 12px;
 }
 
 .efesto-product {
   grid-template-columns: var(--forge-sidebar) minmax(0, 1fr);
   color: var(--forge-text);
   background: var(--forge-bg);
+  transition: grid-template-columns .24s cubic-bezier(.32, .72, 0, 1);
+}
+
+.efesto-product.sidebar-collapsed {
+  grid-template-columns: var(--forge-sidebar-collapsed) minmax(0, 1fr);
 }
 
 .efesto-product button,
@@ -40,104 +51,167 @@
 .efesto-product input:focus-visible,
 .efesto-product select:focus-visible,
 .efesto-product a:focus-visible {
-  outline: 2px solid #f1a476;
+  outline: 2px solid #f0a578;
   outline-offset: 2px;
 }
 
-/* Product shell */
+/* Sidebar */
 .efesto-sidebar {
-  padding: 14px 12px 12px;
-  border-right: 1px solid var(--forge-line);
-  background: #0d0d0e;
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 10px 8px 9px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-right: 1px solid #202022;
+  background: var(--forge-sidebar-bg);
   scrollbar-width: thin;
   scrollbar-color: #343437 transparent;
+  transition: padding .24s cubic-bezier(.32, .72, 0, 1);
 }
 
 .efesto-brand {
-  margin-bottom: 12px;
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 8px;
 }
 
 .efesto-brand > button:first-child {
-  gap: 11px;
-  padding: 7px 8px;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 7px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.efesto-brand > button:first-child:hover {
+  background: #19191a;
 }
 
 .brand-mark {
-  width: 36px;
-  height: 36px;
-  flex-basis: 36px;
-  border-color: #54311e;
-  border-radius: 10px;
-  background: #1f140e;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #51301e;
+  border-radius: 9px;
+  background: #21150f;
   box-shadow: none;
 }
 
 .brand-mark img {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
+}
+
+.efesto-brand strong,
+.efesto-brand small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .efesto-brand strong {
-  color: #faf6f0;
-  font-size: 13px;
+  color: #f4f0eb;
+  font-size: 12px;
   font-weight: 720;
-  letter-spacing: .14em;
+  letter-spacing: .13em;
 }
 
 .efesto-brand small {
-  margin-top: 3px;
+  margin-top: 2px;
   color: #77736f;
-  font-size: 10px;
+  font-size: 9px;
+}
+
+.mobile-close {
+  display: none;
 }
 
 .new-goal {
-  min-height: 44px;
-  margin: 4px 2px 16px;
-  padding: 0 13px;
-  border-color: #5d361f;
-  border-radius: 10px;
-  background: #1d120c;
-  transition: border-color .18s ease, background .18s ease;
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 1px 12px;
+  padding: 0 11px;
+  overflow: hidden;
+  border: 1px solid #343033;
+  border-radius: 9px;
+  background: #171718;
+  color: #d6d1cb;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease;
 }
 
 .new-goal:hover {
-  border-color: #814827;
-  background: #25160e;
+  border-color: #59402f;
+  background: #1d1916;
 }
 
 .new-goal svg {
   width: 16px;
+  flex: 0 0 16px;
   color: var(--forge-accent);
 }
 
+.new-goal span {
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .efesto-sidebar nav {
+  display: grid;
   gap: 2px;
-  padding-top: 10px;
-  border-top: 1px solid #1f1f21;
+  padding-top: 9px;
+  border-top: 1px solid #202022;
 }
 
 .efesto-sidebar nav button,
 .kernel-summary {
-  min-height: 42px;
-  gap: 11px;
-  padding: 0 11px;
-  border-radius: 9px;
-  color: #aaa7a3;
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #9d9995;
+  cursor: pointer;
+  text-align: left;
 }
 
 .efesto-sidebar nav button:hover,
 .efesto-sidebar nav button.active,
 .kernel-summary:hover {
-  background: #181819;
+  background: #1b1b1d;
 }
 
 .efesto-sidebar nav button.active {
-  color: #f6f2ed;
-  box-shadow: inset 2px 0 0 var(--forge-accent);
+  color: #f0ece7;
 }
 
 .efesto-sidebar nav svg {
-  width: 17px;
+  width: 16px;
+  flex: 0 0 16px;
   color: #77777e;
 }
 
@@ -146,57 +220,282 @@
 }
 
 .efesto-sidebar nav span {
-  font-size: 12px;
+  flex: 1;
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.efesto-sidebar nav b {
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 1px solid #343438;
+  border-radius: 999px;
+  background: #202022;
+  color: #aaa6a1;
+  font-size: 8px;
+}
+
+.sidebar-spacer {
+  flex: 1;
+  min-height: 16px;
 }
 
 .kernel-summary {
-  min-height: 58px;
-  border: 1px solid #1f1f21;
-  background: #101011;
+  min-height: 52px;
+  padding: 7px 9px;
+  border: 1px solid #242426;
+  background: #131314;
 }
 
-.efesto-stage {
+.kernel-summary > span:nth-child(2) {
   min-width: 0;
+  flex: 1;
+}
+
+.kernel-summary strong,
+.kernel-summary small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kernel-summary strong {
+  color: #d6d1cb;
+  font-size: 10px;
+}
+
+.kernel-summary small {
+  margin-top: 2px;
+  color: #6d6a67;
+  font-size: 8px;
+}
+
+.kernel-summary > svg {
+  width: 13px;
+  flex: 0 0 13px;
+  color: #5f5d63;
+}
+
+.kernel-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: #66666d;
+}
+
+.kernel-dot.online {
+  background: var(--forge-green);
+  box-shadow: 0 0 0 3px rgb(142 183 122 / 10%);
+}
+
+.nav-scrim {
+  display: none;
+}
+
+/* Collapsed navigation keeps spatial memory with icon-only controls. */
+.efesto-product.sidebar-collapsed .efesto-sidebar {
+  padding-inline: 8px;
+}
+
+.efesto-product.sidebar-collapsed .efesto-brand {
+  justify-content: center;
+}
+
+.efesto-product.sidebar-collapsed .efesto-brand > button:first-child {
+  width: 40px;
+  justify-content: center;
+  padding-inline: 4px;
+}
+
+.efesto-product.sidebar-collapsed .efesto-brand > button:first-child > span:last-child,
+.efesto-product.sidebar-collapsed .new-goal span,
+.efesto-product.sidebar-collapsed .efesto-sidebar nav span,
+.efesto-product.sidebar-collapsed .efesto-sidebar nav b,
+.efesto-product.sidebar-collapsed .kernel-summary > span:nth-child(2),
+.efesto-product.sidebar-collapsed .kernel-summary > svg {
+  display: none;
+}
+
+.efesto-product.sidebar-collapsed .new-goal,
+.efesto-product.sidebar-collapsed .efesto-sidebar nav button,
+.efesto-product.sidebar-collapsed .kernel-summary {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.efesto-product.sidebar-collapsed .new-goal {
+  width: 40px;
+  margin-inline: auto;
+}
+
+.efesto-product.sidebar-collapsed .kernel-summary {
+  width: 40px;
+  min-height: 40px;
+  margin-inline: auto;
+}
+
+/* General app shell */
+.efesto-stage {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  height: 100dvh;
+  grid-template-rows: 52px minmax(0, 1fr);
+  overflow: hidden;
   background: var(--forge-bg);
 }
 
 .efesto-topbar {
-  height: 56px;
-  padding: 0 20px;
-  border-bottom-color: var(--forge-line);
-  background: rgba(10, 10, 11, .92);
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--forge-line);
+  background: rgba(11, 11, 12, .94);
+  backdrop-filter: blur(16px);
   box-shadow: none;
 }
 
+.efesto-topbar > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.menu-button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #8c898e;
+  cursor: pointer;
+}
+
+.menu-button:hover {
+  background: #1a1a1b;
+  color: #d6d1cb;
+}
+
+.menu-button svg {
+  width: 17px;
+}
+
 .top-title {
+  padding: 7px 6px;
+  border: 0;
+  background: transparent;
   color: #d7d3ce;
-  font-size: 12px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 630;
+}
+
+.top-title span {
+  padding: 0 3px;
+  color: #545258;
 }
 
 .local-first-status,
 .private-status {
   color: #77736f;
-  font-size: 10px;
+  font-size: 9px;
+}
+
+.local-first-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .local-first-status svg {
+  width: 13px;
   color: var(--forge-green);
 }
 
+.refresh-button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #858289;
+  cursor: pointer;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: #1a1a1b;
+}
+
+.refresh-button:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+.refresh-button svg {
+  width: 15px;
+}
+
 .connection-pill {
-  border-color: var(--forge-line-strong);
-  background: #141415;
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--forge-line-strong);
+  border-radius: 9px;
+  background: #151516;
+  color: #a7a39f;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.connection-pill > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #68686f;
+}
+
+.connection-pill.online {
+  border-color: #34452f;
+  background: #131912;
+  color: #c8dac1;
+}
+
+.connection-pill.online > span {
+  background: var(--forge-green);
 }
 
 .efesto-main {
   min-width: 0;
-  padding: 34px max(24px, calc((100vw - var(--forge-sidebar) - 1040px) / 2)) 96px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 34px max(22px, calc((100vw - var(--forge-sidebar) - 1040px) / 2)) 90px;
   background: var(--forge-bg);
   scrollbar-width: thin;
   scrollbar-color: #353537 transparent;
 }
 
-/* Home owns one header, one scroll area and one composer. */
+.efesto-product.sidebar-collapsed .efesto-main {
+  padding-inline: max(22px, calc((100vw - var(--forge-sidebar-collapsed) - 1040px) / 2));
+}
+
+/* Home: one header, one scroll area, composer owns the bottom. */
 .efesto-home-active .efesto-stage {
   grid-template-rows: minmax(0, 1fr);
 }
@@ -219,11 +518,11 @@
   height: 100dvh;
   min-width: 0;
   min-height: 0;
-  grid-template-rows: 56px minmax(0, 1fr) auto;
+  grid-template-rows: 52px minmax(0, 1fr) auto;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% -15%, rgba(238, 134, 71, .045), transparent 34%),
-    var(--forge-bg);
+    radial-gradient(circle at 50% -16%, rgba(233, 130, 69, .035), transparent 32%),
+    var(--forge-surface);
 }
 
 .forge-surface-bar {
@@ -233,10 +532,10 @@
   min-width: 0;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 14px;
-  padding: 0 18px;
+  gap: 12px;
+  padding: 0 14px;
   border-bottom: 1px solid var(--forge-line);
-  background: rgba(10, 10, 11, .92);
+  background: rgba(12, 12, 13, .94);
   backdrop-filter: blur(16px);
 }
 
@@ -247,117 +546,103 @@
 }
 
 .forge-menu-button {
-  display: none;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  margin-right: 4px;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  cursor: pointer;
-}
-
-.forge-menu-button:hover {
-  background: #19191a;
-}
-
-.forge-menu-button svg {
-  width: 18px;
-}
-
-.forge-agent-picker {
-  display: flex;
-  min-width: 0;
-  max-width: 310px;
-  align-items: center;
-  gap: 9px;
-  padding: 4px 7px 4px 4px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-}
-
-.forge-agent-picker:hover {
-  background: #181819;
-}
-
-.forge-agent-mark {
   display: grid;
   width: 34px;
   height: 34px;
   flex: 0 0 34px;
   place-items: center;
+  margin-right: 5px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #848187;
+  cursor: pointer;
+}
+
+.forge-menu-button:hover {
+  background: #1a1a1b;
+  color: #d3cec8;
+}
+
+.forge-menu-button svg {
+  width: 17px;
+}
+
+.forge-product-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+}
+
+.forge-agent-mark {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
   overflow: hidden;
-  border: 1px solid #51301e;
+  border: 1px solid #50301e;
   border-radius: 9px;
   background: #21150f;
 }
 
 .forge-agent-mark img {
-  width: 28px;
-  height: 28px;
+  width: 27px;
+  height: 27px;
 }
 
-.forge-agent-copy {
+.forge-product-title > span:last-child {
   min-width: 0;
 }
 
-.forge-agent-copy strong,
-.forge-agent-copy small {
+.forge-product-title strong,
+.forge-product-title small {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.forge-agent-copy strong {
-  color: #efebe6;
-  font-size: 12px;
+.forge-product-title strong {
+  color: #e9e5df;
+  font-size: 11px;
   font-weight: 680;
 }
 
-.forge-agent-copy small {
-  max-width: 210px;
+.forge-product-title small {
+  max-width: 260px;
   margin-top: 2px;
-  color: #77736f;
-  font-size: 9px;
-}
-
-.forge-agent-picker > svg {
-  width: 14px;
-  flex: 0 0 14px;
-  color: #666369;
+  color: #6f6c69;
+  font-size: 8px;
 }
 
 .forge-mode-switcher {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 3px;
-  border: 1px solid #2b2b2d;
-  border-radius: 10px;
-  background: #101011;
+  padding: 2px;
+  border: 1px solid #2b2b2e;
+  border-radius: 9px;
+  background: #111112;
 }
 
 .forge-mode-switcher button {
   display: flex;
-  min-width: 76px;
-  height: 32px;
+  min-width: 68px;
+  height: 30px;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 0 11px;
+  gap: 5px;
+  padding: 0 10px;
   border: 0;
   border-radius: 7px;
   background: transparent;
   color: #77757a;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 650;
-  transition: color .18s ease, background .18s ease;
+  transition: color .16s ease, background .16s ease;
 }
 
 .forge-mode-switcher button:hover {
@@ -365,13 +650,13 @@
 }
 
 .forge-mode-switcher button.active {
-  color: #f4eee8;
-  background: #29201b;
-  box-shadow: inset 0 0 0 1px #57341f;
+  color: #f2ece6;
+  background: #2a201b;
+  box-shadow: inset 0 0 0 1px #56341f;
 }
 
 .forge-mode-switcher svg {
-  width: 14px;
+  width: 13px;
 }
 
 .forge-mode-switcher button.active svg {
@@ -381,28 +666,28 @@
 .forge-state-action {
   display: flex;
   min-width: 0;
-  max-width: 200px;
+  max-width: 190px;
   align-items: center;
   justify-self: end;
-  gap: 7px;
+  gap: 6px;
   padding: 7px 8px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 8px;
   background: transparent;
-  color: #88858a;
+  color: #89868b;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .forge-state-action:hover {
-  background: #181819;
+  background: #19191a;
   color: #bbb7b2;
 }
 
 .forge-state-action i {
-  width: 7px;
-  height: 7px;
-  flex: 0 0 7px;
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
   border-radius: 50%;
   background: #67676e;
 }
@@ -414,8 +699,8 @@
 }
 
 .forge-state-action > svg {
-  width: 14px;
-  flex: 0 0 14px;
+  width: 13px;
+  flex: 0 0 13px;
 }
 
 .forge-state-action.phase-ready i,
@@ -441,147 +726,110 @@
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
-  scrollbar-color: #363638 transparent;
+  scrollbar-color: #353537 transparent;
 }
 
 .forge-empty {
   display: flex;
-  width: min(860px, 100%);
+  width: min(760px, 100%);
   min-height: 100%;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   flex-direction: column;
   margin: 0 auto;
-  padding: 40px 28px 44px;
+  padding: 46px 24px 54px;
   text-align: center;
 }
 
 .forge-empty-mark {
   display: grid;
-  width: 58px;
-  height: 58px;
+  width: 52px;
+  height: 52px;
   place-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   overflow: hidden;
-  border: 1px solid #51301e;
-  border-radius: 16px;
-  background: #1d130e;
+  border: 1px solid #50301e;
+  border-radius: 15px;
+  background: #1e140e;
 }
 
 .forge-empty-mark img {
-  width: 50px;
-  height: 50px;
+  width: 45px;
+  height: 45px;
 }
 
 .forge-empty-mark > svg {
-  width: 25px;
+  width: 23px;
   color: var(--forge-accent);
 }
 
 .forge-empty > small {
-  color: #a87353;
-  font-size: 9px;
+  color: #9d6e51;
+  font-size: 8px;
   font-weight: 750;
   letter-spacing: .17em;
 }
 
 .forge-empty h1 {
-  margin: 10px 0 9px;
-  color: #f6f2ed;
-  font-size: clamp(34px, 4vw, 48px);
-  font-weight: 630;
-  letter-spacing: -.045em;
-  line-height: 1.05;
+  margin: 9px 0 8px;
+  color: #f2efea;
+  font-size: clamp(30px, 3.5vw, 42px);
+  font-weight: 620;
+  letter-spacing: -.04em;
+  line-height: 1.08;
 }
 
 .forge-empty > p {
-  max-width: 590px;
+  max-width: 540px;
   margin: 0;
-  color: #8d8985;
-  font-size: 12px;
-  line-height: 1.6;
+  color: #88847f;
+  font-size: 11px;
+  line-height: 1.58;
 }
 
-.forge-suggestions {
-  display: grid;
-  width: min(720px, 100%);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 30px;
-}
-
-.forge-suggestions button {
-  display: grid;
-  min-height: 58px;
-  grid-template-columns: 18px minmax(0, 1fr) 15px;
+.forge-empty-meta {
+  display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 11px 13px;
-  border: 1px solid #28282a;
-  border-radius: 11px;
-  background: #111112;
-  color: #aaa6a1;
-  cursor: pointer;
-  text-align: left;
-  transition: border-color .18s ease, background .18s ease, color .18s ease;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 15px;
+  color: #646166;
+  font-size: 8px;
 }
 
-.forge-suggestions button:hover {
-  border-color: #50311f;
-  background: #161310;
-  color: #d7d1cb;
+.forge-empty-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
-.forge-suggestions svg:first-child {
-  width: 16px;
-  color: #cf7844;
+.forge-empty-meta svg {
+  width: 12px;
+  color: #78996a;
 }
 
-.forge-suggestions span {
-  font-size: 10px;
-  line-height: 1.42;
-}
-
-.forge-suggestions svg:last-child {
-  width: 13px;
-  color: #55545a;
+.forge-empty-meta i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #75757b;
 }
 
 .forge-thread {
   width: min(var(--forge-content), calc(100% - 40px));
   margin: 0 auto;
-  padding: 34px 0 72px;
-}
-
-.forge-thread-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  padding: 0 4px 13px;
-  border-bottom: 1px solid #1f1f21;
-}
-
-.forge-thread-heading span {
-  color: #d8d3cd;
-  font-size: 12px;
-  font-weight: 680;
-}
-
-.forge-thread-heading small {
-  color: #65636a;
-  font-size: 9px;
+  padding: 30px 0 72px;
 }
 
 .forge-message {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);
   gap: 12px;
-  padding: 18px 4px;
+  padding: 18px 3px;
 }
 
 .forge-message + .forge-message {
-  border-top: 1px solid #1c1c1e;
+  border-top: 1px solid #1d1d1f;
 }
 
 .forge-message-avatar {
@@ -614,7 +862,7 @@
 }
 
 .forge-message-body > header strong {
-  color: #e6e1db;
+  color: #e5e0da;
   font-size: 10px;
 }
 
@@ -633,7 +881,7 @@
 
 .forge-message-body > p {
   margin: 5px 0 0;
-  color: #c7c2bc;
+  color: #cbc6c0;
   font-size: 12px;
   line-height: 1.72;
   white-space: pre-wrap;
@@ -646,7 +894,7 @@
   margin: 8px 0 8px auto;
   padding: 12px 13px;
   border: 1px solid #2a2522;
-  border-radius: 14px;
+  border-radius: var(--forge-radius);
   background: #171411;
 }
 
@@ -687,33 +935,34 @@
   animation: forge-pulse 1.1s ease-in-out infinite;
 }
 
+/* Goal uses the same canvas and composer, not a dashboard rail. */
 .forge-goal-plan {
-  width: min(740px, calc(100% - 40px));
+  width: min(720px, calc(100% - 40px));
   margin: 0 auto;
-  padding: 52px 0 72px;
+  padding: 46px 0 68px;
 }
 
 .forge-goal-plan > header {
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr);
+  grid-template-columns: 44px minmax(0, 1fr);
   gap: 14px;
-  padding-bottom: 24px;
+  padding-bottom: 22px;
   border-bottom: 1px solid var(--forge-line);
 }
 
 .forge-plan-icon {
   display: grid;
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   place-items: center;
-  border: 1px solid #5a361f;
-  border-radius: 12px;
+  border: 1px solid #57351f;
+  border-radius: 11px;
   background: #21150f;
   color: var(--forge-accent);
 }
 
 .forge-plan-icon svg {
-  width: 20px;
+  width: 19px;
 }
 
 .forge-goal-plan small {
@@ -725,7 +974,7 @@
 .forge-goal-plan h1 {
   margin: 6px 0 7px;
   color: #f0ebe5;
-  font-size: clamp(22px, 3vw, 32px);
+  font-size: clamp(21px, 3vw, 30px);
   font-weight: 620;
   letter-spacing: -.035em;
   line-height: 1.2;
@@ -740,11 +989,11 @@
 .forge-goal-plan ol {
   display: grid;
   gap: 1px;
-  margin: 22px 0;
+  margin: 20px 0;
   padding: 0;
   overflow: hidden;
   border: 1px solid var(--forge-line);
-  border-radius: 12px;
+  border-radius: 11px;
   background: var(--forge-line);
   list-style: none;
 }
@@ -753,9 +1002,9 @@
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
-  padding: 14px 15px;
-  background: var(--forge-panel);
+  gap: 11px;
+  padding: 13px 14px;
+  background: #121213;
 }
 
 .forge-goal-plan li > b {
@@ -777,13 +1026,13 @@
 
 .forge-goal-plan li strong {
   color: #d5d0ca;
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .forge-goal-plan li small {
   margin-top: 3px;
   color: #74716e;
-  font-size: 9px;
+  font-size: 8px;
   letter-spacing: 0;
   line-height: 1.4;
 }
@@ -796,11 +1045,11 @@
 
 .forge-plan-actions .primary-action,
 .forge-plan-actions .secondary-action {
-  min-height: 40px;
-  padding: 0 14px;
+  min-height: 38px;
+  padding: 0 13px;
   border-radius: 9px;
   box-shadow: none;
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .forge-plan-actions .primary-action {
@@ -810,7 +1059,7 @@
 }
 
 .forge-plan-actions .primary-action:hover:not(:disabled) {
-  background: #f09962;
+  background: var(--forge-accent-hover);
 }
 
 .forge-plan-actions .secondary-action {
@@ -818,37 +1067,97 @@
   background: #161617;
 }
 
-/* Composer remains in the viewport at every size. */
+.forge-plan-boundary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 13px 0 0;
+  color: #66636a;
+  font-size: 8px;
+}
+
+.forge-plan-boundary svg {
+  width: 12px;
+  color: #78996a;
+}
+
+/* The composer follows Vercel's pattern: suggestions directly above,
+   large input, context tools in its footer, and stable bottom placement. */
 .forge-composer-zone {
   position: relative;
   z-index: 12;
-  padding: 12px 20px max(10px, env(safe-area-inset-bottom));
-  background: linear-gradient(180deg, rgba(10, 10, 11, 0), var(--forge-bg) 18px);
+  padding: 9px 20px max(9px, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(12, 12, 13, 0), var(--forge-surface) 18px);
+}
+
+.forge-quick-prompts {
+  display: grid;
+  width: min(var(--forge-content), 100%);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin: 0 auto 9px;
+}
+
+.forge-quick-prompts button {
+  display: grid;
+  min-height: 48px;
+  grid-template-columns: 16px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  border: 1px solid #29292b;
+  border-radius: 10px;
+  background: #121213;
+  color: #999590;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .16s ease, background .16s ease, color .16s ease;
+}
+
+.forge-quick-prompts button:hover {
+  border-color: #52331f;
+  background: #171411;
+  color: #d3cdc7;
+}
+
+.forge-quick-prompts svg:first-child {
+  width: 14px;
+  color: #c97643;
+}
+
+.forge-quick-prompts span {
+  font-size: 9px;
+  line-height: 1.38;
+}
+
+.forge-quick-prompts svg:last-child {
+  width: 12px;
+  color: #55545a;
 }
 
 .forge-composer {
   width: min(var(--forge-content), 100%);
   margin: 0 auto;
-  padding: 12px 12px 10px;
-  border: 1px solid #343437;
-  border-radius: 16px;
-  background: #171718;
-  box-shadow: 0 12px 42px rgba(0, 0, 0, .32);
-  transition: border-color .18s ease, box-shadow .18s ease;
+  padding: 11px 11px 9px;
+  border: 1px solid #3a3a3d;
+  border-radius: 15px;
+  background: #181819;
+  box-shadow: 0 12px 38px rgba(0, 0, 0, .3);
+  transition: border-color .16s ease, box-shadow .16s ease;
 }
 
 .forge-composer:focus-within {
-  border-color: #4a403a;
-  box-shadow: 0 14px 46px rgba(0, 0, 0, .4);
+  border-color: #5a504a;
+  box-shadow: 0 14px 44px rgba(0, 0, 0, .38);
 }
 
 .forge-composer textarea {
   display: block;
   width: 100%;
-  min-height: 34px;
+  min-height: 44px;
   max-height: 150px;
   resize: none;
-  padding: 5px 4px 9px;
+  padding: 5px 5px 10px;
   border: 0;
   outline: 0;
   background: transparent;
@@ -858,7 +1167,7 @@
 }
 
 .forge-composer textarea::placeholder {
-  color: #716f73;
+  color: #737076;
 }
 
 .forge-composer > footer {
@@ -866,7 +1175,7 @@
   min-width: 0;
   grid-template-columns: minmax(0, 1fr) auto 34px;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
 }
 
 .forge-composer-context {
@@ -883,12 +1192,12 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #8c8985;
+  color: #8e8a86;
   cursor: pointer;
 }
 
 .forge-model-button:hover {
-  background: #222223;
+  background: #232324;
   color: #bbb6b0;
 }
 
@@ -924,8 +1233,8 @@
   color: var(--forge-accent);
 }
 
-.forge-boundary {
-  color: #656268;
+.forge-shortcut {
+  color: #5f5c61;
   font-size: 8px;
   white-space: nowrap;
 }
@@ -940,17 +1249,17 @@
   background: var(--forge-accent);
   color: #160d08;
   cursor: pointer;
-  transition: background .18s ease, color .18s ease, transform .18s ease;
+  transition: background .16s ease, color .16s ease, transform .16s ease;
 }
 
 .forge-send:hover:not(:disabled) {
-  background: #f09a66;
+  background: var(--forge-accent-hover);
   transform: translateY(-1px);
 }
 
 .forge-send:disabled {
-  background: #2d2d30;
-  color: #66666d;
+  background: #2f2f32;
+  color: #696970;
   cursor: not-allowed;
 }
 
@@ -964,13 +1273,13 @@
 }
 
 .forge-composer-hint {
-  margin: 7px auto 0;
-  color: #57555a;
-  font-size: 8px;
+  margin: 6px auto 0;
+  color: #565359;
+  font-size: 7px;
   text-align: center;
 }
 
-/* Existing product areas stay restrained and consistent. */
+/* Existing product areas stay sober and aligned with the same system. */
 .workspace,
 .chat-thread,
 .home-view {
@@ -1009,7 +1318,7 @@
 }
 
 .efesto-toast {
-  top: 18px;
+  top: 16px;
   border-color: #493226;
   background: #1d1511;
 }
@@ -1019,46 +1328,89 @@
   50% { opacity: 1; transform: scale(1); }
 }
 
-@media (max-width: 980px) {
+@media (max-width: 940px) {
   :root {
-    --forge-sidebar: 224px;
+    --forge-sidebar: 210px;
   }
 
-  .forge-agent-copy small {
-    max-width: 120px;
+  .forge-product-title small {
+    max-width: 125px;
   }
 
   .forge-state-action {
-    max-width: 150px;
+    max-width: 135px;
+  }
+
+  .forge-quick-prompts span {
+    font-size: 8px;
   }
 }
 
 @media (max-width: 720px) {
-  .efesto-product {
+  .efesto-product,
+  .efesto-product.sidebar-collapsed {
     display: block;
     width: 100%;
     height: 100dvh;
   }
 
-  .efesto-sidebar {
+  .efesto-sidebar,
+  .efesto-product.sidebar-collapsed .efesto-sidebar {
     position: fixed;
     inset: 0 auto 0 0;
     z-index: 60;
-    width: min(84vw, 300px);
+    width: min(84vw, 292px);
     height: 100dvh;
-    padding-top: max(14px, env(safe-area-inset-top));
+    padding: max(10px, env(safe-area-inset-top)) 9px max(9px, env(safe-area-inset-bottom));
     transform: translateX(-102%);
-    transition: transform .22s ease;
-    box-shadow: 22px 0 60px rgba(0, 0, 0, .42);
+    transition: transform .22s cubic-bezier(.32, .72, 0, 1);
+    box-shadow: 22px 0 60px rgba(0, 0, 0, .44);
   }
 
   .efesto-product.nav-open .efesto-sidebar {
     transform: translateX(0);
   }
 
+  .efesto-product.sidebar-collapsed .efesto-brand {
+    justify-content: space-between;
+  }
+
+  .efesto-product.sidebar-collapsed .efesto-brand > button:first-child {
+    width: auto;
+    justify-content: flex-start;
+  }
+
+  .efesto-product.sidebar-collapsed .efesto-brand > button:first-child > span:last-child,
+  .efesto-product.sidebar-collapsed .new-goal span,
+  .efesto-product.sidebar-collapsed .efesto-sidebar nav span,
+  .efesto-product.sidebar-collapsed .efesto-sidebar nav b,
+  .efesto-product.sidebar-collapsed .kernel-summary > span:nth-child(2),
+  .efesto-product.sidebar-collapsed .kernel-summary > svg {
+    display: block;
+  }
+
+  .efesto-product.sidebar-collapsed .new-goal,
+  .efesto-product.sidebar-collapsed .efesto-sidebar nav button,
+  .efesto-product.sidebar-collapsed .kernel-summary {
+    width: 100%;
+    justify-content: flex-start;
+    padding-inline: 10px;
+  }
+
+  .efesto-product.sidebar-collapsed .kernel-summary {
+    min-height: 52px;
+    margin-inline: 0;
+  }
+
   .efesto-brand .mobile-close {
     display: grid;
+    width: 34px;
+    height: 34px;
     place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
   }
 
   .nav-scrim {
@@ -1067,7 +1419,7 @@
     z-index: 55;
     display: block;
     border: 0;
-    background: rgba(0, 0, 0, .58);
+    background: rgba(0, 0, 0, .6);
     backdrop-filter: blur(2px);
   }
 
@@ -1076,8 +1428,9 @@
     height: 100dvh;
   }
 
-  .efesto-main {
-    padding: 24px 16px 72px;
+  .efesto-main,
+  .efesto-product.sidebar-collapsed .efesto-main {
+    padding: 24px 15px 72px;
   }
 
   .efesto-home-active .efesto-main {
@@ -1086,11 +1439,7 @@
   }
 
   .efesto-topbar {
-    padding: 0 10px;
-  }
-
-  .efesto-topbar .menu-button {
-    display: grid;
+    padding: 0 9px;
   }
 
   .top-context,
@@ -1100,26 +1449,32 @@
 
   .forge-surface-bar {
     grid-template-columns: minmax(0, 1fr) auto auto;
-    gap: 5px;
-    padding: max(4px, env(safe-area-inset-top)) 8px 4px;
+    gap: 4px;
+    padding: max(3px, env(safe-area-inset-top)) 7px 3px;
   }
 
-  .forge-menu-button {
-    display: grid;
+  .forge-product-title {
+    gap: 6px;
   }
 
-  .forge-agent-picker {
-    max-width: 120px;
-    padding-right: 4px;
+  .forge-agent-mark {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
   }
 
-  .forge-agent-copy small,
-  .forge-agent-picker > svg {
+  .forge-agent-mark img {
+    width: 25px;
+    height: 25px;
+  }
+
+  .forge-product-title small {
     display: none;
   }
 
-  .forge-agent-copy strong {
-    font-size: 11px;
+  .forge-product-title strong {
+    max-width: 90px;
+    font-size: 10px;
   }
 
   .forge-mode-switcher {
@@ -1127,20 +1482,20 @@
   }
 
   .forge-mode-switcher button {
-    min-width: 48px;
-    height: 30px;
+    min-width: 45px;
+    height: 29px;
     gap: 4px;
-    padding: 0 7px;
-    font-size: 9px;
+    padding: 0 6px;
+    font-size: 8px;
   }
 
   .forge-mode-switcher svg {
-    width: 13px;
+    width: 12px;
   }
 
   .forge-state-action {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
     justify-content: center;
     padding: 0;
   }
@@ -1151,7 +1506,7 @@
   }
 
   .forge-state-action > svg {
-    width: 15px;
+    width: 14px;
   }
 
   .forge-scroll {
@@ -1159,63 +1514,57 @@
   }
 
   .forge-empty {
-    justify-content: flex-start;
-    padding: 44px 15px 36px;
+    justify-content: center;
+    padding: 34px 16px 26px;
   }
 
   .forge-empty-mark {
-    width: 52px;
-    height: 52px;
-    margin-bottom: 17px;
-    border-radius: 14px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 14px;
+    border-radius: 13px;
   }
 
   .forge-empty-mark img {
-    width: 45px;
-    height: 45px;
+    width: 42px;
+    height: 42px;
   }
 
   .forge-empty h1 {
-    margin-top: 9px;
-    font-size: 34px;
+    font-size: 31px;
   }
 
   .forge-empty > p {
-    max-width: 410px;
-    font-size: 11px;
+    max-width: 400px;
+    font-size: 10px;
   }
 
-  .forge-suggestions {
-    grid-template-columns: 1fr;
-    gap: 7px;
-    margin-top: 24px;
-  }
-
-  .forge-suggestions button {
-    min-height: 52px;
+  .forge-empty-meta {
+    gap: 10px;
+    font-size: 7px;
   }
 
   .forge-thread {
-    width: calc(100% - 24px);
-    padding: 22px 0 42px;
+    width: calc(100% - 22px);
+    padding: 20px 0 38px;
   }
 
   .forge-message {
     gap: 9px;
-    padding: 15px 2px;
+    padding: 14px 2px;
   }
 
   .forge-message.user {
-    width: 92%;
+    width: 94%;
   }
 
   .forge-goal-plan {
-    width: calc(100% - 28px);
-    padding: 30px 0 44px;
+    width: calc(100% - 26px);
+    padding: 28px 0 40px;
   }
 
   .forge-goal-plan > header {
-    grid-template-columns: 40px minmax(0, 1fr);
+    grid-template-columns: 39px minmax(0, 1fr);
   }
 
   .forge-plan-icon {
@@ -1224,11 +1573,11 @@
   }
 
   .forge-goal-plan h1 {
-    font-size: 22px;
+    font-size: 21px;
   }
 
   .forge-goal-plan li {
-    padding: 12px;
+    padding: 11px;
   }
 
   .forge-plan-actions {
@@ -1237,25 +1586,64 @@
   }
 
   .forge-composer-zone {
-    padding: 9px 10px max(8px, env(safe-area-inset-bottom));
+    padding: 7px 9px max(7px, env(safe-area-inset-bottom));
+  }
+
+  .forge-quick-prompts {
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+    margin-bottom: 7px;
+  }
+
+  .forge-quick-prompts button {
+    min-height: 42px;
+    grid-template-columns: 13px minmax(0, 1fr);
+    gap: 6px;
+    padding: 7px 8px;
+  }
+
+  .forge-quick-prompts button:nth-child(n+3) {
+    display: none;
+  }
+
+  .forge-quick-prompts span {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 7px;
+    line-height: 1.3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .forge-quick-prompts svg:first-child {
+    width: 12px;
+  }
+
+  .forge-quick-prompts svg:last-child {
+    display: none;
   }
 
   .forge-composer {
-    padding: 10px 10px 8px;
+    padding: 9px 9px 7px;
     border-radius: 14px;
   }
 
   .forge-composer textarea {
-    min-height: 31px;
-    padding-top: 3px;
+    min-height: 38px;
+    padding: 3px 4px 8px;
   }
 
   .forge-composer > footer {
-    grid-template-columns: minmax(0, 1fr) 34px;
+    grid-template-columns: minmax(0, 1fr) 32px;
   }
 
-  .forge-boundary {
+  .forge-shortcut {
     display: none;
+  }
+
+  .forge-send {
+    width: 32px;
+    height: 32px;
   }
 
   .forge-composer-hint {
@@ -1263,7 +1651,7 @@
   }
 
   .forge-model-button {
-    max-width: 230px;
+    max-width: 225px;
   }
 
   .workspace-heading {
@@ -1282,40 +1670,49 @@
   }
 
   .efesto-toast {
-    top: 66px;
+    top: 59px;
   }
 }
 
 @media (max-width: 430px) {
-  .forge-agent-mark {
-    width: 30px;
-    height: 30px;
-    flex-basis: 30px;
-  }
-
-  .forge-agent-mark img {
-    width: 25px;
-    height: 25px;
+  .forge-product-title strong {
+    max-width: 72px;
   }
 
   .forge-mode-switcher button {
-    min-width: 42px;
-    padding: 0 5px;
+    min-width: 40px;
+    padding-inline: 5px;
   }
 
-  .forge-suggestions span {
-    font-size: 9px;
+  .forge-empty-meta span:last-child {
+    display: none;
   }
 
   .forge-message.user {
-    width: 96%;
+    width: 97%;
+  }
+}
+
+@media (max-height: 720px) and (min-width: 721px) {
+  .forge-empty {
+    justify-content: center;
+    padding-block: 22px;
+  }
+
+  .forge-quick-prompts button {
+    min-height: 42px;
+  }
+
+  .forge-composer textarea {
+    min-height: 34px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .efesto-product,
   .efesto-sidebar,
   .forge-send,
-  .forge-suggestions button,
+  .forge-quick-prompts button,
   .new-goal {
     transition: none;
   }
