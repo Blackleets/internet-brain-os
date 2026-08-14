@@ -2297,3 +2297,124 @@
     transition: none;
   }
 }
+
+/* v13 — premium forge surface: quiet depth, clearer hierarchy, copper focus. */
+.efesto-product {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.efesto-sidebar {
+  background:
+    radial-gradient(circle at 18% 0%, rgb(233 130 69 / 4%), transparent 30%),
+    linear-gradient(180deg, #111112 0%, #0f0f10 100%);
+  box-shadow: inset -1px 0 rgb(255 255 255 / 2%);
+}
+
+.efesto-sidebar nav button,
+.sidebar-settings,
+.kernel-summary {
+  transition: background .16s ease, color .16s ease, transform .16s ease;
+}
+
+.efesto-sidebar nav button.active {
+  background: linear-gradient(90deg, rgb(233 130 69 / 12%), rgb(233 130 69 / 4%));
+  box-shadow: inset 2px 0 var(--forge-accent), inset 0 1px 0 rgb(255 255 255 / 2%);
+}
+
+.forge-surface {
+  background:
+    radial-gradient(circle at 50% -16%, rgb(233 130 69 / 6%), transparent 32%),
+    linear-gradient(180deg, rgb(255 255 255 / 1.5%), transparent 28%),
+    var(--forge-surface);
+}
+
+.forge-surface-bar {
+  box-shadow: 0 1px 0 rgb(255 255 255 / 1.5%), 0 14px 34px rgb(0 0 0 / 12%);
+}
+
+.forge-mode-switcher {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 3%), 0 5px 18px rgb(0 0 0 / 18%);
+}
+
+.forge-mode-switcher button.active {
+  background: linear-gradient(180deg, #33251d, #261a14);
+  box-shadow: inset 0 0 0 1px #69432b, inset 0 1px 0 rgb(255 255 255 / 5%);
+}
+
+.forge-empty-mark {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%), 0 10px 30px rgb(0 0 0 / 24%);
+}
+
+.forge-empty h1 {
+  background: linear-gradient(120deg, #f6f0ea 8%, #e1a37e 68%, #a7c6a1 112%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.forge-quick-prompts button {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 2%);
+  transition: border-color .16s ease, background .16s ease, color .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+
+.forge-quick-prompts button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 18%), inset 0 1px 0 rgb(255 255 255 / 3%);
+}
+
+.forge-composer {
+  border-color: #403d3d;
+  background: linear-gradient(145deg, #1b1b1c, #151516);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 34%), inset 0 1px 0 rgb(255 255 255 / 3%);
+}
+
+.forge-composer:focus-within {
+  border-color: #8b5b3e;
+  box-shadow: 0 0 0 3px rgb(233 130 69 / 8%), 0 18px 50px rgb(0 0 0 / 38%), inset 0 1px 0 rgb(255 255 255 / 4%);
+}
+
+.forge-model-popover {
+  background: linear-gradient(145deg, #1b1b1d, #141415);
+  backdrop-filter: blur(18px);
+}
+
+.forge-model-option.active {
+  background: linear-gradient(90deg, rgb(233 130 69 / 13%), rgb(233 130 69 / 4%));
+  box-shadow: inset 2px 0 var(--forge-accent), inset 0 1px 0 rgb(255 255 255 / 2%);
+}
+
+.forge-send:not(:disabled) {
+  box-shadow: 0 8px 20px rgb(233 130 69 / 22%), inset 0 1px 0 rgb(255 255 255 / 12%);
+}
+
+.forge-value-surface {
+  padding: 0 0 1px;
+}
+
+@media (max-width: 720px) {
+  .forge-composer-zone {
+    padding-inline: 12px;
+  }
+
+  .forge-quick-prompts {
+    grid-template-columns: 1fr;
+  }
+
+  .forge-empty {
+    padding-inline: 18px;
+  }
+
+  .forge-model-popover {
+    width: min(344px, calc(100vw - 24px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .efesto-product nav button,
+  .sidebar-settings,
+  .kernel-summary,
+  .forge-quick-prompts button {
+    transition: none;
+  }
+}

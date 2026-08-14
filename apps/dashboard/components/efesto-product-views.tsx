@@ -33,13 +33,13 @@ const starterGoals = [
   'Encuentra oportunidades públicas relevantes y evita duplicados.',
 ];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, valueSurface }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
   input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
   onConfirmGoal: () => void; onEditGoal: () => void; onStarterGoal: (goal: string) => void; onStarterChat: (prompt: string) => void;
   onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
-  onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenNav: () => void;
+  onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenNav: () => void; valueSurface?: ReactNode;
 }) {
   const state = brainState(phase);
   const showSuggestions = chatMode ? messages.length === 0 : !preparedGoal;
@@ -103,6 +103,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
         <p>Efesto prepara el plan. Tú decides si se ejecuta.</p>
         <div className="forge-empty-meta"><span><ShieldCheck /> Kernel-gated</span><span><i /> Confirmación humana</span></div>
       </section>}
+      {valueSurface ? <div className="forge-value-surface" aria-label="Valor local de Efesto">{valueSurface}</div> : null}
     </div>
 
     <ComposerForm
