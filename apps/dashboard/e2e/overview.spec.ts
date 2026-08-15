@@ -234,6 +234,7 @@ test.describe('mobile Efesto product shell', () => {
     await page.getByRole('button', { name: 'Inicio', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Kernel conectado', exact: true })).toBeVisible();
     await expectLocalScorecard(page);
+    await page.getByRole('button', { name: 'Chat', exact: true }).click();
     await page.getByRole('textbox', { name: 'Mensaje', exact: true }).fill('Busca oportunidades reales');
     const composerBox = await page.locator('.forge-composer').boundingBox();
     expect(composerBox).not.toBeNull();
