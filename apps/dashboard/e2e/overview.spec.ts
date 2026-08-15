@@ -99,7 +99,7 @@ test('answers a web Chat order with a bounded preview instead of staying inert',
   await expect(page.getByRole('button', { name: 'Enviar mensaje', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Enviar mensaje', exact: true }).click();
   await expect(page.getByText(/He recibido tu orden/)).toBeVisible();
-  await expect(page.getByText('Vista previa web · sin modelo externo', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Mensajes').getByText('Vista previa web · sin modelo externo', { exact: true })).toBeVisible();
   expect(writes).toEqual(['/api/efesto/plan']);
 });
 

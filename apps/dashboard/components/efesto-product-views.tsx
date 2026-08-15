@@ -107,7 +107,7 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
         <small>{webPreview ? t('home.webMissionEyebrow') : t('home.controlledMissionEyebrow')}</small>
         <h1>{t('home.defineResult')}</h1>
         <p>{webPreview ? t('home.webPrepareCopy') : t('home.prepareCopy')}</p>
-        <div className="forge-empty-meta"><span><ShieldCheck /> {webPreview ? t('runtime.webReady') : t('home.kernelGated')}</span><span><i /> {webPreview ? t('runtime.localOptional') : t('home.humanConfirmation')}</span></div>
+        <div className="forge-empty-meta"><span><ShieldCheck /> {t('common.privateByDesign')}</span><span><i /> {webPreview ? t('runtime.localOptional') : t('home.humanConfirmation')}</span></div>
       </section>}
       {valueSurface ? <div className="forge-value-surface" aria-label={t('home.valueSurface')}>{valueSurface}</div> : null}
     </div>

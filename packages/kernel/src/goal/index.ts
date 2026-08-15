@@ -2,3 +2,8 @@ export * from './automatic-read-only-continuation';
 export * from './goal-contract';
 export * from './goal-errors';
 export * from './goal-surface-snapshot';
+export * from './user-goal-contract';
+export * from './goal-interpreter';
+export * from './goal-planner';
+export * from './goal-plan-contract';
+export * from './goal-resolver';
