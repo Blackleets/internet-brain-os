@@ -56,12 +56,16 @@ The local Kernel remains the privacy boundary and projects accepted Evidence int
 
 ## Control Center Dashboard
 
-`apps/dashboard` is a presentation-only authenticated client for the existing
-loopback Kernel. It runs locally at `http://127.0.0.1:3000` and only connects to
-the local Kernel API with the operator-provided `x-hephaestus-token`; it has no
-cloud proxy, analytics transport, duplicate store, or authority to write around
-Kernel contracts. The token remains in the browser tab's memory by default and
-is never embedded in URLs or build output.
+`apps/dashboard` has two explicit runtime boundaries. Its private/local mode is
+a presentation-only authenticated client for the existing loopback Kernel and
+runs locally at `http://127.0.0.1:3000`; it connects to the local Kernel API with
+the operator-provided `x-hephaestus-token`, has no analytics transport, duplicate
+store, or authority to write around Kernel contracts, and keeps the token in the
+browser tab's memory by default. Its hosted `?runtime=web` mode is a bounded,
+read-only onboarding surface: an explicit submitted Goal may query the public
+web through the native connector, but the result is unverified preview data,
+never Evidence or memory, and the hosted surface cannot save, authorize, or
+execute anything. The token is never embedded in URLs or build output.
 
 The dashboard exposes the connection flow, truthful Overview, persisted Cases
 and Goals, Hermes mission state, Opportunity Inbox, existing bounded automation
@@ -73,6 +77,41 @@ Knowledge Graph projections and a general scheduler are not complete and must
 remain explicitly unavailable until their Kernel contracts and implementations
 exist; the dashboard must not invent graph records, schedules, progress, or
 future executions.
+
+The Complementos directory is a Kernel-backed read model, not a second
+integration authority. `apps/local-kernel/integration-catalog.mjs` publishes the
+curated connector boundary for GitHub, Gmail, Google Drive, Notion, and Google
+Calendar. The first real provider adapter is
+`apps/local-kernel/github-readonly-integration.mjs` plus the typed
+`packages/connectors/src/github-readonly.ts` client. It is strictly read-only:
+only bounded GitHub API `GET` operations for repositories, issues, pull
+requests, and checks are exposed. An owner-private Kernel credential is verified
+before saving; an interactive actor must authorize an explicit `github.read`
+scope against an active Goal; every read is bounded, idempotent, Goal-bound, and
+retained as a provenance receipt with a content hash. Authorization receipts
+expire and can be revoked; revoking the credential revokes all outstanding
+GitHub authorizations. The public catalog exposes the native adapter only from
+this Kernel status, never from UI intent alone.
+
+The remaining four entries stay behind the MCP boundary and carry independent
+read-only scopes, capabilities, readiness state, and Settings action. MCP
+gateway availability alone cannot mark a provider ready; only an exact
+connector status reported by the Kernel may do that. Provider credentials,
+OAuth, external writes, and irreversible actions remain outside this UI slice
+until their adapter contracts and approval receipts exist. Local SVG marks live under
+`apps/dashboard/public/integrations/`, so the directory has no remote asset
+dependency.
+
+The five external definitions are centralized in
+`apps/local-kernel/integration-definitions.mjs` and are consumed by both the
+catalog and Goal Intelligence routing. This keeps scope, capability, consent,
+and adapter identity aligned without making the definitions an account-status
+authority. The Goal GitHub action exposes the same bounded native contract as
+an operation selector: repository, issues, pull requests, or checks; checks
+also require an explicit branch, tag, or commit reference. The dashboard maps
+each operation to its exact capability before the Kernel authorization and
+Evidence requests, while preserving the read-only and explicit-consent
+disclosures.
 
 The persistent bottom composer is a provider-neutral conversation surface.
 Authenticated users may register loopback Ollama or HTTPS OpenAI-compatible
@@ -91,6 +130,30 @@ owner-private `chat-conversations.json` file and may optionally retain a Case
 reference for navigation. This store is conversation history, not Hephaestus
 memory: partial cancelled output is not committed, and no stored message gains
 Evidence, Claim, admission, or memory authority.
+
+The Goal surface also consumes the authenticated, non-mutating
+`POST /api/goals/plan` read model (`efesto.goal-intelligence.v1`). The Kernel
+uses the same bounded Goal intent enrichment as Goal creation, selects Hermes
+public research by default, and adds a curated MCP connector only when the
+Goal contains an explicit signal for GitHub, Gmail, Google Drive, Notion, or
+Google Calendar. Each selected source reports required scopes/capabilities
+separately from capabilities that are active in the current integration
+catalog. The dashboard renders this as an Intelligence Brief inside the
+proposed plan; it never treats the brief as authorization or Evidence. A
+missing preview route from an older Kernel becomes an explicit limited state,
+not a fabricated source plan.
+
+The hosted web runtime extends this brief with one explicit public-search call
+through `packages/connectors/src/public-web-search.ts`. It uses credential-free
+HTML discovery with a bounded result count, DuckDuckGo/Brave fallbacks, and a
+public-reader Bing fallback when direct providers are challenged. Query-relevant
+titles, snippets, domains, and links are displayed as unverified public results
+with provider and failure state visible. The response is not persisted, does
+not fetch private resources, and does not create a Goal, mission, Case, Evidence,
+memory record, or external action. Private/local Goal
+creation still does not browse merely because a Goal exists; discovery remains
+an explicit user action and the Kernel/Hermes path remains authoritative for
+real work.
 
 Accepted public-page Evidence passes through an extensible deterministic Opportunity classifier in the local Kernel. It promotes only sufficiently strong, explainable signals across work, grants, clients, savings, food, public aid, learning, events, housing, travel, collaboration, rewards, and useful tools. A promoted record retains its Case and Evidence identifiers, canonical public source, category, concrete benefit type, bounded relevance score, matching signals, raw deadline text when present, and a cautious next action. Ordinary captures remain Evidence and do not pollute the Opportunity Inbox. The authenticated local Inbox is rendered by the extension and synchronized as separate Opportunity notes into the user's vault. This classifier is a lead filter, not a verification, financial-advice, or recommendation engine; Hermes investigation and human review remain separate stages.
 

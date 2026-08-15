@@ -19,6 +19,8 @@ import { ModelForge } from './model-forge.mjs';
 import { ModelProviderRegistry } from './model-provider-registry.mjs';
 import { KernelChatService } from './chat-service.mjs';
 import { ChatConversationStore } from './chat-conversation-store.mjs';
+import { GitHubCredentialStore, GitHubReadOnlyIntegration } from './github-readonly-integration.mjs';
+import { GitHubEvidenceProjector } from './github-evidence-projector.mjs';
 
 let server;
 const apiToken = 'test-token-that-is-at-least-32-characters';
@@ -72,6 +74,203 @@ describe('local Kernel HTTP receiver', () => {
     expect(response.status).toBe(200);
     expect(body).toMatchObject({ schemaVersion: 'efesto.bootstrap-status.v1', overall: 'ready', pairing: 'paired' });
     expect(JSON.stringify(body)).not.toContain(apiToken);
+  });
+
+  it('serves an authenticated integration catalog with truthful adapter states', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-integrations-http-'));
+    const bootstrapStatus = () => ({
+      schemaVersion: 'efesto.bootstrap-status.v1',
+      ok: true,
+      kernel: 'ready', hermes: 'ready', obsidian: 'not_configured', pairing: 'required', overall: 'needs_setup',
+      message: 'needs setup', diagnostics: {}, actions: [],
+    });
+    const providers = new ModelProviderRegistry(join(dir, 'providers.json'), {
+      defaults: [{ id: 'local', type: 'ollama', label: 'Local', baseUrl: 'http://127.0.0.1:11434', models: ['qwen3:4b'], managedBy: 'environment' }],
+    });
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, { bootstrapStatus, modelProviderRegistry: providers });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const base = `http://127.0.0.1:${server.address().port}`;
+
+    expect((await fetch(`${base}/api/integrations`)).status).toBe(401);
+    const response = await fetch(`${base}/api/integrations`, { headers: authHeaders });
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({ ok: true, schemaVersion: 'efesto.integration-catalog.v1', authority: 'kernel' });
+    expect(body.integrations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'kernel', status: 'ready' }),
+      expect.objectContaining({ id: 'model-providers', status: 'ready', count: 1 }),
+      expect.objectContaining({ id: 'mcp-gateway', status: 'not_configured', capabilities: [] }),
+      expect.objectContaining({ id: 'github', status: 'not_configured', scopes: ['github.read'] }),
+      expect.objectContaining({ id: 'gmail', status: 'not_configured', scopes: ['gmail.read'] }),
+      expect.objectContaining({ id: 'google-drive', status: 'not_configured', scopes: ['drive.read'] }),
+      expect.objectContaining({ id: 'notion', status: 'not_configured', scopes: ['notion.read'] }),
+      expect.objectContaining({ id: 'google-calendar', status: 'not_configured', scopes: ['calendar.read'] }),
+    ]));
+    expect(JSON.stringify(body)).not.toContain('providers.json');
+    expect(JSON.stringify(body)).not.toContain(apiToken);
+  });
+
+  it('keeps GitHub consent, reads, receipts, and revocation behind the authenticated Kernel boundary', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-github-http-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    const goals = new GoalManager(store);
+    const goal = await goals.create({ title: 'Audit GitHub repository', keywords: ['github', 'repository'] });
+    let readCalls = 0;
+    const github = new GitHubReadOnlyIntegration({
+      store,
+      credentials: new GitHubCredentialStore(join(dir, 'github-credential.json')),
+      reader: {
+        verifyToken: async () => undefined,
+        read: async (input, token) => {
+          readCalls += 1;
+          expect(token).toBe('github-test-token-123');
+          return {
+            schemaVersion: 'efesto.github-readonly.v1',
+            operation: input.operation,
+            resource: { owner: input.owner, repo: input.repo, limit: input.limit ?? 20 },
+            provider: 'github-api',
+            fetchedAt: '2026-08-14T12:00:00.000Z',
+            data: { kind: input.operation, fullName: `${input.owner}/${input.repo}` },
+          };
+        },
+      },
+      now: () => new Date('2026-08-14T12:00:00.000Z'),
+    });
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), new CaptureCaseEvidenceProjector(store), undefined, undefined, {
+      goalManager: goals,
+      githubIntegration: github,
+      githubEvidenceProjector: new GitHubEvidenceProjector(store),
+      mcpGateway: { status: 'ready', connectors: {} },
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const endpoint = `http://127.0.0.1:${server.address().port}`;
+    const dashboardHeaders = { ...authHeaders, origin: 'http://localhost:3000' };
+
+    expect((await fetch(`${endpoint}/api/integrations/github`)).status).toBe(401);
+    const before = await fetch(`${endpoint}/api/integrations/github`, { headers: authHeaders });
+    expect(await before.json()).toMatchObject({ ok: true, id: 'github', adapter: 'native', status: 'not_configured', capabilities: [] });
+
+    const configured = await fetch(`${endpoint}/api/integrations/github/credentials`, {
+      method: 'POST',
+      headers: { ...dashboardHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({ token: 'github-test-token-123' }),
+    });
+    expect(configured.status).toBe(200);
+    expect(JSON.stringify(await configured.json())).not.toContain('github-test-token-123');
+
+    const catalog = await (await fetch(`${endpoint}/api/integrations`, { headers: authHeaders })).json();
+    expect(catalog.integrations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'github', adapter: 'native', status: 'ready', requiresExplicitConsent: true }),
+      expect.objectContaining({ id: 'gmail', adapter: 'mcp', status: 'not_configured' }),
+      expect.objectContaining({ id: 'google-drive', adapter: 'mcp', status: 'not_configured' }),
+      expect.objectContaining({ id: 'notion', adapter: 'mcp', status: 'not_configured' }),
+      expect.objectContaining({ id: 'google-calendar', adapter: 'mcp', status: 'not_configured' }),
+    ]));
+
+    const authorizationResponse = await fetch(`${endpoint}/api/integrations/github/authorizations`, {
+      method: 'POST',
+      headers: { ...dashboardHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({ goalId: goal.id, capabilities: ['github.repository.read'] }),
+    });
+    const authorizationBody = await authorizationResponse.json();
+    expect(authorizationResponse.status).toBe(201);
+    expect(authorizationBody.authorization).toMatchObject({ goalId: goal.id, scope: 'github.read', decision: 'approved' });
+
+    expect((await fetch(`${endpoint}/api/integrations/github/authorizations/${encodeURIComponent(authorizationBody.authorization.id)}`)).status).toBe(401);
+    const authorizationStatus = await fetch(`${endpoint}/api/integrations/github/authorizations/${encodeURIComponent(authorizationBody.authorization.id)}`, { headers: authHeaders });
+    expect(authorizationStatus.status).toBe(200);
+    expect(await authorizationStatus.json()).toMatchObject({ ok: true, authorization: { id: authorizationBody.authorization.id, status: 'active' } });
+
+    const readResponse = await fetch(`${endpoint}/api/integrations/github/read`, {
+      method: 'POST',
+      headers: { ...authHeaders, 'content-type': 'application/json', 'x-ibos-idempotency-key': 'http-read-1' },
+      body: JSON.stringify({ authorizationId: authorizationBody.authorization.id, operation: 'repository', owner: 'acme', repo: 'repo' }),
+    });
+    const readBody = await readResponse.json();
+    expect(readResponse.status).toBe(200);
+    expect(readBody).toMatchObject({ ok: true, schemaVersion: 'efesto.github-readonly.v1', replayed: false, receipt: { goalId: goal.id, capability: 'github.repository.read' }, result: { fullName: 'acme/repo' } });
+    expect(readCalls).toBe(1);
+
+    const evidenceResponse = await fetch(`${endpoint}/api/integrations/github/evidence`, {
+      method: 'POST',
+      headers: { ...dashboardHeaders, 'content-type': 'application/json', 'x-ibos-idempotency-key': 'http-read-1' },
+      body: JSON.stringify({ goalId: goal.id, authorizationId: authorizationBody.authorization.id, operation: 'repository', owner: 'acme', repo: 'repo' }),
+    });
+    const evidenceBody = await evidenceResponse.json();
+    expect(evidenceResponse.status).toBe(201);
+    expect(evidenceBody).toMatchObject({ ok: true, schemaVersion: 'efesto.github-evidence.v1', replayed: true, duplicate: false, goalId: goal.id, receiptId: readBody.receipt.id });
+    expect((await store.read()).evidence).toHaveLength(1);
+
+    const caseResponse = await fetch(`${endpoint}/api/browser/case/${encodeURIComponent(evidenceBody.caseId)}`, { headers: authHeaders });
+    expect(caseResponse.status).toBe(200);
+    expect(await caseResponse.json()).toMatchObject({ ok: true, githubAuthorization: { id: authorizationBody.authorization.id, status: 'active' } });
+
+    const evidenceReplay = await fetch(`${endpoint}/api/integrations/github/evidence`, {
+      method: 'POST',
+      headers: { ...dashboardHeaders, 'content-type': 'application/json', 'x-ibos-idempotency-key': 'http-read-1' },
+      body: JSON.stringify({ goalId: goal.id, authorizationId: authorizationBody.authorization.id, operation: 'repository', owner: 'acme', repo: 'repo' }),
+    });
+    expect(evidenceReplay.status).toBe(200);
+    expect(await evidenceReplay.json()).toMatchObject({ duplicate: true, evidenceId: evidenceBody.evidenceId });
+
+    const revoked = await fetch(`${endpoint}/api/integrations/github/authorizations/${encodeURIComponent(authorizationBody.authorization.id)}`, { method: 'DELETE', headers: dashboardHeaders });
+    expect(revoked.status).toBe(200);
+    const revokedStatus = await fetch(`${endpoint}/api/integrations/github/authorizations/${encodeURIComponent(authorizationBody.authorization.id)}`, { headers: authHeaders });
+    expect(revokedStatus.status).toBe(200);
+    expect(await revokedStatus.json()).toMatchObject({ ok: true, authorization: { status: 'revoked' } });
+    const blocked = await fetch(`${endpoint}/api/integrations/github/read`, {
+      method: 'POST',
+      headers: { ...authHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({ authorizationId: authorizationBody.authorization.id, idempotencyKey: 'http-read-2', operation: 'repository', owner: 'acme', repo: 'repo' }),
+    });
+    expect(blocked.status).toBe(403);
+    expect(await blocked.json()).toMatchObject({ ok: false, code: 'GITHUB_AUTHORIZATION_REVOKED' });
+  });
+
+  it('serves a non-mutating Kernel-owned Goal intelligence plan with connector readiness', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-goal-plan-http-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    const goals = new GoalManager(store);
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, {
+      goalManager: goals,
+      hermesRoute: {},
+      bootstrapStatus: () => ({
+        schemaVersion: 'efesto.bootstrap-status.v1',
+        ok: true,
+        kernel: 'ready', hermes: 'ready', obsidian: 'not_configured', pairing: 'paired', overall: 'ready',
+        message: 'ready', diagnostics: {}, actions: [],
+      }),
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const endpoint = `http://127.0.0.1:${server.address().port}`;
+    const before = await store.read();
+
+    expect((await fetch(`${endpoint}/api/goals/plan`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: 'Audita este repositorio de GitHub' }),
+    })).status).toBe(401);
+
+    const response = await fetch(`${endpoint}/api/goals/plan`, {
+      method: 'POST',
+      headers: { ...authHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({ title: 'Audita este repositorio de GitHub' }),
+    });
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      ok: true,
+      schemaVersion: 'efesto.goal-intelligence.v1',
+      authority: 'kernel',
+      intent: { mode: 'connector_research' },
+      sources: expect.arrayContaining([
+        expect.objectContaining({ id: 'hermes', status: 'ready' }),
+        expect.objectContaining({ id: 'github', status: 'not_configured', activeCapabilities: [], required: true }),
+      ]),
+      readiness: 'needs_setup',
+      nextAction: 'configure_source',
+    });
+    expect(await store.read()).toEqual(before);
   });
 
   it('reports Ollama configured only when the summarizer has a model', async () => {

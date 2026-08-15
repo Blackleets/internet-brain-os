@@ -1,14 +1,16 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { WebGoalResolver } from './goal-resolver';
-import { UserGoal } from './user-goal-contract';
+import type { PublicWebSearcher } from '../execution/public-web-search-adapter';
+
+type SearcherMock = Mock<Parameters<PublicWebSearcher['search']>, ReturnType<PublicWebSearcher['search']>>;
 
 describe('WebGoalResolver', () => {
   let resolver: WebGoalResolver;
-  let searcherMock: ReturnType<typeof vi.fn>;
+  let searcherMock: SearcherMock;
 
   beforeEach(() => {
-    searcherMock = vi.fn<(query: string, limit?: number) => Promise<any>>();
-    resolver = new WebGoalResolver(searcherMock as any);
+    searcherMock = vi.fn<Parameters<PublicWebSearcher['search']>, ReturnType<PublicWebSearcher['search']>>();
+    resolver = new WebGoalResolver({ search: searcherMock });
   });
 
   it('should resolve a job goal and return candidates', async () => {

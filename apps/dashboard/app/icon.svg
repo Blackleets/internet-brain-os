@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc" shape-rendering="crispEdges">
+  <title id="title">Efesto pixel smith</title>
+  <desc id="desc">Pixel-art blacksmith forging intelligence with orange embers and electric-blue data sparks.</desc>
+  <g fill="none" stroke-linecap="square" stroke-linejoin="miter">
+    <path fill="#17191f" d="M28 100h56v8H28zM20 108h72v8H20z"/>
+    <path fill="#292c35" d="M72 84h36v8H72zM64 92h52v8H64zM72 100h36v8H72z"/>
+    <path fill="#464a56" d="M80 88h28v4H80zM72 96h36v4H72z"/>
+    <path fill="#24140d" d="M24 68h32v32H24z"/>
+    <path fill="#a3471d" d="M28 72h24v24H28z"/>
+    <path fill="#e87732" d="M32 76h16v16H32z"/>
+    <path fill="#ffb06f" d="M36 80h8v8h-8z"/>
+    <path fill="#1d2028" d="M36 32h28v8H36zM28 40h44v20H28zM32 60h36v16H32z"/>
+    <path fill="#363b48" d="M36 28h24v8H36zM32 36h36v8H32z"/>
+    <path fill="#f0a66e" d="M40 44h20v16H40z"/>
+    <path fill="#12141a" d="M44 48h4v4h-4zM56 48h4v4h-4z"/>
+    <path fill="#8b3f22" d="M48 56h12v4H48z"/>
+    <path fill="#2b303c" d="M32 64h12v32H32zM56 64h12v32H56z"/>
+    <path fill="#e87732" d="M36 68h8v20h-8z"/>
+    <path fill="#313746" d="M28 92h16v16H28zM56 92h16v16H56z"/>
+    <path fill="#111319" d="M24 104h24v8H24zM52 104h24v8H52z"/>
+    <path fill="#f0a66e" d="M64 68h8v12h-8z"/>
+    <path fill="#e87732" d="M68 72h16v8H68z"/>
+    <path fill="#7d8799" d="M80 28h8v40h-8z"/>
+    <path fill="#aeb6c3" d="M72 20h32v12H72zM96 24h12v8H96z"/>
+    <path fill="#525a68" d="M76 32h16v4H76z"/>
+    <path fill="#68e5ff" d="M88 68h4v4h-4zM100 60h4v4h-4zM108 72h4v4h-4zM96 80h4v4h-4z"/>
+    <path fill="#ff9a55" d="M84 76h4v4h-4zM104 84h4v4h-4zM112 64h4v4h-4z"/>
+    <path stroke="#4fc3f7" stroke-width="2" d="M90 70h8M102 62h8M110 74h10"/>
+    <path stroke="#e87732" stroke-width="2" d="M86 78h8M106 86h10"/>
+  </g>
+</svg>

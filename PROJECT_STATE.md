@@ -21,6 +21,94 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 - Search snippet/agent text ≠ Evidence.
 - Responsive mobile-width support does not imply phone → PC Kernel authority.
 
+## Execution checkpoint — 2026-08-15
+
+- Active verification PR: #224
+  (`https://github.com/Blackleets/internet-brain-os/pull/224`), draft and
+  unmerged, based on `main` at `622595cc9d9eb3ba578be23ef118db4c85ac682e`.
+  The earlier duplicate PR #223 is closed and was not merged.
+- Candidate code SHA: `76caa35e5b56eecc3e6239b1d93df3c1c9ffd2a6`.
+  Local qualification commit: `37bcea565158e0a589c0bb307a229d4dc973c29b`.
+  The local working branch remains
+  `agent/premium-forge-value-surface-2026-08-14`; the active remote
+  verification branch is `agent/premium-forge-candidate-verify-2026-08-15`.
+- Fresh local qualification is green: architecture boundary, clean
+  TypeScript, 199 test files / 1,147 tests, dashboard tests (20 files / 141
+  tests), production build, extension package, `verify:first-run`,
+  `release:verify`, and offline Hermes boundary acceptance (14/14).
+- The candidate closes the regressions found by the first remote run:
+  provider-neutral Kernel goal resolution, goal interpreter/planner contracts,
+  criterion matching, stale connector artifact removal, dashboard icon 404,
+  browser locator scoping, mobile privacy-state rendering, and public-search
+  relevance/fallback behavior.
+- Runtime smoke is green: production dashboard startup returned HTTP 200 for
+  `/`; invalid Goal planning input returned HTTP 400 with the bounded
+  `invalid_request` contract. `public-launch-approval` remains
+  `blocked-pending-uat`.
+- Browser UAT is not claimed locally: Playwright could not launch because its
+  Chromium executable is absent. The previous remote run did launch Chromium
+  on the older `4a0dcf31cc408214385c42367805a46cf6f73914` head and exposed the
+  browser regressions now fixed in the candidate.
+- Preview smoke on the candidate's Vercel deployment is green: a Bitcoin Goal
+  returned six topic-relevant public sources, a remote-work Goal returned two
+  employment sources after its bounded broad fallback, and Chat returned the
+  same read-only preview count. No data was persisted, credentials were used,
+  or external action executed.
+- Remote exact-SHA status is still pending. The connected GitHub API published
+  the updated candidate but did not emit new Actions workflow runs for the
+  current head; only the older diagnostic head's runs are available (launcher
+  smoke passed; CI, Windows first-run/package, and live Hermes acceptance
+  failed). No current remote green claim is made.
+- Next release gate: trigger the exact-SHA browser/Windows/package matrix on
+  PR #224, inspect every job, then execute UAT-1→UAT-6 before merge or public
+  promotion.
+
+## Current product surface — Complementos directory
+
+The dashboard's mobile-first Complementos view now exposes a curated external
+connector set: GitHub, Gmail, Google Drive, Notion, and Google Calendar, plus
+the MCP gateway and the existing local integrations. Logos are local static
+assets. External entries are read-first and each one has its own scope,
+capabilities, readiness state, and Settings destination.
+
+This is a truthful catalog/read-model foundation, not a broad account
+authorization surface. GitHub now has the first native read-only adapter:
+the local Kernel can verify a server-side credential, authorize a bounded
+read scope against an active Goal, execute repository/issues/pull-request/check
+reads, and retain revocable authorization plus provenance receipts. A fresh
+bootstrap without `HEPHAESTUS_GITHUB_TOKEN` or a local GitHub credential still
+shows GitHub as `not_configured`; Gmail, Google Drive, Notion, and Google
+Calendar remain MCP catalog-only and `not_configured`. No write capability or
+provider is implied by the catalog.
+
+The authenticated local endpoints are deliberately narrow:
+`/api/integrations/github/credentials`,
+`/api/integrations/github/authorizations`,
+`/api/integrations/github/read`, and
+`/api/integrations/github/evidence`. Credential material never leaves the
+Kernel; reads are GET-only, bounded, Goal-bound, idempotent, and revocable.
+The Goal brief now exposes an explicit repository consent step and the Kernel
+projects the verified GitHub receipt into one deterministic Case/Evidence
+record with provenance, content hash, authorization, and replay protection.
+Evidence now also exposes the public status of the Goal-bound authorization,
+its approved scope/capabilities and expiry, with an inline two-step revoke
+flow. Revocation closes future reads while preserving already-captured
+Evidence. Shared connector definitions now feed both catalog status and Goal
+source routing, and the Goal GitHub action maps repository, issues, pull
+requests, and checks to their exact capabilities; checks require an explicit
+branch, tag, or commit reference. The next slice is to exercise this complete
+path with a real user-owned read-scoped token before reviewing another
+provider contract.
+
+The Goal flow now adds a Kernel-owned `efesto.goal-intelligence.v1` preview
+before confirmation. It routes generic public Goals to Hermes and explicit
+GitHub/Gmail/Drive/Notion/Calendar signals to the matching read-only connector.
+Required capabilities are shown separately from active capabilities, so the
+dashboard can explain a pending integration without implying it is connected.
+The preview is non-mutating; Goal persistence and mission authorization still
+only happen after the existing explicit confirmation. Older Kernels degrade to
+an explicit limited brief.
+
 ## Verified foundation ✅
 
 ### Memory Safety v1
@@ -447,3 +535,9 @@ Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.
 ## Update rule
 
 Replace stale facts here when the verified baseline, blocker, next priority or recovery procedure changes. Do not turn this file into an append-only diary.
+
+## Action trigger diagnostic — 2026-08-15
+
+The candidate branch is published and the PR is open, but the connected GitHub integration has not emitted GitHub Actions runs for the current head. Direct API inspection of the exact head reports zero workflow runs and only the Vercel check. This is a CI-dispatch/integration boundary, not a passing or failing product result; no old diagnostic SHA is reused as evidence.
+
+Manual final CI trigger — 2026-08-15

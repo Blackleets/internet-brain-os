@@ -2,7 +2,7 @@ import { UserGoalInterpreter } from './goal-interpreter';
 import { UserGoal } from './user-goal-contract';
 import { GoalPlanner } from './goal-planner';
 import { GoalPlan } from './goal-plan-contract';
-import { PublicWebSearchClient } from '../../../connectors/src/public-web-search';
+import type { PublicWebSearcher } from '../execution/public-web-search-adapter';
 
 /**
  * Represents a candidate result from a public web search.
@@ -34,6 +34,36 @@ export interface Candidate {
   state: 'partial' | 'no_match';
 }
 
+function normalizeMatchText(value: string): string {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function criterionIsMentioned(description: string, text: string): boolean {
+  const normalizedDescription = normalizeMatchText(description);
+  const normalizedText = normalizeMatchText(text);
+  const numbers = normalizedDescription.match(/\d+/g) ?? [];
+  if (numbers.some((number) => !new RegExp(`\\b${number}\\b`).test(normalizedText))) return false;
+
+  const semanticRules = [
+    { when: /\b(?:jornada|horas?|hrs?)\b/, match: /\b(?:jornada|horas?|hrs?)\b|\d+\s*h(?:rs?)?/ },
+    { when: /\b(?:salario|sueldo)\b/, match: /\b(?:salario|sueldo|paga|euros?|eur)\b|€/ },
+    { when: /\b(?:mensual|monthly|mes)\b|al mes/, match: /\b(?:mensual|monthly|mes)\b|al mes/ },
+    { when: /\b(?:modalidad|modality)\b/, match: /\b(?:modalidad|remoto|remote|presencial|onsite|hibrido|hybrid)\b/ },
+    { when: /\b(?:contrato|contract)\b/, match: /\b(?:contrato|contract|freelance|parcial|part-time|completo|full-time)\b/ },
+  ] as const;
+
+  let matchedRule = false;
+  for (const rule of semanticRules) {
+    if (!rule.when.test(normalizedDescription)) continue;
+    matchedRule = true;
+    if (!rule.match.test(normalizedText)) return false;
+  }
+  if (matchedRule) return true;
+
+  const meaningfulWords = normalizedDescription.match(/[a-z0-9]{4,}/g) ?? [];
+  return meaningfulWords.some((word) => normalizedText.includes(word));
+}
+
 /**
  * Resolves a goal using public web search only (does not persist Evidence or memory).
  * Suitable for web mode without Kernel persistence.
@@ -41,12 +71,12 @@ export interface Candidate {
 export class WebGoalResolver {
   private readonly interpreter: UserGoalInterpreter;
   private readonly planner: GoalPlanner;
-  private readonly searcher: PublicWebSearchClient;
+  private readonly searcher: PublicWebSearcher;
 
-  constructor(searcher?: PublicWebSearchClient) {
+  constructor(searcher: PublicWebSearcher) {
     this.interpreter = new UserGoalInterpreter();
     this.planner = new GoalPlanner();
-    this.searcher = searcher ?? new PublicWebSearchClient();
+    this.searcher = searcher;
   }
 
   /**
@@ -109,12 +139,10 @@ export class WebGoalResolver {
       const criteriaMet: string[] = [];
       const criteriaMissing: string[] = [];
 
-      const textToSearch = `${result.title} ${result.snippet}`.toLowerCase();
+      const textToSearch = `${result.title} ${result.snippet}`;
 
       for (const description of criteriaDescriptions) {
-        // Simple keyword matching: check if the description (lowercase) appears in the text
-        // We could improve this with stemming or more sophisticated matching, but for now we do substring.
-        if (description.toLowerCase().includes(textToSearch) || textToSearch.includes(description.toLowerCase())) {
+        if (criterionIsMentioned(description, textToSearch)) {
           criteriaMet.push(description);
         } else {
           criteriaMissing.push(description);
