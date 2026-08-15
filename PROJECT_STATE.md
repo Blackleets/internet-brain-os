@@ -21,6 +21,42 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 - Search snippet/agent text ≠ Evidence.
 - Responsive mobile-width support does not imply phone → PC Kernel authority.
 
+## Current product surface — Complementos directory
+
+The dashboard's mobile-first Complementos view now exposes a curated external
+connector set: GitHub, Gmail, Google Drive, Notion, and Google Calendar, plus
+the MCP gateway and the existing local integrations. Logos are local static
+assets. External entries are read-first and each one has its own scope,
+capabilities, readiness state, and Settings destination.
+
+This is a truthful catalog/read-model foundation, not a broad account
+authorization surface. GitHub now has the first native read-only adapter:
+the local Kernel can verify a server-side credential, authorize a bounded
+read scope against an active Goal, execute repository/issues/pull-request/check
+reads, and retain revocable authorization plus provenance receipts. A fresh
+bootstrap without `HEPHAESTUS_GITHUB_TOKEN` or a local GitHub credential still
+shows GitHub as `not_configured`; Gmail, Google Drive, Notion, and Google
+Calendar remain MCP catalog-only and `not_configured`. No write capability or
+provider is implied by the catalog.
+
+The authenticated local endpoints are deliberately narrow:
+`/api/integrations/github/credentials`,
+`/api/integrations/github/authorizations`, and
+`/api/integrations/github/read`. Credential material never leaves the Kernel;
+reads are GET-only, bounded, Goal-bound, idempotent, and revocable. The next
+slice is to project the first GitHub receipt into the existing Evidence/Goal
+journey and add the same reviewed contract to another provider only after this
+path is exercised with a real user-owned token.
+
+The Goal flow now adds a Kernel-owned `efesto.goal-intelligence.v1` preview
+before confirmation. It routes generic public Goals to Hermes and explicit
+GitHub/Gmail/Drive/Notion/Calendar signals to the matching read-only connector.
+Required capabilities are shown separately from active capabilities, so the
+dashboard can explain a pending integration without implying it is connected.
+The preview is non-mutating; Goal persistence and mission authorization still
+only happen after the existing explicit confirmation. Older Kernels degrade to
+an explicit limited brief.
+
 ## Verified foundation ✅
 
 ### Memory Safety v1

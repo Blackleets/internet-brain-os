@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Gmail">
+  <rect width="64" height="64" rx="18" fill="#202124"/>
+  <path d="M14 22.5A5.5 5.5 0 0 1 19.5 17h25a5.5 5.5 0 0 1 5.5 5.5v19A5.5 5.5 0 0 1 44.5 47h-25a5.5 5.5 0 0 1-5.5-5.5v-19Z" fill="#fff"/>
+  <path d="M15.5 22 32 35l16.5-13v19.5a4 4 0 0 1-4 4h-25a4 4 0 0 1-4-4V22Z" fill="#f2f2f2"/>
+  <path d="M15.5 22 32 35l16.5-13" fill="none" stroke="#ea4335" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15.5 22v19.5a4 4 0 0 0 4 4M48.5 22v19.5a4 4 0 0 1-4 4" fill="none" stroke="#4285f4" stroke-width="3" stroke-linecap="round"/>
+</svg>

@@ -4,6 +4,114 @@ This file records major product and technical decisions.
 
 Do not delete old decisions. If a decision changes, add a new entry explaining why.
 
+## 2026-08-14 - Kernel-owned Goal Intelligence Brief
+
+Decision: Efesto now prepares a non-mutating `efesto.goal-intelligence.v1`
+preview before a Goal is confirmed. The Kernel classifies the bounded Goal
+intent, selects the minimum relevant read-only sources, and returns each
+source's required scopes, required capabilities, active capabilities, and
+real readiness state. The dashboard renders that result as the Intelligence
+Brief inside the existing Goal plan.
+
+The planner always starts with Hermes/public research for a normal public Goal.
+Explicit signals for GitHub, Gmail, Google Drive, Notion, or Google Calendar
+add only that connector. A gateway being present does not make a provider
+ready; only the connector status in the Kernel catalog can activate its
+capabilities. A pending connector remains visible and can route to Settings,
+while the Goal remains subject to the existing explicit mission confirmation.
+
+Reason:
+
+This makes Efesto feel materially more intelligent by reducing tool choice to
+the user's objective, while preserving the product's core boundary: planning
+is not authorization, source selection is not evidence, and unconfigured
+providers are never presented as connected.
+
+Change request / rollback:
+
+- Behavior: add authenticated, read-only `POST /api/goals/plan`; no store,
+  Goal, mission, connector, or credential mutation occurs.
+- Files: `apps/local-kernel/goal-intelligence.mjs`, `goals.mjs`, `server.mjs`,
+  dashboard Kernel contract/parser/loader, Goal plan UI, translations, CSS,
+  and regression fixtures/tests.
+- Breakage risk: older Kernels may not expose the preview route; the dashboard
+  falls back to an explicit limited brief and preserves the existing Goal
+  flow. The route can be removed independently without changing Goal or
+  mission persistence.
+- Proof: planner unit tests cover generic routing, every curated connector,
+  inactive-capability suppression, and invalid input; HTTP tests prove
+  authentication and no mutation; dashboard parser/shell tests cover the
+  rendered brief and confirmation boundary.
+
+## 2026-08-14 - Complementos externos read-first
+
+Decision: the Efesto Complementos directory exposes five curated external connectors behind the MCP boundary: GitHub, Gmail, Google Drive, Notion, and Google Calendar. Each connector starts with a narrow read-only scope, a local logo, an explicit capability list, and an independent Kernel-owned readiness state.
+
+The dashboard may display and configure these connectors, but `mcp-gateway` readiness never implies that a provider account is authorized. A connector becomes `ready` only when the Kernel receives that connector's exact gateway status and capabilities. Until then the UI must show `not_configured`, keep the connector out of active capability claims, and route configuration to the real Settings surface.
+
+Reason:
+
+This gives Efesto a premium, understandable first connector surface without an unbounded marketplace or false connected states. The read-first boundary keeps provider-specific credentials and future write actions outside the product domain until each adapter has a reviewed authorization and receipt contract.
+
+## 2026-08-14 - First real external adapter: GitHub read-only
+
+Decision: implement GitHub as the first native external adapter, while keeping
+Gmail, Google Drive, Notion, and Google Calendar as independent MCP catalog
+entries. The adapter is a Kernel-local authority boundary over a typed provider
+client; it is not a provider dependency in the domain modules.
+
+The adapter accepts only bounded GitHub API `GET` reads for repositories,
+issues, pull requests, and checks. A credential is verified before it is saved
+to an owner-private local file (or may be supplied read-only by
+`HEPHAESTUS_GITHUB_TOKEN`). An interactive actor must authorize the
+`github.read` scope and selected read capabilities for an active Goal. The
+Kernel persists a Goal revision-bound authorization receipt, enforces a short
+expiry, supports explicit revocation, and records deterministic idempotent read
+receipts with source URL and content hash. No remote write, comment, merge,
+dispatch, OAuth exchange, or automatic Goal authorization is exposed.
+
+Reason:
+
+This gives Efesto one genuinely useful integration without pretending that a
+logo or MCP gateway is an account connection. The contract is small enough to
+test end-to-end, preserves local credential ownership, and creates a reusable
+review bar for future adapters.
+
+Change request / rollback:
+
+- Behavior: add authenticated `/api/integrations/github/*` routes and publish
+  native GitHub status only when the local Kernel instantiates the adapter.
+- Files: `apps/local-kernel/github-readonly-contract.mjs`,
+  `apps/local-kernel/github-readonly-integration.mjs`,
+  `packages/connectors/src/github-readonly.ts`, the catalog/plan wiring, and
+  focused provider, integration, catalog, and HTTP tests.
+- Breakage risk: the adapter fails closed when the connector build or
+  credential is unavailable; existing MCP entries retain their prior
+  `not_configured` behavior. Removing the new routes and catalog status hook
+  restores the previous catalog while leaving existing Goal and mission data
+  intact.
+- Proof: targeted tests cover GET-only provider behavior, normalization,
+  credential secrecy, active-Goal consent, expiry, revocation, idempotent
+  receipts, authenticated routes, and unchanged MCP connector states.
+
+## 2026-08-14 - Universal integration boundary, curated first surface
+
+Decision: Efesto remains open to any compatible tool through typed adapters and MCP, but the product surface starts with a curated set of five integration entry points. MCP is a discovery/transport boundary; it never receives authority over the Kernel, Evidence, or Memory.
+
+The first visible set is:
+
+- MCP gateway for compatible local or remote servers;
+- native public-web research (`web.search` / `web.read`);
+- Obsidian as the local, user-owned knowledge projection;
+- GitHub in read-first mode for repositories, issues, and pull requests;
+- one read-first document surface, initially Google Drive or Notion after audience validation.
+
+Every discovered tool must become a Kernel capability with explicit provider, data scope, credential scope, health, risk level, consent policy, bounded execution, and receipt/provenance. R0 observation is the default; external writes and irreversible actions remain separate approval-gated capabilities. The UI should show five recommended connectors plus a quiet “add via MCP” path, not an unbounded logo grid or a connected state that the local bootstrap cannot prove.
+
+Reason:
+
+Efesto gains universal extensibility without turning the first-run experience into an integration marketplace. A small read-first portfolio makes the value legible, keeps the local-first promise credible, and gives the Kernel enough evidence to expand safely later.
+
 ## 2026-08-12 - Canonical Efesto constitution
 
 Decision: `CONSTITUTION.md` is the single canonical project constitution and agent preflight contract for Efesto.

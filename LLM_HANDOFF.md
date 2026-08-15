@@ -587,3 +587,171 @@ This completes the web-first design slice. Responsive mobile use is included thr
 - No Kernel, authentication, persistence, agent, Evidence, Find, replay or memory-authority contract changed.
 - No native app or phone→PC transport was added.
 - Do not merge the draft automatically.
+
+## Handoff 2026-08-14 - Codex - Efesto Complementos connector foundation
+
+### What changed
+
+- Added a Kernel-owned external MCP catalog for GitHub, Gmail, Google Drive,
+  Notion, and Google Calendar.
+- Kept every connector read-first with a narrow scope, explicit capabilities,
+  independent readiness, and a real Settings action.
+- Added local SVG logos and a responsive directory/icon strip in the dashboard.
+- Added a Settings connector ledger so each `+` action lands on a useful,
+  truthful configuration surface rather than a dead control.
+
+### Verification
+
+- Kernel integration-catalog tests: 3/3 passed.
+- Kernel server integration tests: included in the targeted 30-test run.
+- Dashboard suite: 126/126 passed.
+- Dashboard typecheck: passed.
+- Full repository gates: architecture check, typecheck, build and 1,086/1,086
+  tests passed.
+- Vercel preview deployment is `READY` for commit `d1fc5f2a40bf8436126ac78f877961d0869353c5`.
+
+### Boundary
+
+The connector catalog is wired to Efesto's Kernel read model, but no external
+OAuth/MCP account authorization is claimed yet. The local server does not
+instantiate provider connector statuses, so the five external entries remain
+`not_configured` until a reviewed gateway/auth adapter reports them. Do not
+mark them connected or add write scopes from the UI alone. Browser screenshot
+comparison remains unavailable in this environment because a Chromium binary
+is not installed.
+
+### Next recommended step
+
+Implement and test one real read-only adapter, preferably GitHub, with explicit
+consent, bounded capability receipts, provenance, revocation, and fail-closed
+status reporting; then reuse that contract for the remaining four connectors.
+
+## Handoff 2026-08-14 - Codex - Goal Intelligence Brief
+
+### What changed
+
+- Added the non-mutating authenticated `POST /api/goals/plan` Kernel contract
+  (`efesto.goal-intelligence.v1`).
+- Reused Kernel Goal intent enrichment and added deterministic, explicit-signal
+  routing for Hermes/public research, GitHub, Gmail, Google Drive, Notion, and
+  Google Calendar.
+- Returned required scopes/capabilities separately from active capabilities and
+  kept connector readiness independent from MCP gateway readiness.
+- Added the premium Intelligence Brief inside the Goal plan with intent,
+  selected sources, read-only boundary, pending configuration state, and real
+  Settings/Agents actions.
+- Added Spanish, English, and Portuguese copy, mobile layout, reduced-motion
+  handling, parser/HTTP/planner/dashboard tests, and updated the E2E fixture for
+  the read-only preview request.
+
+### Files changed
+
+- `apps/local-kernel/goal-intelligence.mjs`
+- `apps/local-kernel/goals.mjs`
+- `apps/local-kernel/server.mjs`
+- `apps/local-kernel/goal-intelligence.test.mjs`
+- `apps/local-kernel/server.test.mjs`
+- `apps/dashboard/lib/kernel/contracts.ts`
+- `apps/dashboard/lib/kernel/parse.ts`
+- `apps/dashboard/lib/kernel/goal-intelligence.ts`
+- `apps/dashboard/components/efesto-product-shell.tsx`
+- `apps/dashboard/components/efesto-product-views.tsx`
+- `apps/dashboard/components/efesto-product-shell.test.tsx`
+- `apps/dashboard/lib/kernel/parse.test.ts`
+- `apps/dashboard/app/efesto-forge-redesign.css`
+- `apps/dashboard/lib/efesto-i18n.tsx`
+- `apps/dashboard/e2e/kernel-fixture.mjs`
+- `apps/dashboard/e2e/overview.spec.ts`
+- `ARCHITECTURE.md`, `DECISIONS.md`, `PROJECT_STATE.md`
+
+### Why
+
+Efesto needed to feel more intelligent at the moment of decision, not by
+adding decorative assistant behavior but by explaining how a Goal maps to
+sources and permissions. The brief reduces tool choice while preserving
+Kernel sovereignty, evidence provenance, and human confirmation.
+
+### Verification
+
+- Targeted planner, Kernel HTTP, parser, and dashboard tests: 53/53 passed.
+- TypeScript typecheck: passed after the implementation slice.
+- Full architecture check, typecheck, build, and repository test suite passed:
+  190 test files / 1,096 tests.
+- Vercel preview is `READY` for the published branch commit
+  `74e89e43390f2e405f78ef7dd528ad2f942b2653`.
+- Browser screenshot comparison remains blocked in this environment because
+  the Playwright Chromium binary is not installed; the deployed HTML smoke
+  check returned HTTP 200.
+
+### Risks / uncertainties
+
+- The planner is deterministic and bounded; it is a source-routing preview,
+  not semantic model reasoning and not proof that a provider account is
+  authorized.
+- A running old Kernel without `/api/goals/plan` shows the explicit limited
+  state and keeps the existing Goal confirmation path.
+- The web preview still cannot reach a user's loopback Kernel unless the user
+  opens it from a compatible local environment; the preview must not imply
+  phone-to-PC authority.
+
+### Next recommended step
+
+Inspect the rendered desktop/mobile brief on the preview, then implement one
+genuine read-only GitHub adapter behind the same source/capability/receipt
+contract. Keep the adapter bounded, consented, revocable, and fail-closed.
+
+## Handoff 2026-08-14 - Codex - Governed GitHub read-only adapter
+
+### What changed
+
+- Added a typed `GitHubReadOnlyClient` under `packages/connectors` with a fixed
+  HTTPS GitHub API base, bounded timeout/response/list limits, GET-only
+  repository/issues/pull-request/check reads, input validation, normalized
+  provider data, and safe provider errors.
+- Added the Kernel-owned `GitHubReadOnlyIntegration` with owner-private
+  credential storage, credential verification, active-Goal authorization,
+  `github.read` capabilities, 15-minute authorization expiry, explicit
+  revocation, deterministic idempotent read receipts, source provenance and
+  content hashes.
+- Added authenticated local routes for GitHub credential status/configure/
+  revoke, authorization/revoke, and bounded reads. The integration catalog and
+  Goal Intelligence Brief publish GitHub as `native` only from this verified
+  Kernel status. Gmail, Google Drive, Notion, and Google Calendar remain
+  unchanged MCP catalog entries.
+
+### Files changed
+
+- `apps/local-kernel/github-readonly-contract.mjs`
+- `apps/local-kernel/github-readonly-integration.mjs`
+- `apps/local-kernel/github-readonly-integration.test.mjs`
+- `apps/local-kernel/server.mjs`
+- `apps/local-kernel/server.test.mjs`
+- `apps/local-kernel/integration-catalog.mjs`
+- `apps/local-kernel/integration-catalog.test.mjs`
+- `apps/local-kernel/goal-intelligence.mjs`
+- `packages/connectors/src/github-readonly.ts`
+- `packages/connectors/src/index.ts`
+- `packages/connectors/test/github-readonly.test.ts`
+- `ARCHITECTURE.md`, `DECISIONS.md`, `PROJECT_STATE.md`, `LLM_HANDOFF.md`
+
+### Verification
+
+- Targeted provider, integration, catalog, and Kernel HTTP tests: 42/42 passed.
+- `pnpm architecture:check`: passed.
+- `pnpm typecheck`: passed after the implementation and export wiring.
+- Full repository gates: 192 test files / 1,107 tests passed; architecture
+  check, typecheck, and production build passed.
+- Remote PR head: `8b477b70be2e3bb6f689c5c6a5196ecd1d089466`.
+- Vercel preview is `READY` at
+  `https://efesto-git-agent-premium-forge-v-093946-nfyns-projects-b0cc0f41.vercel.app`.
+- Automated preview fetch is SSO-protected and returned HTTP 302; no visual
+  or HTML smoke pass is claimed from that response.
+
+### Boundary / residual risk
+
+No live GitHub credential is available in this workspace, so the real provider
+was verified through the typed client contract and deterministic HTTP fixtures,
+not a live account read. Do not claim live GitHub data until an owner supplies
+a read-scoped token through the local Kernel. The adapter does not yet project
+GitHub receipts into the Evidence/Goal UI; that is the next bounded product
+slice. Do not add write scopes or alter the other four connectors in that step.
