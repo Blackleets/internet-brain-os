@@ -18,50 +18,104 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(async ({ page }) => { expect(browserProblems.get(page) ?? []).toEqual([]); });
 
 async function connect(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Conectar', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Conectar Kernel', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Ajustes', exact: true })).toBeVisible();
   await page.getByRole('textbox', { name: 'URL del Kernel', exact: true }).fill('http://127.0.0.1:4100');
   await page.getByLabel('Token privado', { exact: true }).fill(token);
   await page.getByRole('button', { name: 'Autorizar dispositivo', exact: true }).click();
-  await expect(page.getByRole('button', { name: /Kernel ready/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Kernel listo/ })).toBeVisible();
 }
 
 async function expectLocalScorecard(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Valor del producto', exact: true })).toBeVisible();
   await expect(page.getByText('Solo local · sin telemetría externa', { exact: true })).toBeVisible();
-  await expect(page.getByText('Goals con Find útil', { exact: true })).toBeVisible();
-  await expect(page.getByText('Tiempo al primer Find útil', { exact: true })).toBeVisible();
+  await expect(page.getByText('Goals con hallazgo útil', { exact: true })).toBeVisible();
+  await expect(page.getByText('Tiempo al primer hallazgo útil', { exact: true })).toBeVisible();
   await expect(page.getByText('50%', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('5 min', { exact: true })).toBeVisible();
 }
 
-test('runs the Goal-first journey only after explicit confirmation', async ({ page }) => {
+test('runs the conversation-first journey only after explicit confirmation', async ({ page }) => {
   const writes: string[] = [];
   page.on('request', (request) => { if (request.method() === 'POST') writes.push(new URL(request.url()).pathname); });
   await page.goto('/');
   expect(page.viewportSize()).toEqual({ width: 1536, height: 1024 });
-  await expect(page.locator('.efesto-product')).toHaveCSS('grid-template-columns', /270px/);
-  await expect(page.getByRole('heading', { name: '¿Qué quieres conseguir?', exact: true })).toBeVisible();
-  await expect(page.getByRole('img', { name: /Modo local desconectado/ })).toBeVisible();
-  await expect(page.getByRole('textbox', { name: 'Goal', exact: true })).toBeVisible();
-  await expect(page.locator('.home-eyebrow')).toHaveText('CONVERSACIÓN CON AUTORIDAD DEL KERNEL');
-  await expect(page.locator('.composer-identity')).toContainText('Forjar un nuevo Goal');
-  await expect(page.getByRole('button', { name: 'Goal', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('button', { name: 'Chat', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('.efesto-product')).toHaveCSS('grid-template-columns', /236px/);
+  await expect(page.getByRole('heading', { name: '¿En qué trabajamos?', exact: true })).toBeVisible();
+  await expect(page.getByText('EFESTO · INTELLIGENCE FORGE', { exact: true })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Mensaje', exact: true })).toBeVisible();
+  await expect(page.getByText('Privado por diseño', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Goal', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByRole('button', { name: 'Chat', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.forge-quick-prompts, .forge-suggestion-rail, .forge-suggestion-next')).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Mensaje', exact: true })).toHaveAttribute('placeholder', 'Configura un modelo para empezar…');
+  await page.getByRole('button', { name: 'Goal', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Goal', exact: true })).toHaveAttribute('placeholder', /Encuéntrame|Busca trabajos|Investiga una empresa|Encuentra oportunidades/);
 
   await connect(page);
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
-  await expect(page.getByRole('img', { name: /Investigando/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Kernel conectado', exact: true })).toBeVisible();
   await expectLocalScorecard(page);
 
+  await page.getByRole('button', { name: 'Goal', exact: true }).click();
   await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Auditar fuentes públicas');
   await page.getByRole('button', { name: 'Preparar Goal', exact: true }).click();
   await expect(page.getByText('PLAN PROPUESTO · AÚN NO EJECUTADO', { exact: true })).toBeVisible();
-  expect(writes).toEqual([]);
+  expect(writes).toEqual(['/api/goals/plan']);
 
   await page.getByRole('button', { name: 'Confirmar y ejecutar', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Missions', exact: true })).toBeVisible();
-  expect(writes).toEqual(['/api/goals', '/api/goals/goal-e2e/missions']);
+  await expect(page.getByRole('heading', { name: 'Misiones', exact: true })).toBeVisible();
+  expect(writes).toEqual(['/api/goals/plan', '/api/goals', '/api/goals/goal-e2e/missions']);
+});
+
+test('opens the zero-setup web path and keeps planning separate from execution', async ({ page }) => {
+  const writes: string[] = [];
+  page.on('request', (request) => { if (request.method() === 'POST') writes.push(new URL(request.url()).pathname); });
+
+  await page.goto('/?runtime=web');
+  await expect(page.getByRole('button', { name: 'Modo web listo', exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Goal', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('EFESTO · TRABAJO DESDE LA WEB', { exact: true })).toBeVisible();
+
+  await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Auditar fuentes públicas');
+  await page.getByRole('button', { name: 'Preparar Goal', exact: true }).click();
+  await expect(page.getByText('Resultados encontrados en la web', { exact: true })).toBeVisible();
+  await expect(page.getByText('Resultados públicos no verificados · sin credenciales, escritura ni ejecución.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Conectar modo privado para ejecutar', exact: true })).toBeDisabled();
+  expect(writes).toEqual(['/api/efesto/plan']);
+
+  await page.getByRole('button', { name: 'Integraciones', exact: true }).click();
+  await expect(page.getByText('Conecta el Kernel para leer adaptadores y capacidades disponibles.', { exact: true })).toBeVisible();
+});
+
+test('answers a web Chat order with a bounded preview instead of staying inert', async ({ page }) => {
+  const writes: string[] = [];
+  page.on('request', (request) => { if (request.method() === 'POST') writes.push(new URL(request.url()).pathname); });
+
+  await page.goto('/?runtime=web');
+  await expect(page.getByRole('button', { name: 'Modo web listo', exact: true }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Mensaje', exact: true }).fill('Encuentra oportunidades de negocio en Madrid');
+  await expect(page.getByRole('button', { name: 'Enviar mensaje', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Enviar mensaje', exact: true }).click();
+  await expect(page.getByText(/He recibido tu orden/)).toBeVisible();
+  await expect(page.getByText('Vista previa web · sin modelo externo', { exact: true })).toBeVisible();
+  expect(writes).toEqual(['/api/efesto/plan']);
+});
+
+test('switches the Efesto surface language from gear settings', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Ajustes', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Ajustes', exact: true })).toBeVisible();
+
+  await page.getByRole('combobox', { name: 'Idioma de la interfaz', exact: true }).selectOption('en');
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Home', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('efesto.locale.v1'))).toBe('en');
+
+  await page.getByRole('button', { name: 'Home', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'What are we working on?', exact: true })).toBeVisible();
+  await expect(page.getByText('Enter to send', { exact: true })).toBeVisible();
 });
 
 test('wires Finds, Evidence and model Chat to real product contracts', async ({ page }) => {
@@ -70,42 +124,38 @@ test('wires Finds, Evidence and model Chat to real product contracts', async ({ 
   await page.goto('/');
   await connect(page);
 
-  await page.getByRole('button', { name: 'Inicio', exact: true }).click();
-  await page.locator('.context-section').nth(0).getByRole('button', { name: 'Ver todo', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Evidence', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Inicio', exact: true }).click();
-  await page.locator('.context-section').nth(1).getByRole('button', { name: 'Ver todo', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Finds', exact: true })).toBeVisible();
-
-  await page.locator('.efesto-sidebar nav').getByRole('button', { name: /Finds/ }).click();
+  await page.getByRole('button', { name: 'Hallazgos', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Hallazgos', exact: true })).toBeVisible();
   await expect(page.getByText('AI automation project', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Útil', exact: true }).click();
   await expect.poll(() => writes).toContain('/api/opportunities/opportunity-1/feedback');
 
-  await page.getByRole('button', { name: /Evidence/ }).click();
+  await page.getByRole('button', { name: 'Evidencia', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Evidencia', exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Supplier research/ }).click();
   const source = page.getByRole('link', { name: /Abrir fuente/ });
   await expect(source).toBeVisible();
   await expect(source).toHaveAttribute('href', 'https://supplier.example/source');
 
-  await page.getByRole('button', { name: /Models/ }).click();
+  await page.getByRole('button', { name: 'Modelos', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Modelos', exact: true })).toBeVisible();
   await page.getByRole('button', { name: /qwen3:4b/ }).click();
   await expect(page.getByRole('textbox', { name: 'Mensaje', exact: true })).toBeVisible();
   await page.getByRole('textbox', { name: 'Mensaje', exact: true }).fill('Resume el estado');
-  await page.getByRole('button', { name: 'Enviar', exact: true }).click();
+  await page.getByRole('button', { name: 'Enviar mensaje', exact: true }).click();
   await expect(page.getByText('Fixture response from the selected local model.', { exact: true })).toBeVisible();
-  await expect(page.getByText('No admitido en memoria', { exact: true })).toBeVisible();
+  await expect(page.getByText('La conversación permanece separada de la evidencia y la memoria.', { exact: true })).toBeVisible();
   expect(writes).toContain('/api/chat/stream');
 });
 
 test('disconnect removes the session credential and returns truthful offline state', async ({ page }) => {
   await page.goto('/');
   await connect(page);
-  await page.getByRole('button', { name: /Kernel ready/ }).click();
+  await page.getByRole('button', { name: /Kernel listo/ }).click();
   await page.getByRole('button', { name: 'Desconectar', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Conectar', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
-  await expect(page.getByRole('img', { name: /Modo local desconectado/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Conectar Kernel', exact: true })).toBeVisible();
   await expect(page.getByText('Métricas temporalmente no disponibles', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.getItem('hephaestus.owner.connection.session.v1'))).toBeNull();
 });
@@ -116,16 +166,19 @@ test('supports keyboard Goal preparation with visible focus and reduced motion',
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
 
+  await page.getByRole('button', { name: 'Goal', exact: true }).click();
+  await expect(page.getByText('Enter para preparar', { exact: true })).toBeVisible();
   const goal = page.getByRole('textbox', { name: 'Goal', exact: true });
   await goal.focus();
   await expect(goal).toBeFocused();
-  expect(await goal.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none');
+  expect(await goal.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('none');
+  expect(await page.locator('.forge-composer').evaluate((element) => getComputedStyle(element).boxShadow)).not.toBe('none');
   await goal.fill('Busca una oportunidad pública y verificable');
   await goal.press('Enter');
   await expect(page.getByText('PLAN PROPUESTO · AÚN NO EJECUTADO', { exact: true })).toBeVisible();
   expect(writes).toEqual([]);
 
-  const motion = await page.locator('.brain-stage > img').evaluate((element) => ({
+  const motion = await page.locator('.forge-composer').evaluate((element) => ({
     transitionDuration: getComputedStyle(element).transitionDuration,
     animationDuration: getComputedStyle(element).animationDuration,
   }));
@@ -149,19 +202,22 @@ test.describe('mobile Efesto product shell', () => {
   });
 
 
-  test('uses a drawer, single-column Goal surface and safe composer without horizontal overflow', async ({ page }) => {
+  test('uses a drawer, single-column Forge surface and safe composer without horizontal overflow', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('button', { name: 'Abrir menú', exact: true })).toBeVisible();
-    await expect(page.getByRole('heading', { name: '¿Qué quieres conseguir?', exact: true })).toBeVisible();
-    await expect(page.getByRole('img', { name: /Modo local desconectado/ })).toBeVisible();
-    await expect(page.getByRole('textbox', { name: 'Goal', exact: true })).toBeVisible();
-    await expect(page.locator('.goal-dock')).toBeVisible();
-    await expect(page.locator('.composer-identity')).toContainText('Forjar un nuevo Goal');
+    await expect(page.getByRole('button', { name: 'Alternar navegación', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '¿En qué trabajamos?', exact: true })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Mensaje', exact: true })).toBeVisible();
+    await expect(page.locator('.forge-composer')).toBeVisible();
+    await expect(page.locator('.forge-quick-prompts, .forge-suggestion-rail, .forge-suggestion-next')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Goal', exact: true }).click();
+    const goal = page.getByRole('textbox', { name: 'Goal', exact: true });
+    await expect(goal).toHaveAttribute('placeholder', /Encuéntrame|Busca trabajos|Investiga una empresa|Encuentra oportunidades/);
+    await expect(page.getByText('Privado por diseño', { exact: true })).toBeVisible();
 
     const initial = await page.evaluate(() => ({ viewportWidth: innerWidth, documentWidth: document.documentElement.scrollWidth }));
     expect(initial.documentWidth).toBe(initial.viewportWidth);
 
-    await page.getByRole('button', { name: 'Abrir menú', exact: true }).click();
+    await page.getByRole('button', { name: 'Alternar navegación', exact: true }).click();
     const sidebar = page.locator('.efesto-sidebar');
     await expect(sidebar).toBeVisible();
     await expect.poll(async () => (await sidebar.boundingBox())?.x ?? -999).toBeGreaterThanOrEqual(-1);
@@ -174,12 +230,12 @@ test.describe('mobile Efesto product shell', () => {
     await expect.poll(async () => (await sidebar.boundingBox())?.x ?? 0).toBeLessThan(-100);
 
     await connect(page);
-    await page.getByRole('button', { name: 'Abrir menú', exact: true }).click();
+    await page.getByRole('button', { name: 'Alternar navegación', exact: true }).click();
     await page.getByRole('button', { name: 'Inicio', exact: true }).click();
-    await expect(page.getByRole('img', { name: /Investigando/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Kernel conectado', exact: true })).toBeVisible();
     await expectLocalScorecard(page);
-    await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Busca oportunidades reales');
-    const composerBox = await page.locator('.goal-dock').boundingBox();
+    await page.getByRole('textbox', { name: 'Mensaje', exact: true }).fill('Busca oportunidades reales');
+    const composerBox = await page.locator('.forge-composer').boundingBox();
     expect(composerBox).not.toBeNull();
     if (!composerBox) throw new Error('Mobile composer has no layout box');
     expect(composerBox.x).toBeGreaterThanOrEqual(0);
