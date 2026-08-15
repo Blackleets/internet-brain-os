@@ -30,6 +30,25 @@ const fixtures = {
   opportunities: { ok: true, opportunities: [{ id: 'opportunity-1', category: 'client', categoryLabel: 'Potential client', benefitType: 'income', title: 'AI automation project', sourceHost: 'clients.example', relevance: 72, nextAction: 'Qualify the need before contacting', status: 'new', detectedAt: '2026-07-26T10:00:00.000Z' }] },
   providers: { ok: true, providers: [{ id: 'fixture-local', type: 'ollama', label: 'Ollama local', baseUrl: 'http://127.0.0.1:11434', models: ['qwen3:4b'], hasCredential: true, managedBy: 'environment' }] },
   modelForge: { ok: true, forge: { runtime: 'available', hardware: { ramGiB: 32, cpuCores: 12, tier: 'powerful' }, activeModel: 'qwen3:4b', recommended: 'qwen3:4b', models: [{ id: 'qwen3:4b', label: 'Qwen 3 4B', minRamGiB: 8, tier: 'light', uses: ['chat'], multilingual: true, compatible: true, installed: true, active: true }], setup: { action: 'configure', command: null, setting: null, restartRequired: false } } },
+  integrations: {
+    ok: true,
+    schemaVersion: 'efesto.integration-catalog.v1',
+    authority: 'kernel',
+    generatedAt: '2026-07-26T10:00:00.000Z',
+    integrations: [
+      { id: 'kernel', kind: 'core', adapter: 'native', status: 'ready', capabilities: ['goal.prepare', 'mission.confirm', 'evidence.read'], scopes: ['local'], action: 'settings', readOnly: true, statusReason: 'kernel_boundary' },
+      { id: 'hermes', kind: 'agent', adapter: 'native', status: 'ready', capabilities: ['mission.execute'], scopes: ['public.read'], action: 'agents', readOnly: true, requiresExplicitConsent: true, statusReason: 'runtime_verified' },
+      { id: 'obsidian', kind: 'memory', adapter: 'native', status: 'ready', capabilities: ['memory.project'], scopes: ['local.memory'], action: 'settings', readOnly: true, statusReason: 'local_projection' },
+      { id: 'browser-extension', kind: 'capture', adapter: 'native', status: 'ready', capabilities: ['capture.public_page'], scopes: ['public.read'], action: 'settings', readOnly: true, requiresExplicitConsent: true, statusReason: 'paired_extension' },
+      { id: 'model-providers', kind: 'model', adapter: 'native', status: 'ready', capabilities: ['chat.generate'], scopes: ['model.input'], action: 'models', count: 1, readOnly: true, statusReason: 'provider_configured' },
+      { id: 'mcp-gateway', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['scoped.tool'], action: 'settings', readOnly: true, requiresExplicitConsent: true, statusReason: 'gateway_not_configured' },
+      { id: 'github', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['github.read'], action: 'settings', readOnly: true, requiresExplicitConsent: true, statusReason: 'gateway_not_configured' },
+      { id: 'gmail', kind: 'transport', status: 'not_configured', adapter: 'mcp', capabilities: [], scopes: ['gmail.read'], action: 'settings', readOnly: true, requiresExplicitConsent: true, statusReason: 'gateway_not_configured' },
+      { id: 'google-drive', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['drive.read'], action: 'settings', readOnly: true, requiresExplicitConsent: true, statusReason: 'gateway_not_configured' },
+      { id: 'notion', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['notion.read'], action: 'settings', readOnly: true, requiresExplicitConsent: true, statusReason: 'gateway_not_configured' },
+      { id: 'google-calendar', kind: 'transport', adapter: 'mcp', status: 'not_configured', capabilities: [], scopes: ['calendar.read'], action: 'settings', readOnly: true, requiresExplicitConsent: true, statusReason: 'gateway_not_configured' },
+    ],
+  },
   preferences: {
     ok: true,
     profile: {
@@ -76,7 +95,7 @@ const fixtures = {
 const routes = new Map([
   ['/health', fixtures.health], ['/status', fixtures.status], ['/bootstrap/status', fixtures.bootstrap],
   ['/api/cases', fixtures.cases], ['/api/goals', fixtures.goals], ['/api/agent-missions', fixtures.missions], ['/api/goal-surfaces', fixtures.goalSurfaces],
-  ['/api/opportunities', fixtures.opportunities], ['/api/chat/providers', fixtures.providers], ['/api/model-forge', fixtures.modelForge], ['/api/preferences', fixtures.preferences],
+  ['/api/opportunities', fixtures.opportunities], ['/api/chat/providers', fixtures.providers], ['/api/model-forge', fixtures.modelForge], ['/api/preferences', fixtures.preferences], ['/api/integrations', fixtures.integrations],
   ['/api/goals/plan', fixtures.goalPlan],
 ]);
 
