@@ -68,6 +68,8 @@ const es: Record<string, string> = {
   'home.newConversationAria': 'Nueva conversación',
   'home.newGoalAria': 'Crear un Goal',
   'home.messages': 'Mensajes',
+  'home.copyMessage': 'Copiar respuesta',
+  'home.copiedMessage': 'Respuesta copiada',
   'home.emptyEyebrow': 'EFESTO · INTELLIGENCE FORGE',
   'home.emptyHeading': '¿En qué trabajamos?',
   'home.emptyCopy': 'Pregunta, analiza o convierte una intención en un Goal cuando necesites una misión controlada.',
@@ -525,6 +527,8 @@ const es: Record<string, string> = {
 
 const en: Record<string, string> = {
   ...es,
+  'home.copyMessage': 'Copy response',
+  'home.copiedMessage': 'Response copied',
   'locale.language': 'Language',
   'locale.interface': 'Interface language',
   'locale.help': 'Change the language across the Efesto surface.',
@@ -572,6 +576,8 @@ const en: Record<string, string> = {
 
 const pt: Record<string, string> = {
   ...es,
+  'home.copyMessage': 'Copiar resposta',
+  'home.copiedMessage': 'Resposta copiada',
   'model.availableList': 'Modelos disponíveis',
   'status.active': 'ativo',
   'nav.brandHome': 'Efesto, início',
