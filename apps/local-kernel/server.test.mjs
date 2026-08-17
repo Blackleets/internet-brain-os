@@ -170,11 +170,11 @@ describe('local Kernel HTTP receiver', () => {
     const authorizationResponse = await fetch(`${endpoint}/api/integrations/github/authorizations`, {
       method: 'POST',
       headers: { ...dashboardHeaders, 'content-type': 'application/json' },
-      body: JSON.stringify({ goalId: goal.id, capabilities: ['github.repository.read'] }),
+      body: JSON.stringify({ goalId: goal.id, capabilities: ['github.repository.read'], resource: { owner: 'acme', repo: 'repo' } }),
     });
     const authorizationBody = await authorizationResponse.json();
     expect(authorizationResponse.status).toBe(201);
-    expect(authorizationBody.authorization).toMatchObject({ goalId: goal.id, scope: 'github.read', decision: 'approved' });
+    expect(authorizationBody.authorization).toMatchObject({ goalId: goal.id, scope: 'github.read', decision: 'approved', resource: { owner: 'acme', repo: 'repo' } });
 
     expect((await fetch(`${endpoint}/api/integrations/github/authorizations/${encodeURIComponent(authorizationBody.authorization.id)}`)).status).toBe(401);
     const authorizationStatus = await fetch(`${endpoint}/api/integrations/github/authorizations/${encodeURIComponent(authorizationBody.authorization.id)}`, { headers: authHeaders });

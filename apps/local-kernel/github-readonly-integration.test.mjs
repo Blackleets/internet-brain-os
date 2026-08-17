@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, stat } from 'node:fs/promises';
+import { chmod, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -10,6 +10,8 @@ import {
 
 const TOKEN = 'github-test-token-123';
 const ACTOR = { actorType: 'interactive_user', decidedBy: 'dashboard-ui' };
+const REPO_RESOURCE = { owner: 'Blackleets', repo: 'internet-brain-os' };
+const ACME_RESOURCE = { owner: 'acme', repo: 'repo' };
 
 async function fixture() {
   const dir = await mkdtemp(join(tmpdir(), 'efesto-github-readonly-'));
@@ -82,8 +84,8 @@ describe('GitHub read-only Kernel integration', () => {
     const { integration } = await fixture();
     await integration.configureCredential(TOKEN);
 
-    const first = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], actor: ACTOR });
-    const replay = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], actor: ACTOR });
+    const first = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: REPO_RESOURCE, actor: ACTOR });
+    const replay = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: REPO_RESOURCE, actor: ACTOR });
 
     expect(first).toEqual(replay);
     expect(first).toMatchObject({
@@ -93,6 +95,7 @@ describe('GitHub read-only Kernel integration', () => {
       decision: 'approved',
       scope: 'github.read',
       approvedCapabilities: ['github.repository.read'],
+      resource: REPO_RESOURCE,
       actorType: 'interactive_user',
       decidedBy: 'dashboard-ui',
     });
@@ -103,7 +106,7 @@ describe('GitHub read-only Kernel integration', () => {
     const fixtureValue = await fixture();
     const { integration, advance } = fixtureValue;
     await integration.configureCredential(TOKEN);
-    const authorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], actor: ACTOR });
+    const authorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: REPO_RESOURCE, actor: ACTOR });
 
     await expect(integration.getAuthorization(authorization.id)).resolves.toMatchObject({ id: authorization.id, status: 'active' });
     advance(60_001);
@@ -114,7 +117,7 @@ describe('GitHub read-only Kernel integration', () => {
   it('fails closed when an authorization expiry is malformed', async () => {
     const { integration, store } = await fixture();
     await integration.configureCredential(TOKEN);
-    const authorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], actor: ACTOR });
+    const authorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: REPO_RESOURCE, actor: ACTOR });
     await store.project(async (data) => ({ changed: true, data: { ...data, githubAuthorizations: data.githubAuthorizations.map((item) => item.id === authorization.id ? { ...item, expiresAt: 'not-a-date' } : item) }, result: undefined }));
 
     await expect(integration.getAuthorization(authorization.id)).resolves.toMatchObject({ status: 'invalid' });
@@ -126,25 +129,25 @@ describe('GitHub read-only Kernel integration', () => {
     const { integration, store } = await fixture();
     await integration.configureCredential(TOKEN);
 
-    await expect(integration.authorize({ goalId: 'goal:missing', capabilities: ['github.repository.read'], actor: ACTOR }))
+    await expect(integration.authorize({ goalId: 'goal:missing', capabilities: ['github.repository.read'], resource: REPO_RESOURCE, actor: ACTOR }))
       .rejects.toMatchObject({ code: 'GITHUB_GOAL_NOT_FOUND', status: 404 });
-    await expect(integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.write'], actor: ACTOR }))
+    await expect(integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.write'], resource: REPO_RESOURCE, actor: ACTOR }))
       .rejects.toMatchObject({ code: 'GITHUB_CAPABILITY_DENIED', status: 403 });
-    await expect(integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], actor: { actorType: 'agent', decidedBy: 'hermes' } }))
+    await expect(integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: REPO_RESOURCE, actor: { actorType: 'agent', decidedBy: 'hermes' } }))
       .rejects.toMatchObject({ code: 'GITHUB_ACTOR_UNTRUSTED', status: 403 });
 
-    const authorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], actor: ACTOR });
+    const authorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: ACME_RESOURCE, actor: ACTOR });
     await store.project(async (data) => ({ changed: true, data: { ...data, goals: data.goals.map((goal) => ({ ...goal, status: 'completed' })) }, result: undefined }));
     await expect(integration.read({ authorizationId: authorization.id, idempotencyKey: 'inactive-goal', operation: 'repository', owner: 'acme', repo: 'repo' }))
       .rejects.toMatchObject({ code: 'GITHUB_GOAL_AUTHORIZATION_STALE', status: 403 });
-    await expect(integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], actor: ACTOR }))
+    await expect(integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: REPO_RESOURCE, actor: ACTOR }))
       .rejects.toMatchObject({ code: 'GITHUB_GOAL_NOT_FOUND', status: 404 });
   });
 
   it('reads only through an active authorization and replays an idempotent receipt', async () => {
     const { integration, store, counts } = await fixture();
     await integration.configureCredential(TOKEN);
-    const authorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], actor: ACTOR });
+    const authorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: REPO_RESOURCE, actor: ACTOR });
 
     const [first, replay] = await Promise.all([
       integration.read({
@@ -180,23 +183,102 @@ describe('GitHub read-only Kernel integration', () => {
     expect(JSON.stringify(await store.read())).not.toContain(TOKEN);
   });
 
+  it('binds each authorization to the consented repository', async () => {
+    const { integration, counts } = await fixture();
+    await integration.configureCredential(TOKEN);
+    const authorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: REPO_RESOURCE, actor: ACTOR });
+
+    await expect(integration.read({ authorizationId: authorization.id, idempotencyKey: 'wrong-repository', operation: 'repository', owner: 'acme', repo: 'repo' }))
+      .rejects.toMatchObject({ code: 'GITHUB_RESOURCE_NOT_AUTHORIZED', status: 403 });
+    expect(counts().readCalls).toBe(0);
+  });
+
+  it('rejects idempotency-key reuse when the request changes', async () => {
+    const { integration } = await fixture();
+    await integration.configureCredential(TOKEN);
+    const authorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: REPO_RESOURCE, actor: ACTOR });
+
+    await integration.read({ authorizationId: authorization.id, idempotencyKey: 'same-key', operation: 'repository', owner: REPO_RESOURCE.owner, repo: REPO_RESOURCE.repo, limit: 20 });
+    await expect(integration.read({ authorizationId: authorization.id, idempotencyKey: 'same-key', operation: 'repository', owner: REPO_RESOURCE.owner, repo: REPO_RESOURCE.repo, limit: 10 }))
+      .rejects.toMatchObject({ code: 'GITHUB_IDEMPOTENCY_REUSE', status: 409 });
+  });
+
+  it('invalidates previous approvals when the local credential is replaced', async () => {
+    const { integration } = await fixture();
+    await integration.configureCredential(TOKEN);
+    const authorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: REPO_RESOURCE, actor: ACTOR });
+
+    await integration.configureCredential('github-replaced-token-456');
+    await expect(integration.read({ authorizationId: authorization.id, idempotencyKey: 'replaced-credential', operation: 'repository', owner: REPO_RESOURCE.owner, repo: REPO_RESOURCE.repo }))
+      .rejects.toMatchObject({ code: 'GITHUB_AUTHORIZATION_REVOKED', status: 403 });
+  });
+
+  it('revokes approvals when a restarted process observes a different credential identity', async () => {
+    const { integration, store } = await fixture();
+    await integration.configureCredential(TOKEN);
+    const authorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: REPO_RESOURCE, actor: ACTOR });
+    await store.project(async (data) => ({
+      changed: true,
+      data: { ...data, githubAuthorizations: data.githubAuthorizations.map((item) => item.id === authorization.id ? { ...item, credentialFingerprint: 'different-credential' } : item) },
+      result: undefined,
+    }));
+
+    await expect(integration.read({ authorizationId: authorization.id, idempotencyKey: 'credential-drift', operation: 'repository', owner: REPO_RESOURCE.owner, repo: REPO_RESOURCE.repo }))
+      .rejects.toMatchObject({ code: 'GITHUB_CREDENTIAL_CHANGED', status: 403 });
+    expect((await store.read()).githubAuthorizations.find((item) => item.id === authorization.id)).toMatchObject({ revokeReason: 'credential_changed' });
+  });
+
+  it('fails closed for unsafe persisted credential permissions', async () => {
+    if (process.platform === 'win32') return;
+    const dir = await mkdtemp(join(tmpdir(), 'efesto-github-credential-permissions-'));
+    const file = join(dir, 'github-credential.json');
+    await writeFile(file, `${JSON.stringify({ token: TOKEN })}\n`, { mode: 0o600 });
+    await chmod(file, 0o644);
+    const credentials = new GitHubCredentialStore(file);
+
+    await expect(credentials.getToken()).rejects.toMatchObject({ code: 'GITHUB_CREDENTIAL_STORE_UNSAFE_PERMISSIONS', status: 500 });
+    await expect(credentials.status()).resolves.toMatchObject({ status: 'degraded', configured: false });
+  });
+
+  it('archives older receipts instead of deleting provenance referenced by Evidence', async () => {
+    const { integration, store, counts } = await fixture();
+    await integration.configureCredential(TOKEN);
+    const authorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: REPO_RESOURCE, actor: ACTOR });
+    const first = await integration.read({ authorizationId: authorization.id, idempotencyKey: 'archive-0', operation: 'repository', owner: REPO_RESOURCE.owner, repo: REPO_RESOURCE.repo });
+    await store.project(async (data) => ({
+      changed: true,
+      data: { ...data, evidence: [{ id: 'evidence:github:archive', sourceReceiptId: first.receipt.id }] },
+      result: undefined,
+    }));
+
+    for (let index = 1; index <= 250; index += 1) {
+      await integration.read({ authorizationId: authorization.id, idempotencyKey: `archive-${index}`, operation: 'repository', owner: REPO_RESOURCE.owner, repo: REPO_RESOURCE.repo });
+    }
+
+    const persisted = await store.read();
+    expect(persisted.githubReadReceiptArchive).toEqual(expect.arrayContaining([expect.objectContaining({ id: first.receipt.id })]));
+    const callsBeforeReplay = counts().readCalls;
+    await expect(integration.read({ authorizationId: authorization.id, idempotencyKey: 'archive-0', operation: 'repository', owner: REPO_RESOURCE.owner, repo: REPO_RESOURCE.repo })).resolves.toMatchObject({ replayed: true });
+    expect(counts().readCalls).toBe(callsBeforeReplay);
+  });
+
   it('enforces revocation and expiration, then revokes all authorizations with the credential', async () => {
     const fixtureValue = await fixture();
     const { integration, store, advance } = fixtureValue;
     await integration.configureCredential(TOKEN);
-    const authorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], actor: ACTOR });
+    const authorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: ACME_RESOURCE, actor: ACTOR });
 
     advance(60_001);
     await expect(integration.read({ authorizationId: authorization.id, idempotencyKey: 'expired', operation: 'repository', owner: 'acme', repo: 'repo' }))
       .rejects.toMatchObject({ code: 'GITHUB_AUTHORIZATION_EXPIRED', status: 403 });
 
-    const freshAuthorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], actor: ACTOR });
+    const freshAuthorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: ACME_RESOURCE, actor: ACTOR });
     await integration.revokeAuthorization(freshAuthorization.id, ACTOR);
     await expect(integration.read({ authorizationId: freshAuthorization.id, idempotencyKey: 'revoked', operation: 'repository', owner: 'acme', repo: 'repo' }))
       .rejects.toMatchObject({ code: 'GITHUB_AUTHORIZATION_REVOKED', status: 403 });
 
     advance(-60_001);
-    const activeAuthorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], actor: ACTOR });
+    const activeAuthorization = await integration.authorize({ goalId: 'goal:github-audit', capabilities: ['github.repository.read'], resource: ACME_RESOURCE, actor: ACTOR });
     await integration.revokeCredential();
     expect(await integration.status()).toMatchObject({ status: 'not_configured', configured: false });
     const persisted = await store.read();

@@ -49,9 +49,24 @@ describe('web runtime goal preview', () => {
   it('shows provider unavailability instead of inventing results', async () => {
     const plan = await prepareWebGoalPlan({ title: 'Busca un producto' }, { search: async () => { throw new Error('provider down'); } });
 
+    expect(plan).toMatchObject({ readiness: 'unavailable', nextAction: 'configure_source' });
     expect(plan.publicSearch).toMatchObject({ status: 'unavailable', provider: 'unavailable', results: [] });
     expect(plan.sources[0]).toMatchObject({ id: 'public-web', status: 'unavailable' });
     expect(plan.limitations).toContain('public_search_unavailable');
+  });
+
+  it('does not report a connector-signaled Goal as ready when public search succeeds alone', async () => {
+    const plan = await prepareWebGoalPlan({ title: 'Audita un repositorio de GitHub' }, {
+      search: async (query) => ({
+        query,
+        searchedAt: '2026-08-15T10:00:00.000Z',
+        provider: 'bing-html',
+        results: [{ rank: 1, title: 'GitHub repository', url: 'https://example.com/repo', snippet: 'Repository result.', sourceHost: 'example.com' }],
+      }),
+    });
+
+    expect(plan).toMatchObject({ readiness: 'needs_setup', nextAction: 'configure_source' });
+    expect(plan.sources.find((source) => source.id === 'github')).toMatchObject({ status: 'not_configured', activeCapabilities: [] });
   });
 
   it('uses one bounded broad fallback when a focused job query has no matches', async () => {

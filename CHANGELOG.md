@@ -34,6 +34,15 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Hardened the native GitHub read boundary: consent is bound to the exact
+  owner/repository resource, credential identity changes revoke approvals,
+  changed idempotency payloads fail closed, unsafe credential-file permissions
+  are rejected, and older receipts are archived instead of silently evicted.
+- Bounded GitHub issue pagination now filters pull requests across provider
+  pages before applying the requested result limit.
+- Made `WebGoalResolver` a pure provider-neutral planner/evaluator with finite
+  zero-criteria coverage, and made hosted Goal readiness reflect every
+  selected source rather than public search alone.
 - Raised the workspace `nanoid` override to `3.3.18`, clearing the production audit advisory inherited through Next/PostCSS without changing application behavior.
 - Refined the draft Efesto web redesign into a professional conversation-first surface with a persistent bottom composer, real `Chat / Goal` modes, compact smith identity, direct local forge imagery, and a verified 390×844 no-overflow layout while preserving all existing Kernel action contracts.
 - Internal.81 was qualified on final `main` SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb` by the complete CI/package matrix and authentic remote Hermes L1→L7 run `31686750785` (`14/14`: 14 candidates, 3 verified Evidence records and 3 Evidence-backed Finds); public launch remains blocked on manual UAT.

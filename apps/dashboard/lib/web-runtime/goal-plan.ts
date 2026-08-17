@@ -104,6 +104,8 @@ export function buildWebGoalPlan({ title, keywords, now = () => new Date().toISO
   const categories = CATEGORY_RULES.filter(([, pattern]) => pattern.test(searchable)).map(([category]) => category).slice(0, 4);
   const connectorSources = WEB_SOURCE_DEFINITIONS.filter((definition) => definition.pattern?.test(searchable));
   const sources = [WEB_SOURCE_DEFINITIONS[0], ...connectorSources].map(sourceFromDefinition);
+  const limitations = ['preview_only', 'kernel_required_for_execution', 'read_only_sources'];
+  if (connectorSources.length > 0) limitations.push('source_not_configured');
 
   return {
     schemaVersion: 'efesto.goal-intelligence.v1',
@@ -117,7 +119,7 @@ export function buildWebGoalPlan({ title, keywords, now = () => new Date().toISO
     sources,
     readiness: 'needs_setup',
     nextAction: 'configure_source',
-    limitations: ['preview_only', 'kernel_required_for_execution', 'read_only_sources'],
+    limitations,
   };
 }
 
@@ -181,14 +183,22 @@ export async function prepareWebGoalPlan(input: WebGoalPlanInput, searcher: WebS
 function withSearchSnapshot(plan: GoalIntelligencePlan, response: PublicWebSearchResponse | Omit<PublicSearchSnapshot, 'status'>, status: PublicSearchSnapshot['status']): GoalIntelligencePlan {
   const publicSearch: PublicSearchSnapshot = { ...response, status };
   const publicSourceStatus = status === 'ready' ? 'ready' : 'unavailable';
+  const sources: GoalIntelligencePlan['sources'] = plan.sources.map((source) => source.id === 'public-web'
+    ? { ...source, status: publicSourceStatus, activeCapabilities: status === 'ready' ? ['web.search', 'public.read'] : [] }
+    : source);
+  const nonReady = sources.filter((source) => source.status !== 'ready');
+  const readiness: GoalIntelligencePlan['readiness'] = nonReady.some((source) => source.status === 'unavailable')
+    ? 'unavailable'
+    : nonReady.length > 0 ? 'needs_setup' : 'ready';
+  const limitations = [...plan.limitations];
+  if (nonReady.some((source) => source.id !== 'public-web') && !limitations.includes('source_not_configured')) limitations.push('source_not_configured');
+  if (status === 'unavailable' && !limitations.includes('public_search_unavailable')) limitations.push('public_search_unavailable');
   return {
     ...plan,
-    sources: plan.sources.map((source) => source.id === 'public-web'
-      ? { ...source, status: publicSourceStatus, activeCapabilities: status === 'ready' ? ['web.search', 'public.read'] : [] }
-      : source),
-    readiness: status === 'ready' ? 'ready' : 'unavailable',
-    nextAction: 'confirm_goal',
-    limitations: status === 'ready' ? plan.limitations : [...plan.limitations, 'public_search_unavailable'],
+    sources,
+    readiness,
+    nextAction: readiness === 'ready' ? 'confirm_goal' : 'configure_source',
+    limitations,
     publicSearch,
   };
 }

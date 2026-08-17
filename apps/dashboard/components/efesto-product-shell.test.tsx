@@ -350,7 +350,7 @@ describe('Efesto conversation-first product shell', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Evidencia' })).toBeTruthy());
     const authorizationRequest = requests.find((request) => request.method === 'POST' && new URL(request.url).pathname === '/api/integrations/github/authorizations');
     const evidenceRequest = requests.find((request) => request.method === 'POST' && new URL(request.url).pathname === '/api/integrations/github/evidence');
-    expect(await authorizationRequest?.clone().json()).toMatchObject({ capabilities: ['github.checks.read'] });
+    expect(await authorizationRequest?.clone().json()).toMatchObject({ capabilities: ['github.checks.read'], resource: { owner: 'Blackleets', repo: 'internet-brain-os', ref: 'main' } });
     expect(await evidenceRequest?.clone().json()).toMatchObject({ operation: 'checks', ref: 'main' });
   });
 });

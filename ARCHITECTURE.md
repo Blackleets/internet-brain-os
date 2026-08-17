@@ -87,11 +87,19 @@ Calendar. The first real provider adapter is
 only bounded GitHub API `GET` operations for repositories, issues, pull
 requests, and checks are exposed. An owner-private Kernel credential is verified
 before saving; an interactive actor must authorize an explicit `github.read`
-scope against an active Goal; every read is bounded, idempotent, Goal-bound, and
-retained as a provenance receipt with a content hash. Authorization receipts
-expire and can be revoked; revoking the credential revokes all outstanding
-GitHub authorizations. The public catalog exposes the native adapter only from
-this Kernel status, never from UI intent alone.
+scope against an active Goal and the exact owner/repository resource (with a
+reference required for checks). Every read is bounded, idempotent, Goal-bound,
+resource-bound, and retained as a provenance receipt with a content hash.
+Credential identity is fingerprint-bound: replacing the stored token or
+detecting an environment-token drift revokes outstanding authorizations.
+Changed idempotency payloads fail closed, while older read receipts move to a
+durable archive so provenance is not silently evicted. Persisted credential
+files with unsafe POSIX permissions are rejected. Issue reads paginate a
+bounded number of provider pages and filter pull requests before returning the
+requested limit. Authorization receipts expire and can be revoked; revoking
+the credential revokes all outstanding GitHub authorizations. The public
+catalog exposes the native adapter only from this Kernel status, never from UI
+intent alone.
 
 The remaining four entries stay behind the MCP boundary and carry independent
 read-only scopes, capabilities, readiness state, and Settings action. MCP
@@ -142,6 +150,13 @@ catalog. The dashboard renders this as an Intelligence Brief inside the
 proposed plan; it never treats the brief as authorization or Evidence. A
 missing preview route from an older Kernel becomes an explicit limited state,
 not a fabricated source plan.
+
+The exported Kernel `WebGoalResolver` is a pure planner/evaluator. It does not
+accept or invoke a public-web searcher; callers must execute every planned
+query through the capability and execution boundary, then pass the authorized
+responses back for evaluation. This keeps provider I/O behind the same
+authority checks as every other external read and prevents an injected search
+implementation from bypassing the Kernel boundary.
 
 The hosted web runtime extends this brief with one explicit public-search call
 through `packages/connectors/src/public-web-search.ts`. It uses credential-free

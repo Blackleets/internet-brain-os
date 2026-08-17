@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { chmod, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import {
   GITHUB_AUTHORIZATION_SCHEMA_VERSION,
@@ -35,7 +35,7 @@ export class GitHubCredentialStore {
   async getToken() {
     if (this.environmentToken) return this.environmentToken;
     try {
-      const parsed = JSON.parse(await readFile(this.filePath, 'utf8'));
+      const parsed = JSON.parse(await readPrivateCredentialFile(this.filePath));
       if (!validCredential(parsed?.token)) throw new Error('invalid credential');
       return parsed.token.trim();
     } catch (error) {
@@ -124,7 +124,9 @@ export class GitHubReadOnlyIntegration {
     } catch {
       throw new GitHubIntegrationError('GITHUB_CREDENTIAL_REJECTED', 'GitHub rejected this read credential. Nothing was saved.', 422);
     }
+    const previous = await this.credentials.getToken();
     await this.credentials.save(normalized);
+    if (previous && previous !== normalized) await this.#revokeAll('credential_replaced');
     this.health = 'ready';
     return this.status();
   }
@@ -136,15 +138,21 @@ export class GitHubReadOnlyIntegration {
     return this.status();
   }
 
-  async authorize({ goalId, capabilities, actor } = {}) {
+  async authorize({ goalId, capabilities, resource, actor } = {}) {
     const configured = await this.status();
     if (configured.status !== 'ready') throw new GitHubIntegrationError('GITHUB_NOT_CONFIGURED', 'Configure and verify GitHub before authorizing a read scope.', 409);
     const normalizedGoalId = cleanText(goalId, 'goalId', 240);
     const approvedCapabilities = normalizeCapabilities(capabilities);
+    const normalizedResource = normalizeResource(resource);
+    if (approvedCapabilities.includes('github.checks.read') && !normalizedResource.ref) {
+      throw new GitHubIntegrationError('GITHUB_RESOURCE_INVALID', 'GitHub checks authorization requires an explicit commit, branch, or tag ref.', 400);
+    }
     const trustedActor = normalizeActor(actor);
     const data = await this.store.read();
     const goal = (data.goals ?? []).find((item) => item?.id === normalizedGoalId && item?.status === 'active');
     if (!goal) throw new GitHubIntegrationError('GITHUB_GOAL_NOT_FOUND', 'An active Goal is required before authorizing GitHub.', 404);
+    const token = await this.credentials.getToken();
+    if (!token) throw new GitHubIntegrationError('GITHUB_NOT_CONFIGURED', 'Configure GitHub before authorizing a read scope.', 409);
 
     const issuedAt = this.now().toISOString();
     const expiresAt = new Date(new Date(issuedAt).getTime() + this.authorizationTtlMs).toISOString();
@@ -155,6 +163,8 @@ export class GitHubReadOnlyIntegration {
       decision: 'approved',
       scope: GITHUB_READ_SCOPE,
       approvedCapabilities,
+      resource: normalizedResource,
+      credentialFingerprint: credentialFingerprint(token),
       actorType: trustedActor.actorType,
       decidedBy: trustedActor.decidedBy,
       issuedAt,
@@ -203,20 +213,30 @@ export class GitHubReadOnlyIntegration {
   async #read({ authorizationId, idempotencyKey, operation, owner, repo, ref, limit } = {}) {
     const normalizedAuthorizationId = cleanText(authorizationId, 'authorizationId', 240);
     const normalizedIdempotencyKey = cleanText(idempotencyKey, 'idempotencyKey', 240);
-    const capability = githubCapabilityForOperation(operation);
+    const request = normalizeReadRequest({ operation, owner, repo, ...(ref === undefined ? {} : { ref }), ...(limit === undefined ? {} : { limit }) });
+    const capability = githubCapabilityForOperation(request.operation);
     if (!capability) throw new GitHubIntegrationError('GITHUB_INPUT_INVALID', 'GitHub read operation is unsupported.', 400);
-    const request = { operation, owner, repo, ...(ref === undefined ? {} : { ref }), ...(limit === undefined ? {} : { limit }) };
     const data = await this.store.read();
     const authorization = (data.githubAuthorizations ?? []).find((item) => item?.id === normalizedAuthorizationId);
     assertActiveAuthorization(authorization, capability, this.now());
     assertActiveGoal(data, authorization);
+    assertAuthorizedResource(authorization, request);
     const token = await this.credentials.getToken();
     if (!token) throw new GitHubIntegrationError('GITHUB_NOT_CONFIGURED', 'Configure GitHub before reading it.', 409);
+    if (authorization.credentialFingerprint !== credentialFingerprint(token)) {
+      await this.#revokeAll('credential_changed');
+      throw new GitHubIntegrationError('GITHUB_CREDENTIAL_CHANGED', 'The GitHub credential changed; authorize the read again.', 403);
+    }
 
-    const canonical = { authorizationId: normalizedAuthorizationId, idempotencyKey: normalizedIdempotencyKey, ...request };
-    const receiptId = `github-read:${hash(canonical)}`;
-    const previous = (data.githubReadReceipts ?? []).find((item) => item?.id === receiptId);
-    if (previous) return { receipt: publicReadReceipt(previous), result: structuredClone(previous.result), replayed: true };
+    const requestFingerprint = hash(request);
+    const previous = allReadReceipts(data).find((item) => item?.authorizationId === normalizedAuthorizationId && item?.idempotencyKey === normalizedIdempotencyKey);
+    if (previous) {
+      if (readRequestFingerprint(previous) !== requestFingerprint) {
+        throw new GitHubIntegrationError('GITHUB_IDEMPOTENCY_REUSE', 'The GitHub idempotency key was reused with a different request.', 409);
+      }
+      return { receipt: publicReadReceipt(previous), result: structuredClone(previous.result), replayed: true };
+    }
+    const receiptId = `github-read:${hash({ authorizationId: normalizedAuthorizationId, idempotencyKey: normalizedIdempotencyKey, request })}`;
 
     let response;
     try {
@@ -232,6 +252,8 @@ export class GitHubReadOnlyIntegration {
       schemaVersion: GITHUB_READ_RECEIPT_SCHEMA_VERSION,
       id: receiptId,
       authorizationId: normalizedAuthorizationId,
+      idempotencyKey: normalizedIdempotencyKey,
+      requestFingerprint,
       goalId: authorization.goalId,
       capability,
       scope: GITHUB_READ_SCOPE,
@@ -243,14 +265,36 @@ export class GitHubReadOnlyIntegration {
       contentHash: hash(result),
       result,
     };
-    await this.store.project(async (current) => {
+    const persistence = await this.store.project(async (current) => {
       const liveAuthorization = (current.githubAuthorizations ?? []).find((item) => item?.id === normalizedAuthorizationId);
       assertActiveAuthorization(liveAuthorization, capability, this.now());
       assertActiveGoal(current, liveAuthorization);
-      const receipts = Array.isArray(current.githubReadReceipts) ? current.githubReadReceipts : [];
-      if (receipts.some((item) => item?.id === receipt.id)) return { changed: false, data: current, result: undefined };
-      return { changed: true, data: { ...current, githubReadReceipts: [...receipts, receipt].slice(-MAX_READ_RECEIPTS) }, result: undefined };
+      assertAuthorizedResource(liveAuthorization, request);
+      const currentToken = await this.credentials.getToken();
+      if (!currentToken) throw new GitHubIntegrationError('GITHUB_NOT_CONFIGURED', 'Configure GitHub before reading it.', 409);
+      if (liveAuthorization.credentialFingerprint !== credentialFingerprint(currentToken)) {
+        return { changed: false, data: current, result: { credentialChanged: true } };
+      }
+      const receipts = allReadReceipts(current);
+      const existing = receipts.find((item) => item?.id === receipt.id);
+      if (existing) return { changed: false, data: current, result: undefined };
+      const nextReceipts = [...receipts, receipt];
+      const activeReceipts = nextReceipts.slice(-MAX_READ_RECEIPTS);
+      const archivedReceipts = nextReceipts.slice(0, -MAX_READ_RECEIPTS);
+      return {
+        changed: true,
+        data: {
+          ...current,
+          githubReadReceipts: activeReceipts,
+          githubReadReceiptArchive: archivedReceipts,
+        },
+        result: undefined,
+      };
     });
+    if (persistence?.credentialChanged) {
+      await this.#revokeAll('credential_changed');
+      throw new GitHubIntegrationError('GITHUB_CREDENTIAL_CHANGED', 'The GitHub credential changed; authorize the read again.', 403);
+    }
     return { receipt: publicReadReceipt(receipt), result, replayed: false };
   }
 
@@ -290,6 +334,13 @@ function assertActiveAuthorization(receipt, capability, now) {
   if (expiresAt <= now.getTime()) throw new GitHubIntegrationError('GITHUB_AUTHORIZATION_EXPIRED', 'GitHub authorization expired and must be renewed.', 403);
   if (receipt.scope !== GITHUB_READ_SCOPE || !receipt.approvedCapabilities?.includes(capability)) {
     throw new GitHubIntegrationError('GITHUB_CAPABILITY_DENIED', 'This GitHub read is outside the approved capability receipt.', 403);
+  }
+}
+
+function assertAuthorizedResource(receipt, request) {
+  const resource = receipt?.resource;
+  if (!resource || resource.owner !== request.owner || resource.repo !== request.repo || (resource.ref !== undefined && resource.ref !== request.ref)) {
+    throw new GitHubIntegrationError('GITHUB_RESOURCE_NOT_AUTHORIZED', 'This GitHub resource is outside the approved consent receipt.', 403);
   }
 }
 
@@ -333,7 +384,7 @@ function currentGoalRevision(goal) {
 }
 
 function publicAuthorization(receipt) {
-  const { result: _result, ...publicValue } = receipt;
+  const { result: _result, credentialFingerprint: _credentialFingerprint, ...publicValue } = receipt;
   return structuredClone(publicValue);
 }
 
@@ -345,8 +396,32 @@ function authorizationStatus(receipt, now) {
 }
 
 function publicReadReceipt(receipt) {
-  const { result: _result, ...publicValue } = receipt;
+  const { result: _result, requestFingerprint: _requestFingerprint, ...publicValue } = receipt;
   return structuredClone(publicValue);
+}
+
+function allReadReceipts(data) {
+  const values = [
+    ...(Array.isArray(data?.githubReadReceiptArchive) ? data.githubReadReceiptArchive : []),
+    ...(Array.isArray(data?.githubReadReceipts) ? data.githubReadReceipts : []),
+  ];
+  const seen = new Set();
+  return values.filter((item) => {
+    if (!item?.id || seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
+function readRequestFingerprint(receipt) {
+  if (typeof receipt?.requestFingerprint === 'string' && receipt.requestFingerprint) return receipt.requestFingerprint;
+  return hash({
+    operation: receipt?.operation,
+    owner: receipt?.resource?.owner,
+    repo: receipt?.resource?.repo,
+    ...(receipt?.resource?.ref === undefined ? {} : { ref: receipt.resource.ref }),
+    limit: receipt?.resource?.limit ?? 20,
+  });
 }
 
 function mapProviderError(error) {
@@ -358,6 +433,58 @@ function mapProviderError(error) {
 function requireCredential(value) {
   if (!validCredential(value)) throw new GitHubIntegrationError('GITHUB_CREDENTIAL_INVALID', 'GitHub credential is invalid.', 422);
   return value.trim();
+}
+
+async function readPrivateCredentialFile(filePath) {
+  if (process.platform !== 'win32') {
+    const mode = (await stat(filePath)).mode & 0o777;
+    if ((mode & 0o077) !== 0) {
+      throw new GitHubIntegrationError('GITHUB_CREDENTIAL_STORE_UNSAFE_PERMISSIONS', 'The local GitHub credential store must have private file permissions.', 500);
+    }
+  }
+  return readFile(filePath, 'utf8');
+}
+
+function normalizeResource(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new GitHubIntegrationError('GITHUB_RESOURCE_INVALID', 'A specific GitHub owner and repository are required for consent.', 400);
+  }
+  const resource = {
+    owner: cleanSegment(value.owner, 'resource.owner'),
+    repo: cleanSegment(value.repo, 'resource.repo'),
+    ...(value.ref === undefined ? {} : { ref: cleanRef(value.ref) }),
+  };
+  return resource;
+}
+
+function normalizeReadRequest(value) {
+  const operation = value?.operation;
+  if (!githubCapabilityForOperation(operation)) throw new GitHubIntegrationError('GITHUB_INPUT_INVALID', 'GitHub read operation is unsupported.', 400);
+  const owner = cleanSegment(value.owner, 'owner');
+  const repo = cleanSegment(value.repo, 'repo');
+  const ref = value.ref === undefined ? undefined : cleanRef(value.ref);
+  const limit = value.limit === undefined ? 20 : Number(value.limit);
+  if (!Number.isInteger(limit) || limit < 1 || limit > 20) throw new GitHubIntegrationError('GITHUB_INPUT_INVALID', 'GitHub read limit must be an integer between 1 and 20.', 400);
+  if (operation === 'checks' && !ref) throw new GitHubIntegrationError('GITHUB_INPUT_INVALID', 'GitHub checks reads require a commit, branch, or tag ref.', 400);
+  return { operation, owner, repo, ...(ref === undefined ? {} : { ref }), limit };
+}
+
+function cleanSegment(value, field) {
+  if (typeof value !== 'string') throw new GitHubIntegrationError('GITHUB_INPUT_INVALID', `${field} is invalid.`, 400);
+  const normalized = value.trim();
+  if (!normalized || normalized.length > 120 || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(normalized)) {
+    throw new GitHubIntegrationError('GITHUB_INPUT_INVALID', `${field} is invalid.`, 400);
+  }
+  return normalized;
+}
+
+function cleanRef(value) {
+  if (typeof value !== 'string') throw new GitHubIntegrationError('GITHUB_INPUT_INVALID', 'GitHub ref is invalid.', 400);
+  const normalized = value.trim();
+  if (!normalized || normalized.length > 200 || /[\u0000-\u001f\u007f]/u.test(normalized) || normalized.includes('..')) {
+    throw new GitHubIntegrationError('GITHUB_INPUT_INVALID', 'GitHub ref is invalid.', 400);
+  }
+  return normalized;
 }
 
 function validCredential(value) {
@@ -379,6 +506,10 @@ function boundedTtl(value) {
 
 function hash(value) {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
+}
+
+function credentialFingerprint(token) {
+  return hash({ credential: token });
 }
 
 function safeMessage(error) {

@@ -1052,3 +1052,58 @@ manual UAT-1→UAT-6 remain mandatory before merge or public promotion.
 ### GitHub verification trigger — 2026-08-15
 
 The candidate PR is ready for review at the exact head of the verification branch. This documentation-only checkpoint does not change product behavior; it exists to produce a normal synchronized PR head for the release matrix.
+
+## Handoff 2026-08-17 - Codex - Security review closure
+
+### What I changed
+
+- Bound GitHub consent and reads to the exact owner/repository resource, with a
+  required reference for checks.
+- Bound approvals to the credential fingerprint and revoked them on local
+  credential replacement or environment-token drift.
+- Made changed idempotency-key reuse fail closed and moved older read receipts
+  to a durable archive so Evidence provenance is retained.
+- Rejected unsafe POSIX permissions on the persisted GitHub credential file and
+  added bounded issue pagination that filters pull requests across pages.
+- Removed the direct public-web searcher from `WebGoalResolver`; callers now
+  execute planned queries through the authorized execution boundary and pass
+  responses back for pure evaluation. Hosted readiness now considers all
+  selected sources.
+
+### Files changed
+
+The implementation and regression coverage are in the local GitHub integration,
+server/dashboard consent wiring, typed GitHub connector, Kernel Goal resolver,
+hosted Goal runtime, and their focused tests. `ARCHITECTURE.md`, `CHANGELOG.md`,
+`DECISIONS.md`, and `PROJECT_STATE.md` record the durable contract and gate
+status.
+
+### Verification
+
+- Focused regression tests: 6 files / 69 tests.
+- Full test suite: 199 files / 1,156 tests.
+- `pnpm typecheck`, `pnpm architecture:check`, `pnpm build`,
+  `pnpm verify:first-run`, `pnpm release:verify`, `pnpm build:extension`, and
+  `pnpm audit --prod`: pass.
+- The published `3a614d4` head was already green across its five remote
+  workflow runs; this hardening slice still needs fresh exact-SHA remote runs
+  after publication.
+
+### Risks / uncertainties
+
+- Manual browser/package UAT-1→UAT-6 is not claimed locally and remains a
+  release gate. `public-launch-approval` is still `blocked-pending-uat`.
+- Live provider proof still requires a real user-owned read-scoped GitHub
+  credential; fixtures and contracts do not prove account access.
+
+### Next step
+
+Commit and publish the hardened slice to PR #224, inspect the resulting exact
+SHA's CI/Chromium/Windows/package matrix and preview, then run UAT-1→UAT-6.
+Do not merge or promote publicly until those gates are green on the same SHA.
+
+### Do not forget
+
+Search previews remain unverified and never become Evidence, Findings, or
+memory without the explicit authenticated Kernel path, source verification,
+provenance, and Goal confirmation.

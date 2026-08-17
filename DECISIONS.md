@@ -4,6 +4,45 @@ This file records major product and technical decisions.
 
 Do not delete old decisions. If a decision changes, add a new entry explaining why.
 
+## 2026-08-17 - External read authorization hardening and pure Goal resolution
+
+Decision: the native GitHub adapter binds every authorization and read to the
+exact owner/repository resource (and to a branch, tag, or commit reference for
+checks). The authorization receipt also binds the credential fingerprint.
+Replacing the local credential or detecting an environment-token drift revokes
+the affected approvals. An idempotency key may replay only the same request;
+changed reuse fails closed. Active receipts are bounded, but older receipts are
+archived durably so Evidence provenance remains replayable. Credential files
+with group/world permissions are rejected. GitHub issue reads use bounded
+pagination and filter pull requests before returning the requested limit.
+
+Decision: `WebGoalResolver` is a pure provider-neutral planner/evaluator. It
+must receive already-authorized public-web responses and cannot receive or call
+a searcher implementation. Public-web I/O therefore remains behind the
+CapabilityRegistry/ExecutionEngine boundary.
+
+Reason:
+
+The review found authority reuse risks at resource, credential, idempotency,
+receipt-retention, and provider-I/O boundaries. It also found that direct
+searcher injection could bypass the execution boundary and that hosted Goal
+readiness could ignore an unavailable selected connector. These changes close
+those paths without adding write capabilities or broadening provider access.
+
+Change request / rollback:
+
+- Behavior: old authorization/read receipts that lack the new binding fields
+  fail closed; credential replacement and drift require fresh consent; the
+  resolver's callers must execute planned queries before evaluation.
+- Files: GitHub local integration/server/dashboard consent wiring, typed GitHub
+  pagination, Kernel Goal resolver, hosted Goal readiness, and focused tests.
+- Rollback: revert this slice only if a reviewed replacement preserves the same
+  resource, credential, idempotency, retention, and execution-boundary
+  invariants; do not restore the prior implicit authorization behavior.
+- Proof: focused integration/connector/kernel/dashboard tests plus the full
+  test suite, architecture check, typecheck, production build,
+  `verify:first-run`, `release:verify`, extension build, and production audit.
+
 ## 2026-08-14 - One contract for curated connectors and GitHub read modes
 
 Decision: the five curated external connector definitions live in one

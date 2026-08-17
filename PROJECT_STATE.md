@@ -21,47 +21,40 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 - Search snippet/agent text ≠ Evidence.
 - Responsive mobile-width support does not imply phone → PC Kernel authority.
 
-## Execution checkpoint — 2026-08-15
+## Execution checkpoint — 2026-08-17
 
 - Active verification PR: #224
-  (`https://github.com/Blackleets/internet-brain-os/pull/224`), draft and
-  unmerged, based on `main` at `622595cc9d9eb3ba578be23ef118db4c85ac682e`.
-  The earlier duplicate PR #223 is closed and was not merged.
-- Candidate code SHA: `76caa35e5b56eecc3e6239b1d93df3c1c9ffd2a6`.
-  Local qualification commit: `37bcea565158e0a589c0bb307a229d4dc973c29b`.
-  The local working branch remains
-  `agent/premium-forge-value-surface-2026-08-14`; the active remote
-  verification branch is `agent/premium-forge-candidate-verify-2026-08-15`.
-- Fresh local qualification is green: architecture boundary, clean
-  TypeScript, 199 test files / 1,147 tests, dashboard tests (20 files / 141
-  tests), production build, extension package, `verify:first-run`,
-  `release:verify`, and offline Hermes boundary acceptance (14/14).
-- The candidate closes the regressions found by the first remote run:
-  provider-neutral Kernel goal resolution, goal interpreter/planner contracts,
-  criterion matching, stale connector artifact removal, dashboard icon 404,
-  browser locator scoping, mobile privacy-state rendering, and public-search
-  relevance/fallback behavior.
-- Runtime smoke is green: production dashboard startup returned HTTP 200 for
-  `/`; invalid Goal planning input returned HTTP 400 with the bounded
-  `invalid_request` contract. `public-launch-approval` remains
-  `blocked-pending-uat`.
-- Browser UAT is not claimed locally: Playwright could not launch because its
-  Chromium executable is absent. The previous remote run did launch Chromium
-  on the older `4a0dcf31cc408214385c42367805a46cf6f73914` head and exposed the
-  browser regressions now fixed in the candidate.
-- Preview smoke on the candidate's Vercel deployment is green: a Bitcoin Goal
-  returned six topic-relevant public sources, a remote-work Goal returned two
-  employment sources after its bounded broad fallback, and Chat returned the
-  same read-only preview count. No data was persisted, credentials were used,
-  or external action executed.
-- Remote exact-SHA status is still pending. The connected GitHub API published
-  the updated candidate but did not emit new Actions workflow runs for the
-  current head; only the older diagnostic head's runs are available (launcher
-  smoke passed; CI, Windows first-run/package, and live Hermes acceptance
-  failed). No current remote green claim is made.
-- Next release gate: trigger the exact-SHA browser/Windows/package matrix on
-  PR #224, inspect every job, then execute UAT-1→UAT-6 before merge or public
-  promotion.
+  (`https://github.com/Blackleets/internet-brain-os/pull/224`), open and
+  unmerged. Its published candidate head before this hardening slice is
+  `3a614d4ea6e83d24c960bc341006c9e70d8604d7`; the active branch is
+  `agent/premium-forge-candidate-verify-2026-08-15` and the earlier duplicate
+  PR #223 is closed and was not merged.
+- The current working slice hardens the GitHub read authority boundary:
+  resource-bound consent, credential-fingerprint revocation, fail-closed
+  idempotency reuse, durable receipt archiving, unsafe credential-file mode
+  rejection, bounded issue pagination, and a pure provider-neutral
+  `WebGoalResolver`. Hosted Goal readiness now reflects every selected source.
+- Local qualification is green after the slice: 199 test files / 1,156 tests,
+  typecheck, architecture check, production build, extension package,
+  `verify:first-run`, `release:verify`, and `pnpm audit --prod`. The current
+  hardening changes are local until published to PR #224.
+- The exact published `3a614d4` candidate had all five required workflow runs
+  completed successfully before this new head: CI, live public-web Hermes
+  acceptance, internal test package, Windows launcher smoke, and Windows first
+  run. The new head must receive fresh exact-SHA runs after publication.
+- `public-launch-approval` remains `blocked-pending-uat`. Browser/package
+  evidence and the manual UAT-1→UAT-6 sequence are still release gates; no
+  merge or public-promotion claim is made until the same final SHA passes
+  them.
+- No credentials, provider write scopes, external writes, or irreversible
+  actions were introduced. A real user-owned read-scoped GitHub token remains
+  required to validate live provider data beyond fixtures/contracts.
+
+## Next release gate
+
+Publish the hardened slice to PR #224, inspect every workflow and the preview
+for the resulting exact SHA, then complete manual UAT-1→UAT-6 before merging or
+promoting publicly.
 
 ## Current product surface — Complementos directory
 
@@ -74,12 +67,14 @@ capabilities, readiness state, and Settings destination.
 This is a truthful catalog/read-model foundation, not a broad account
 authorization surface. GitHub now has the first native read-only adapter:
 the local Kernel can verify a server-side credential, authorize a bounded
-read scope against an active Goal, execute repository/issues/pull-request/check
-reads, and retain revocable authorization plus provenance receipts. A fresh
-bootstrap without `HEPHAESTUS_GITHUB_TOKEN` or a local GitHub credential still
-shows GitHub as `not_configured`; Gmail, Google Drive, Notion, and Google
-Calendar remain MCP catalog-only and `not_configured`. No write capability or
-provider is implied by the catalog.
+read scope against an active Goal and exact repository resource, execute
+repository/issues/pull-request/check reads, and retain revocable authorization
+plus provenance receipts. Credential identity changes invalidate approvals,
+and unsafe persisted credential permissions fail closed. A fresh bootstrap
+without `HEPHAESTUS_GITHUB_TOKEN` or a local GitHub credential still shows
+GitHub as `not_configured`; Gmail, Google Drive, Notion, and Google Calendar
+remain MCP catalog-only and `not_configured`. No write capability or provider
+is implied by the catalog.
 
 The authenticated local endpoints are deliberately narrow:
 `/api/integrations/github/credentials`,
@@ -106,8 +101,10 @@ GitHub/Gmail/Drive/Notion/Calendar signals to the matching read-only connector.
 Required capabilities are shown separately from active capabilities, so the
 dashboard can explain a pending integration without implying it is connected.
 The preview is non-mutating; Goal persistence and mission authorization still
-only happen after the existing explicit confirmation. Older Kernels degrade to
-an explicit limited brief.
+only happen after the existing explicit confirmation. Hosted readiness is
+limited until every selected source is ready. Older Kernels degrade to an
+explicit limited brief. The exported `WebGoalResolver` remains a pure
+planner/evaluator and receives only already-authorized search responses.
 
 ## Verified foundation ✅
 

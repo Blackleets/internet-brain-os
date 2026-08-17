@@ -70,8 +70,34 @@ describe('GitHubReadOnlyClient', () => {
 
     const result = await client.read({ operation: 'issues', owner: 'acme', repo: 'repo', limit: 1 }, 'github-test-token-123');
 
-    expect(requestedUrl).toContain('/repos/acme/repo/issues?state=open&per_page=1');
+    expect(requestedUrl).toContain('/repos/acme/repo/issues?state=open&per_page=20');
     expect(result.data).toMatchObject({ kind: 'issues', total: 1, items: [expect.objectContaining({ number: 10, operation: 'issues' })] });
+  });
+
+  it('fills a bounded issue read across pages when pull requests occupy the first page', async () => {
+    const requestedUrls: string[] = [];
+    const firstPage = Array.from({ length: 20 }, (_, index) => ({
+      id: index + 1,
+      number: index + 1,
+      title: `Pull request ${index + 1}`,
+      state: 'open',
+      pull_request: { url: `https://api.github.com/repos/acme/repo/pulls/${index + 1}` },
+    }));
+    const client = new GitHubReadOnlyClient({
+      fetchImpl: (async (input: URL | RequestInfo) => {
+        const url = String(input);
+        requestedUrls.push(url);
+        return jsonResponse(url.includes('&page=2')
+          ? [{ id: 99, number: 99, title: 'Issue after pull requests', state: 'open', html_url: 'https://github.com/acme/repo/issues/99', user: { login: 'alice' }, labels: [], updated_at: '2026-08-14T12:00:00Z' }]
+          : firstPage);
+      }) as typeof fetch,
+    });
+
+    const result = await client.read({ operation: 'issues', owner: 'acme', repo: 'repo', limit: 1 }, 'github-test-token-123');
+
+    expect(requestedUrls).toHaveLength(2);
+    expect(requestedUrls[1]).toContain('page=2');
+    expect(result.data).toMatchObject({ kind: 'issues', total: 1, items: [expect.objectContaining({ number: 99 })] });
   });
 
   it('requires a ref for checks and maps provider denial without exposing credentials', async () => {

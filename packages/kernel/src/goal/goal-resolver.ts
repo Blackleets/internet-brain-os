@@ -1,8 +1,8 @@
 import { UserGoalInterpreter } from './goal-interpreter';
-import { UserGoal } from './user-goal-contract';
 import { GoalPlanner } from './goal-planner';
-import { GoalPlan } from './goal-plan-contract';
-import type { PublicWebSearcher } from '../execution/public-web-search-adapter';
+import type { UserGoal } from './user-goal-contract';
+import type { GoalPlan } from './goal-plan-contract';
+import type { PublicWebSearchResponse } from '../execution/public-web-search-adapter';
 
 /**
  * Represents a candidate result from a public web search.
@@ -65,33 +65,35 @@ function criterionIsMentioned(description: string, text: string): boolean {
 }
 
 /**
- * Resolves a goal using public web search only (does not persist Evidence or memory).
- * Suitable for web mode without Kernel persistence.
+ * Interprets and evaluates a Goal against results that were already returned by
+ * an authorized public-web execution. This class deliberately performs no I/O:
+ * callers must route every query in the returned plan through the
+ * CapabilityRegistry/ExecutionEngine boundary before passing responses here.
  */
 export class WebGoalResolver {
   private readonly interpreter: UserGoalInterpreter;
   private readonly planner: GoalPlanner;
-  private readonly searcher: PublicWebSearcher;
 
-  constructor(searcher: PublicWebSearcher) {
+  constructor() {
     this.interpreter = new UserGoalInterpreter();
     this.planner = new GoalPlanner();
-    this.searcher = searcher;
+  }
+
+  plan(goalText: string): { userGoal: UserGoal; plan: GoalPlan } {
+    const userGoal: UserGoal = this.interpreter.interpret(goalText);
+    return { userGoal, plan: this.planner.createPlan(userGoal) };
   }
 
   /**
-   * Resolves the given goal text and returns a list of candidates.
+   * Evaluates the given goal text and authorized public-web responses.
    * @param goalText The natural language goal (e.g., "Encuéntrame un trabajo de 20 horas que pague 600 euros al mes")
-   * @returns A promise that resolves to the list of candidates and the overall resolution state
+   * @param responses Results returned by the authorized execution boundary.
+   * @returns The candidate list and the overall resolution state.
    */
-  async resolve(goalText: string): Promise<{ candidates: Candidate[]; resolutionState: 'partial' | 'no_match' }> {
-    // Step 1: Interpret the goal
-    const userGoal: UserGoal = this.interpreter.interpret(goalText);
+  resolve(goalText: string, responses: readonly PublicWebSearchResponse[]): { candidates: Candidate[]; resolutionState: 'partial' | 'no_match' } {
+    if (!Array.isArray(responses)) throw new TypeError('Authorized public-web responses are required');
+    const { userGoal, plan } = this.plan(goalText);
 
-    // Step 2: Create a plan
-    const plan: GoalPlan = this.planner.createPlan(userGoal);
-
-    // Step 3: Execute each query in the plan and collect results
     const allResults: Array<{
       query: string;
       title: string;
@@ -101,23 +103,16 @@ export class WebGoalResolver {
       retrievedAt: string;
     }> = [];
 
-    for (const query of plan.queries) {
-      try {
-        const response = await this.searcher.search(query, 10); // limit to 10 results per query
-        for (const result of response.results) {
-          allResults.push({
-            query: response.query,
-            title: result.title,
-            url: result.url,
-            domain: result.sourceHost,
-            snippet: result.snippet,
-            retrievedAt: response.searchedAt,
-          });
-        }
-      } catch (error) {
-        // If a query fails, we log it as a warning but continue with other queries
-        // We could also collect errors and include them in warnings, but for simplicity we skip.
-        console.warn(`Failed to execute query "${query}":`, error);
+    for (const response of responses) {
+      for (const result of response.results) {
+        allResults.push({
+          query: response.query,
+          title: result.title,
+          url: result.url,
+          domain: result.sourceHost,
+          snippet: result.snippet,
+          retrievedAt: response.searchedAt,
+        });
       }
     }
 
@@ -149,7 +144,7 @@ export class WebGoalResolver {
         }
       }
 
-      const coverage = criteriaMet.length / criteriaDescriptions.length;
+      const coverage = criteriaDescriptions.length === 0 ? 0 : criteriaMet.length / criteriaDescriptions.length;
 
       // Determine candidate state: partial if at least one criterion met, otherwise no_match
       const candidateState: 'partial' | 'no_match' = criteriaMet.length > 0 ? 'partial' : 'no_match';

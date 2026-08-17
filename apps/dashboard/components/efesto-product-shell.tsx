@@ -437,7 +437,7 @@ function EfestoProductShellContent() {
       if (typeof goal.id !== 'string' || !goal.id) throw new Error('Goal id missing');
       const authorizationResponse = await client.request('/api/integrations/github/authorizations', {
         method: 'POST',
-        body: JSON.stringify({ goalId: goal.id, capabilities: [GITHUB_CAPABILITY_BY_OPERATION[operation]] }),
+        body: JSON.stringify({ goalId: goal.id, capabilities: [GITHUB_CAPABILITY_BY_OPERATION[operation]], resource: { owner, repo, ...(ref ? { ref } : {}) } }),
       }, parseObject);
       const authorization = parseObject(authorizationResponse.authorization);
       if (typeof authorization.id !== 'string' || !authorization.id) throw new Error('GitHub authorization missing');

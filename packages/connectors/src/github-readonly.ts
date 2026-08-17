@@ -86,8 +86,9 @@ export class GitHubReadOnlyClient {
   async read(input: GitHubReadInput, token: string): Promise<GitHubReadResponse> {
     const normalized = normalizeInput(input);
     const credential = validateToken(token);
-    const path = pathFor(normalized);
-    const body = await this.request(path, credential);
+    const body = normalized.operation === 'issues'
+      ? await this.requestIssues(normalized, credential)
+      : await this.request(pathFor(normalized), credential);
     const data = normalizeResponse(normalized.operation, body, normalized);
     return {
       schemaVersion: GITHUB_READONLY_SCHEMA_VERSION,
@@ -132,6 +133,20 @@ export class GitHubReadOnlyClient {
       clearTimeout(timeout);
     }
   }
+
+  private async requestIssues(input: GitHubReadInput, token: string): Promise<unknown[]> {
+    const limit = input.limit ?? 20;
+    const perPage = Math.min(100, Math.max(limit, 20));
+    const pages = 5;
+    const issues: unknown[] = [];
+    for (let page = 1; page <= pages && issues.length < limit; page += 1) {
+      const body = await this.request(pathFor(input, page, perPage), token);
+      if (!Array.isArray(body)) throw new GitHubReadOnlyError('GITHUB_RESPONSE_INVALID', 'GitHub returned an invalid issue list response.');
+      issues.push(...body.filter((item) => !readObjectOrEmpty(item).pull_request));
+      if (body.length < perPage) break;
+    }
+    return issues.slice(0, limit);
+  }
 }
 
 function normalizeInput(input: GitHubReadInput): GitHubReadInput {
@@ -146,11 +161,11 @@ function normalizeInput(input: GitHubReadInput): GitHubReadInput {
   return { operation, owner, repo, ...(ref ? { ref } : {}), limit };
 }
 
-function pathFor(input: GitHubReadInput): string {
+function pathFor(input: GitHubReadInput, page = 1, perPage = input.limit ?? 20): string {
   const repository = `/repos/${encodeURIComponent(input.owner)}/${encodeURIComponent(input.repo)}`;
   switch (input.operation) {
     case 'repository': return repository;
-    case 'issues': return `${repository}/issues?state=open&per_page=${input.limit ?? 20}`;
+    case 'issues': return `${repository}/issues?state=open&per_page=${perPage}${page > 1 ? `&page=${page}` : ''}`;
     case 'pull_requests': return `${repository}/pulls?state=open&per_page=${input.limit ?? 20}`;
     case 'checks': return `${repository}/commits/${encodeURIComponent(input.ref ?? '')}/check-runs?per_page=${input.limit ?? 20}`;
   }

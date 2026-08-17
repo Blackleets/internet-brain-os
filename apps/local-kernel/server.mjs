@@ -260,7 +260,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
       try {
         const body = await readJson(request, 16 * 1024);
-        return send(response, 201, { ok: true, authorization: await githubIntegration.authorize({ goalId: body?.goalId, capabilities: body?.capabilities, actor }) });
+        return send(response, 201, { ok: true, authorization: await githubIntegration.authorize({ goalId: body?.goalId, capabilities: body?.capabilities, resource: body?.resource, actor }) });
       } catch (error) { return sendGitHubError(response, error, 'GITHUB_AUTHORIZATION_FAILED'); }
     }
     if (request.method === 'GET' && request.url?.startsWith('/api/integrations/github/authorizations/')) {
