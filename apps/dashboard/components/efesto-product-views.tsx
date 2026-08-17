@@ -19,7 +19,7 @@ export type Provider = {
   hasCredential?: boolean;
   managedBy?: 'environment' | 'user';
 };
-export type ChatMessage = { role: 'user' | 'assistant'; content: string; model?: string };
+export type ChatMessage = { role: 'user' | 'assistant'; content: string; model?: string; webSearch?: PublicSearchSnapshot };
 export type EvidenceRecord = {
   id?: string; sourceUrl?: string; summary?: string; confidence?: number; capturedAt?: string;
   tags?: string[]; entityIds?: string[]; relationshipIds?: string[]; contentHash?: string; sourceReceiptId?: string;
@@ -80,7 +80,7 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
       <div className="forge-surface-leading">
         <button type="button" className="forge-menu-button" onClick={onOpenNav} aria-label={t('nav.toggle')}><Menu /></button>
         <div className="forge-product-title">
-          <span className="forge-agent-mark"><Image src="/efesto-smith.svg" alt="" width={28} height={28} /></span>
+          <span className="forge-agent-mark"><Image src="/efesto-smith.svg" alt="" width={28} height={28} unoptimized priority /></span>
           <span><strong>{surfaceTitle}</strong><small>Efesto · {chatMode ? (webMode ? t('runtime.webReady') : chatAvailable ? modelLabel : t('home.modelNotConfigured')) : t('home.controlledMission')}</small></span>
         </div>
       </div>
@@ -97,7 +97,7 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
     <div className="forge-scroll">
       {chatMode ? messages.length ? <section className="forge-thread" aria-label={t('home.messages')}>
         {messages.map((message, index) => <article className={'forge-message ' + message.role} key={message.role + '-' + index}>
-          <div className="forge-message-avatar">{message.role === 'user' ? t('home.you') : <Image src="/efesto-smith.svg" alt="" width={24} height={24} />}</div>
+          <div className="forge-message-avatar">{message.role === 'user' ? t('home.you') : <Image src="/efesto-smith.svg" alt="" width={24} height={24} unoptimized />}</div>
           <div className="forge-message-body">
             <header>
               <strong>{message.role === 'user' ? t('home.you') : message.model ?? 'Efesto'}</strong>
@@ -113,21 +113,20 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
               </button> : null}
             </header>
             <p>{message.content || (chatPending && index === messages.length - 1 ? <span className="forge-generating"><i />{t('home.thinking')}</span> : null)}</p>
+            {message.webSearch ? <PublicSearchResults search={message.webSearch} inThread /> : null}
           </div>
         </article>)}
       </section> : <section className="forge-empty" aria-label={t('home.newConversationAria')}>
-        <span className="forge-empty-mark"><Image src="/efesto-smith.svg" alt="" width={52} height={52} /></span>
+        <span className="forge-empty-mark"><Image src="/efesto-smith.svg" alt="" width={52} height={52} unoptimized /></span>
         <small>{t('home.emptyEyebrow')}</small>
         <h1>{t('home.emptyHeading')}</h1>
         <p>{t('home.emptyCopy')}</p>
         <div className="forge-empty-meta"><span><ShieldCheck /> {t('common.privateByDesign')}</span><span><i /> {t('home.noAutomaticMemory')}</span></div>
         <ForgeLiveRail webMode={webMode} connected={connected} />
-        <div className="forge-empty-actions forge-launchpad">
-          {!chatAvailable && !webMode ? <ForgeActionCard icon={connected ? BrainCircuit : Plug} title={connected ? t('home.configureModel') : t('home.privateChatSetup')} copy={t('home.actionModelCopy')} onClick={connected ? onOpenModels : onOpenSettings} /> : null}
-          {webMode ? <ForgeActionCard icon={Plug} title={t('home.openPrivateMode')} copy={t('home.actionPrivateCopy')} onClick={onOpenSettings} /> : null}
+        {chatAvailable || webMode ? <StarterSuggestions suggestions={starterGoals} onSelect={onInputChange} compact /> : <div className="forge-empty-actions forge-launchpad">
+          <ForgeActionCard icon={connected ? BrainCircuit : Plug} title={connected ? t('home.configureModel') : t('home.privateChatSetup')} copy={t('home.actionModelCopy')} onClick={connected ? onOpenModels : onOpenSettings} />
           <ForgeActionCard icon={Target} title={t('home.startGoal')} copy={t('home.actionGoalCopy')} onClick={() => onToggleChat(false)} primary />
-        </div>
-        {chatAvailable || webMode ? <StarterSuggestions suggestions={starterGoals} onSelect={onInputChange} /> : null}
+        </div>}
       </section> : preparedGoal ? <section className="forge-goal-plan" aria-label={t('home.planAria')}>
         <header>
           <span className="forge-plan-icon"><Target /></span>
@@ -200,9 +199,9 @@ function ForgeActionCard({ icon: Icon, title, copy, onClick, primary = false }: 
   </button>;
 }
 
-function StarterSuggestions({ suggestions, onSelect }: { suggestions: string[]; onSelect: (value: string) => void }) {
+function StarterSuggestions({ suggestions, onSelect, compact = false }: { suggestions: string[]; onSelect: (value: string) => void; compact?: boolean }) {
   const { t } = useEfestoLocale();
-  return <section className="forge-starter-panel" aria-label={t('home.suggestionsAria')}>
+  return <section className={'forge-starter-panel' + (compact ? ' is-compact' : '')} aria-label={t('home.suggestionsAria')}>
     <header>
       <div><small>{t('home.starterEyebrow')}</small><strong>{t('home.starterTitle')}</strong></div>
       <span>{t('home.starterCopy')}</span>
@@ -271,10 +270,10 @@ function GoalIntelligenceBrief({ plan, pending, webMode, connected, goalPending,
   </section>;
 }
 
-function PublicSearchResults({ search }: { search: PublicSearchSnapshot }) {
+function PublicSearchResults({ search, inThread = false }: { search: PublicSearchSnapshot; inThread?: boolean }) {
   const { t } = useEfestoLocale();
   const providerLabel = search.provider === 'bing-html' ? 'Bing' : search.provider === 'jina-bing' ? 'Bing · lectura pública' : search.provider === 'brave-html' ? 'Brave Search' : search.provider === 'duckduckgo-html' ? 'DuckDuckGo' : t('status.unavailable');
-  return <section className={`forge-public-search status-${search.status}`} aria-label={t('home.webSearchAria')}>
+  return <section className={`forge-public-search status-${search.status}${inThread ? ' in-thread' : ''}`} aria-label={t('home.webSearchAria')}>
     <header>
       <span className="forge-public-search-mark"><Search /></span>
       <div><small>{t('home.webSearchEyebrow')}</small><strong>{t('home.webSearchTitle', { count: search.results.length })}</strong><span>{providerLabel} · {search.query}</span></div>
@@ -710,9 +709,18 @@ export function SettingsView({ connected, connecting, rememberSession, snapshot,
       <form className="connection-card" onSubmit={onConnect}>
         <header><span className={'kernel-dot ' + (connected ? 'online' : 'offline')} /><div><small>{t('settings.currentDevice')}</small><strong>{connected ? t('settings.authorized') : t('settings.connectKernel')}</strong></div></header>
         {!connected ? <>
-          <label>{t('settings.kernelUrl')}<input name="baseUrl" aria-label={t('settings.kernelUrl')} type="url" defaultValue="http://127.0.0.1:4000" required /></label>
-          <label>{t('settings.privateToken')}<input name="token" aria-label={t('settings.privateToken')} type="password" autoComplete="off" placeholder={t('settings.tokenPlaceholder')} /></label>
-          <label>{t('settings.pairingCode')}<input name="pairingCode" aria-label={t('settings.pairingCode')} inputMode="text" autoComplete="off" placeholder={t('settings.pairingPlaceholder')} /></label>
+          <section className="kernel-connect-guide" aria-labelledby="kernel-connect-guide-title">
+            <header><span className="kernel-connect-guide-mark"><Plug /></span><div><small>{t('settings.kernelGuideEyebrow')}</small><strong id="kernel-connect-guide-title">{t('settings.kernelGuideTitle')}</strong></div></header>
+            <p>{t('settings.kernelGuideCopy')}</p>
+            <ol>
+              <li>{t('settings.kernelGuideStep1')}</li>
+              <li>{t('settings.kernelGuideStep2')} <code>http://127.0.0.1:4000</code></li>
+              <li>{t('settings.kernelGuideStep3')}</li>
+            </ol>
+          </section>
+          <label>{t('settings.kernelUrl')}<input name="baseUrl" aria-label={t('settings.kernelUrl')} type="url" defaultValue="http://127.0.0.1:4000" required /><small className="connection-field-hint">{t('settings.kernelUrlHint')}</small></label>
+          <label>{t('settings.privateToken')}<input name="token" aria-label={t('settings.privateToken')} type="password" autoComplete="off" placeholder={t('settings.tokenPlaceholder')} /><small className="connection-field-hint">{t('settings.privateTokenHint')}</small></label>
+          <label>{t('settings.pairingCode')}<input name="pairingCode" aria-label={t('settings.pairingCode')} inputMode="text" autoComplete="off" placeholder={t('settings.pairingPlaceholder')} /><small className="connection-field-hint">{t('settings.pairingHint')}</small></label>
           <label className="remember-row"><input name="rememberSession" type="checkbox" defaultChecked={rememberSession} /><span><strong>{t('settings.remember')}</strong><small>{t('settings.rememberCopy')}</small></span></label>
           <div className="connection-actions"><button type="submit" name="action" value="pair" className="primary-action" disabled={connecting}>{connecting ? t('settings.pairing') : t('settings.pair')}</button><button type="submit" name="action" value="token" className="secondary-action" disabled={connecting}>{t('settings.authorize')}</button></div>
         </> : <div className="connection-actions"><button type="button" className="primary-action" onClick={onRefresh}><RefreshCw /> {t('settings.checkNow')}</button><button type="button" className="danger-action" onClick={onDisconnect}>{t('settings.disconnect')}</button></div>}
