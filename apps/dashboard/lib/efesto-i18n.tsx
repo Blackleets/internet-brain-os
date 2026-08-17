@@ -72,6 +72,14 @@ const es: Record<string, string> = {
   'home.emptyHeading': '¿En qué trabajamos?',
   'home.emptyCopy': 'Pregunta, analiza o convierte una intención en un Goal cuando necesites una misión controlada.',
   'home.noAutomaticMemory': 'Sin memoria automática',
+  'home.starterEyebrow': 'PUNTOS DE PARTIDA',
+  'home.starterTitle': 'Empieza con un objetivo real',
+  'home.starterCopy': 'Elige un ejemplo, ajústalo y prepáralo.',
+  'home.suggestionsAria': 'Sugerencias para empezar',
+  'home.useSuggestion': 'Usar sugerencia: {{suggestion}}',
+  'home.configureModel': 'Configurar modelo',
+  'home.privateChatSetup': 'Configurar chat privado',
+  'home.startGoal': 'Crear un Goal',
   'home.controlledMission': 'misión controlada',
   'home.valueSurface': 'Valor local de Efesto',
   'home.modelNotConfigured': 'modelo sin configurar',
@@ -887,6 +895,14 @@ Object.assign(es, {
 });
 
 Object.assign(en, {
+  'home.starterEyebrow': 'STARTING POINTS',
+  'home.starterTitle': 'Start with a real objective',
+  'home.starterCopy': 'Choose an example, adjust it, and prepare it.',
+  'home.suggestionsAria': 'Suggestions to get started',
+  'home.useSuggestion': 'Use suggestion: {{suggestion}}',
+  'home.configureModel': 'Configure a model',
+  'home.privateChatSetup': 'Set up private chat',
+  'home.startGoal': 'Create a Goal',
   'integrations.public-web.name': 'Public web search',
   'integrations.public-web.copy': 'Queries public results in read-only mode; it stores and executes nothing.',
   'runtime.webReady': 'Web mode ready',
@@ -924,6 +940,14 @@ Object.assign(en, {
 });
 
 Object.assign(pt, {
+  'home.starterEyebrow': 'PONTOS DE PARTIDA',
+  'home.starterTitle': 'Comece com um objetivo real',
+  'home.starterCopy': 'Escolha um exemplo, ajuste e prepare-o.',
+  'home.suggestionsAria': 'Sugestões para começar',
+  'home.useSuggestion': 'Usar sugestão: {{suggestion}}',
+  'home.configureModel': 'Configurar modelo',
+  'home.privateChatSetup': 'Configurar chat privado',
+  'home.startGoal': 'Criar um Goal',
   'integrations.public-web.name': 'Pesquisa web pública',
   'integrations.public-web.copy': 'Consulta resultados públicos em modo somente leitura; não salva nem executa nada.',
   'runtime.webReady': 'Modo web pronto',
