@@ -63,8 +63,6 @@ describe('PublicWebSearchClient', () => {
 
     expect(result).toMatchObject({ provider: 'brave-html', results: [expect.objectContaining({ url: 'https://example.com/iphone' })] });
     expect(requests).toEqual([
-      expect.stringContaining('html.duckduckgo.com/html/'),
-      expect.stringContaining('lite.duckduckgo.com/lite/'),
       expect.stringContaining('search.brave.com/search'),
     ]);
   });
