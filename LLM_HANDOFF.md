@@ -1112,3 +1112,52 @@ candidate before merging or promoting publicly.
 Search previews remain unverified and never become Evidence, Findings, or
 memory without the explicit authenticated Kernel path, source verification,
 provenance, and Goal confirmation.
+
+## Handoff 2026-08-17 - Codex - Goal source routing precision
+
+### What I changed
+
+- Tightened connector signal matching so generic public topics do not
+  accidentally select private GitHub, Google Drive, Notion, or Google Calendar
+  sources.
+- Kept explicit connector signals and the existing read-only capability and
+  consent contracts unchanged.
+- Added parity regressions for the local Kernel plan and hosted web preview;
+  generic software, open-source, document, notes, and event Goals remain on
+  public research.
+
+### Files changed
+
+- `apps/local-kernel/integration-definitions.mjs`
+- `apps/local-kernel/goal-intelligence.test.mjs`
+- `apps/dashboard/lib/web-runtime/goal-plan.ts`
+- `apps/dashboard/lib/web-runtime/goal-plan.test.ts`
+- `CHANGELOG.md`
+- `PROJECT_STATE.md`
+- `LLM_HANDOFF.md`
+
+### Tests or checks performed
+
+- Focused source-routing tests: 25/25 passed.
+- Full suite: 199 files / 1,166 tests passed.
+- `pnpm architecture:check` passed.
+- `pnpm typecheck` passed.
+- `pnpm build` passed.
+
+### Risks / uncertainties
+
+- This slice improves deterministic intent routing only; it does not prove a
+  live user-owned provider connection or complete manual UAT-1→UAT-6.
+- Provider credentials and write capabilities remain outside the change.
+
+### Next recommended step
+
+Run the complete GitHub read path with a real user-owned read-scoped token on
+the exact candidate, then keep the remaining providers behind their MCP
+read-only contracts.
+
+### Do not forget
+
+Search snippets and hosted preview results remain unverified and must never be
+promoted to Evidence, Findings, or memory without the authenticated Kernel
+path and provenance gates.
