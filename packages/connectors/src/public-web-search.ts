@@ -49,15 +49,9 @@ export class PublicWebSearchClient {
       }
     }
 
-    try {
-      const endpoint = new URL(`https://r.jina.ai/http://www.bing.com/search?q=${encodeURIComponent(normalizedQuery)}`);
-      const text = await this.fetchHtml(endpoint, true);
-      const results = filterRelevantResults(normalizedQuery, parseJinaSearchMarkdown(text, limit));
-      if (results.length > 0) return this.response(normalizedQuery, 'jina-bing', results);
-    } catch (error) {
-      lastProviderError = error;
-    }
-
+    // Brave is a fast, credential-free HTML fallback. Try it before the
+    // reader/direct-Bing path so short hosted requests do not spend their
+    // entire budget on slower providers and then surface an empty result.
     try {
       const endpoint = new URL('https://search.brave.com/search');
       endpoint.searchParams.set('q', normalizedQuery);
@@ -65,6 +59,15 @@ export class PublicWebSearchClient {
       const html = await this.fetchHtml(endpoint);
       const results = filterRelevantResults(normalizedQuery, parseBraveHtml(html, limit));
       if (results.length > 0) return this.response(normalizedQuery, 'brave-html', results);
+    } catch (error) {
+      lastProviderError = error;
+    }
+
+    try {
+      const endpoint = new URL(`https://r.jina.ai/http://www.bing.com/search?q=${encodeURIComponent(normalizedQuery)}`);
+      const text = await this.fetchHtml(endpoint, true);
+      const results = filterRelevantResults(normalizedQuery, parseJinaSearchMarkdown(text, limit));
+      if (results.length > 0) return this.response(normalizedQuery, 'jina-bing', results);
     } catch (error) {
       lastProviderError = error;
     }
