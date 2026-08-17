@@ -74,9 +74,10 @@ test('opens the zero-setup web path and keeps planning separate from execution',
 
   await page.goto('/?runtime=web');
   await expect(page.getByRole('button', { name: 'Modo web listo', exact: true }).first()).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Goal', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByText('EFESTO · TRABAJO DESDE LA WEB', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Chat', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('EFESTO · INTELLIGENCE FORGE', { exact: true })).toBeVisible();
 
+  await page.getByRole('button', { name: 'Goal', exact: true }).click();
   await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Auditar fuentes públicas');
   await page.getByRole('button', { name: 'Preparar Goal', exact: true }).click();
   await expect(page.getByText('Resultados encontrados en la web', { exact: true })).toBeVisible();
