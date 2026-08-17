@@ -160,15 +160,20 @@ function buildPublicSearchTokens(title: string, keywords: readonly string[], cat
  * The result is unverified preview data: it is not Evidence, is not persisted,
  * and does not grant the web shell authority to execute anything.
  */
-export async function prepareWebGoalPlan(input: WebGoalPlanInput, searcher: WebSearchClient = new PublicWebSearchClient()): Promise<GoalIntelligencePlan> {
+const HOSTED_SEARCH_TIMEOUT_MS = 8_000;
+
+export async function prepareWebGoalPlan(input: WebGoalPlanInput, searcher: WebSearchClient = new PublicWebSearchClient({ timeoutMs: 1_800 })): Promise<GoalIntelligencePlan> {
   const basePlan = buildWebGoalPlan(input);
   const publicSearchQuery = buildPublicSearchQuery(basePlan.goal.title, basePlan.goal.keywords, basePlan.goal.categories);
   const fallbackSearchQuery = buildBroadPublicSearchQuery(basePlan.goal.title, basePlan.goal.keywords, basePlan.goal.categories);
   const searchQueries = [...new Set([publicSearchQuery, fallbackSearchQuery])].slice(0, 2);
+  const deadline = Date.now() + HOSTED_SEARCH_TIMEOUT_MS;
   try {
     let lastSearch: PublicWebSearchResponse | undefined;
     for (const query of searchQueries) {
-      lastSearch = await searcher.search(query, 6);
+      const remainingMs = deadline - Date.now();
+      if (remainingMs <= 0) throw new Error('Public search deadline exceeded');
+      lastSearch = await withTimeout(searcher.search(query, 6), remainingMs);
       if (lastSearch.results.length > 0) break;
     }
     return withSearchSnapshot(basePlan, lastSearch!, 'ready');
@@ -180,6 +185,19 @@ export async function prepareWebGoalPlan(input: WebGoalPlanInput, searcher: WebS
       results: [],
     }, 'unavailable');
   }
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Public search timed out')), timeoutMs);
+    promise.then((value) => {
+      clearTimeout(timeout);
+      resolve(value);
+    }, (error: unknown) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+  });
 }
 
 function withSearchSnapshot(plan: GoalIntelligencePlan, response: PublicWebSearchResponse | Omit<PublicSearchSnapshot, 'status'>, status: PublicSearchSnapshot['status']): GoalIntelligencePlan {
