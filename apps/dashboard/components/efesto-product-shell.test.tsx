@@ -172,8 +172,10 @@ describe('Efesto conversation-first product shell', () => {
     expect(screen.getByRole('button', { name: 'Enviar mensaje' })).toHaveProperty('disabled', false);
     fireEvent.click(screen.getByRole('button', { name: 'Enviar mensaje' }));
 
-    await waitFor(() => expect(screen.getByText(/He recibido tu orden/)).toBeTruthy());
-    expect(screen.getAllByText('Vista previa web · sin modelo externo').length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.getByText(/He consultado la búsqueda pública/)).toBeTruthy());
+    expect(screen.getAllByText('Web pública · búsqueda real · solo lectura').length).toBeGreaterThan(0);
+    expect(screen.getByRole('region', { name: 'Resultados de búsqueda pública' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Resultado público de prueba/ })).toHaveProperty('href', 'https://example.com/result');
     expect(screen.getByText(/no se han usado credenciales ni se ha ejecutado ninguna acción/)).toBeTruthy();
     expect(requests.filter((request) => request.method === 'POST').map((request) => new URL(request.url).pathname)).toEqual(['/api/efesto/plan']);
   });
