@@ -536,7 +536,14 @@ function EfestoProductShellContent() {
       try {
         const plan = await loadWebGoalIntelligencePlan(content, keywordsFromGoal(content), controller.signal);
         setChatMessages((current) => current.map((message, index) => index === current.length - 1
-          ? { ...message, content: t('chat.webPreviewResponse', { count: plan.publicSearch?.results.length ?? 0 }) }
+          ? {
+            ...message,
+            content: t('chat.webPreviewResponse', {
+              count: plan.publicSearch?.results.length ?? 0,
+              query: plan.publicSearch?.query ?? content,
+            }),
+            webSearch: plan.publicSearch,
+          }
           : message));
         setToast(t('toast.webChatPrepared'));
       } catch {
@@ -573,7 +580,7 @@ function EfestoProductShellContent() {
     <aside className="efesto-sidebar" aria-label={t('nav.main')}>
       <div className="efesto-brand">
         <button type="button" onClick={() => navigate('home')} aria-label={t('nav.brandHome')}>
-          <span className="brand-mark"><Image src="/efesto-smith.svg" alt="" width={36} height={36} /></span>
+        <span className="brand-mark"><Image src="/efesto-smith.svg" alt="" width={36} height={36} unoptimized priority /></span>
           <span><strong>EFESTO</strong><small>The Intelligence Forge</small></span>
         </button>
         <button type="button" className="mobile-close" onClick={() => setNavOpen(false)} aria-label={t('nav.closeMenu')}><X /></button>
