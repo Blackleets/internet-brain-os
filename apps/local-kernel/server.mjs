@@ -25,6 +25,11 @@ import { ChatServiceError, KernelChatService } from './chat-service.mjs';
 import { ChatConversationError, ChatConversationStore } from './chat-conversation-store.mjs';
 import { defaultEfestoPaths, inspectEfestoBootstrap, readLauncherConfig } from '../../scripts/efesto-bootstrap.mjs';
 import { LocalProductCohortLedger } from './product-cohort.mjs';
+import { buildIntegrationCatalog } from './integration-catalog.mjs';
+import { buildGoalIntelligencePlan } from './goal-intelligence.mjs';
+import { GITHUB_EVIDENCE_SCHEMA_VERSION, GITHUB_READONLY_SCHEMA_VERSION } from './github-readonly-contract.mjs';
+import { GitHubIntegrationError, createRuntimeGitHubReadOnlyIntegration } from './github-readonly-integration.mjs';
+import { GitHubEvidenceProjector, GitHubEvidenceProjectorError } from './github-evidence-projector.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
@@ -81,6 +86,10 @@ const modelProviders = new ModelProviderRegistry(resolve(dataDir, 'model-provide
 });
 const chatService = new KernelChatService(modelProviders);
 const chatConversations = new ChatConversationStore(resolve(dataDir, 'chat-conversations.json'));
+const githubIntegration = isMain
+  ? await createRuntimeGitHubReadOnlyIntegration({ store: knowledgeStore, dataDir, env: process.env })
+  : undefined;
+const githubEvidenceProjector = isMain ? new GitHubEvidenceProjector(knowledgeStore) : undefined;
 const dashboardOrigins = dashboardOriginsFrom(process.env.HEPHAESTUS_DASHBOARD_ORIGINS);
 
 function environmentModelProviders(env) {
@@ -125,9 +134,20 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const providers = options.modelProviderRegistry;
   const chat = options.chatService;
   const conversations = options.chatConversationStore;
+  const mcpGateway = options.mcpGateway;
+  const githubIntegration = options.githubIntegration;
+  const githubEvidenceProjector = options.githubEvidenceProjector;
   const bootstrapStatus = options.bootstrapStatus;
   const allowedDashboardOrigins = new Set(options.allowedDashboardOrigins ?? []);
   const hermesMaxBodyBytes = Number(options.hermesMaxBodyBytes ?? 256 * 1024);
+  const readBootstrapStatus = () => bootstrapStatus
+    ? bootstrapStatus()
+    : inspectEfestoBootstrap({
+      ...(options.bootstrapProbeOptions ?? {}),
+      env: options.bootstrapProbeOptions?.env ?? process.env,
+      cwd: options.bootstrapProbeOptions?.cwd ?? process.cwd(),
+    });
+  const readGitHubStatus = () => githubIntegration?.status?.();
   return createServer(async (request, response) => {
     if (!isLoopbackHost(request.headers.host)) {
       return send(response, 403, { ok: false, code: 'HOST_FORBIDDEN' });
@@ -154,13 +174,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     }
     if (request.method === 'GET' && request.url === '/bootstrap/status') {
       try {
-        const body = bootstrapStatus
-          ? await bootstrapStatus()
-          : await inspectEfestoBootstrap({
-            ...(options.bootstrapProbeOptions ?? {}),
-            env: options.bootstrapProbeOptions?.env ?? process.env,
-            cwd: options.bootstrapProbeOptions?.cwd ?? process.cwd(),
-          });
+        const body = await readBootstrapStatus();
         return send(response, 200, body);
       } catch {
         return send(response, 500, { ok: false, code: 'BOOTSTRAP_STATUS_FAILED' });
@@ -217,6 +231,155 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         return send(response, 500, { ok: false, code: 'IDENTITY_REGISTRY_UNAVAILABLE' });
       }
     }
+    if (request.method === 'GET' && request.url === '/api/integrations/github') {
+      if (!githubIntegration) return send(response, 404, { ok: false, code: 'GITHUB_INTEGRATION_UNAVAILABLE' });
+      try { return send(response, 200, { ok: true, ...(await readGitHubStatus()) }); }
+      catch { return send(response, 500, { ok: false, code: 'GITHUB_STATUS_FAILED' }); }
+    }
+    if (request.method === 'POST' && request.url === '/api/integrations/github/credentials') {
+      if (!githubIntegration) return send(response, 404, { ok: false, code: 'GITHUB_INTEGRATION_UNAVAILABLE' });
+      const actor = interactiveMissionConfirmationActor(origin, allowedDashboardOrigins);
+      if (!actor) return send(response, 403, { ok: false, code: 'INTERACTIVE_ORIGIN_REQUIRED' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try {
+        const body = await readJson(request, 16 * 1024);
+        return send(response, 200, { ok: true, ...(await githubIntegration.configureCredential(body?.token)) });
+      } catch (error) { return sendGitHubError(response, error, 'GITHUB_CREDENTIAL_SAVE_FAILED'); }
+    }
+    if (request.method === 'DELETE' && request.url === '/api/integrations/github/credentials') {
+      if (!githubIntegration) return send(response, 404, { ok: false, code: 'GITHUB_INTEGRATION_UNAVAILABLE' });
+      const actor = interactiveMissionConfirmationActor(origin, allowedDashboardOrigins);
+      if (!actor) return send(response, 403, { ok: false, code: 'INTERACTIVE_ORIGIN_REQUIRED' });
+      try { return send(response, 200, { ok: true, ...(await githubIntegration.revokeCredential()) }); }
+      catch (error) { return sendGitHubError(response, error, 'GITHUB_CREDENTIAL_REVOKE_FAILED'); }
+    }
+    if (request.method === 'POST' && request.url === '/api/integrations/github/authorizations') {
+      if (!githubIntegration) return send(response, 404, { ok: false, code: 'GITHUB_INTEGRATION_UNAVAILABLE' });
+      const actor = interactiveMissionConfirmationActor(origin, allowedDashboardOrigins);
+      if (!actor) return send(response, 403, { ok: false, code: 'INTERACTIVE_ORIGIN_REQUIRED' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try {
+        const body = await readJson(request, 16 * 1024);
+        return send(response, 201, { ok: true, authorization: await githubIntegration.authorize({ goalId: body?.goalId, capabilities: body?.capabilities, resource: body?.resource, actor }) });
+      } catch (error) { return sendGitHubError(response, error, 'GITHUB_AUTHORIZATION_FAILED'); }
+    }
+    if (request.method === 'GET' && request.url?.startsWith('/api/integrations/github/authorizations/')) {
+      if (!githubIntegration?.getAuthorization) return send(response, 404, { ok: false, code: 'GITHUB_INTEGRATION_UNAVAILABLE' });
+      try {
+        const receiptId = decodeURIComponent(request.url.slice('/api/integrations/github/authorizations/'.length));
+        return send(response, 200, { ok: true, authorization: await githubIntegration.getAuthorization(receiptId) });
+      } catch (error) { return sendGitHubError(response, error, 'GITHUB_AUTHORIZATION_STATUS_FAILED'); }
+    }
+    if (request.method === 'DELETE' && request.url?.startsWith('/api/integrations/github/authorizations/')) {
+      if (!githubIntegration) return send(response, 404, { ok: false, code: 'GITHUB_INTEGRATION_UNAVAILABLE' });
+      const actor = interactiveMissionConfirmationActor(origin, allowedDashboardOrigins);
+      if (!actor) return send(response, 403, { ok: false, code: 'INTERACTIVE_ORIGIN_REQUIRED' });
+      try {
+        const receiptId = decodeURIComponent(request.url.slice('/api/integrations/github/authorizations/'.length));
+        return send(response, 200, { ok: true, authorization: await githubIntegration.revokeAuthorization(receiptId, actor) });
+      } catch (error) { return sendGitHubError(response, error, 'GITHUB_AUTHORIZATION_REVOKE_FAILED'); }
+    }
+    if (request.method === 'POST' && request.url === '/api/integrations/github/read') {
+      if (!githubIntegration) return send(response, 404, { ok: false, code: 'GITHUB_INTEGRATION_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try {
+        const body = await readJson(request, 32 * 1024);
+        const headerKey = request.headers['x-ibos-idempotency-key'];
+        const idempotencyKey = Array.isArray(headerKey) ? headerKey[0] : headerKey ?? body?.idempotencyKey;
+        const result = await githubIntegration.read({
+          authorizationId: body?.authorizationId,
+          idempotencyKey,
+          operation: body?.operation,
+          owner: body?.owner,
+          repo: body?.repo,
+          ref: body?.ref,
+          limit: body?.limit,
+        });
+        return send(response, 200, { ok: true, schemaVersion: GITHUB_READONLY_SCHEMA_VERSION, ...result });
+      } catch (error) { return sendGitHubError(response, error, 'GITHUB_READ_FAILED'); }
+    }
+    if (request.method === 'POST' && request.url === '/api/integrations/github/evidence') {
+      if (!githubIntegration || !githubEvidenceProjector) return send(response, 404, { ok: false, code: 'GITHUB_EVIDENCE_UNAVAILABLE' });
+      if (!interactiveMissionConfirmationActor(origin, allowedDashboardOrigins)) return send(response, 403, { ok: false, code: 'INTERACTIVE_ORIGIN_REQUIRED' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try {
+        const body = await readJson(request, 32 * 1024);
+        const headerKey = request.headers['x-ibos-idempotency-key'];
+        const idempotencyKey = Array.isArray(headerKey) ? headerKey[0] : headerKey ?? body?.idempotencyKey;
+        const read = await githubIntegration.read({
+          authorizationId: body?.authorizationId,
+          idempotencyKey,
+          operation: body?.operation,
+          owner: body?.owner,
+          repo: body?.repo,
+          ref: body?.ref,
+          limit: body?.limit,
+        });
+        const projection = await githubEvidenceProjector.project({ goalId: body?.goalId, receipt: read.receipt, result: read.result });
+        const obsidianNotes = obsidianProjector?.syncCase ? await obsidianProjector.syncCase(projection.caseId) : undefined;
+        return send(response, read.replayed && projection.duplicate ? 200 : 201, {
+          ok: true,
+          schemaVersion: GITHUB_EVIDENCE_SCHEMA_VERSION,
+          ...read,
+          ...projection,
+          obsidianNotes,
+        });
+      } catch (error) { return sendGitHubError(response, error, 'GITHUB_EVIDENCE_FAILED'); }
+    }
+    if (request.method === 'GET' && request.url === '/api/integrations') {
+      try {
+        const bootstrap = await readBootstrapStatus();
+        let providerCount;
+        if (providers) {
+          try { providerCount = (await providers.list()).length; } catch { providerCount = undefined; }
+        }
+        return send(response, 200, {
+          ok: true,
+          ...buildIntegrationCatalog({
+            bootstrap,
+            hermesAvailable: Boolean(hermesRoute),
+            obsidianAvailable: Boolean(obsidianProjector),
+            providerCount,
+            mcpGateway,
+            githubStatus: await readGitHubStatus(),
+          }),
+        });
+      } catch {
+        return send(response, 500, { ok: false, code: 'INTEGRATION_CATALOG_FAILED' });
+      }
+    }
+    if (request.method === 'POST' && request.url === '/api/goals/plan') {
+      if (!goals) return send(response, 404, { ok: false, code: 'GOALS_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try {
+        const body = await readJson(request);
+        const bootstrap = await readBootstrapStatus();
+        let providerCount;
+        if (providers) {
+          try { providerCount = (await providers.list()).length; } catch { providerCount = undefined; }
+        }
+        const catalog = buildIntegrationCatalog({
+          bootstrap,
+          hermesAvailable: Boolean(hermesRoute),
+          obsidianAvailable: Boolean(obsidianProjector),
+          providerCount,
+          mcpGateway,
+          githubStatus: await readGitHubStatus(),
+        });
+        return send(response, 200, {
+          ok: true,
+          ...buildGoalIntelligencePlan({
+            title: body?.title,
+            categories: body?.categories,
+            keywords: body?.keywords,
+            integrations: catalog.integrations,
+          }),
+        });
+      } catch (error) {
+        if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'GOAL_PLAN_FAILED' });
+      }
+    }
     if (request.method === 'GET' && request.url === '/api/cases' && captureProjector) {
       try {
         return send(response, 200, { ok: true, cases: await captureProjector.listCases() });
@@ -228,9 +391,18 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       const caseId = decodeURIComponent(request.url.slice('/api/browser/case/'.length));
       try {
         const result = await captureProjector.getCaseById(caseId);
-        return send(response, 200, { ok: true, ...result });
+        const githubEvidence = result.evidence.find((item) => item?.integration === 'github' && typeof item.authorizationId === 'string');
+        let githubAuthorization;
+        if (githubEvidence && githubIntegration?.getAuthorization) {
+          try { githubAuthorization = await githubIntegration.getAuthorization(githubEvidence.authorizationId); }
+          catch (error) {
+            if (!(error instanceof GitHubIntegrationError) || error.code !== 'GITHUB_AUTHORIZATION_NOT_FOUND') throw error;
+          }
+        }
+        return send(response, 200, { ok: true, ...result, ...(githubAuthorization ? { githubAuthorization } : {}) });
       } catch (error) {
         if (error instanceof InboxError) return send(response, error.status ?? 400, { ok: false, code: error.code, error: error.message });
+        if (error instanceof GitHubIntegrationError) return sendGitHubError(response, error, 'GITHUB_AUTHORIZATION_STATUS_FAILED');
         return send(response, 500, { ok: false, code: 'INTERNAL_ERROR' });
       }
     }
@@ -572,6 +744,8 @@ export const server = createLocalKernelServer(inbox, projector, obsidian, summar
   modelProviderRegistry: modelProviders,
   chatService,
   chatConversationStore: chatConversations,
+  githubIntegration,
+  githubEvidenceProjector,
   allowedDashboardOrigins: dashboardOrigins,
 });
 
@@ -668,6 +842,13 @@ function send(response, status, body) {
   if (body === undefined) return response.end();
   response.setHeader('content-type', 'application/json; charset=utf-8');
   response.end(JSON.stringify(body));
+}
+
+function sendGitHubError(response, error, fallbackCode) {
+  if (error instanceof GitHubIntegrationError || error instanceof GitHubEvidenceProjectorError) {
+    return send(response, error.status, { ok: false, code: error.code, error: error.message });
+  }
+  return send(response, 500, { ok: false, code: fallbackCode });
 }
 
 async function writeStreamEvent(response, event) {

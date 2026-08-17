@@ -52,19 +52,19 @@ export class UserGoalInterpreter {
     // Intent: we can derive from the category and the action verb.
     // The action verb is usually at the beginning: "Encuéntrame", "Busco", "Quiero", etc.
     // We map the verb to its infinitive form in Spanish.
-    const verbMap: Record<string, string> = {
-      'encuéntrame': 'encontrar',
-      'encontrar': 'encontrar',
-      'busco': 'buscar',
-      'buscar': 'buscar',
-      'quiero': 'querer',
-      'necesito': 'necesitar'
+    const verbMap: Record<string, 'find' | 'want'> = {
+      'encuéntrame': 'find',
+      'encontrar': 'find',
+      'busco': 'find',
+      'buscar': 'find',
+      'quiero': 'want',
+      'necesito': 'want'
     };
     const intentMatch = lowerText.match(/^(encuéntrame|encontrar|busco|buscar|quiero|necesito)\s+/i);
-    let intent = 'encontrar'; // fallback to a safe default
+    let intent: 'find' | 'want' = 'find';
     if (intentMatch) {
       const verb = intentMatch[1].toLowerCase();
-      intent = verbMap[verb] ?? verb; // if not in map, use the verb as is (should not happen with our regex)
+      intent = verbMap[verb] ?? 'find';
     }
 
     // Preferences: look for words like "remoto", "presencial", "híbrido"

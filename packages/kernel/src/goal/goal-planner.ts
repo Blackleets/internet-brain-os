@@ -37,7 +37,7 @@ export class GoalPlanner {
     let spanishVerb: string;
     switch (intent) {
       case 'find':
-        spanishVerb = 'encontrar';
+        spanishVerb = category === 'empleo' ? 'buscar' : 'encontrar';
         break;
       case 'want':
         spanishVerb = 'querer';
@@ -55,7 +55,8 @@ export class GoalPlanner {
       constraintParts.push(`${constraints.hours} horas`);
     }
     if (constraints.salary && constraints.currency && constraints.frequency) {
-      constraintParts.push(`${constraints.salary} ${constraints.currency} ${constraints.frequency}`);
+      const frequencyLabel: Record<string, string> = { monthly: 'mensual', weekly: 'semanal', hourly: 'horario' };
+      constraintParts.push(`${constraints.salary} ${constraints.currency} ${frequencyLabel[constraints.frequency] ?? constraints.frequency}`);
     } else if (constraints.salary && constraints.currency) {
       constraintParts.push(`${constraints.salary} ${constraints.currency}`);
     }
@@ -155,34 +156,28 @@ export class GoalPlanner {
     }
 
     // Add variations for different ways of expressing the same thing
+    const originalGoal = userGoal.originalTitle.toLowerCase();
+    const mentionsPartialDay = originalGoal.includes('media jornada') || originalGoal.includes('jornada parcial');
     if (constraints.hours !== undefined) {
       queries.push(`${baseQuery}`);
       queries.push(`${category} ${constraints.hours}h`);
-      queries.push(`${category} ${constraints.hours}hrs`);
-
-      // Media jornada variations
-      if (constraints.hours === 20) { // Assuming 20 hours is media jornada
-        queries.push(`${category} media jornada`);
-        queries.push(`${category} jornada parcial`);
-        queries.push(`${category} medio tiempo`);
-      }
     }
 
     // Salary variations
     if (constraints.salary !== undefined && constraints.currency !== undefined) {
       // Already added in baseQuery, but add symbolic variations
-      queries.push(`${category} ${constraints.salary}€`);
+      queries.push(`${category} ${constraints.salary} euros`);
       queries.push(`${category} ${constraints.salary} EUR`);
 
       if (constraints.frequency === 'monthly') {
-        queries.push(`${category} ${constraints.salary} al mes`);
-        queries.push(`${category} ${constraints.salary} mensual`);
+        queries.push(`${category} ${constraints.salary} euros al mes`);
+        queries.push(`${category} ${constraints.salary} EUR mensual`);
       } else if (constraints.frequency === 'weekly') {
-        queries.push(`${category} ${constraints.salary} por semana`);
-        queries.push(`${category} ${constraints.salary} semanal`);
+        queries.push(`${category} ${constraints.salary} euros por semana`);
+        queries.push(`${category} ${constraints.salary} EUR semanal`);
       } else if (constraints.frequency === 'hourly') {
-        queries.push(`${category} ${constraints.salary} por hora`);
-        queries.push(`${category} ${constraints.salary} horario`);
+        queries.push(`${category} ${constraints.salary} euros por hora`);
+        queries.push(`${category} ${constraints.salary} EUR horario`);
       }
     }
 
@@ -193,9 +188,11 @@ export class GoalPlanner {
     }
 
     // Modality variations
-    if (constraints.modality !== undefined) {
-      queries.push(`${category} ${constraints.modality}`);
-      if (constraints.modality === 'remote') {
+    const remotePreference = constraints.modality === 'remote' || userGoal.preferences.includes('remote');
+    if (constraints.modality !== undefined || remotePreference) {
+      const modality = constraints.modality ?? 'remote';
+      queries.push(`${category} ${modality}`);
+      if (modality === 'remote') {
         queries.push(`${category} remoto`);
         queries.push(`${category} trabajo desde casa`);
       }
@@ -213,6 +210,12 @@ export class GoalPlanner {
         queries.push(`${category} freelance`);
         queries.push(`${category} autónomo`);
       }
+    }
+
+    if (constraints.hours === 20 || mentionsPartialDay) {
+      queries.push(`${category} media jornada`);
+      queries.push(`${category} jornada parcial`);
+      queries.push(`${category} medio tiempo`);
     }
 
     // Remove duplicates and limit to reasonable number

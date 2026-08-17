@@ -1,8 +1,8 @@
 import { UserGoalInterpreter } from './goal-interpreter';
-import { UserGoal } from './user-goal-contract';
 import { GoalPlanner } from './goal-planner';
-import { GoalPlan } from './goal-plan-contract';
-import { PublicWebSearchClient } from '../../../connectors/src/public-web-search';
+import type { UserGoal } from './user-goal-contract';
+import type { GoalPlan } from './goal-plan-contract';
+import type { PublicWebSearchResponse } from '../execution/public-web-search-adapter';
 
 /**
  * Represents a candidate result from a public web search.
@@ -34,34 +34,66 @@ export interface Candidate {
   state: 'partial' | 'no_match';
 }
 
+function normalizeMatchText(value: string): string {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function criterionIsMentioned(description: string, text: string): boolean {
+  const normalizedDescription = normalizeMatchText(description);
+  const normalizedText = normalizeMatchText(text);
+  const numbers = normalizedDescription.match(/\d+/g) ?? [];
+  if (numbers.some((number) => !new RegExp(`\\b${number}\\b`).test(normalizedText))) return false;
+
+  const semanticRules = [
+    { when: /\b(?:jornada|horas?|hrs?)\b/, match: /\b(?:jornada|horas?|hrs?)\b|\d+\s*h(?:rs?)?/ },
+    { when: /\b(?:salario|sueldo)\b/, match: /\b(?:salario|sueldo|paga|euros?|eur)\b|€/ },
+    { when: /\b(?:mensual|monthly|mes)\b|al mes/, match: /\b(?:mensual|monthly|mes)\b|al mes/ },
+    { when: /\b(?:modalidad|modality)\b/, match: /\b(?:modalidad|remoto|remote|presencial|onsite|hibrido|hybrid)\b/ },
+    { when: /\b(?:contrato|contract)\b/, match: /\b(?:contrato|contract|freelance|parcial|part-time|completo|full-time)\b/ },
+  ] as const;
+
+  let matchedRule = false;
+  for (const rule of semanticRules) {
+    if (!rule.when.test(normalizedDescription)) continue;
+    matchedRule = true;
+    if (!rule.match.test(normalizedText)) return false;
+  }
+  if (matchedRule) return true;
+
+  const meaningfulWords = normalizedDescription.match(/[a-z0-9]{4,}/g) ?? [];
+  return meaningfulWords.some((word) => normalizedText.includes(word));
+}
+
 /**
- * Resolves a goal using public web search only (does not persist Evidence or memory).
- * Suitable for web mode without Kernel persistence.
+ * Interprets and evaluates a Goal against results that were already returned by
+ * an authorized public-web execution. This class deliberately performs no I/O:
+ * callers must route every query in the returned plan through the
+ * CapabilityRegistry/ExecutionEngine boundary before passing responses here.
  */
 export class WebGoalResolver {
   private readonly interpreter: UserGoalInterpreter;
   private readonly planner: GoalPlanner;
-  private readonly searcher: PublicWebSearchClient;
 
-  constructor(searcher?: PublicWebSearchClient) {
+  constructor() {
     this.interpreter = new UserGoalInterpreter();
     this.planner = new GoalPlanner();
-    this.searcher = searcher ?? new PublicWebSearchClient();
+  }
+
+  plan(goalText: string): { userGoal: UserGoal; plan: GoalPlan } {
+    const userGoal: UserGoal = this.interpreter.interpret(goalText);
+    return { userGoal, plan: this.planner.createPlan(userGoal) };
   }
 
   /**
-   * Resolves the given goal text and returns a list of candidates.
+   * Evaluates the given goal text and authorized public-web responses.
    * @param goalText The natural language goal (e.g., "Encuéntrame un trabajo de 20 horas que pague 600 euros al mes")
-   * @returns A promise that resolves to the list of candidates and the overall resolution state
+   * @param responses Results returned by the authorized execution boundary.
+   * @returns The candidate list and the overall resolution state.
    */
-  async resolve(goalText: string): Promise<{ candidates: Candidate[]; resolutionState: 'partial' | 'no_match' }> {
-    // Step 1: Interpret the goal
-    const userGoal: UserGoal = this.interpreter.interpret(goalText);
+  resolve(goalText: string, responses: readonly PublicWebSearchResponse[]): { candidates: Candidate[]; resolutionState: 'partial' | 'no_match' } {
+    if (!Array.isArray(responses)) throw new TypeError('Authorized public-web responses are required');
+    const { userGoal, plan } = this.plan(goalText);
 
-    // Step 2: Create a plan
-    const plan: GoalPlan = this.planner.createPlan(userGoal);
-
-    // Step 3: Execute each query in the plan and collect results
     const allResults: Array<{
       query: string;
       title: string;
@@ -71,23 +103,16 @@ export class WebGoalResolver {
       retrievedAt: string;
     }> = [];
 
-    for (const query of plan.queries) {
-      try {
-        const response = await this.searcher.search(query, 10); // limit to 10 results per query
-        for (const result of response.results) {
-          allResults.push({
-            query: response.query,
-            title: result.title,
-            url: result.url,
-            domain: result.sourceHost,
-            snippet: result.snippet,
-            retrievedAt: response.searchedAt,
-          });
-        }
-      } catch (error) {
-        // If a query fails, we log it as a warning but continue with other queries
-        // We could also collect errors and include them in warnings, but for simplicity we skip.
-        console.warn(`Failed to execute query "${query}":`, error);
+    for (const response of responses) {
+      for (const result of response.results) {
+        allResults.push({
+          query: response.query,
+          title: result.title,
+          url: result.url,
+          domain: result.sourceHost,
+          snippet: result.snippet,
+          retrievedAt: response.searchedAt,
+        });
       }
     }
 
@@ -109,19 +134,17 @@ export class WebGoalResolver {
       const criteriaMet: string[] = [];
       const criteriaMissing: string[] = [];
 
-      const textToSearch = `${result.title} ${result.snippet}`.toLowerCase();
+      const textToSearch = `${result.title} ${result.snippet}`;
 
       for (const description of criteriaDescriptions) {
-        // Simple keyword matching: check if the description (lowercase) appears in the text
-        // We could improve this with stemming or more sophisticated matching, but for now we do substring.
-        if (description.toLowerCase().includes(textToSearch) || textToSearch.includes(description.toLowerCase())) {
+        if (criterionIsMentioned(description, textToSearch)) {
           criteriaMet.push(description);
         } else {
           criteriaMissing.push(description);
         }
       }
 
-      const coverage = criteriaMet.length / criteriaDescriptions.length;
+      const coverage = criteriaDescriptions.length === 0 ? 0 : criteriaMet.length / criteriaDescriptions.length;
 
       // Determine candidate state: partial if at least one criterion met, otherwise no_match
       const candidateState: 'partial' | 'no_match' = criteriaMet.length > 0 ? 'partial' : 'no_match';

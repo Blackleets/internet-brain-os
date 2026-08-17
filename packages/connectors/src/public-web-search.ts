@@ -9,7 +9,7 @@ export interface PublicWebSearchResult {
 export interface PublicWebSearchResponse {
   readonly query: string;
   readonly searchedAt: string;
-  readonly provider: 'duckduckgo-html';
+  readonly provider: 'duckduckgo-html' | 'jina-bing' | 'brave-html' | 'bing-html';
   readonly results: readonly PublicWebSearchResult[];
 }
 
@@ -18,6 +18,8 @@ export interface PublicWebSearchOptions {
   readonly maxResults?: number;
   readonly fetchImpl?: typeof fetch;
   readonly now?: () => Date;
+  readonly market?: string;
+  readonly language?: string;
 }
 
 /**
@@ -30,11 +32,63 @@ export class PublicWebSearchClient {
   async search(query: string, requestedLimit?: number): Promise<PublicWebSearchResponse> {
     const normalizedQuery = normalizeQuery(query);
     const limit = normalizeLimit(requestedLimit ?? this.options.maxResults ?? 10);
+    let lastProviderError: unknown;
+
+    // Prefer the fast, credential-free Brave HTML surface for hosted reads.
+    // The remaining providers stay as a bounded fallback chain for resilience.
+    try {
+      const endpoint = new URL('https://search.brave.com/search');
+      endpoint.searchParams.set('q', normalizedQuery);
+      endpoint.searchParams.set('source', 'web');
+      const html = await this.fetchHtml(endpoint);
+      const results = filterRelevantResults(normalizedQuery, parseBraveHtml(html, limit));
+      if (results.length > 0) return this.response(normalizedQuery, 'brave-html', results);
+    } catch (error) {
+      lastProviderError = error;
+    }
+
+    const duckDuckGoProviders = [
+      { endpoint: 'https://html.duckduckgo.com/html/', parse: parseDuckDuckGoHtml },
+      { endpoint: 'https://lite.duckduckgo.com/lite/', parse: parseDuckDuckGoLiteHtml },
+    ] as const;
+    for (const provider of duckDuckGoProviders) {
+      try {
+        const endpoint = new URL(provider.endpoint);
+        endpoint.searchParams.set('q', normalizedQuery);
+        const html = await this.fetchHtml(endpoint);
+        const results = filterRelevantResults(normalizedQuery, provider.parse(html, limit));
+        if (results.length > 0) return this.response(normalizedQuery, 'duckduckgo-html', results);
+      } catch (error) {
+        lastProviderError = error;
+      }
+    }
+
+    try {
+      const endpoint = new URL(`https://r.jina.ai/http://www.bing.com/search?q=${encodeURIComponent(normalizedQuery)}`);
+      const text = await this.fetchHtml(endpoint, true);
+      const results = filterRelevantResults(normalizedQuery, parseJinaSearchMarkdown(text, limit));
+      if (results.length > 0) return this.response(normalizedQuery, 'jina-bing', results);
+    } catch (error) {
+      lastProviderError = error;
+    }
+
+    try {
+      const endpoint = new URL('https://www.bing.com/search');
+      endpoint.searchParams.set('q', normalizedQuery);
+      endpoint.searchParams.set('count', String(limit));
+      endpoint.searchParams.set('cc', this.options.market ?? 'es');
+      endpoint.searchParams.set('setlang', this.options.language ?? 'es');
+      const html = await this.fetchHtml(endpoint);
+      return this.response(normalizedQuery, 'bing-html', filterRelevantResults(normalizedQuery, parseBingHtml(html, limit)));
+    } catch (error) {
+      throw error ?? lastProviderError ?? new Error('Public search provider unavailable');
+    }
+  }
+
+  private async fetchHtml(endpoint: string | URL, allowPlainText = false): Promise<string> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 12_000);
     try {
-      const endpoint = new URL('https://html.duckduckgo.com/html/');
-      endpoint.searchParams.set('q', normalizedQuery);
       const response = await (this.options.fetchImpl ?? fetch)(endpoint, {
         method: 'GET',
         redirect: 'error',
@@ -46,17 +100,21 @@ export class PublicWebSearchClient {
       });
       if (!response.ok) throw new Error(`Public search provider returned HTTP ${response.status}`);
       const contentType = response.headers.get('content-type') ?? '';
-      if (!contentType.toLowerCase().includes('html')) throw new Error('Public search provider returned a non-HTML response');
-      const html = await readBoundedText(response, 1024 * 1024);
-      return {
-        query: normalizedQuery,
-        searchedAt: (this.options.now ?? (() => new Date()))().toISOString(),
-        provider: 'duckduckgo-html',
-        results: parseDuckDuckGoHtml(html, limit),
-      };
+      const normalizedContentType = contentType.toLowerCase();
+      if (!normalizedContentType.includes('html') && !(allowPlainText && normalizedContentType.includes('text/plain'))) throw new Error('Public search provider returned an unsupported response');
+      return readBoundedText(response, 1024 * 1024);
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  private response(query: string, provider: PublicWebSearchResponse['provider'], results: readonly PublicWebSearchResult[]): PublicWebSearchResponse {
+    return {
+      query,
+      searchedAt: (this.options.now ?? (() => new Date()))().toISOString(),
+      provider,
+      results,
+    };
   }
 }
 
@@ -85,17 +143,165 @@ export function parseDuckDuckGoHtml(html: string, limit = 10): readonly PublicWe
   return results;
 }
 
+export function parseDuckDuckGoLiteHtml(html: string, limit = 10): readonly PublicWebSearchResult[] {
+  const anchorPattern = /<a\b[^>]*class=["'][^"']*\bresult-link\b[^"']*["'][^>]*>([\s\S]*?)<\/a>/gi;
+  const results: PublicWebSearchResult[] = [];
+  const seen = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = anchorPattern.exec(html)) && results.length < normalizeLimit(limit)) {
+    const tagStart = html.lastIndexOf('<a', match.index);
+    const tagEnd = html.indexOf('>', tagStart);
+    if (tagStart < 0 || tagEnd < 0) continue;
+    const tag = html.slice(tagStart, tagEnd + 1);
+    const href = /\bhref=["']([^"']+)["']/i.exec(tag)?.[1] ?? '';
+    if (!href.includes('uddg=')) continue;
+    const target = normalizeResultUrl(decodeEntities(href));
+    if (!target || seen.has(target)) continue;
+    let parsed: URL;
+    try { parsed = new URL(target); } catch { continue; }
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) continue;
+    const title = cleanText(match[1] ?? '');
+    if (!title) continue;
+    const following = html.slice(anchorPattern.lastIndex, anchorPattern.lastIndex + 5000);
+    const snippet = /<(?:td|div)\b[^>]*class=["'][^"']*\bresult-snippet\b[^"']*["'][^>]*>([\s\S]*?)<\/(?:td|div)>/i.exec(following)?.[1] ?? '';
+    seen.add(target);
+    results.push({
+      rank: results.length + 1,
+      title,
+      url: parsed.toString(),
+      snippet: cleanText(snippet).slice(0, 500),
+      sourceHost: parsed.hostname.toLowerCase(),
+    });
+  }
+  return results;
+}
+
+export function parseBraveHtml(html: string, limit = 10): readonly PublicWebSearchResult[] {
+  const resultPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>\s*[\s\S]*?<div[^>]+class=["'][^"']*\btitle\b[^"']*\bsearch-snippet-title\b[^"']*["'][^>]*>([\s\S]*?)<\/div>\s*<\/a>/gi;
+  const results: PublicWebSearchResult[] = [];
+  const seen = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = resultPattern.exec(html)) && results.length < normalizeLimit(limit)) {
+    const target = normalizeResultUrl(decodeEntities(match[1] ?? ''));
+    if (!target || seen.has(target)) continue;
+    let parsed: URL;
+    try { parsed = new URL(target); } catch { continue; }
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) continue;
+    const title = cleanText(match[2] ?? '');
+    if (!title) continue;
+    const following = html.slice(resultPattern.lastIndex, resultPattern.lastIndex + 4000);
+    const snippet = /<div[^>]+class=["'][^"']*\bgeneric-snippet\b[^"']*["'][^>]*>[\s\S]*?<div[^>]+class=["'][^"']*\bcontent\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i.exec(following)?.[1] ?? '';
+    seen.add(target);
+    results.push({
+      rank: results.length + 1,
+      title,
+      url: parsed.toString(),
+      snippet: cleanText(snippet).slice(0, 500),
+      sourceHost: parsed.hostname.toLowerCase(),
+    });
+  }
+  return results;
+}
+
+export function parseJinaSearchMarkdown(markdown: string, limit = 10): readonly PublicWebSearchResult[] {
+  const headingPattern = /^(?:\d+\.\s+)?##\s+\[([^\]]+)\]\(([^)]+)\)\s*$/gm;
+  const results: PublicWebSearchResult[] = [];
+  const seen = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = headingPattern.exec(markdown)) && results.length < normalizeLimit(limit)) {
+    const target = normalizeBingResultUrl(decodeEntities(match[2] ?? ''));
+    if (!target || seen.has(target)) continue;
+    let parsed: URL;
+    try { parsed = new URL(target); } catch { continue; }
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) continue;
+    const title = cleanMarkdownText(match[1] ?? '');
+    if (!title) continue;
+    const following = markdown.slice(headingPattern.lastIndex, headingPattern.lastIndex + 3000);
+    const snippet = following
+      .split(/\r?\n/)
+      .map((line) => cleanMarkdownText(line))
+      .find((line) => line && !line.startsWith('[') && !line.startsWith('!') && line !== 'Ad' && !line.startsWith('Viewing ads')) ?? '';
+    seen.add(target);
+    results.push({
+      rank: results.length + 1,
+      title,
+      url: parsed.toString(),
+      snippet: snippet.slice(0, 500),
+      sourceHost: parsed.hostname.toLowerCase(),
+    });
+  }
+  return results;
+}
+
+export function parseBingHtml(html: string, limit = 10): readonly PublicWebSearchResult[] {
+  const resultPattern = /<li[^>]+class=["'][^"']*\bb_algo\b[^"']*["'][^>]*>([\s\S]*?)<\/li>/gi;
+  const results: PublicWebSearchResult[] = [];
+  const seen = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = resultPattern.exec(html)) && results.length < normalizeLimit(limit)) {
+    const block = match[1] ?? '';
+    const link = /<h2[^>]*>\s*<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i.exec(block);
+    if (!link) continue;
+    const target = normalizeBingResultUrl(decodeEntities(link[1] ?? ''));
+    if (!target || seen.has(target)) continue;
+    let parsed: URL;
+    try { parsed = new URL(target); } catch { continue; }
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) continue;
+    const title = cleanText(link[2] ?? '');
+    if (!title) continue;
+    const snippetMatch = /<div[^>]+class=["'][^"']*\bb_caption\b[^"']*["'][^>]*>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/i.exec(block);
+    seen.add(target);
+    results.push({
+      rank: results.length + 1,
+      title,
+      url: parsed.toString(),
+      snippet: cleanText(snippetMatch?.[1] ?? '').slice(0, 500),
+      sourceHost: parsed.hostname.toLowerCase(),
+    });
+  }
+  return results;
+}
+
 function normalizeResultUrl(raw: string): string | undefined {
   const value = raw.trim();
   if (!value) return undefined;
   try {
     const candidate = value.startsWith('//') ? `https:${value}` : value;
     const parsed = new URL(candidate, 'https://duckduckgo.com');
-    if (parsed.hostname.endsWith('duckduckgo.com') && parsed.pathname.startsWith('/l/')) {
+    if (isProviderHost(parsed.hostname, 'duckduckgo.com') && parsed.pathname.startsWith('/l/')) {
       const unwrapped = parsed.searchParams.get('uddg');
-      return unwrapped ? decodeURIComponent(unwrapped) : undefined;
+      return unwrapped ? normalizeResultUrl(decodeURIComponent(unwrapped)) : undefined;
     }
+    if (isProviderHost(parsed.hostname, 'duckduckgo.com')) return undefined;
     return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeBingResultUrl(raw: string): string | undefined {
+  const value = raw.trim();
+  if (!value) return undefined;
+  try {
+    const parsed = new URL(value, 'https://www.bing.com');
+    if (isProviderHost(parsed.hostname, 'bing.com') && parsed.pathname.startsWith('/ck/')) {
+      const encoded = parsed.searchParams.get('u');
+      const decoded = encoded ? decodeBingRedirect(encoded) : undefined;
+      return decoded ? normalizeResultUrl(decoded) : undefined;
+    }
+    if (isProviderHost(parsed.hostname, 'bing.com')) return undefined;
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function decodeBingRedirect(value: string): string | undefined {
+  const encoded = value.startsWith('a1') ? value.slice(2) : value;
+  const normalized = encoded.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+  try {
+    return Buffer.from(padded, 'base64').toString('utf8');
   } catch {
     return undefined;
   }
@@ -108,6 +314,42 @@ function normalizeQuery(value: string): string {
     throw new Error('Search query is invalid');
   }
   return normalized;
+}
+
+const SEARCH_STOP_WORDS = new Set([
+  'a', 'al', 'an', 'and', 'are', 'about', 'busca', 'buscar', 'by', 'con', 'dame',
+  'de', 'del', 'el', 'en', 'encuentra', 'encuentrame', 'encuéntrame', 'encontrar', 'es',
+  'explica', 'explicar', 'explain', 'find', 'for', 'from', 'fuente', 'fuentes',
+  'give', 'is', 'la', 'las', 'los', 'me', 'muéstrame', 'muestrame', 'my', 'of',
+  'para', 'por', 'public', 'publica', 'publicas', 'pública', 'públicas', 'que',
+  'qué', 'quiero', 'search', 'sobre', 'source', 'the', 'to', 'un', 'una', 'menos',
+  'verificable', 'verificables', 'what', 'with', 'y', 'you', 'oportunidad', 'oportunidades',
+]);
+
+function filterRelevantResults(query: string, results: readonly PublicWebSearchResult[]): readonly PublicWebSearchResult[] {
+  const queryTokens = tokenizeSearchText(query).filter((token) => !SEARCH_STOP_WORDS.has(token));
+  if (queryTokens.length === 0) return results;
+  return results
+    .filter((result) => {
+      const resultTokens = new Set(tokenizeSearchText(`${result.title} ${result.snippet} ${result.sourceHost}`));
+      const matchedTokens = queryTokens.filter((token) => resultTokens.has(token));
+      const minimumMatches = queryTokens.length === 1 ? 1 : 2;
+      return matchedTokens.length >= minimumMatches;
+    })
+    .map((result, index) => ({ ...result, rank: index + 1 }));
+}
+
+function tokenizeSearchText(value: string): string[] {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+}
+
+function isProviderHost(hostname: string, provider: string): boolean {
+  return hostname === provider || hostname.endsWith(`.${provider}`);
 }
 
 function normalizeLimit(value: number): number {
@@ -143,6 +385,10 @@ function cleanText(value: string): string {
   return decodeEntities(value.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
 }
 
+function cleanMarkdownText(value: string): string {
+  return cleanText(value.replace(/\*\*/g, '').replace(/`/g, ''));
+}
+
 function decodeEntities(value: string): string {
   return value
     .replace(/&amp;/g, '&')
@@ -150,5 +396,7 @@ function decodeEntities(value: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&#x27;/gi, "'");
+    .replace(/&#x27;/gi, "'")
+    .replace(/&#(\d+);/g, (_match, code: string) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([\da-f]+);/gi, (_match, code: string) => String.fromCodePoint(Number.parseInt(code, 16)));
 }

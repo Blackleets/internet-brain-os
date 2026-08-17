@@ -2,6 +2,9 @@
 
 ### Added
 - Canonical `CONSTITUTION.md` for Efesto's product identity, Kernel authority, safety boundaries, truthful autonomy, engineering discipline, agent preflight, and amendment process; `pnpm resume` now validates its required agent entry points before exposing the live checkpoint.
+- Kernel-owned Complementos directory with local logos and curated read-first connector entries for GitHub, Gmail, Google Drive, Notion, and Google Calendar behind MCP.
+- Independent external connector capability/status records and a Settings ledger that exposes each connector's scope and truthful `not_configured` state without implying authorization.
+- Shared Kernel connector definitions now drive both catalog status and Goal source routing; the GitHub Goal action covers repository, issues, pull requests, and checks with operation-scoped capability and reference wiring.
 - Credential-free remote Hermes L1→L7 acceptance using a checksum-verified, runner-local Ollama runtime and reviewed tool-capable Qwen3 model identity; no founder API key or PC installation is required.
 - Remote GitHub acceptance workflow for authentic Hermes v0.20 public-web L1→L7 proof, pinned to reviewed action/runtime commits and publishing only the sanitized acceptance report.
 - Private local-installation product cohort for trustworthy first-Goal activation and repeat-Goal measurement without global identifiers or external telemetry.
@@ -31,6 +34,19 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Goal source routing now requires explicit connector signals: generic terms
+  such as software, documents, notes, events, and open source remain on the
+  public-research path instead of requesting private GitHub, Drive, Notion, or
+  Calendar setup. Kernel and hosted previews keep the same read-only behavior.
+- Hardened the native GitHub read boundary: consent is bound to the exact
+  owner/repository resource, credential identity changes revoke approvals,
+  changed idempotency payloads fail closed, unsafe credential-file permissions
+  are rejected, and older receipts are archived instead of silently evicted.
+- Bounded GitHub issue pagination now filters pull requests across provider
+  pages before applying the requested result limit.
+- Made `WebGoalResolver` a pure provider-neutral planner/evaluator with finite
+  zero-criteria coverage, and made hosted Goal readiness reflect every
+  selected source rather than public search alone.
 - Raised the workspace `nanoid` override to `3.3.18`, clearing the production audit advisory inherited through Next/PostCSS without changing application behavior.
 - Refined the draft Efesto web redesign into a professional conversation-first surface with a persistent bottom composer, real `Chat / Goal` modes, compact smith identity, direct local forge imagery, and a verified 390×844 no-overflow layout while preserving all existing Kernel action contracts.
 - Internal.81 was qualified on final `main` SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb` by the complete CI/package matrix and authentic remote Hermes L1→L7 run `31686750785` (`14/14`: 14 candidates, 3 verified Evidence records and 3 Evidence-backed Finds); public launch remains blocked on manual UAT.
@@ -67,6 +83,24 @@
 # CHANGELOG
 
 All meaningful project changes should be recorded here.
+
+## 2026-08-15
+
+- Reset the exact-SHA verification checkpoint on PR #224; this documentation-only
+  commit changes no application code and keeps public launch blocked until fresh
+  CI, Chromium, Windows/package, and live acceptance evidence is attached.
+
+- Recorded the exact premium forge candidate checkpoint and its fresh local
+  qualification. Public launch remains blocked until the same candidate passes
+  browser/package gates and manual UAT-1→UAT-6.
+- Corrected the candidate's provider-boundary, goal planning, connector
+  artifact, and dashboard browser regressions; local qualification now passes
+  at 199 test files / 1,144 tests. Published the corrected code for draft PR
+  #224 while keeping remote exact-SHA CI and manual UAT pending.
+- Hardened the hosted public-web preview so conversational Goals search their
+  actual topics, reject generic low-relevance matches, and use one bounded
+  broad fallback when a focused search is empty. Candidate smoke now returns
+  relevant Bitcoin and employment sources in both Goal and Chat modes.
 
 ## 2026-07-10
 

@@ -2,58 +2,81 @@
 
 import Image from 'next/image';
 import {
-  Bot, BrainCircuit, ChevronRight, Home, Menu, RefreshCw, Settings,
+  Bot, BrainCircuit, ChevronRight, Home, Menu, Plug, RefreshCw, Settings,
   ShieldCheck, Sparkles, SquarePen, Target, Workflow, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { KernelClient, KernelClientError } from '../lib/kernel/client';
-import type { CaseSummary } from '../lib/kernel/contracts';
+import type { CaseSummary, GoalIntelligencePlan, IntegrationAction, IntegrationCatalog } from '../lib/kernel/contracts';
 import { loadGoalSurfaces, type GoalSurface, type GoalSurfaceWorkState } from '../lib/kernel/goal-surfaces';
+import { loadGoalIntelligencePlan } from '../lib/kernel/goal-intelligence';
+import { loadIntegrationCatalog } from '../lib/kernel/integrations';
 import { loadOverview, type OverviewSnapshot } from '../lib/kernel/overview';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { connectionStore } from '../lib/session/connection-store';
+import { EfestoLocaleProvider, useEfestoLocale } from '../lib/efesto-i18n';
+import { loadWebGoalIntelligencePlan } from '../lib/web-runtime/client';
+import { detectEfestoRuntimeMode, type EfestoRuntimeMode } from '../lib/web-runtime/runtime';
 import {
-  AgentsView, AutomationsView, EvidenceView, FindsView, HomeView, MissionsView, ModelsView, SettingsView,
+  AgentsView, AutomationsView, EvidenceView, FindsView, HomeView, IntegrationsView, MissionsView, ModelsView, SettingsView,
   type BrainPhase, type CaseDetail, type ChatMessage, type EvidenceRecord, type Provider,
 } from './efesto-product-views';
+import { ProductValueScorecardPanel } from './overview/product-value-scorecard';
 
-type View = 'home' | 'missions' | 'finds' | 'evidence' | 'models' | 'agents' | 'automations' | 'settings';
+type View = 'home' | 'missions' | 'finds' | 'evidence' | 'models' | 'agents' | 'integrations' | 'automations' | 'settings';
 type Connection = { baseUrl: string; token: string };
 type StreamEvent = { type?: 'conversation' | 'delta' | 'done' | 'error'; delta?: string; error?: string; response?: { model?: string } };
 
 const SESSION_CONNECTION_KEY = 'hephaestus.owner.connection.session.v1';
 const DEFAULT_BASE_URL = 'http://127.0.0.1:4000';
-type NavItem = { id: View; label: string; icon: typeof Home };
+type GitHubReadOperation = 'repository' | 'issues' | 'pull_requests' | 'checks';
+const GITHUB_CAPABILITY_BY_OPERATION: Record<GitHubReadOperation, string> = {
+  repository: 'github.repository.read',
+  issues: 'github.issue.read',
+  pull_requests: 'github.pull_request.read',
+  checks: 'github.checks.read',
+};
+type NavItem = { id: View; labelKey: string; icon: typeof Home };
 const workspaceNav: NavItem[] = [
-  { id: 'home', label: 'Inicio', icon: Home },
-  { id: 'missions', label: 'Misiones', icon: Target },
-  { id: 'finds', label: 'Hallazgos', icon: Sparkles },
-  { id: 'evidence', label: 'Evidencia', icon: ShieldCheck },
+  { id: 'home', labelKey: 'nav.home', icon: Home },
+  { id: 'missions', labelKey: 'nav.missions', icon: Target },
+  { id: 'finds', labelKey: 'nav.finds', icon: Sparkles },
+  { id: 'evidence', labelKey: 'nav.evidence', icon: ShieldCheck },
 ];
 const systemNav: NavItem[] = [
-  { id: 'models', label: 'Modelos', icon: BrainCircuit },
-  { id: 'agents', label: 'Agentes', icon: Bot },
-  { id: 'automations', label: 'Automatizaciones', icon: Workflow },
+  { id: 'models', labelKey: 'nav.models', icon: BrainCircuit },
+  { id: 'agents', labelKey: 'nav.agents', icon: Bot },
+  { id: 'integrations', labelKey: 'nav.integrations', icon: Plug },
+  { id: 'automations', labelKey: 'nav.automations', icon: Workflow },
 ];
-const settingsNav: NavItem = { id: 'settings', label: 'Ajustes', icon: Settings };
+const settingsNav: NavItem = { id: 'settings', labelKey: 'nav.settings', icon: Settings };
 const navGroups = [
-  { label: 'Inteligencia', items: workspaceNav },
-  { label: 'Sistema', items: systemNav },
+  { labelKey: 'nav.intelligence', items: workspaceNav },
+  { labelKey: 'nav.system', items: systemNav },
 ];
 const nav = [...workspaceNav, ...systemNav, settingsNav];
 
 export default function EfestoProductShell() {
+  return <EfestoLocaleProvider><EfestoProductShellContent /></EfestoLocaleProvider>;
+}
+
+function EfestoProductShellContent() {
+  const { t } = useEfestoLocale();
   const [view, setView] = useState<View>('home');
   const [navOpen, setNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [runtimeMode, setRuntimeMode] = useState<EfestoRuntimeMode>('local');
   const [connection, setConnection] = useState<Connection>();
   const [snapshot, setSnapshot] = useState<OverviewSnapshot>();
   const [goalSurfaces, setGoalSurfaces] = useState<GoalSurface[]>([]);
+  const [integrationCatalog, setIntegrationCatalog] = useState<IntegrationCatalog>();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [selectedProviderId, setSelectedProviderId] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
   const [input, setInput] = useState('');
   const [preparedGoal, setPreparedGoal] = useState('');
+  const [goalPlan, setGoalPlan] = useState<GoalIntelligencePlan>();
+  const [goalPlanPending, setGoalPlanPending] = useState(false);
   const [goalPending, setGoalPending] = useState(false);
   const [chatMode, setChatMode] = useState(true);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -63,16 +86,26 @@ export default function EfestoProductShell() {
   const [loadingCaseId, setLoadingCaseId] = useState('');
   const [toast, setToast] = useState('');
   const [connecting, setConnecting] = useState(false);
+  const [githubBusy, setGithubBusy] = useState(false);
+  const [githubAuthorizationBusy, setGithubAuthorizationBusy] = useState(false);
   const [rememberSession, setRememberSession] = useState(false);
   const chatAbortRef = useRef<AbortController | undefined>(undefined);
+  const webMode = runtimeMode === 'web';
 
   const selectedProvider = providers.find((item) => item.id === selectedProviderId);
   const focusedGoalSurface = goalSurfaces[0];
   const brainPhase = useMemo<BrainPhase>(() => {
+    if (webMode && !connection) return 'ready';
     if (!connection || snapshot?.readiness.kernel !== 'online') return 'offline';
     if (chatPending) return 'thinking';
     return brainPhaseFromWorkState(focusedGoalSurface?.mission?.workState);
-  }, [chatPending, connection, focusedGoalSurface?.mission?.workState, snapshot?.readiness.kernel]);
+  }, [chatPending, connection, focusedGoalSurface?.mission?.workState, snapshot?.readiness.kernel, webMode]);
+
+  useEffect(() => {
+    const nextMode = detectEfestoRuntimeMode();
+    setRuntimeMode(nextMode);
+    if (nextMode === 'web') setChatMode(true);
+  }, []);
 
   useEffect(() => {
     try {
@@ -106,13 +139,15 @@ export default function EfestoProductShell() {
     const poll = async () => {
       try {
         const client = new KernelClient(connection);
-        const [nextSnapshot, nextGoalSurfaces] = await Promise.all([
+        const [nextSnapshot, nextGoalSurfaces, nextIntegrationCatalog] = await Promise.all([
           loadOverview(client),
           loadGoalSurfaces(client),
+          loadOptionalIntegrationCatalog(client),
         ]);
         if (cancelled) return;
         setSnapshot(nextSnapshot);
         setGoalSurfaces(nextGoalSurfaces);
+        setIntegrationCatalog(nextIntegrationCatalog);
       } catch {
         // The visible readiness state remains the last verified state until the next successful poll.
       }
@@ -138,6 +173,8 @@ export default function EfestoProductShell() {
     setChatMode(true);
     setChatMessages([]);
     setPreparedGoal('');
+    setGoalPlan(undefined);
+    setGoalPlanPending(false);
     setInput('');
     navigate('home');
   }
@@ -146,8 +183,16 @@ export default function EfestoProductShell() {
     setChatPending(false);
     setChatMode(false);
     setPreparedGoal('');
+    setGoalPlan(undefined);
+    setGoalPlanPending(false);
     setInput('');
     navigate('home');
+  }
+
+  function navigateIntegration(action: IntegrationAction) {
+    if (action === 'settings') return navigate('settings');
+    if (action === 'agents') return navigate('agents');
+    if (action === 'models') return navigate('models');
   }
 
   async function connect(event: FormEvent<HTMLFormElement>) {
@@ -167,7 +212,7 @@ export default function EfestoProductShell() {
     const token = String(data.get('token') ?? '').trim();
     if (tokenInput instanceof HTMLInputElement) tokenInput.value = '';
     if (!token) {
-      setToast('Introduce el token privado o usa el código de emparejamiento.');
+      setToast(t('toast.tokenMissing'));
       return;
     }
     await connectWith({ baseUrl, token }, remember);
@@ -192,13 +237,13 @@ export default function EfestoProductShell() {
         throw new KernelClientError('HTTP_ERROR', response.status);
       }
       if (await connectWith({ baseUrl: verifiedBaseUrl, token: body.apiToken }, remember)) {
-        setToast('Kernel emparejado. La web ya puede controlar Missions y Evidence.');
+        setToast(t('toast.pairSuccess'));
       }
     } catch (error) {
       if (error instanceof KernelClientError && error.code === 'HTTP_ERROR') {
-        setToast('Código rechazado, expirado o ya utilizado. Genera otro en el Kernel.');
+        setToast(t('toast.pairRejected'));
       } else {
-        setToast(connectionMessage(error));
+        setToast(connectionMessage(error, t));
       }
     } finally {
       setConnecting(false);
@@ -211,59 +256,92 @@ export default function EfestoProductShell() {
     try {
       const verified = { baseUrl: normalizeKernelBaseUrl(input.baseUrl), token: input.token };
       const client = new KernelClient(verified);
-      const [nextSnapshot, nextProviders, nextGoalSurfaces] = await Promise.all([
+      const [nextSnapshot, nextProviders, nextGoalSurfaces, nextIntegrationCatalog] = await Promise.all([
         loadOverview(client),
         client.get('/api/chat/providers', parseProviders),
         loadGoalSurfaces(client),
+        loadOptionalIntegrationCatalog(client),
       ]);
       if (nextSnapshot.readiness.kernel !== 'online') throw new KernelClientError('OFFLINE');
       setConnection(verified);
       setSnapshot(nextSnapshot);
       setProviders(nextProviders);
       setGoalSurfaces(nextGoalSurfaces);
+      setIntegrationCatalog(nextIntegrationCatalog);
       connectionStore.set(verified);
       if (remember) window.sessionStorage.setItem(SESSION_CONNECTION_KEY, JSON.stringify(verified));
       else window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
-      setToast('Kernel conectado. La interfaz muestra estado persistido real.');
+      setToast(t('toast.connectionSuccess'));
       return true;
     } catch (error) {
-      setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); connectionStore.clear();
+      setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); setIntegrationCatalog(undefined); connectionStore.clear();
       window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
-      setToast(connectionMessage(error));
+      setToast(connectionMessage(error, t));
       return false;
     } finally { setConnecting(false); }
   }
 
   function disconnect() {
     chatAbortRef.current?.abort();
-    setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); setCaseDetails({}); setSelectedCaseId(''); setChatMessages([]);
+    setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); setIntegrationCatalog(undefined); setCaseDetails({}); setSelectedCaseId(''); setChatMessages([]);
+    setGoalPlan(undefined); setGoalPlanPending(false);
     connectionStore.clear(); window.sessionStorage.removeItem(SESSION_CONNECTION_KEY); setRememberSession(false);
-    setToast('Dispositivo desconectado. El token ya no está en esta sesión.');
+    setToast(t('toast.disconnected'));
   }
 
   async function refresh() {
     if (!connection) return navigate('settings');
     try {
       const client = new KernelClient(connection);
-      const [nextSnapshot, nextProviders, nextGoalSurfaces] = await Promise.all([
+      const [nextSnapshot, nextProviders, nextGoalSurfaces, nextIntegrationCatalog] = await Promise.all([
         loadOverview(client),
         client.get('/api/chat/providers', parseProviders),
         loadGoalSurfaces(client),
+        loadOptionalIntegrationCatalog(client),
       ]);
-      setSnapshot(nextSnapshot); setProviders(nextProviders); setGoalSurfaces(nextGoalSurfaces); setToast('Estado actualizado desde el Kernel.');
-    } catch (error) { setToast(connectionMessage(error)); }
+      setSnapshot(nextSnapshot); setProviders(nextProviders); setGoalSurfaces(nextGoalSurfaces); setIntegrationCatalog(nextIntegrationCatalog); setToast(t('toast.refreshed'));
+    } catch (error) { setToast(connectionMessage(error, t)); }
   }
 
-  function prepareGoal(event: FormEvent<HTMLFormElement>) {
+  function updateInput(value: string) {
+    setInput(value);
+    if (preparedGoal && value.trim() !== preparedGoal) {
+      setPreparedGoal('');
+      setGoalPlan(undefined);
+    }
+  }
+
+  async function prepareGoal(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const value = input.trim();
     if (!value) return;
     setPreparedGoal(value);
-    setToast(connection ? 'Plan preparado. Nada se ejecutará hasta que confirmes.' : 'Borrador preparado localmente. Conecta el Kernel para ejecutarlo.');
+    setGoalPlan(undefined);
+    const canPlan = Boolean(connection) || webMode;
+    setGoalPlanPending(canPlan);
+    setToast(connection ? t('toast.goalPrepared') : webMode ? t('toast.webGoalPreparing') : t('toast.goalDraft'));
+    if (!canPlan) return;
+    try {
+      if (webMode && !connection) {
+        setGoalPlan(await loadWebGoalIntelligencePlan(value, keywordsFromGoal(value)));
+      } else if (connection) {
+        const client = new KernelClient({ ...connection, timeoutMs: 15_000 });
+        setGoalPlan(await loadGoalIntelligencePlan(client, value, keywordsFromGoal(value)));
+      }
+    } catch {
+      setToast(webMode && !connection ? t('toast.webGoalFailed') : t('toast.goalPlanLimited'));
+    } finally {
+      setGoalPlanPending(false);
+    }
   }
 
   async function confirmGoal() {
-    if (!connection || !preparedGoal || goalPending) { if (!connection) navigate('settings'); return; }
+    if (!preparedGoal || goalPending) return;
+    if (!connection) {
+      setToast(webMode ? t('toast.webExecutionRequiresKernel') : t('toast.goalDraft'));
+      if (!webMode) navigate('settings');
+      return;
+    }
     setGoalPending(true);
     try {
       const client = new KernelClient({ ...connection, timeoutMs: 30_000 });
@@ -276,9 +354,114 @@ export default function EfestoProductShell() {
         method: 'POST', body: JSON.stringify({ confirmed: true, agent: 'hermes', cadence: 'manual' }),
       }, parseOk);
       setInput(''); setPreparedGoal(''); await refresh(); navigate('missions');
-      setToast('Goal persistido y misión confirmada para Hermes.');
-    } catch { setToast('El Kernel rechazó la misión. No se creó actividad falsa ni trabajo parcial.'); }
+      setToast(t('toast.goalPersisted'));
+    } catch { setToast(t('toast.goalRejected')); }
     finally { setGoalPending(false); }
+  }
+
+  async function configureGithub(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!connection) return navigate('settings');
+    const form = event.currentTarget;
+    const tokenInput = form.elements.namedItem('githubToken');
+    const token = String(new FormData(form).get('githubToken') ?? '').trim();
+    if (tokenInput instanceof HTMLInputElement) tokenInput.value = '';
+    if (!token) {
+      setToast(t('toast.githubTokenMissing'));
+      return;
+    }
+    setGithubBusy(true);
+    try {
+      const client = new KernelClient({ ...connection, timeoutMs: 30_000 });
+      await client.request('/api/integrations/github/credentials', { method: 'POST', body: JSON.stringify({ token }) }, parseOk);
+      await refresh();
+      setToast(t('toast.githubConfigured'));
+    } catch {
+      setToast(t('toast.githubRejected'));
+    } finally {
+      setGithubBusy(false);
+    }
+  }
+
+  async function revokeGithub() {
+    if (!connection || githubBusy) return;
+    setGithubBusy(true);
+    try {
+      const client = new KernelClient({ ...connection, timeoutMs: 30_000 });
+      await client.request('/api/integrations/github/credentials', { method: 'DELETE' }, parseOk);
+      await refresh();
+      setToast(t('toast.githubRevoked'));
+    } catch {
+      setToast(t('toast.githubRevokeRejected'));
+    } finally {
+      setGithubBusy(false);
+    }
+  }
+
+  async function revokeGithubAuthorization(authorizationId: string) {
+    if (!connection || githubAuthorizationBusy) return;
+    setGithubAuthorizationBusy(true);
+    try {
+      const client = new KernelClient({ ...connection, timeoutMs: 30_000 });
+      await client.request(`/api/integrations/github/authorizations/${encodeURIComponent(authorizationId)}`, { method: 'DELETE' }, parseOk);
+      if (selectedCaseId) {
+        const detail = await client.get(`/api/browser/case/${encodeURIComponent(selectedCaseId)}`, parseCaseDetail);
+        setCaseDetails((current) => ({ ...current, [selectedCaseId]: detail }));
+      }
+      await refresh();
+      setToast(t('toast.githubAuthorizationRevoked'));
+    } catch {
+      setToast(t('toast.githubAuthorizationRevokeRejected'));
+    } finally {
+      setGithubAuthorizationBusy(false);
+    }
+  }
+
+  async function runGithubEvidence({ owner, repo, operation, ref, consent }: { owner: string; repo: string; operation: GitHubReadOperation; ref?: string; consent: boolean }) {
+    if (!connection || !preparedGoal || goalPending) {
+      if (!connection) navigate('settings');
+      return;
+    }
+    if (!consent) {
+      setToast(t('toast.githubConsentRequired'));
+      return;
+    }
+    setGoalPending(true);
+    try {
+      const client = new KernelClient({ ...connection, timeoutMs: 60_000 });
+      const goalResponse = await client.request('/api/goals', {
+        method: 'POST',
+        body: JSON.stringify({ title: preparedGoal, keywords: keywordsFromGoal(preparedGoal), priority: 2 }),
+      }, parseObject);
+      const goal = parseObject(goalResponse.goal);
+      if (typeof goal.id !== 'string' || !goal.id) throw new Error('Goal id missing');
+      const authorizationResponse = await client.request('/api/integrations/github/authorizations', {
+        method: 'POST',
+        body: JSON.stringify({ goalId: goal.id, capabilities: [GITHUB_CAPABILITY_BY_OPERATION[operation]], resource: { owner, repo, ...(ref ? { ref } : {}) } }),
+      }, parseObject);
+      const authorization = parseObject(authorizationResponse.authorization);
+      if (typeof authorization.id !== 'string' || !authorization.id) throw new Error('GitHub authorization missing');
+      const idempotencyKey = 'github-evidence:' + goal.id + ':' + operation + ':' + owner + '/' + repo + (ref ? ':' + ref : '');
+      const evidenceResponse = await client.request('/api/integrations/github/evidence', {
+        method: 'POST',
+        body: JSON.stringify({ goalId: goal.id, authorizationId: authorization.id, idempotencyKey, operation, owner, repo, ...(ref ? { ref } : {}) }),
+      }, parseObject);
+      const caseId = typeof evidenceResponse.caseId === 'string' ? evidenceResponse.caseId : '';
+      if (!caseId) throw new Error('GitHub Case missing');
+      const detail = await client.get('/api/browser/case/' + encodeURIComponent(caseId), parseCaseDetail);
+      setCaseDetails((current) => ({ ...current, [caseId]: detail }));
+      setSelectedCaseId(caseId);
+      setInput('');
+      setPreparedGoal('');
+      setGoalPlan(undefined);
+      await refresh();
+      navigate('evidence');
+      setToast(t('toast.githubEvidenceReady'));
+    } catch {
+      setToast(t('toast.githubEvidenceRejected'));
+    } finally {
+      setGoalPending(false);
+    }
   }
 
   async function recordFeedback(opportunityId: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') {
@@ -286,8 +469,8 @@ export default function EfestoProductShell() {
     try {
       const client = new KernelClient(connection);
       await client.request(`/api/opportunities/${encodeURIComponent(opportunityId)}/feedback`, { method: 'POST', body: JSON.stringify({ signal }) }, parseOk);
-      await refresh(); setToast(signal === 'dismissed' ? 'Find descartado; Evidence objetiva no fue reescrita.' : 'Preferencia guardada en el Kernel.');
-    } catch { setToast('No se pudo registrar el feedback. El estado anterior se conserva.'); }
+      await refresh(); setToast(signal === 'dismissed' ? t('toast.feedbackDismissed') : t('toast.feedbackSaved'));
+    } catch { setToast(t('toast.feedbackFailed')); }
   }
 
   async function openCase(record: CaseSummary) {
@@ -299,7 +482,7 @@ export default function EfestoProductShell() {
       const client = new KernelClient(connection);
       const detail = await client.get(`/api/browser/case/${encodeURIComponent(record.id)}`, parseCaseDetail);
       setCaseDetails((current) => ({ ...current, [record.id]: detail }));
-    } catch { setToast('No se pudo abrir el Case o su Evidence. No se muestran datos de relleno.'); }
+    } catch { setToast(t('toast.caseFailed')); }
     finally { setLoadingCaseId(''); }
   }
 
@@ -336,20 +519,51 @@ export default function EfestoProductShell() {
         ...(String(data.get('apiKey') ?? '').trim() ? { apiKey: String(data.get('apiKey')).trim() } : {}),
       }) }, parseOk);
       form.reset(); if (apiKeyInput instanceof HTMLInputElement) apiKeyInput.value = ''; await refresh();
-      setToast('Proveedor guardado de forma privada en el Kernel.');
-    } catch { if (apiKeyInput instanceof HTMLInputElement) apiKeyInput.value = ''; setToast('El proveedor fue rechazado. Revisa URL, modelos y credencial.'); }
+      setToast(t('toast.providerSaved'));
+    } catch { if (apiKeyInput instanceof HTMLInputElement) apiKeyInput.value = ''; setToast(t('toast.providerRejected')); }
   }
 
   async function sendChat(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const content = input.trim();
     if (!content || chatPending) return;
-    if (!connection) return navigate('settings');
-    if (!selectedProvider || !selectedModel) return navigate('models');
+    const webChatAvailable = webMode && !connection;
     const controller = new AbortController();
     chatAbortRef.current = controller;
     const before: ChatMessage[] = [...chatMessages, { role: 'user', content }];
-    setChatMessages([...before, { role: 'assistant', content: '', model: selectedModel }]); setInput(''); setChatPending(true);
+    setChatMessages([...before, { role: 'assistant', content: '', model: webChatAvailable ? t('composer.webPreview') : selectedModel }]); setInput(''); setChatPending(true);
+    if (webChatAvailable) {
+      try {
+        const plan = await loadWebGoalIntelligencePlan(content, keywordsFromGoal(content), controller.signal);
+        setChatMessages((current) => current.map((message, index) => index === current.length - 1
+          ? {
+            ...message,
+            content: t('chat.webPreviewResponse', {
+              count: plan.publicSearch?.results.length ?? 0,
+              query: plan.publicSearch?.query ?? content,
+            }),
+            webSearch: plan.publicSearch,
+          }
+          : message));
+        setToast(t('toast.webChatPrepared'));
+      } catch {
+        if (controller.signal.aborted) {
+          setChatMessages((current) => current.slice(0, -1));
+          setToast(t('toast.generationStopped'));
+        } else {
+          setChatMessages((current) => current.map((message, index) => index === current.length - 1
+            ? { ...message, content: t('chat.webPreviewFailed'), model: t('composer.webPreview') }
+            : message));
+          setToast(t('toast.webChatFailed'));
+        }
+      } finally {
+        setChatPending(false);
+        if (chatAbortRef.current === controller) chatAbortRef.current = undefined;
+      }
+      return;
+    }
+    if (!connection) return navigate('settings');
+    if (!selectedProvider || !selectedModel) return navigate('models');
     try {
       const client = new KernelClient({ ...connection, timeoutMs: 120_000 });
       await client.streamNdjson<StreamEvent>('/api/chat/stream', { method: 'POST', body: JSON.stringify({ providerId: selectedProvider.id, model: selectedModel, messages: before.map(({ role, content: text }) => ({ role, content: text })) }) }, (streamEvent) => {
@@ -357,67 +571,88 @@ export default function EfestoProductShell() {
         if (streamEvent.type === 'done' && streamEvent.response?.model) setChatMessages((current) => current.map((message, index) => index === current.length - 1 ? { ...message, model: streamEvent.response?.model } : message));
         if (streamEvent.type === 'error') throw new Error(streamEvent.error ?? 'provider error');
       }, controller.signal);
-      setToast('Conversación completada. La salida del modelo sigue separada de Evidence y memoria.');
-    } catch { setToast(controller.signal.aborted ? 'Generación detenida por el usuario.' : 'El modelo no respondió. No se guardó una respuesta falsa.'); }
+      setToast(t('toast.chatComplete'));
+    } catch { setToast(controller.signal.aborted ? t('toast.generationStopped') : t('toast.modelFailed')); }
     finally { setChatPending(false); if (chatAbortRef.current === controller) chatAbortRef.current = undefined; }
   }
 
-  return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''}`}>
-    <aside className="efesto-sidebar" aria-label="Navegación principal">
+  return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''} ${webMode ? 'runtime-web' : 'runtime-local'}`}>
+    <aside className="efesto-sidebar" aria-label={t('nav.main')}>
       <div className="efesto-brand">
-        <button type="button" onClick={() => navigate('home')} aria-label="Efesto, inicio">
-          <span className="brand-mark"><Image src="/efesto-smith.svg" alt="" width={36} height={36} /></span>
+        <button type="button" onClick={() => navigate('home')} aria-label={t('nav.brandHome')}>
+        <span className="brand-mark"><Image src="/efesto-smith.svg" alt="" width={36} height={36} unoptimized priority /></span>
           <span><strong>EFESTO</strong><small>The Intelligence Forge</small></span>
         </button>
-        <button type="button" className="mobile-close" onClick={() => setNavOpen(false)} aria-label="Cerrar menú"><X /></button>
+        <button type="button" className="mobile-close" onClick={() => setNavOpen(false)} aria-label={t('nav.closeMenu')}><X /></button>
       </div>
 
-      <div className="sidebar-actions" aria-label="Crear">
-        <button type="button" className="new-chat" onClick={newChat} title="Nueva conversación">
-          <SquarePen /><span>Nuevo chat</span>
+      <div className="sidebar-actions" aria-label={t('nav.create')}>
+        <button type="button" className="new-chat" onClick={newChat} title={t('nav.newChat')}>
+          <SquarePen /><span>{t('nav.newChat')}</span>
         </button>
-        <button type="button" className="new-goal" onClick={newGoal} title="Nuevo Goal">
-          <Target /><span>Nuevo Goal</span>
+        <button type="button" className="new-goal" onClick={newGoal} title={t('nav.newGoal')}>
+          <Target /><span>{t('nav.newGoal')}</span>
         </button>
       </div>
 
-      <nav aria-label="Áreas de Efesto">
-        {navGroups.map((group) => <div className="nav-group" key={group.label}>
-          <span className="nav-label">{group.label}</span>
-          {group.items.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} title={label}>
+      {webMode && !connection ? <aside className="sidebar-runtime-card" aria-label={t('runtime.webGuideAria')}>
+        <div className="sidebar-runtime-heading">
+          <span className="sidebar-runtime-icon"><Sparkles /></span>
+          <span><small>{t('runtime.webGuideEyebrow')}</small><strong>{t('runtime.webGuideTitle')}</strong></span>
+        </div>
+        <p>{t('runtime.webGuideCopy')}</p>
+        <div className="sidebar-runtime-steps" aria-label={t('runtime.webGuideStepsAria')}>
+          <span><b>1</b>{t('runtime.webGuideStep1')}</span>
+          <span><b>2</b>{t('runtime.webGuideStep2')}</span>
+          <span><b>3</b>{t('runtime.webGuideStep3')}</span>
+        </div>
+        <button type="button" onClick={() => navigate('settings')}>
+          <Plug /><span>{t('runtime.webGuideAction')}</span><ChevronRight />
+        </button>
+      </aside> : null}
+
+      <nav aria-label={t('nav.primaryAreas')}>
+        {navGroups.map((group) => <div className="nav-group" key={group.labelKey}>
+          <span className="nav-label">{t(group.labelKey)}</span>
+          {group.items.map(({ id, labelKey, icon: Icon }) => { const label = t(labelKey); return <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} aria-label={label} title={label}>
             <Icon /><span>{label}</span>
             {id === 'missions' && snapshot ? <b>{snapshot.missions.length}</b> : null}
             {id === 'finds' && snapshot ? <b>{snapshot.opportunities.filter((item) => item.status === 'new').length}</b> : null}
-          </button>)}
+          </button>; })}
         </div>)}
       </nav>
 
       <div className="sidebar-spacer" />
-      <button type="button" className={'sidebar-settings ' + (view === 'settings' ? 'active' : '')} onClick={() => navigate('settings')} aria-current={view === 'settings' ? 'page' : undefined} title="Ajustes">
-        <Settings /><span>Ajustes</span>
+      <button type="button" className={'sidebar-settings ' + (view === 'settings' ? 'active' : '')} onClick={() => navigate('settings')} aria-current={view === 'settings' ? 'page' : undefined} title={t('nav.settings')}>
+        <Settings /><span>{t('nav.settings')}</span>
       </button>
-      <button type="button" className="kernel-summary" onClick={() => navigate('settings')}><span className={`kernel-dot ${snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} /><span><strong>{snapshot?.readiness.kernel === 'online' ? 'Kernel online' : 'Kernel local'}</strong><small>{snapshot?.readiness.bootstrap?.pairing === 'paired' ? 'Emparejado' : snapshot?.readiness.bootstrap?.pairing === 'required' ? 'Pairing requerido' : 'Sin conexión'}</small></span><ChevronRight /></button>
+      <button type="button" className="kernel-summary" onClick={() => navigate('settings')}>
+        <span className={`kernel-dot ${webMode && !connection ? 'online' : snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} />
+        <span><strong>{webMode && !connection ? t('runtime.webReady') : snapshot?.readiness.kernel === 'online' ? t('kernel.connected') : t('kernel.local')}</strong><small>{webMode && !connection ? t('runtime.localOptional') : snapshot?.readiness.bootstrap?.pairing === 'paired' ? t('kernel.paired') : snapshot?.readiness.bootstrap?.pairing === 'required' ? t('kernel.pairingRequired') : t('kernel.offline')}</small></span>
+        <ChevronRight />
+      </button>
     </aside>
-    {navOpen ? <button type="button" className="nav-scrim" onClick={() => setNavOpen(false)} aria-label="Cerrar menú" /> : null}
+    {navOpen ? <button type="button" className="nav-scrim" onClick={() => setNavOpen(false)} aria-label={t('nav.closeMenu')} /> : null}
 
     <section className="efesto-stage">
       <header className="efesto-topbar">
-        <div><button type="button" className="menu-button" onClick={toggleNavigation} aria-label="Alternar navegación"><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view)}</button></div>
-        <div className="top-context"><span className="local-first-status"><ShieldCheck /> Local-first</span><span className="private-status">Private by design</span></div>
-        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? 'Kernel ready' : 'Conectar'}</button></div>
+        <div><button type="button" className="menu-button" onClick={toggleNavigation} aria-label={t('nav.toggle')}><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view, t)}</button></div>
+        <div className="top-context"><span className="local-first-status"><ShieldCheck /> {webMode && !connection ? t('top.webReady') : t('top.localDesign')}</span><span className="private-status">{webMode && !connection ? t('top.localOptional') : t('top.localProtection')}</span></div>
+        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label={t('top.refresh')}><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : webMode ? 'online web' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? t('top.kernelReady') : webMode ? t('top.webReady') : t('top.connect')}</button></div>
       </header>
       <main className="efesto-main">
-        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} /> : null}
+        {view === 'home' ? <HomeView phase={brainPhase} webMode={webMode && !connection} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} goalPlan={goalPlan} goalPlanPending={goalPlanPending} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={updateInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else void prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean((connection && selectedProvider && selectedModel) || (webMode && !connection))} submitDisabled={!input.trim() || (chatMode && !(webMode && !connection) && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onRunGitHubEvidence={(githubInput) => void runGithubEvidence(githubInput)} onEditGoal={() => { setPreparedGoal(''); setGoalPlan(undefined); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenAgents={() => navigate('agents')} onOpenNav={toggleNavigation} valueSurface={<ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot || !snapshot.productScorecard || snapshot.issues.some((issue) => issue.endpoint === 'scorecard')} />} /> : null}
         {view === 'missions' ? <MissionsView snapshot={snapshot} onNew={newGoal} /> : null}
         {view === 'finds' ? <FindsView opportunities={snapshot?.opportunities ?? []} connected={Boolean(connection)} onFeedback={(id, signal) => void recordFeedback(id, signal)} /> : null}
-        {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} onOpen={(record) => void openCase(record)} /> : null}
+        {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} githubAuthorizationBusy={githubAuthorizationBusy} onOpen={(record) => void openCase(record)} onRevokeGithubAuthorization={(authorizationId) => void revokeGithubAuthorization(authorizationId)} /> : null}
         {view === 'models' ? <ModelsView providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} modelForge={snapshot?.readiness.modelForge} connected={Boolean(connection)} onSelect={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); setChatMode(true); navigate('home'); }} onAdd={addProvider} /> : null}
         {view === 'agents' ? <AgentsView snapshot={snapshot} onSettings={() => navigate('settings')} onNewGoal={newGoal} /> : null}
+        {view === 'integrations' ? <IntegrationsView catalog={integrationCatalog} connected={Boolean(connection)} onNavigate={navigateIntegration} onRefresh={() => void refresh()} onBack={() => navigate('home')} /> : null}
         {view === 'automations' ? <AutomationsView missions={snapshot?.missions ?? []} connected={Boolean(connection)} onNewGoal={newGoal} /> : null}
-        {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} onConnect={connect} onDisconnect={disconnect} onRefresh={() => void refresh()} /> : null}
+        {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} catalog={integrationCatalog} githubBusy={githubBusy} onConnect={connect} onDisconnect={disconnect} onRefresh={() => void refresh()} onConfigureGithub={configureGithub} onRevokeGithub={() => void revokeGithub()} /> : null}
       </main>
 
-      {toast ? <div className="efesto-toast" role="status"><ShieldCheck /><span>{toast}</span><button type="button" onClick={() => setToast('')} aria-label="Cerrar aviso"><X /></button></div> : null}
+      {toast ? <div className="efesto-toast" role="status"><ShieldCheck /><span>{toast}</span><button type="button" onClick={() => setToast('')} aria-label={t('toast.close')}><X /></button></div> : null}
     </section>
   </div>;
 }
@@ -432,9 +667,26 @@ function brainPhaseFromWorkState(workState: GoalSurfaceWorkState | undefined): B
 }
 function keywordsFromGoal(value: string) { return Array.from(new Set(value.toLocaleLowerCase('es').replace(/[^\p{L}\p{N}]+/gu, ' ').split(/\s+/).filter((word) => word.length > 2))).slice(0, 8); }
 function slug(value: string) { return value.toLocaleLowerCase('en').replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || `provider-${Date.now()}`; }
-function viewLabel(view: View) { return nav.find((item) => item.id === view)?.label ?? 'Inicio'; }
-function connectionMessage(error: unknown) { if (error instanceof KernelClientError && error.code === 'UNAUTHORIZED') return 'El Kernel rechazó el token. No se guardó la credencial.'; if (error instanceof KernelClientError && error.code === 'TIMEOUT') return 'El Kernel tardó demasiado en responder.'; if (error instanceof KernelClientError && error.code === 'OFFLINE') return 'No se alcanzó el Kernel local. Comprueba que el Launcher esté activo.'; return 'No se pudo conectar. Revisa la URL local y el token.'; }
+function viewLabel(view: View, t: (key: string) => string) { return t(nav.find((item) => item.id === view)?.labelKey ?? 'nav.home'); }
+async function loadOptionalIntegrationCatalog(client: KernelClient): Promise<IntegrationCatalog | undefined> {
+  try { return await loadIntegrationCatalog(client); }
+  catch { return undefined; }
+}
+function connectionMessage(error: unknown, t: (key: string) => string) { if (error instanceof KernelClientError && error.code === 'UNAUTHORIZED') return t('error.unauthorized'); if (error instanceof KernelClientError && error.code === 'TIMEOUT') return t('error.timeout'); if (error instanceof KernelClientError && error.code === 'OFFLINE') return t('error.offline'); return t('error.connection'); }
 function parseObject(value: unknown): Record<string, unknown> { if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid response'); return value as Record<string, unknown>; }
 function parseOk(value: unknown) { const body = parseObject(value); if (body.ok !== true) throw new Error('Invalid response'); return body; }
 function parseProviders(value: unknown): Provider[] { const body = parseOk(value); if (!Array.isArray(body.providers)) throw new Error('Invalid providers'); return body.providers.map((value) => { const item = parseObject(value); if (typeof item.id !== 'string' || typeof item.label !== 'string' || !Array.isArray(item.models) || !item.models.every((model) => typeof model === 'string')) throw new Error('Invalid provider'); return item as unknown as Provider; }); }
-function parseCaseDetail(value: unknown): CaseDetail { const body = parseOk(value); const caseRecord = parseObject(body.case); if (!Array.isArray(body.evidence)) throw new Error('Invalid Evidence'); return { case: caseRecord, evidence: body.evidence.map((item) => parseObject(item) as EvidenceRecord) }; }
+function parseCaseDetail(value: unknown): CaseDetail {
+  const body = parseOk(value);
+  const caseRecord = parseObject(body.case);
+  if (!Array.isArray(body.evidence)) throw new Error('Invalid Evidence');
+  const githubAuthorization = body.githubAuthorization === undefined ? undefined : parseGithubAuthorization(body.githubAuthorization);
+  return { case: caseRecord, evidence: body.evidence.map((item) => parseObject(item) as EvidenceRecord), ...(githubAuthorization ? { githubAuthorization } : {}) };
+}
+function parseGithubAuthorization(value: unknown): NonNullable<CaseDetail['githubAuthorization']> {
+  const item = parseObject(value);
+  if (typeof item.id !== 'string' || typeof item.goalId !== 'string' || typeof item.scope !== 'string' || typeof item.issuedAt !== 'string' || typeof item.expiresAt !== 'string') throw new Error('Invalid GitHub authorization');
+  if (!Array.isArray(item.approvedCapabilities) || !item.approvedCapabilities.every((capability) => typeof capability === 'string')) throw new Error('Invalid GitHub capabilities');
+  if (!['active', 'expired', 'revoked', 'invalid'].includes(item.status as string)) throw new Error('Invalid GitHub authorization status');
+  return { id: item.id, goalId: item.goalId, scope: item.scope, approvedCapabilities: item.approvedCapabilities as string[], issuedAt: item.issuedAt, expiresAt: item.expiresAt, status: item.status as NonNullable<CaseDetail['githubAuthorization']>['status'], ...(typeof item.revokedAt === 'string' ? { revokedAt: item.revokedAt } : {}) };
+}

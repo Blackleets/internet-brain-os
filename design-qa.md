@@ -1,3 +1,35 @@
+# Efesto composer premium pass — Design QA
+
+source visual truth path: `/workspace/scratch/b089e0142119/upload/01-1000034867.jpg` (707 × 1439 Android screenshot; empty composer with keyboard open)
+implementation screenshot path: `/workspace/scratch/b089e0142119/efesto-composer-neutral-focus.png` (focused composer crop from the live Vercel preview)
+implementation preview: `https://efesto-nd1nkd9ah-nfyns-projects-b0cc0f41.vercel.app/`
+viewport: 1363 × 936 CSS px for the live preview; focused crop is 900 × 236 px
+state: empty Chat, disconnected Kernel, no configured model, one visible starter suggestion
+
+## Composer comparison
+
+The reference showed two heavy fixed suggestion cards and an oversized orange textarea focus frame. The implementation now uses one calm suggestion rail above a compact composer, keeps the text field as the visual anchor, and uses a restrained graphite focus ring that remains visible without dominating the surface.
+
+The starter prompt is selected per surface entry, rotates automatically every 9 seconds when motion is allowed, and can be changed manually. Suggestions disappear as soon as the user starts typing and return when the field is cleared. The behavior is presentation-only: selecting a prompt fills the draft and does not execute a Goal or mutate Kernel state.
+
+## Findings
+
+No actionable P0, P1 or P2 visual differences remain for the focused composer surface. Mobile CSS reduces the rail, composer radius, controls and spacing while keeping the input at 16 px to avoid browser zoom. Reduced-motion users receive no rotation or transition animation.
+
+## Primary interactions tested
+
+- Live Vercel preview rendered exactly one `.forge-quick-prompt` and the `Cambiar sugerencia` control.
+- Manual rotation changed the visible prompt from `1 de 4` to `2 de 4` without creating a request.
+- Typing hid the suggestion rail; keyboard-clearing the field restored one suggestion.
+- Browser console contained no application-origin errors; observed extension metadata and Google One Tap messages were third-party noise.
+- Dashboard unit tests: 18 files, 125 tests passed.
+- Dashboard typecheck and production build passed.
+- GitHub `CI #808` and `Internal Test Package #304` passed after preserving visible focus styling.
+
+final result: passed
+
+---
+
 # Efesto inline model selector — Design QA
 
 source visual truth path: `https://chatbot.ai-sdk.dev/demo` (official Vercel AI chatbot with the model selector open)

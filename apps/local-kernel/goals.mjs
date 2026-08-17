@@ -50,7 +50,7 @@ export function matchOpportunityToGoals(opportunity, goals) {
   return matches.sort((left, right) => right.score - left.score || left.title.localeCompare(right.title));
 }
 
-function validateGoal(input) {
+export function validateGoalDraft(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw invalid('Goal must be an object');
   const title = clean(input.title, 120);
   if (title.length < 3) throw invalid('Goal title must contain at least 3 characters');
@@ -66,6 +66,12 @@ function validateGoal(input) {
   const location = input.location === undefined ? undefined : clean(input.location, 80);
   const priority = Number(input.priority ?? 2);
   if (!Number.isInteger(priority) || priority < 1 || priority > 3) throw invalid('Goal priority must be between 1 and 3');
+  return { title, categories, keywords, location: location || undefined, priority };
+}
+
+function validateGoal(input) {
+  const draft = validateGoalDraft(input);
+  const { title, categories, keywords, location, priority } = draft;
   const createdAt = new Date().toISOString();
   const fingerprint = createHash('sha256').update(JSON.stringify({ title: normalize(title), categories, keywords: keywords.map(normalize), location: normalize(location ?? '') })).digest('hex');
   return { id: `goal:${fingerprint}`, title, categories, keywords, location: location || undefined, priority, status: 'active', createdAt };

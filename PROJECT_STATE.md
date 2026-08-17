@@ -21,6 +21,103 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 - Search snippet/agent text ≠ Evidence.
 - Responsive mobile-width support does not imply phone → PC Kernel authority.
 
+## Execution checkpoint — 2026-08-17
+
+- Active verification PR: #224
+  (`https://github.com/Blackleets/internet-brain-os/pull/224`), open and
+  unmerged. Its published candidate head before this hardening slice is
+  `3a614d4ea6e83d24c960bc341006c9e70d8604d7`; the active branch is
+  `agent/premium-forge-candidate-verify-2026-08-15` and the earlier duplicate
+  PR #223 is closed and was not merged.
+- The published hardening implementation head is
+  `b9025578889b5141f7e63ad959e4ef170c5a48cb`. It hardens the GitHub read
+  authority boundary:
+  resource-bound consent, credential-fingerprint revocation, fail-closed
+  idempotency reuse, durable receipt archiving, unsafe credential-file mode
+  rejection, bounded issue pagination, and a pure provider-neutral
+  `WebGoalResolver`. Hosted Goal readiness now reflects every selected source.
+- Local qualification is green after the slice: 199 test files / 1,166 tests,
+  typecheck, architecture check, production build, extension package,
+  `verify:first-run`, `release:verify`, and `pnpm audit --prod`.
+- Remote exact-SHA matrix for `b9025578` is green: CI #828, Internal Test
+  Package #326, Windows First Run Repro #214, Windows Launcher Smoke #216,
+  and Hermes live public-web acceptance #39. The final Hermes attempt passed
+  14/14 checks with 11 candidates, 6 verified Evidence records, and 1
+  Evidence-backed Find; its first attempt had a bounded 12/14 model-result
+  miss and was retried without changing the code.
+- Vercel preview is `READY` for the same SHA at
+  `https://efesto-git-agent-premium-forge-c-9afe77-nfyns-projects-b0cc0f41.vercel.app`
+  (deployment `dpl_EwSZq7m8ysVKqAHVZMeswBTfzpRG`).
+- `public-launch-approval` remains `blocked-pending-uat`. Browser/package
+  evidence and the manual UAT-1→UAT-6 sequence are still release gates; no
+  merge or public-promotion claim is made until the same final SHA passes
+  them.
+- No credentials, provider write scopes, external writes, or irreversible
+  actions were introduced. A real user-owned read-scoped GitHub token remains
+  required to validate live provider data beyond fixtures/contracts.
+
+## Next release gate
+
+The automated candidate gates are green on `b9025578`. Complete manual
+UAT-1→UAT-6 on the same immutable Windows package before merging or promoting
+publicly.
+
+## Current product surface — Complementos directory
+
+The dashboard's mobile-first Complementos view now exposes a curated external
+connector set: GitHub, Gmail, Google Drive, Notion, and Google Calendar, plus
+the MCP gateway and the existing local integrations. Logos are local static
+assets. External entries are read-first and each one has its own scope,
+capabilities, readiness state, and Settings destination.
+
+This is a truthful catalog/read-model foundation, not a broad account
+authorization surface. GitHub now has the first native read-only adapter:
+the local Kernel can verify a server-side credential, authorize a bounded
+read scope against an active Goal and exact repository resource, execute
+repository/issues/pull-request/check reads, and retain revocable authorization
+plus provenance receipts. Credential identity changes invalidate approvals,
+and unsafe persisted credential permissions fail closed. A fresh bootstrap
+without `HEPHAESTUS_GITHUB_TOKEN` or a local GitHub credential still shows
+GitHub as `not_configured`; Gmail, Google Drive, Notion, and Google Calendar
+remain MCP catalog-only and `not_configured`. No write capability or provider
+is implied by the catalog.
+
+The authenticated local endpoints are deliberately narrow:
+`/api/integrations/github/credentials`,
+`/api/integrations/github/authorizations`,
+`/api/integrations/github/read`, and
+`/api/integrations/github/evidence`. Credential material never leaves the
+Kernel; reads are GET-only, bounded, Goal-bound, idempotent, and revocable.
+The Goal brief now exposes an explicit repository consent step and the Kernel
+projects the verified GitHub receipt into one deterministic Case/Evidence
+record with provenance, content hash, authorization, and replay protection.
+Evidence now also exposes the public status of the Goal-bound authorization,
+its approved scope/capabilities and expiry, with an inline two-step revoke
+flow. Revocation closes future reads while preserving already-captured
+Evidence. Shared connector definitions now feed both catalog status and Goal
+source routing, and the Goal GitHub action maps repository, issues, pull
+requests, and checks to their exact capabilities; checks require an explicit
+branch, tag, or commit reference. The next slice is to exercise this complete
+path with a real user-owned read-scoped token before reviewing another
+provider contract.
+
+Goal source selection is now conservative across both the local Kernel preview
+and the hosted web preview: generic public topics such as software, documents,
+notes, events, and open-source projects stay on public research unless the
+Goal names a connector or an explicit private resource. This prevents an
+unconfigured private integration from blocking an otherwise valid public Goal.
+
+The Goal flow now adds a Kernel-owned `efesto.goal-intelligence.v1` preview
+before confirmation. It routes generic public Goals to Hermes and explicit
+GitHub/Gmail/Drive/Notion/Calendar signals to the matching read-only connector.
+Required capabilities are shown separately from active capabilities, so the
+dashboard can explain a pending integration without implying it is connected.
+The preview is non-mutating; Goal persistence and mission authorization still
+only happen after the existing explicit confirmation. Hosted readiness is
+limited until every selected source is ready. Older Kernels degrade to an
+explicit limited brief. The exported `WebGoalResolver` remains a pure
+planner/evaluator and receives only already-authorized search responses.
+
 ## Verified foundation ✅
 
 ### Memory Safety v1
@@ -447,3 +544,13 @@ Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.
 ## Update rule
 
 Replace stale facts here when the verified baseline, blocker, next priority or recovery procedure changes. Do not turn this file into an append-only diary.
+
+## Remote verification — 2026-08-17
+
+The connected GitHub integration published the hardening implementation to PR
+#224 and emitted all five exact-SHA workflows. Four completed green on the
+first attempt; Hermes live acceptance completed green on its retry with a
+14/14 report. The retry was limited to the failed job after its first bounded
+model-result miss; no code or ref changed. The Vercel preview is also `READY`
+for the same SHA. These automated results do not replace the required manual
+Windows UAT-1→UAT-6 gate.
