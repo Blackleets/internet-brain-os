@@ -144,6 +144,9 @@ describe('Efesto conversation-first product shell', () => {
     await waitFor(() => expect(screen.getAllByRole('button', { name: 'Modo web listo' }).length).toBeGreaterThan(0));
     expect(screen.getByRole('button', { name: /^Goal$/ }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByText('EFESTO · TRABAJO DESDE LA WEB')).toBeTruthy();
+    const webGuide = screen.getByRole('complementary', { name: 'Guía del modo web' });
+    expect(webGuide.textContent).toContain('Explora resultados públicos aquí');
+    expect(screen.getByRole('button', { name: 'Abrir modo privado' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Sugerencias para empezar' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Usar sugerencia: Encuéntrame un taladro/ }));
     expect((screen.getByLabelText('Goal') as HTMLTextAreaElement).value).toContain('taladro');
@@ -153,8 +156,10 @@ describe('Efesto conversation-first product shell', () => {
     await waitFor(() => expect(screen.getByText('Resultados encontrados en la web')).toBeTruthy());
     expect(screen.getByText('Resultados públicos no verificados · sin credenciales, escritura ni ejecución.')).toBeTruthy();
     expect(screen.getByRole('link', { name: /Resultado público de prueba/ })).toHaveProperty('href', 'https://example.com/result');
-    expect(screen.getByRole('button', { name: 'Conectar modo privado para ejecutar' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Conectar modo privado para ejecutar' })).toHaveProperty('disabled', false);
     expect(requests.filter((request) => request.method === 'POST').map((request) => new URL(request.url).pathname)).toEqual(['/api/efesto/plan']);
+    fireEvent.click(screen.getByRole('button', { name: 'Conectar modo privado para ejecutar' }));
+    expect(screen.getByRole('heading', { name: /^Ajustes$/ })).toBeTruthy();
   });
 
   it('makes a web Chat order produce a bounded preview without a Kernel or model', async () => {
