@@ -171,8 +171,9 @@ function buildPublicSearchTokens(title: string, keywords: readonly string[], cat
  * and does not grant the web shell authority to execute anything.
  */
 const HOSTED_SEARCH_TIMEOUT_MS = 8_000;
+const HOSTED_SEARCH_PROVIDER_TIMEOUT_MS = 2_200;
 
-export async function prepareWebGoalPlan(input: WebGoalPlanInput, searcher: WebSearchClient = new PublicWebSearchClient({ timeoutMs: 1_800 })): Promise<GoalIntelligencePlan> {
+export async function prepareWebGoalPlan(input: WebGoalPlanInput, searcher: WebSearchClient = new PublicWebSearchClient({ timeoutMs: HOSTED_SEARCH_PROVIDER_TIMEOUT_MS })): Promise<GoalIntelligencePlan> {
   const basePlan = buildWebGoalPlan(input);
   const publicSearchQuery = buildPublicSearchQuery(basePlan.goal.title, basePlan.goal.keywords, basePlan.goal.categories);
   const fallbackSearchQuery = buildBroadPublicSearchQuery(basePlan.goal.title, basePlan.goal.keywords, basePlan.goal.categories);
