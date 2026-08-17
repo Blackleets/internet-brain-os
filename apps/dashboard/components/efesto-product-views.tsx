@@ -86,6 +86,12 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
         <h1>{t('home.emptyHeading')}</h1>
         <p>{t('home.emptyCopy')}</p>
         <div className="forge-empty-meta"><span><ShieldCheck /> {t('common.privateByDesign')}</span><span><i /> {t('home.noAutomaticMemory')}</span></div>
+        <div className="forge-empty-actions">
+          {!chatAvailable && !webMode ? <button type="button" className="secondary-action" onClick={connected ? onOpenModels : onOpenSettings}><BrainCircuit /> {connected ? t('home.configureModel') : t('home.privateChatSetup')}</button> : null}
+          {webMode ? <button type="button" className="secondary-action" onClick={onOpenSettings}><Plug /> {t('home.openPrivateMode')}</button> : null}
+          <button type="button" className="primary-action" onClick={() => onToggleChat(false)}><Target /> {t('home.startGoal')}</button>
+        </div>
+        {chatAvailable || webMode ? <StarterSuggestions suggestions={starterGoals} onSelect={onInputChange} /> : null}
       </section> : preparedGoal ? <section className="forge-goal-plan" aria-label={t('home.planAria')}>
         <header>
           <span className="forge-plan-icon"><Target /></span>
@@ -108,6 +114,7 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
         <h1>{t('home.defineResult')}</h1>
         <p>{webPreview ? t('home.webPrepareCopy') : t('home.prepareCopy')}</p>
         <div className="forge-empty-meta"><span><ShieldCheck /> {t('common.privateByDesign')}</span><span><i /> {webPreview ? t('runtime.localOptional') : t('home.humanConfirmation')}</span></div>
+        <StarterSuggestions suggestions={starterGoals} onSelect={onInputChange} />
       </section>}
       {valueSurface ? <div className="forge-value-surface" aria-label={t('home.valueSurface')}>{valueSurface}</div> : null}
     </div>
@@ -132,6 +139,23 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
       onSelectModel={onSelectModel}
       onOpenSettings={onOpenSettings}
     />
+  </section>;
+}
+
+function StarterSuggestions({ suggestions, onSelect }: { suggestions: string[]; onSelect: (value: string) => void }) {
+  const { t } = useEfestoLocale();
+  return <section className="forge-starter-panel" aria-label={t('home.suggestionsAria')}>
+    <header>
+      <div><small>{t('home.starterEyebrow')}</small><strong>{t('home.starterTitle')}</strong></div>
+      <span>{t('home.starterCopy')}</span>
+    </header>
+    <div className="forge-starter-grid">
+      {suggestions.map((suggestion, index) => <button type="button" key={suggestion} onClick={() => onSelect(suggestion)} aria-label={t('home.useSuggestion', { suggestion })}>
+        <span className="forge-starter-index">{String(index + 1).padStart(2, '0')}</span>
+        <span>{suggestion}</span>
+        <ChevronRight />
+      </button>)}
+    </div>
   </section>;
 }
 
