@@ -102,6 +102,27 @@ describe('web runtime goal preview', () => {
     expect(plan.publicSearch).toMatchObject({ query: 'trabajo remoto madrid', results: [{ title: 'Trabajo remoto en Madrid' }] });
   });
 
+  it('uses the natural-language title when focused keyword variants return nothing', async () => {
+    const queries: string[] = [];
+    const title = 'Encuentra oportunidades de negocio en Madrid';
+    const plan = await prepareWebGoalPlan({ title }, {
+      search: async (query) => {
+        queries.push(query);
+        return {
+          query,
+          searchedAt: '2026-08-15T10:00:00.000Z',
+          provider: 'brave-html',
+          results: query === title
+            ? [{ rank: 1, title: 'Negocios en Madrid', url: 'https://example.com/business', snippet: 'Oportunidades públicas de negocio en Madrid.', sourceHost: 'example.com' }]
+            : [],
+        };
+      },
+    });
+
+    expect(queries).toEqual(['negocio madrid', title]);
+    expect(plan.publicSearch).toMatchObject({ query: title, results: [{ title: 'Negocios en Madrid' }] });
+  });
+
   it('rejects empty or oversized goal input before doing any work', () => {
     expect(() => buildWebGoalPlan({ title: '  ' })).toThrow(WebPlanInputError);
     expect(() => buildWebGoalPlan({ title: 'x'.repeat(121) })).toThrow(WebPlanInputError);
