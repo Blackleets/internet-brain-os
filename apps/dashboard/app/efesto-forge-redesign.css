@@ -4374,7 +4374,6 @@
   }
 }
 
-
 /* v15 — make the public web handoff visible before the user hits a boundary. */
 .sidebar-runtime-card {
   display: grid;
@@ -4875,6 +4874,142 @@
   .forge-launch-action,
   .forge-launch-action > svg {
     animation: none;
+    transition: none;
+  }
+}
+
+/* v18 — coherent icon language: one stroke, one rhythm, clear hierarchy. */
+.efesto-product svg {
+  display: block;
+  height: auto;
+  stroke-width: 1.8;
+}
+
+.sidebar-actions .new-chat,
+.sidebar-actions .new-goal,
+.efesto-sidebar nav button,
+.sidebar-settings {
+  gap: 9px;
+}
+
+.sidebar-actions .new-chat > svg,
+.sidebar-actions .new-goal > svg,
+.efesto-sidebar nav button > svg,
+.sidebar-settings > svg {
+  box-sizing: border-box;
+  display: block;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  padding: 5px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 8px;
+  background: #181719;
+  color: #837b75;
+}
+
+.sidebar-actions .new-chat > svg {
+  border-color: #633e29;
+  background: #25170f;
+  color: var(--forge-accent);
+}
+
+.sidebar-actions .new-goal > svg {
+  border-color: #393235;
+  background: #1a191a;
+  color: #bc8d70;
+}
+
+.efesto-sidebar nav button:hover > svg,
+.sidebar-settings:hover > svg {
+  border-color: #484044;
+  background: #211d1d;
+  color: #c7bdb5;
+}
+
+.efesto-sidebar nav button.active > svg,
+.sidebar-settings.active > svg {
+  border-color: #70452d;
+  background: #2a1a12;
+  color: var(--forge-accent);
+  box-shadow: inset 0 1px rgb(255 255 255 / 5%);
+}
+
+.forge-mode-switcher button > svg {
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  padding: 2px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+}
+
+.forge-mode-switcher button.active > svg {
+  border-color: rgb(233 130 69 / 26%);
+  background: rgb(233 130 69 / 9%);
+}
+
+.forge-state-action > svg {
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  padding: 3px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 3%);
+}
+
+.forge-state-action:hover > svg {
+  border-color: rgb(233 130 69 / 28%);
+  background: rgb(233 130 69 / 8%);
+  color: var(--forge-accent);
+}
+
+.forge-launch-icon,
+.forge-plan-icon,
+.forge-intelligence-icon,
+.forge-public-search-mark,
+.forge-github-action-mark,
+.forge-evidence-authority-mark {
+  box-shadow: inset 0 1px rgb(255 255 255 / 5%);
+}
+
+.forge-launch-icon svg,
+.forge-plan-icon svg,
+.forge-intelligence-icon svg,
+.forge-public-search-mark svg,
+.forge-github-action-mark svg,
+.forge-evidence-authority-mark svg {
+  width: 16px;
+  height: 16px;
+}
+
+.forge-live-rail svg,
+.forge-kernel-gate svg,
+.forge-composer-hint svg,
+.forge-starter-grid button > svg,
+.forge-launch-action > svg {
+  flex: 0 0 auto;
+  height: auto;
+}
+
+@media (min-width: 721px) {
+  .efesto-product.sidebar-collapsed .sidebar-actions .new-chat > svg,
+  .efesto-product.sidebar-collapsed .sidebar-actions .new-goal > svg,
+  .efesto-product.sidebar-collapsed .efesto-sidebar nav button > svg,
+  .efesto-product.sidebar-collapsed .sidebar-settings > svg {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-actions .new-chat > svg,
+  .sidebar-actions .new-goal > svg,
+  .efesto-sidebar nav button > svg,
+  .sidebar-settings > svg,
+  .forge-mode-switcher button > svg,
+  .forge-state-action > svg {
     transition: none;
   }
 }
