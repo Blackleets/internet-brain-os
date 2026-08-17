@@ -34,6 +34,10 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Goal source routing now requires explicit connector signals: generic terms
+  such as software, documents, notes, events, and open source remain on the
+  public-research path instead of requesting private GitHub, Drive, Notion, or
+  Calendar setup. Kernel and hosted previews keep the same read-only behavior.
 - Hardened the native GitHub read boundary: consent is bound to the exact
   owner/repository resource, credential identity changes revoke approvals,
   changed idempotency payloads fail closed, unsafe credential-file permissions
