@@ -30,6 +30,19 @@ describe('Kernel Goal intelligence plan', () => {
     expect(plan.limitations).toContain('read_only_sources');
   });
 
+  it.each([
+    ['software', 'Encuentra software de automatización'],
+    ['open source', 'Encuentra proyectos open source de automatización'],
+    ['documentos', 'Investiga documentos públicos sobre contratos'],
+    ['notas', 'Busca notas públicas sobre trading'],
+    ['eventos', 'Encuentra eventos de tecnología en Madrid'],
+  ])('does not route generic %s language to a private connector', (_label, title) => {
+    const plan = buildGoalIntelligencePlan({ title, integrations: readyCatalog });
+
+    expect(plan.sources.map((source) => source.id)).toEqual(['hermes']);
+    expect(plan.intent.mode).toBe('public_research');
+  });
+
   it('routes explicit GitHub intent to the connector without claiming inactive capabilities', () => {
     const plan = buildGoalIntelligencePlan({
       title: 'Audita este repositorio de GitHub y sus pull requests',
