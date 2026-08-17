@@ -104,7 +104,7 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
         </ol>
         <GoalIntelligenceBrief plan={goalPlan} pending={goalPlanPending} webMode={webPreview} connected={connected} goalPending={goalPending} onOpenSettings={onOpenSettings} onOpenAgents={onOpenAgents} onRunGitHubEvidence={onRunGitHubEvidence} />
         <div className="forge-plan-actions">
-          <button type="button" className="primary-action" disabled={!connected || webPreview || goalPending} onClick={onConfirmGoal}>{goalPending ? t('home.confirming') : webPreview ? t('home.connectPrivateToExecute') : connected ? goalPlan?.readiness === 'needs_setup' ? t('home.confirmWithPending') : t('home.confirmAndExecute') : t('home.connectToExecute')}</button>
+          <button type="button" className="primary-action" disabled={(!connected && !webPreview) || goalPending} onClick={webPreview ? onOpenSettings : onConfirmGoal}>{goalPending ? t('home.confirming') : webPreview ? t('home.connectPrivateToExecute') : connected ? goalPlan?.readiness === 'needs_setup' ? t('home.confirmWithPending') : t('home.confirmAndExecute') : t('home.connectToExecute')}</button>
           <button type="button" className="secondary-action" onClick={onEditGoal}>{t('home.editGoal')}</button>
         </div>
         <p className="forge-plan-boundary"><ShieldCheck /> {webPreview ? t('home.webBoundary') : t('home.boundary')}</p>
