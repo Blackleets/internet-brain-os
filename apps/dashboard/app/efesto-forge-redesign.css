@@ -5217,6 +5217,30 @@
   line-height: 1.4;
 }
 
+/* v20 — give the primary work surface the breathing room of a large-screen chat app. */
+:root {
+  --forge-composer-content: 1000px;
+}
+
+.forge-empty {
+  width: min(1000px, 100%);
+}
+
+.forge-launchpad,
+.forge-starter-panel:not(.is-compact) {
+  width: min(960px, 100%);
+}
+
+.forge-composer {
+  width: min(var(--forge-composer-content), 100%);
+}
+
+@media (min-width: 1440px) {
+  :root {
+    --forge-composer-content: 1120px;
+  }
+}
+
 @media (max-width: 720px) {
   .efesto-product.efesto-home-active .efesto-main,
   .efesto-product.efesto-home-active.sidebar-collapsed .efesto-main {
