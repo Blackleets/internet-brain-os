@@ -588,6 +588,22 @@ function EfestoProductShellContent() {
         </button>
       </div>
 
+      {webMode && !connection ? <aside className="sidebar-runtime-card" aria-label={t('runtime.webGuideAria')}>
+        <div className="sidebar-runtime-heading">
+          <span className="sidebar-runtime-icon"><Sparkles /></span>
+          <span><small>{t('runtime.webGuideEyebrow')}</small><strong>{t('runtime.webGuideTitle')}</strong></span>
+        </div>
+        <p>{t('runtime.webGuideCopy')}</p>
+        <div className="sidebar-runtime-steps" aria-label={t('runtime.webGuideStepsAria')}>
+          <span><b>1</b>{t('runtime.webGuideStep1')}</span>
+          <span><b>2</b>{t('runtime.webGuideStep2')}</span>
+          <span><b>3</b>{t('runtime.webGuideStep3')}</span>
+        </div>
+        <button type="button" onClick={() => navigate('settings')}>
+          <Plug /><span>{t('runtime.webGuideAction')}</span><ChevronRight />
+        </button>
+      </aside> : null}
+
       <nav aria-label={t('nav.primaryAreas')}>
         {navGroups.map((group) => <div className="nav-group" key={group.labelKey}>
           <span className="nav-label">{t(group.labelKey)}</span>
