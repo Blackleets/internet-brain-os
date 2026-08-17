@@ -1085,22 +1085,27 @@ status.
 - `pnpm typecheck`, `pnpm architecture:check`, `pnpm build`,
   `pnpm verify:first-run`, `pnpm release:verify`, `pnpm build:extension`, and
   `pnpm audit --prod`: pass.
-- The published `3a614d4` head was already green across its five remote
-  workflow runs; this hardening slice still needs fresh exact-SHA remote runs
-  after publication.
+- The published implementation head is
+  `b9025578889b5141f7e63ad959e4ef170c5a48cb`. Its exact-SHA remote matrix is
+  green: CI #828, Internal Test Package #326, Windows First Run Repro #214,
+  Windows Launcher Smoke #216, and Hermes live acceptance #39. The final
+  Hermes attempt passed 14/14 with 11 candidates, 6 Evidence records, and 1
+  Evidence-backed Find; the first attempt's bounded 12/14 model-result miss
+  was retried without changing the code.
+- Vercel preview is `READY` for the same SHA:
+  `https://efesto-git-agent-premium-forge-c-9afe77-nfyns-projects-b0cc0f41.vercel.app`.
 
 ### Risks / uncertainties
 
-- Manual browser/package UAT-1→UAT-6 is not claimed locally and remains a
-  release gate. `public-launch-approval` is still `blocked-pending-uat`.
+- Manual browser/package UAT-1→UAT-6 is not claimed locally and remains the
+  final release gate. `public-launch-approval` is still `blocked-pending-uat`.
 - Live provider proof still requires a real user-owned read-scoped GitHub
   credential; fixtures and contracts do not prove account access.
 
 ### Next step
 
-Commit and publish the hardened slice to PR #224, inspect the resulting exact
-SHA's CI/Chromium/Windows/package matrix and preview, then run UAT-1→UAT-6.
-Do not merge or promote publicly until those gates are green on the same SHA.
+Run UAT-1→UAT-6 on the same immutable Windows package represented by the green
+candidate before merging or promoting publicly.
 
 ### Do not forget
 

@@ -29,19 +29,25 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
   `3a614d4ea6e83d24c960bc341006c9e70d8604d7`; the active branch is
   `agent/premium-forge-candidate-verify-2026-08-15` and the earlier duplicate
   PR #223 is closed and was not merged.
-- The current working slice hardens the GitHub read authority boundary:
+- The published hardening implementation head is
+  `b9025578889b5141f7e63ad959e4ef170c5a48cb`. It hardens the GitHub read
+  authority boundary:
   resource-bound consent, credential-fingerprint revocation, fail-closed
   idempotency reuse, durable receipt archiving, unsafe credential-file mode
   rejection, bounded issue pagination, and a pure provider-neutral
   `WebGoalResolver`. Hosted Goal readiness now reflects every selected source.
 - Local qualification is green after the slice: 199 test files / 1,156 tests,
   typecheck, architecture check, production build, extension package,
-  `verify:first-run`, `release:verify`, and `pnpm audit --prod`. The current
-  hardening changes are local until published to PR #224.
-- The exact published `3a614d4` candidate had all five required workflow runs
-  completed successfully before this new head: CI, live public-web Hermes
-  acceptance, internal test package, Windows launcher smoke, and Windows first
-  run. The new head must receive fresh exact-SHA runs after publication.
+  `verify:first-run`, `release:verify`, and `pnpm audit --prod`.
+- Remote exact-SHA matrix for `b9025578` is green: CI #828, Internal Test
+  Package #326, Windows First Run Repro #214, Windows Launcher Smoke #216,
+  and Hermes live public-web acceptance #39. The final Hermes attempt passed
+  14/14 checks with 11 candidates, 6 verified Evidence records, and 1
+  Evidence-backed Find; its first attempt had a bounded 12/14 model-result
+  miss and was retried without changing the code.
+- Vercel preview is `READY` for the same SHA at
+  `https://efesto-git-agent-premium-forge-c-9afe77-nfyns-projects-b0cc0f41.vercel.app`
+  (deployment `dpl_EwSZq7m8ysVKqAHVZMeswBTfzpRG`).
 - `public-launch-approval` remains `blocked-pending-uat`. Browser/package
   evidence and the manual UAT-1→UAT-6 sequence are still release gates; no
   merge or public-promotion claim is made until the same final SHA passes
@@ -52,9 +58,9 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 
 ## Next release gate
 
-Publish the hardened slice to PR #224, inspect every workflow and the preview
-for the resulting exact SHA, then complete manual UAT-1→UAT-6 before merging or
-promoting publicly.
+The automated candidate gates are green on `b9025578`. Complete manual
+UAT-1→UAT-6 on the same immutable Windows package before merging or promoting
+publicly.
 
 ## Current product surface — Complementos directory
 
@@ -533,8 +539,12 @@ Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.
 
 Replace stale facts here when the verified baseline, blocker, next priority or recovery procedure changes. Do not turn this file into an append-only diary.
 
-## Action trigger diagnostic — 2026-08-15
+## Remote verification — 2026-08-17
 
-The candidate branch is published and the PR is open, but the connected GitHub integration has not emitted GitHub Actions runs for the current head. Direct API inspection of the exact head reports zero workflow runs and only the Vercel check. This is a CI-dispatch/integration boundary, not a passing or failing product result; no old diagnostic SHA is reused as evidence.
-
-Manual final CI trigger — 2026-08-15
+The connected GitHub integration published the hardening implementation to PR
+#224 and emitted all five exact-SHA workflows. Four completed green on the
+first attempt; Hermes live acceptance completed green on its retry with a
+14/14 report. The retry was limited to the failed job after its first bounded
+model-result miss; no code or ref changed. The Vercel preview is also `READY`
+for the same SHA. These automated results do not replace the required manual
+Windows UAT-1→UAT-6 gate.
