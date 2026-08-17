@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import {
-  Activity, ArrowLeft, Bot, BrainCircuit, Check, ChevronDown, ChevronRight, CircleOff, ExternalLink, FileSearch, Languages,
+  Activity, ArrowLeft, Bot, BrainCircuit, Check, ChevronDown, ChevronRight, CircleOff, Copy, ExternalLink, FileSearch, Languages,
   History, Menu, MessageSquare, Pause, Plug, RefreshCw, Search, Send, Settings, ShieldCheck, Sparkles, Target, Workflow, X,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
@@ -44,6 +44,7 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
   onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenAgents: () => void; onOpenNav: () => void; valueSurface?: ReactNode;
 }) {
   const { t } = useEfestoLocale();
+  const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(null);
   const webPreview = webMode || goalPlan?.authority === 'web-runtime';
   const starterGoals = starterGoalKeys.map((key) => t(key));
   const state = brainState(phase, t);
@@ -51,6 +52,28 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
   const surfaceTitle = chatMode
     ? (messages.length ? t('home.conversation') : t('home.newConversation'))
     : (preparedGoal ? t('home.goalPrepared') : t('home.newGoal'));
+
+  async function copyMessage(content: string, index: number) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(content);
+      } else {
+        const helper = document.createElement('textarea');
+        helper.value = content;
+        helper.setAttribute('readonly', '');
+        helper.style.position = 'fixed';
+        helper.style.opacity = '0';
+        document.body.appendChild(helper);
+        helper.select();
+        if (!document.execCommand('copy')) throw new Error('copy unavailable');
+        helper.remove();
+      }
+      setCopiedMessageIndex(index);
+      window.setTimeout(() => setCopiedMessageIndex((current) => current === index ? null : current), 1400);
+    } catch {
+      setCopiedMessageIndex(null);
+    }
+  }
 
   return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal')} aria-label={chatMode ? t('home.chatWithEfesto') : t('home.newGoalAria')}>
     <header className="forge-surface-bar">
@@ -76,7 +99,19 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
         {messages.map((message, index) => <article className={'forge-message ' + message.role} key={message.role + '-' + index}>
           <div className="forge-message-avatar">{message.role === 'user' ? t('home.you') : <Image src="/efesto-smith.svg" alt="" width={24} height={24} />}</div>
           <div className="forge-message-body">
-            <header><strong>{message.role === 'user' ? t('home.you') : message.model ?? 'Efesto'}</strong>{message.role === 'assistant' ? <span><ShieldCheck /> {t('common.private')}</span> : null}</header>
+            <header>
+              <strong>{message.role === 'user' ? t('home.you') : message.model ?? 'Efesto'}</strong>
+              {message.role === 'assistant' ? <span><ShieldCheck /> {t('common.private')}</span> : null}
+              {message.role === 'assistant' && message.content ? <button
+                type="button"
+                className="forge-message-copy"
+                onClick={() => void copyMessage(message.content, index)}
+                aria-label={copiedMessageIndex === index ? t('home.copiedMessage') : t('home.copyMessage')}
+                title={copiedMessageIndex === index ? t('home.copiedMessage') : t('home.copyMessage')}
+              >
+                {copiedMessageIndex === index ? <Check /> : <Copy />}
+              </button> : null}
+            </header>
             <p>{message.content || (chatPending && index === messages.length - 1 ? <span className="forge-generating"><i />{t('home.thinking')}</span> : null)}</p>
           </div>
         </article>)}
