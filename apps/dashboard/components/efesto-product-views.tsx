@@ -121,10 +121,11 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
         <h1>{t('home.emptyHeading')}</h1>
         <p>{t('home.emptyCopy')}</p>
         <div className="forge-empty-meta"><span><ShieldCheck /> {t('common.privateByDesign')}</span><span><i /> {t('home.noAutomaticMemory')}</span></div>
-        <div className="forge-empty-actions">
-          {!chatAvailable && !webMode ? <button type="button" className="secondary-action" onClick={connected ? onOpenModels : onOpenSettings}><BrainCircuit /> {connected ? t('home.configureModel') : t('home.privateChatSetup')}</button> : null}
-          {webMode ? <button type="button" className="secondary-action" onClick={onOpenSettings}><Plug /> {t('home.openPrivateMode')}</button> : null}
-          <button type="button" className="primary-action" onClick={() => onToggleChat(false)}><Target /> {t('home.startGoal')}</button>
+        <ForgeLiveRail webMode={webMode} connected={connected} />
+        <div className="forge-empty-actions forge-launchpad">
+          {!chatAvailable && !webMode ? <ForgeActionCard icon={connected ? BrainCircuit : Plug} title={connected ? t('home.configureModel') : t('home.privateChatSetup')} copy={t('home.actionModelCopy')} onClick={connected ? onOpenModels : onOpenSettings} /> : null}
+          {webMode ? <ForgeActionCard icon={Plug} title={t('home.openPrivateMode')} copy={t('home.actionPrivateCopy')} onClick={onOpenSettings} /> : null}
+          <ForgeActionCard icon={Target} title={t('home.startGoal')} copy={t('home.actionGoalCopy')} onClick={() => onToggleChat(false)} primary />
         </div>
         {chatAvailable || webMode ? <StarterSuggestions suggestions={starterGoals} onSelect={onInputChange} /> : null}
       </section> : preparedGoal ? <section className="forge-goal-plan" aria-label={t('home.planAria')}>
@@ -149,6 +150,11 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
         <h1>{t('home.defineResult')}</h1>
         <p>{webPreview ? t('home.webPrepareCopy') : t('home.prepareCopy')}</p>
         <div className="forge-empty-meta"><span><ShieldCheck /> {t('common.privateByDesign')}</span><span><i /> {webPreview ? t('runtime.localOptional') : t('home.humanConfirmation')}</span></div>
+        <ForgeLiveRail webMode={webPreview} connected={connected} />
+        <div className="forge-empty-actions forge-launchpad">
+          <ForgeActionCard icon={MessageSquare} title={t('home.chat')} copy={t('home.actionChatCopy')} onClick={() => onToggleChat(true)} primary />
+          <ForgeActionCard icon={Plug} title={webPreview ? t('home.openPrivateMode') : t('home.openSettings')} copy={t('home.actionPrivateCopy')} onClick={onOpenSettings} />
+        </div>
         <StarterSuggestions suggestions={starterGoals} onSelect={onInputChange} />
       </section>}
       {valueSurface ? <div className="forge-value-surface" aria-label={t('home.valueSurface')}>{valueSurface}</div> : null}
@@ -175,6 +181,23 @@ export function HomeView({ phase, webMode, chatMode, messages, preparedGoal, goa
       onOpenSettings={onOpenSettings}
     />
   </section>;
+}
+
+function ForgeLiveRail({ webMode, connected }: { webMode: boolean; connected: boolean }) {
+  const { t } = useEfestoLocale();
+  return <div className="forge-live-rail" aria-label={t('home.liveAria')}>
+    <span className="forge-live-signal"><i /><span><small>LIVE</small><strong>{webMode ? t('home.livePublic') : connected ? t('kernel.connected') : t('kernel.local')}</strong></span></span>
+    <span><ShieldCheck /> {t('home.livePrivate')}</span>
+    <span><Sparkles /> {t('home.liveNoWrites')}</span>
+  </div>;
+}
+
+function ForgeActionCard({ icon: Icon, title, copy, onClick, primary = false }: { icon: typeof Target; title: string; copy: string; onClick: () => void; primary?: boolean }) {
+  return <button type="button" className={'forge-launch-action ' + (primary ? 'primary' : 'secondary')} onClick={onClick}>
+    <span className="forge-launch-icon"><Icon /></span>
+    <span className="forge-launch-copy"><strong>{title}</strong><small>{copy}</small></span>
+    <ChevronRight />
+  </button>;
 }
 
 function StarterSuggestions({ suggestions, onSelect }: { suggestions: string[]; onSelect: (value: string) => void }) {
