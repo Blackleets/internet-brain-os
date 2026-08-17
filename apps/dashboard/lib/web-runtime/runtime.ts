@@ -7,12 +7,14 @@ export type EfestoRuntimeMode = 'local' | 'web';
  * non-secret QA switch so the hosted path can be verified locally.
  */
 export function detectEfestoRuntimeMode(): EfestoRuntimeMode {
+  if (typeof window !== 'undefined') {
+    const requested = new URLSearchParams(window.location.search).get('runtime');
+    if (requested === 'local' || requested === 'web') return requested;
+  }
+
   const configured = process.env.NEXT_PUBLIC_EFESTO_RUNTIME_MODE;
   if (configured === 'local' || configured === 'web') return configured;
   if (typeof window === 'undefined') return 'local';
-
-  const requested = new URLSearchParams(window.location.search).get('runtime');
-  if (requested === 'local' || requested === 'web') return requested;
 
   return isLoopbackHost(window.location.hostname) ? 'local' : 'web';
 }
