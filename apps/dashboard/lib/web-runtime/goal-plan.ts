@@ -170,8 +170,11 @@ function buildPublicSearchTokens(title: string, keywords: readonly string[], cat
  * The result is unverified preview data: it is not Evidence, is not persisted,
  * and does not grant the web shell authority to execute anything.
  */
-const HOSTED_SEARCH_TIMEOUT_MS = 8_000;
-const HOSTED_SEARCH_PROVIDER_TIMEOUT_MS = 2_200;
+// Hosted serverless requests need a little more room for Brave's HTML page to
+// arrive from a cold region. Keep the overall request bounded, but do not cut
+// the first provider off before it can return the real result cards.
+const HOSTED_SEARCH_TIMEOUT_MS = 12_000;
+const HOSTED_SEARCH_PROVIDER_TIMEOUT_MS = 8_000;
 
 export async function prepareWebGoalPlan(input: WebGoalPlanInput, searcher: WebSearchClient = new PublicWebSearchClient({ timeoutMs: HOSTED_SEARCH_PROVIDER_TIMEOUT_MS })): Promise<GoalIntelligencePlan> {
   const basePlan = buildWebGoalPlan(input);
