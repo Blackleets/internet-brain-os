@@ -145,6 +145,16 @@ function buildBroadPublicSearchQuery(title: string, keywords: readonly string[],
   return tokens.length > 0 ? tokens.join(' ') : title.trim();
 }
 
+function buildRawPublicSearchQuery(title: string): string {
+  return title
+    .normalize('NFKC')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .split(/\s+/u)
+    .slice(0, 12)
+    .join(' ');
+}
+
 function buildPublicSearchTokens(title: string, keywords: readonly string[], categories: readonly string[]): string[] {
   const isJobGoal = categories.includes('job');
   return [...new Set(tokenizeSearchText([title, ...keywords].join(' '))
@@ -166,7 +176,11 @@ export async function prepareWebGoalPlan(input: WebGoalPlanInput, searcher: WebS
   const basePlan = buildWebGoalPlan(input);
   const publicSearchQuery = buildPublicSearchQuery(basePlan.goal.title, basePlan.goal.keywords, basePlan.goal.categories);
   const fallbackSearchQuery = buildBroadPublicSearchQuery(basePlan.goal.title, basePlan.goal.keywords, basePlan.goal.categories);
-  const searchQueries = [...new Set([publicSearchQuery, fallbackSearchQuery])].slice(0, 2);
+  // Keep a natural-language fallback for providers that return nothing for a
+  // short keyword query. It is attempted only after the focused variants and
+  // remains bounded by the same hosted deadline.
+  const titleSearchQuery = buildRawPublicSearchQuery(basePlan.goal.title);
+  const searchQueries = [...new Set([publicSearchQuery, fallbackSearchQuery, titleSearchQuery])].slice(0, 3);
   const deadline = Date.now() + HOSTED_SEARCH_TIMEOUT_MS;
   try {
     let lastSearch: PublicWebSearchResponse | undefined;
