@@ -144,6 +144,9 @@ describe('Efesto conversation-first product shell', () => {
     await waitFor(() => expect(screen.getAllByRole('button', { name: 'Modo web listo' }).length).toBeGreaterThan(0));
     expect(screen.getByRole('button', { name: /^Goal$/ }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByText('EFESTO · TRABAJO DESDE LA WEB')).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Sugerencias para empezar' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Usar sugerencia: Encuéntrame un taladro/ }));
+    expect((screen.getByLabelText('Goal') as HTMLTextAreaElement).value).toContain('taladro');
 
     fireEvent.change(screen.getByLabelText('Goal'), { target: { value: 'Audita un repositorio de GitHub' } });
     fireEvent.click(screen.getByRole('button', { name: 'Preparar Goal' }));
