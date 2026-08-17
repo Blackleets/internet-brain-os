@@ -33,6 +33,20 @@ export class PublicWebSearchClient {
     const normalizedQuery = normalizeQuery(query);
     const limit = normalizeLimit(requestedLimit ?? this.options.maxResults ?? 10);
     let lastProviderError: unknown;
+
+    // Prefer the fast, credential-free Brave HTML surface for hosted reads.
+    // The remaining providers stay as a bounded fallback chain for resilience.
+    try {
+      const endpoint = new URL('https://search.brave.com/search');
+      endpoint.searchParams.set('q', normalizedQuery);
+      endpoint.searchParams.set('source', 'web');
+      const html = await this.fetchHtml(endpoint);
+      const results = filterRelevantResults(normalizedQuery, parseBraveHtml(html, limit));
+      if (results.length > 0) return this.response(normalizedQuery, 'brave-html', results);
+    } catch (error) {
+      lastProviderError = error;
+    }
+
     const duckDuckGoProviders = [
       { endpoint: 'https://html.duckduckgo.com/html/', parse: parseDuckDuckGoHtml },
       { endpoint: 'https://lite.duckduckgo.com/lite/', parse: parseDuckDuckGoLiteHtml },
@@ -47,20 +61,6 @@ export class PublicWebSearchClient {
       } catch (error) {
         lastProviderError = error;
       }
-    }
-
-    // Brave is a fast, credential-free HTML fallback. Try it before the
-    // reader/direct-Bing path so short hosted requests do not spend their
-    // entire budget on slower providers and then surface an empty result.
-    try {
-      const endpoint = new URL('https://search.brave.com/search');
-      endpoint.searchParams.set('q', normalizedQuery);
-      endpoint.searchParams.set('source', 'web');
-      const html = await this.fetchHtml(endpoint);
-      const results = filterRelevantResults(normalizedQuery, parseBraveHtml(html, limit));
-      if (results.length > 0) return this.response(normalizedQuery, 'brave-html', results);
-    } catch (error) {
-      lastProviderError = error;
     }
 
     try {
