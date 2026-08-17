@@ -4544,3 +4544,75 @@
     transition: none;
   }
 }
+
+/* v16 — chat-product polish: lightweight message actions and a clearer nav rail. */
+.efesto-sidebar nav button {
+  position: relative;
+  transition: background .16s ease, color .16s ease;
+}
+
+.efesto-sidebar nav button::before {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--forge-accent);
+  content: '';
+  opacity: 0;
+  transform: scaleY(.6);
+  transition: opacity .16s ease, transform .16s ease;
+}
+
+.efesto-sidebar nav button.active::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.efesto-sidebar nav button:hover svg {
+  color: #aaa5a0;
+  transform: translateX(1px);
+}
+
+.efesto-sidebar nav button svg {
+  transition: color .16s ease, transform .16s ease;
+}
+
+.forge-message-copy {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  place-items: center;
+  margin-left: auto;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #77747a;
+  cursor: pointer;
+  opacity: .78;
+  transition: border-color .16s ease, background .16s ease, color .16s ease, opacity .16s ease;
+}
+
+.forge-message-copy:hover,
+.forge-message-copy:focus-visible {
+  border-color: #3c3733;
+  background: #201a16;
+  color: #ded6ce;
+  opacity: 1;
+}
+
+.forge-message-copy svg {
+  width: 12px;
+  color: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .efesto-sidebar nav button,
+  .efesto-sidebar nav button::before,
+  .efesto-sidebar nav button svg,
+  .forge-message-copy {
+    transition: none;
+  }
+}
