@@ -20,6 +20,19 @@ describe('web runtime goal preview', () => {
     expect(plan.limitations).toContain('preview_only');
   });
 
+  it.each([
+    ['software', 'Encuentra software de automatización'],
+    ['open source', 'Encuentra proyectos open source de automatización'],
+    ['documentos', 'Investiga documentos públicos sobre contratos'],
+    ['notas', 'Busca notas públicas sobre trading'],
+    ['eventos', 'Encuentra eventos de tecnología en Madrid'],
+  ])('keeps generic %s Goals on public web only', (_label, title) => {
+    const plan = buildWebGoalPlan({ title });
+
+    expect(plan.sources.map((source) => source.id)).toEqual(['public-web']);
+    expect(plan.intent.mode).toBe('public_research');
+  });
+
   it('runs a bounded public search and preserves unverified result provenance', async () => {
     let searchedQuery = '';
     const plan = await prepareWebGoalPlan({ title: 'Encuéntrame un iPhone usado por menos de 1000 euros' }, {
