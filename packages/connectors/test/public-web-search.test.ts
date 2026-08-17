@@ -47,6 +47,28 @@ describe('PublicWebSearchClient', () => {
     await expect(json.search('drill deals')).rejects.toThrow('unsupported response');
   });
 
+  it('tries the fast Brave fallback before the slower public reader', async () => {
+    const requests: string[] = [];
+    const client = new PublicWebSearchClient({
+      fetchImpl: (async (input: URL | RequestInfo) => {
+        const url = String(input);
+        requests.push(url);
+        if (url.includes('duckduckgo.com')) return new Response('<html><body>challenge</body></html>', { status: 202, headers: { 'content-type': 'text/html' } });
+        if (url.includes('brave.com')) return new Response('<a href="https://example.com/iphone"><div class="title search-snippet-title">Used iPhone</div></a><div class="generic-snippet"><div class="content">Good used iPhone listing.</div></div>', { status: 200, headers: { 'content-type': 'text/html' } });
+        throw new Error('a slower fallback should not be called');
+      }) as typeof fetch,
+    });
+
+    const result = await client.search('used iphone', 3);
+
+    expect(result).toMatchObject({ provider: 'brave-html', results: [expect.objectContaining({ url: 'https://example.com/iphone' })] });
+    expect(requests).toEqual([
+      expect.stringContaining('html.duckduckgo.com/html/'),
+      expect.stringContaining('lite.duckduckgo.com/lite/'),
+      expect.stringContaining('search.brave.com/search'),
+    ]);
+  });
+
   it('falls back to Bing when DuckDuckGo returns no parseable results', async () => {
     const requests: string[] = [];
     const client = new PublicWebSearchClient({
