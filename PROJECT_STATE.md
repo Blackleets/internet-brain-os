@@ -36,7 +36,7 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
   idempotency reuse, durable receipt archiving, unsafe credential-file mode
   rejection, bounded issue pagination, and a pure provider-neutral
   `WebGoalResolver`. Hosted Goal readiness now reflects every selected source.
-- Local qualification is green after the slice: 199 test files / 1,156 tests,
+- Local qualification is green after the slice: 199 test files / 1,166 tests,
   typecheck, architecture check, production build, extension package,
   `verify:first-run`, `release:verify`, and `pnpm audit --prod`.
 - Remote exact-SHA matrix for `b9025578` is green: CI #828, Internal Test
@@ -100,6 +100,12 @@ requests, and checks to their exact capabilities; checks require an explicit
 branch, tag, or commit reference. The next slice is to exercise this complete
 path with a real user-owned read-scoped token before reviewing another
 provider contract.
+
+Goal source selection is now conservative across both the local Kernel preview
+and the hosted web preview: generic public topics such as software, documents,
+notes, events, and open-source projects stay on public research unless the
+Goal names a connector or an explicit private resource. This prevents an
+unconfigured private integration from blocking an otherwise valid public Goal.
 
 The Goal flow now adds a Kernel-owned `efesto.goal-intelligence.v1` preview
 before confirmation. It routes generic public Goals to Hermes and explicit
