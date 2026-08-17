@@ -81,8 +81,10 @@ test('opens the zero-setup web path and keeps planning separate from execution',
   await page.getByRole('button', { name: 'Preparar Goal', exact: true }).click();
   await expect(page.getByText('Resultados encontrados en la web', { exact: true })).toBeVisible();
   await expect(page.getByText('Resultados públicos no verificados · sin credenciales, escritura ni ejecución.', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Conectar modo privado para ejecutar', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Conectar modo privado para ejecutar', exact: true })).toBeEnabled();
   expect(writes).toEqual(['/api/efesto/plan']);
+  await page.getByRole('button', { name: 'Conectar modo privado para ejecutar', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Ajustes', exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Integraciones', exact: true }).click();
   await expect(page.getByText('Conecta el Kernel para leer adaptadores y capacidades disponibles.', { exact: true })).toBeVisible();
