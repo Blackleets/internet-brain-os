@@ -104,7 +104,7 @@ function EfestoProductShellContent() {
   useEffect(() => {
     const nextMode = detectEfestoRuntimeMode();
     setRuntimeMode(nextMode);
-    if (nextMode === 'web') setChatMode(false);
+    if (nextMode === 'web') setChatMode(true);
   }, []);
 
   useEffect(() => {
