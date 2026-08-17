@@ -5013,3 +5013,249 @@
     transition: none;
   }
 }
+
+/* v19 — chat canvas: one page scroll, a fixed composer, and a quieter first screen. */
+.efesto-product.efesto-home-active .efesto-main,
+.efesto-product.efesto-home-active.sidebar-collapsed .efesto-main {
+  height: 100dvh;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0 0 150px;
+  scrollbar-gutter: stable;
+}
+
+.forge-surface {
+  height: auto;
+  min-height: 100dvh;
+  grid-template-rows: 52px auto auto;
+  overflow: visible;
+}
+
+.forge-scroll {
+  min-height: auto;
+  overflow: visible;
+  overscroll-behavior: auto;
+  scrollbar-gutter: auto;
+}
+
+.forge-composer-zone {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: var(--forge-sidebar);
+  z-index: 30;
+  padding: 12px 20px max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid rgb(255 255 255 / 4%);
+  background: linear-gradient(180deg, rgb(12 12 13 / 0%), rgb(12 12 13 / 92%) 22px, rgb(12 12 13 / 98%) 46px);
+  backdrop-filter: blur(14px);
+}
+
+.efesto-product.efesto-home-active.sidebar-collapsed .forge-composer-zone {
+  left: var(--forge-sidebar-collapsed);
+}
+
+.forge-empty {
+  min-height: calc(100dvh - 52px);
+  padding-bottom: 178px;
+}
+
+.forge-surface.is-chat .forge-empty {
+  padding-top: clamp(42px, 12vh, 132px);
+}
+
+.forge-thread {
+  padding-bottom: 164px;
+}
+
+.forge-goal-plan {
+  padding-bottom: 180px;
+}
+
+.forge-value-surface {
+  padding-bottom: 150px;
+}
+
+.forge-starter-panel.is-compact {
+  width: min(780px, 100%);
+  margin-top: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.forge-starter-panel.is-compact > header {
+  display: none;
+}
+
+.forge-starter-panel.is-compact .forge-starter-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.forge-starter-panel.is-compact .forge-starter-grid button {
+  display: inline-flex;
+  min-height: 36px;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 6px;
+  padding: 0 13px;
+  border-color: rgb(255 255 255 / 8%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 2%);
+  color: #b8b1aa;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.forge-starter-panel.is-compact .forge-starter-grid button:hover,
+.forge-starter-panel.is-compact .forge-starter-grid button:focus-visible {
+  border-color: #68432d;
+  background: #21160f;
+  color: #eee6df;
+}
+
+.forge-starter-panel.is-compact .forge-starter-index,
+.forge-starter-panel.is-compact .forge-starter-grid button > svg {
+  display: none;
+}
+
+.forge-public-search.in-thread {
+  margin: 13px 0 0;
+  border-color: #44392f;
+  background: linear-gradient(145deg, rgb(233 130 69 / 5%), rgb(255 255 255 / 2%));
+}
+
+.kernel-connect-guide {
+  display: grid;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid #4a3426;
+  border-radius: 11px;
+  background: linear-gradient(145deg, #21150f, #171415);
+}
+
+.kernel-connect-guide > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.kernel-connect-guide > header > div {
+  min-width: 0;
+}
+
+.kernel-connect-guide-mark {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  place-items: center;
+  border: 1px solid #6a422b;
+  border-radius: 8px;
+  background: #2a1a11;
+  color: var(--forge-accent);
+}
+
+.kernel-connect-guide-mark svg {
+  width: 14px;
+}
+
+.kernel-connect-guide small,
+.kernel-connect-guide strong {
+  display: block;
+}
+
+.kernel-connect-guide small {
+  color: #b47b58;
+  font-size: 7px;
+  font-weight: 780;
+  letter-spacing: .12em;
+}
+
+.kernel-connect-guide strong {
+  margin-top: 2px;
+  color: #eee3d9;
+  font-size: 11px;
+}
+
+.kernel-connect-guide p,
+.kernel-connect-guide ol {
+  margin: 0;
+  color: #a49a92;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.kernel-connect-guide ol {
+  display: grid;
+  gap: 5px;
+  padding-left: 19px;
+}
+
+.kernel-connect-guide li::marker {
+  color: var(--forge-accent);
+  font-weight: 700;
+}
+
+.kernel-connect-guide code {
+  padding: 2px 5px;
+  border: 1px solid #5b3b29;
+  border-radius: 5px;
+  color: #e0a27b;
+  background: #1b120d;
+  font-size: 8px;
+}
+
+.connection-field-hint {
+  color: #706a67;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+@media (max-width: 720px) {
+  .efesto-product.efesto-home-active .efesto-main,
+  .efesto-product.efesto-home-active.sidebar-collapsed .efesto-main {
+    padding-bottom: 132px;
+    scrollbar-gutter: auto;
+  }
+
+  .forge-composer-zone,
+  .efesto-product.efesto-home-active.sidebar-collapsed .forge-composer-zone {
+    left: 0;
+    padding: 8px 10px max(8px, env(safe-area-inset-bottom));
+  }
+
+  .forge-empty {
+    min-height: calc(100dvh - 52px);
+    padding-bottom: 154px;
+  }
+
+  .forge-thread {
+    padding-bottom: 144px;
+  }
+
+  .forge-goal-plan {
+    padding-bottom: 160px;
+  }
+
+  .forge-starter-panel.is-compact {
+    margin-top: 18px;
+  }
+
+  .forge-starter-panel.is-compact .forge-starter-grid {
+    gap: 6px;
+  }
+
+  .forge-starter-panel.is-compact .forge-starter-grid button {
+    max-width: 100%;
+    min-height: 34px;
+    overflow: hidden;
+    padding-inline: 11px;
+    text-overflow: ellipsis;
+  }
+}
