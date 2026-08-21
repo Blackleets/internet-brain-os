@@ -46,6 +46,68 @@ export class EntityManager {
     await this.repository.update(updated);
     return clone(updated);
   }
+
+  async verify(id: EntityId, evidenceId: EvidenceId, updatedAt: IsoDateTime): Promise<Entity> {
+    const current = await this.repository.getById(id);
+    if (!current) throw new Error(`Entity not found: ${id}`);
+    const evidenceIds = [...new Set([...current.evidenceIds, evidenceId])];
+    const updated: Entity = {
+      ...current,
+      updatedAt,
+      evidenceIds,
+      verificationStatus: evidenceIds.length > 0 ? 'verified' : 'hypothesis',
+    };
+    await this.repository.update(updated);
+    return clone(updated);
+  }
+
+  async unverify(id: EntityId, evidenceId: EvidenceId, updatedAt: IsoDateTime): Promise<Entity> {
+    const current = await this.repository.getById(id);
+    if (!current) throw new Error(`Entity not found: ${id}`);
+    const evidenceIds = current.evidenceIds.filter((value) => value !== evidenceId);
+    const updated: Entity = {
+      ...current,
+      updatedAt,
+      evidenceIds,
+      verificationStatus: evidenceIds.length > 0 ? 'hypothesis' : 'hypothesis',
+    };
+    await this.repository.update(updated);
+    return clone(updated);
+  }
+
+  async addAlias(id: EntityId, alias: string, updatedAt: IsoDateTime): Promise<Entity> {
+    const current = await this.repository.getById(id);
+    if (!current) throw new Error(`Entity not found: ${id}`);
+    const normalized = alias.trim();
+    if (!normalized) throw new Error('alias is required');
+    const aliases = new Set(current.aliases ?? []);
+    if (aliases.has(normalized)) throw new Error(`Duplicate alias: ${normalized}`);
+    aliases.add(normalized);
+    const updated: Entity = { ...current, updatedAt, aliases: [...aliases] };
+    await this.repository.update(updated);
+    return clone(updated);
+  }
+
+  async removeAlias(id: EntityId, alias: string, updatedAt: IsoDateTime): Promise<Entity> {
+    const current = await this.repository.getById(id);
+    if (!current) throw new Error(`Entity not found: ${id}`);
+    const normalized = alias.trim();
+    const aliases = new Set(current.aliases ?? []);
+    if (!aliases.has(normalized)) throw new Error(`Alias not found: ${normalized}`);
+    aliases.delete(normalized);
+    const updated: Entity = { ...current, updatedAt, aliases: [...aliases] };
+    await this.repository.update(updated);
+    return clone(updated);
+  }
+
+  async updateConfidence(id: EntityId, confidence: Confidence, updatedAt: IsoDateTime): Promise<Entity> {
+    if (confidence < 0 || confidence > 1) throw new Error('confidence must be between 0 and 1');
+    const current = await this.repository.getById(id);
+    if (!current) throw new Error(`Entity not found: ${id}`);
+    const updated: Entity = { ...current, updatedAt, confidence };
+    await this.repository.update(updated);
+    return clone(updated);
+  }
 }
 
 function required(value: string, field: string): string {
