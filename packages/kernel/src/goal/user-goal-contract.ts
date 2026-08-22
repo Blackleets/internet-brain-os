@@ -1,8 +1,10 @@
 export interface UserGoal {
   /** The original title as provided by the user */
   originalTitle: string;
-  /** The interpreted intent (e.g., "find a job", "research a topic") */
+  /** The interpreted intent (canonical English: "find", "want", "need") */
   intent: string;
+  /** The original action verb detected in the source language (e.g., "encontrar", "buscar") */
+  intentVerb?: string;
   /** The category of the goal (e.g., "trabajo", "investigación", "compra") */
   category: string;
   /** Constraints extracted from the goal */

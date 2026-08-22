@@ -1,14 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { WebGoalResolver } from './goal-resolver';
-import { UserGoal } from './user-goal-contract';
+import { WebGoalResolver, type GoalWebSearchPort } from './goal-resolver';
 
 describe('WebGoalResolver', () => {
   let resolver: WebGoalResolver;
-  let searcherMock: ReturnType<typeof vi.fn>;
+  let searchMock: any;
+  let searcherMock: GoalWebSearchPort;
 
   beforeEach(() => {
-    searcherMock = vi.fn<(query: string, limit?: number) => Promise<any>>();
-    resolver = new WebGoalResolver(searcherMock as any);
+    searchMock = vi.fn().mockResolvedValue({ query: '', searchedAt: '', provider: '', results: [] });
+    searcherMock = { search: searchMock };
+    resolver = new WebGoalResolver(searcherMock);
   });
 
   it('should resolve a job goal and return candidates', async () => {
@@ -33,7 +34,7 @@ describe('WebGoalResolver', () => {
         }
       ]
     };
-    searcherMock.mockResolvedValue(mockSearchResults);
+    searchMock.mockResolvedValue(mockSearchResults);
 
     const goalText = 'Encuéntrame un trabajo de 20 horas que pague 600 euros al mes';
     const result = await resolver.resolve(goalText);
@@ -70,7 +71,7 @@ describe('WebGoalResolver', () => {
     expect(Array.isArray(candidate.warnings)).toBe(true);
     
     // Check that the searcher was called with queries from the plan
-    expect(searcherMock).toHaveBeenCalled();
+    expect(searchMock).toHaveBeenCalled();
     
     // Overall resolution state should be partial since we have candidates with some criteria met
     expect(result.resolutionState).toBe('partial');
@@ -84,7 +85,7 @@ describe('WebGoalResolver', () => {
       provider: 'duckduckgo-html',
       results: []
     };
-    searcherMock.mockResolvedValue(emptySearchResults);
+    searchMock.mockResolvedValue(emptySearchResults);
     
     const goalText = 'Encuéntrame un trabajo de 20 horas que pague 600 euros al mes';
     const result = await resolver.resolve(goalText);
@@ -111,7 +112,7 @@ describe('WebGoalResolver', () => {
         }
       ]
     };
-    searcherMock.mockResolvedValue(datedSearchResults);
+    searchMock.mockResolvedValue(datedSearchResults);
     
     const goalText = 'Encuéntrame trabajo de 20 horas';
     const result = await resolver.resolve(goalText);
