@@ -33,19 +33,9 @@ export class GoalPlanner {
   private createInterpretation(userGoal: UserGoal): string {
     const { intent, category, constraints, preferences } = userGoal;
 
-    // Map intent to appropriate Spanish infinitive verb
-    let spanishVerb: string;
-    switch (intent) {
-      case 'find':
-        spanishVerb = 'encontrar';
-        break;
-      case 'want':
-        spanishVerb = 'querer';
-        break;
-      default:
-        // Fallback to the intent itself (should not happen with current interpreter)
-        spanishVerb = intent;
-    }
+    // Prefer the user's own verb (source language) when available; fall back to
+    // rendering the canonical English intent into Spanish.
+    const spanishVerb = userGoal.intentVerb ?? this.spanishVerbFor(intent);
 
     let interpretation = `${spanishVerb} un ${category}`;
 
@@ -55,7 +45,7 @@ export class GoalPlanner {
       constraintParts.push(`${constraints.hours} horas`);
     }
     if (constraints.salary && constraints.currency && constraints.frequency) {
-      constraintParts.push(`${constraints.salary} ${constraints.currency} ${constraints.frequency}`);
+      constraintParts.push(`${constraints.salary} ${constraints.currency} ${this.spanishFrequency(constraints.frequency)}`);
     } else if (constraints.salary && constraints.currency) {
       constraintParts.push(`${constraints.salary} ${constraints.currency}`);
     }
@@ -79,6 +69,26 @@ export class GoalPlanner {
     }
 
     return interpretation;
+  }
+
+  /** Maps a canonical English intent to its Spanish infinitive for human-readable output. */
+  private spanishVerbFor(intent: string): string {
+    switch (intent) {
+      case 'find': return 'encontrar';
+      case 'want': return 'querer';
+      case 'need': return 'necesitar';
+      default: return intent;
+    }
+  }
+
+  /** Maps a canonical English frequency to its Spanish rendering. */
+  private spanishFrequency(frequency: string): string {
+    switch (frequency) {
+      case 'monthly': return 'mensual';
+      case 'weekly': return 'semanal';
+      case 'hourly': return 'horario';
+      default: return frequency;
+    }
   }
 
   /**
@@ -141,7 +151,7 @@ export class GoalPlanner {
    */
   private createQueries(userGoal: UserGoal): string[] {
     const queries: string[] = [];
-    const { constraints, category } = userGoal;
+    const { constraints, category, preferences } = userGoal;
 
     // Base query: category + constraints
     let baseQuery = category;
@@ -166,24 +176,33 @@ export class GoalPlanner {
         queries.push(`${category} jornada parcial`);
         queries.push(`${category} medio tiempo`);
       }
+    } else if (lowerTextHasMediaJornada(userGoal)) {
+      // Media jornada without explicit hours: still offer the common phrasings.
+      queries.push(`${category} media jornada`);
+      queries.push(`${category} jornada parcial`);
+      queries.push(`${category} medio tiempo`);
     }
 
-    // Salary variations
+    // Salary variations. Frequency-specific phrasings come first because they
+    // carry the most signal for downstream verification.
     if (constraints.salary !== undefined && constraints.currency !== undefined) {
-      // Already added in baseQuery, but add symbolic variations
-      queries.push(`${category} ${constraints.salary}€`);
-      queries.push(`${category} ${constraints.salary} EUR`);
-
       if (constraints.frequency === 'monthly') {
         queries.push(`${category} ${constraints.salary} al mes`);
         queries.push(`${category} ${constraints.salary} mensual`);
+        queries.push(`${category} ${constraints.salary} EUR mensual`);
       } else if (constraints.frequency === 'weekly') {
         queries.push(`${category} ${constraints.salary} por semana`);
         queries.push(`${category} ${constraints.salary} semanal`);
+        queries.push(`${category} ${constraints.salary} EUR semanal`);
       } else if (constraints.frequency === 'hourly') {
         queries.push(`${category} ${constraints.salary} por hora`);
-        queries.push(`${category} ${constraints.salary} horario`);
+        queries.push(`${category} ${constraints.salary} euros por hora`);
+        queries.push(`${category} ${constraints.salary} EUR horario`);
       }
+      // Symbolic variations
+      queries.push(`${category} ${constraints.salary}€`);
+      queries.push(`${category} ${constraints.salary} EUR`);
+      queries.push(`${category} ${constraints.salary} euros`);
     }
 
     // Location variations
@@ -192,10 +211,11 @@ export class GoalPlanner {
       queries.push(`${category} ${constraints.location}`);
     }
 
-    // Modality variations
-    if (constraints.modality !== undefined) {
-      queries.push(`${category} ${constraints.modality}`);
-      if (constraints.modality === 'remote') {
+    // Modality variations (from explicit constraints or remote preference)
+    const modality = constraints.modality ?? (preferences.includes('remote') ? 'remote' : undefined);
+    if (modality !== undefined) {
+      queries.push(`${category} ${modality}`);
+      if (modality === 'remote') {
         queries.push(`${category} remoto`);
         queries.push(`${category} trabajo desde casa`);
       }
@@ -217,7 +237,7 @@ export class GoalPlanner {
 
     // Remove duplicates and limit to reasonable number
     const uniqueQueries = Array.from(new Set(queries));
-    return uniqueQueries.slice(0, 10); // Limit to 10 queries to avoid too many requests
+    return uniqueQueries.slice(0, 16); // Bound total queries per plan
   }
 
   /**
@@ -274,4 +294,9 @@ export class GoalPlanner {
 
     return limits;
   }
+}
+
+/** Detects the "media jornada" phrasing from the original goal text. */
+function lowerTextHasMediaJornada(userGoal: UserGoal): boolean {
+  return /media jornada|jornada parcial|medio tiempo/i.test(userGoal.originalTitle);
 }

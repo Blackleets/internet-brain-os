@@ -51,8 +51,27 @@ export class UserGoalInterpreter {
 
     // Intent: we can derive from the category and the action verb.
     // The action verb is usually at the beginning: "Encuéntrame", "Busco", "Quiero", etc.
-    // We map the verb to its infinitive form in Spanish.
+    // Verbs are normalized to canonical English intents so downstream consumers
+    // (planner, resolver) share one stable vocabulary; the planner renders them
+    // back to Spanish for human-readable output.
     const verbMap: Record<string, string> = {
+      'encuéntrame': 'find',
+      'encontrar': 'find',
+      'busco': 'find',
+      'buscar': 'find',
+      'quiero': 'want',
+      'necesito': 'need'
+    };
+    const intentMatch = lowerText.match(/^(encuéntrame|encontrar|busco|buscar|quiero|necesito)\s+/i);
+    let intent = 'find'; // fallback to a safe default
+    let intentVerb: string | undefined;
+    if (intentMatch) {
+      const verb = intentMatch[1].toLowerCase();
+      intentVerb = verbMap[verb] ?? verb; // canonical intent
+      intent = intentVerb;
+    }
+    // Preserve the source-language verb for human-readable rendering downstream.
+    const spanishVerbs: Record<string, string> = {
       'encuéntrame': 'encontrar',
       'encontrar': 'encontrar',
       'busco': 'buscar',
@@ -60,12 +79,7 @@ export class UserGoalInterpreter {
       'quiero': 'querer',
       'necesito': 'necesitar'
     };
-    const intentMatch = lowerText.match(/^(encuéntrame|encontrar|busco|buscar|quiero|necesito)\s+/i);
-    let intent = 'encontrar'; // fallback to a safe default
-    if (intentMatch) {
-      const verb = intentMatch[1].toLowerCase();
-      intent = verbMap[verb] ?? verb; // if not in map, use the verb as is (should not happen with our regex)
-    }
+    const sourceVerb = intentMatch ? spanishVerbs[intentMatch[1].toLowerCase()] : undefined;
 
     // Preferences: look for words like "remoto", "presencial", "híbrido"
     // Note: contract-related words like "freelance", "contrato", "tiempo parcial", "tiempo completo" 
@@ -124,6 +138,7 @@ export class UserGoalInterpreter {
     return {
       originalTitle: text,
       intent,
+      intentVerb: sourceVerb,
       category,
       constraints,
       preferences,

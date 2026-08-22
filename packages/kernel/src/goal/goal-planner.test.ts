@@ -118,7 +118,7 @@ describe('GoalPlanner', () => {
     const plan: GoalPlan = planner.createPlan(userGoal);
 
     expect(plan.userGoal).toEqual(userGoal);
-    expect(plan.interpretation).toContain('encontrar un trabajo');
+    expect(plan.interpretation).toContain('buscar un trabajo');
     expect(plan.interpretation).toContain('20 horas');
     expect(plan.interpretation).toContain('600 EUR');
     expect(plan.interpretation).toContain('mensual');

@@ -2,7 +2,19 @@ import { UserGoalInterpreter } from './goal-interpreter';
 import { UserGoal } from './user-goal-contract';
 import { GoalPlanner } from './goal-planner';
 import { GoalPlan } from './goal-plan-contract';
-import { PublicWebSearchClient } from '../../../connectors/src/public-web-search';
+
+/**
+ * Port for public web search. Keeps the goal module decoupled from the
+ * connectors package (adapters, not domain-layer provider coupling).
+ */
+export interface GoalWebSearchPort {
+  search(query: string, limit?: number): Promise<{
+    query: string;
+    searchedAt: string;
+    provider: string;
+    results: ReadonlyArray<{ rank: number; title: string; url: string; snippet: string; sourceHost: string }>;
+  }>;
+}
 
 /**
  * Represents a candidate result from a public web search.
@@ -41,12 +53,18 @@ export interface Candidate {
 export class WebGoalResolver {
   private readonly interpreter: UserGoalInterpreter;
   private readonly planner: GoalPlanner;
-  private readonly searcher: PublicWebSearchClient;
+  private readonly searcher: GoalWebSearchPort;
 
-  constructor(searcher?: PublicWebSearchClient) {
+  constructor(searcher?: GoalWebSearchPort) {
     this.interpreter = new UserGoalInterpreter();
     this.planner = new GoalPlanner();
-    this.searcher = searcher ?? new PublicWebSearchClient();
+    if (searcher) {
+      this.searcher = searcher;
+    } else {
+      // Late-bound adapter keeps the connectors package out of the kernel's
+      // compile graph; the adapter is wired at composition root (server/CLI).
+      throw new Error('WebGoalResolver requires a search port (no default adapter is bundled)');
+    }
   }
 
   /**
@@ -112,9 +130,10 @@ export class WebGoalResolver {
       const textToSearch = `${result.title} ${result.snippet}`.toLowerCase();
 
       for (const description of criteriaDescriptions) {
-        // Simple keyword matching: check if the description (lowercase) appears in the text
-        // We could improve this with stemming or more sophisticated matching, but for now we do substring.
-        if (description.toLowerCase().includes(textToSearch) || textToSearch.includes(description.toLowerCase())) {
+        // Token-overlap matching: a criterion is met when its significant tokens
+        // (numbers, currency, keywords) all appear in the result text. Plain
+        // substring matching is too brittle for natural-language descriptions.
+        if (criterionTokensMatch(description, textToSearch)) {
           criteriaMet.push(description);
         } else {
           criteriaMissing.push(description);
@@ -214,4 +233,23 @@ export class WebGoalResolver {
 
     return null;
   }
+}
+
+const STOP_WORDS = new Set([
+  'de', 'un', 'una', 'la', 'el', 'los', 'las', 'del', 'al', 'a', 'en', 'y', 'o',
+  'jornada', 'salario', 'tipo', 'contrato', 'ubicación', 'modalidad'
+]);
+
+/**
+ * Token-overlap criterion matching: every significant token of the criterion
+ * description (numbers, currency codes, keywords) must appear in the result
+ * text. More robust than raw substring equality for natural-language text.
+ */
+export function criterionTokensMatch(description: string, lowerText: string): boolean {
+  const tokens = description
+    .toLowerCase()
+    .split(/[^0-9a-záéíóúñü€]+/i)
+    .filter((token) => token.length > 1 && !STOP_WORDS.has(token));
+  if (tokens.length === 0) return false;
+  return tokens.every((token) => lowerText.includes(token));
 }
