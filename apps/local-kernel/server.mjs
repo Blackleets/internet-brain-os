@@ -7,6 +7,7 @@ import { InboxError, MAX_BODY_BYTES, PageContextInbox } from './page-context-inb
 import { ObsidianKnowledgeProjector } from './obsidian-projector.mjs';
 import { OptionalEvidenceSummarizer } from './optional-evidence-summarizer.mjs';
 import { loadOrCreateApiToken, validateApiToken } from './api-token-store.mjs';
+import { KernelEventBus } from './kernel-event-bus.mjs';
 import { PairingError, PairingSession } from './pairing-session.mjs';
 import { ExtensionIdentityRegistry } from './extension-identity-registry.mjs';
 import { createHermesLocalIngestionRoute } from './hermes-route-factory.mjs';
@@ -110,6 +111,7 @@ function environmentModelProviders(env) {
 
 export function createLocalKernelServer(captureInbox, captureProjector, obsidianProjector, evidenceSummarizer, options = {}) {
   const requiredToken = options.apiToken === undefined ? undefined : validateApiToken(options.apiToken);
+  const kernelEvents = options.kernelEvents ?? new KernelEventBus();
   const activePairing = options.pairingSession;
   const identities = options.extensionRegistry;
   const hermesRoute = options.hermesRoute;
@@ -128,7 +130,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const bootstrapStatus = options.bootstrapStatus;
   const allowedDashboardOrigins = new Set(options.allowedDashboardOrigins ?? []);
   const hermesMaxBodyBytes = Number(options.hermesMaxBodyBytes ?? 256 * 1024);
-  return createServer(async (request, response) => {
+  const server = createServer(async (request, response) => {
     if (!isLoopbackHost(request.headers.host)) {
       return send(response, 403, { ok: false, code: 'HOST_FORBIDDEN' });
     }
@@ -435,7 +437,9 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         const goalId = decodeURIComponent(request.url.slice('/api/goals/'.length, -'/missions'.length));
         const input = await readJson(request);
         const confirmationActor = interactiveMissionConfirmationActor(origin, allowedDashboardOrigins);
-        return send(response, 201, { ok: true, mission: await agentMissions.create(goalId, input, { confirmationActor }) });
+        const mission = await agentMissions.create(goalId, input, { confirmationActor });
+        kernelEvents.publish('mission.created', { missionId: mission.id, goalId, status: mission.status });
+        return send(response, 201, { ok: true, mission });
       } catch (error) {
         if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
         return send(response, 500, { ok: false, code: 'AGENT_MISSION_CREATE_FAILED' });
@@ -493,6 +497,18 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       } catch {
         return send(response, 500, { ok: false, code: 'REPLAY_LAB_QUERY_FAILED' });
       }
+    }
+    if (request.method === 'GET' && request.url === '/api/events') {
+      response.writeHead(200, {
+        'content-type': 'text/event-stream; charset=utf-8',
+        'cache-control': 'no-cache',
+        connection: 'keep-alive',
+        'x-accel-buffering': 'no',
+      });
+      response.write(': connected\n\n');
+      const unsubscribe = kernelEvents.subscribe((frame) => response.write(frame));
+      request.on('close', () => unsubscribe());
+      return undefined;
     }
     if (request.method === 'GET' && request.url?.startsWith('/api/replay-lab/cases/')) {
       if (!replayLabQuery) return send(response, 404, { ok: false, code: 'REPLAY_LAB_UNAVAILABLE' });
@@ -553,6 +569,9 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       });
     }
   });
+  // Composition-root handle for publishing domain events (missions, evidence).
+  server.kernelEvents = kernelEvents;
+  return server;
 }
 
 export const server = createLocalKernelServer(inbox, projector, obsidian, summarizer, {
