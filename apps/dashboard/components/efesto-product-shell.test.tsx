@@ -55,12 +55,15 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); window
 describe('Efesto goal-first product shell', () => {
   it('starts honest and goal-first without simulating Kernel activity', () => {
     render(<EfestoProductShell />);
-    expect(screen.getByRole('heading', { name: '¿Qué quieres conseguir?' })).toBeTruthy();
-    expect(screen.getByRole('img', { name: /Modo local desconectado/ })).toBeTruthy();
-    expect(screen.getByLabelText('Goal')).toBeTruthy();
-    expect(screen.getByText('Forjar un nuevo Goal')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Goal', exact: true }).getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Chat', exact: true }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('heading', { name: '¿En qué trabajamos?' })).toBeTruthy();
+    const stateAction = screen.getByRole('button', { name: 'Conectar Kernel' });
+    expect(stateAction.className).toContain('phase-offline');
+    expect(screen.getByText('Privado por diseño')).toBeTruthy();
+    expect(screen.getByText('Sin memoria automática')).toBeTruthy();
+    expect(screen.getByLabelText('Mensaje')).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Modo de trabajo' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Chat', exact: true }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Goal', exact: true }).getAttribute('aria-pressed')).toBe('false');
     expect(screen.getByRole('button', { name: 'Conectar' })).toBeTruthy();
     expect(requests).toHaveLength(0);
   });
@@ -69,7 +72,10 @@ describe('Efesto goal-first product shell', () => {
     render(<EfestoProductShell />);
     await connect();
     fireEvent.click(screen.getByRole('button', { name: 'Inicio', exact: true }));
-    expect(screen.getByRole('img', { name: /Verificando Evidence/ })).toBeTruthy();
+    // Shared Goal Truth wins: the goal-surface mission reports workState
+    // 'verifying' while the legacy agent-mission record says 'forged'.
+    const stateAction = await screen.findByText('Verificando Evidence');
+    expect(stateAction).toBeTruthy();
     expect(requests.some((request) => request.method === 'GET' && new URL(request.url).pathname === '/api/goal-surfaces')).toBe(true);
     expect((base['/api/agent-missions'].missions[0] as { executionPhase: string }).executionPhase).toBe('forged');
   });
@@ -78,6 +84,8 @@ describe('Efesto goal-first product shell', () => {
     render(<EfestoProductShell />);
     await connect();
     fireEvent.click(screen.getByRole('button', { name: 'Inicio', exact: true }));
+    // The forge starts in chat mode; preparing a Goal requires Goal mode.
+    fireEvent.click(screen.getByRole('button', { name: 'Goal', exact: true }));
     const goal = 'Encuéntrame un taladro bueno por 18 a 25 euros';
     fireEvent.change(screen.getByLabelText('Goal'), { target: { value: goal } });
     fireEvent.click(screen.getByRole('button', { name: 'Preparar Goal' }));
@@ -92,12 +100,12 @@ describe('Efesto goal-first product shell', () => {
   it('wires Finds feedback and Evidence source inspection to real Kernel routes', async () => {
     render(<EfestoProductShell />);
     await connect();
-    fireEvent.click(screen.getByRole('button', { name: /Finds/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Hallazgos/ }));
     expect(screen.getByText('Taladro 21 €')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Útil' }));
     await waitFor(() => expect(requests.some((request) => request.method === 'POST' && new URL(request.url).pathname === '/api/opportunities/opp-1/feedback')).toBe(true));
 
-    fireEvent.click(screen.getByRole('button', { name: /Evidence/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Evidencia/ }));
     fireEvent.click(screen.getByRole('button', { name: /Supplier research/ }));
     const source = await screen.findByRole('link', { name: /Abrir fuente/ });
     expect(source.getAttribute('href')).toBe('https://shop.example/drill');
@@ -107,12 +115,16 @@ describe('Efesto goal-first product shell', () => {
   it('uses a configured model for Chat while keeping model output outside Evidence', async () => {
     render(<EfestoProductShell />);
     await connect();
-    fireEvent.click(screen.getByRole('button', { name: /Models/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Modelos/ }));
     fireEvent.click(screen.getByRole('button', { name: /qwen3:4b/ }));
     fireEvent.change(screen.getByLabelText('Mensaje'), { target: { value: 'Resume el estado' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }));
+    expect(screen.getByLabelText('Mensaje').getAttribute('aria-pressed')).toBeNull(); // chat composer is a textarea, not a toggle
+    expect(screen.getByText('La conversación permanece separada de Evidence y memoria.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Enviar mensaje/ }));
     expect(await screen.findByText('Respuesta real del fixture.')).toBeTruthy();
-    expect(screen.getByText('No admitido en memoria')).toBeTruthy();
+    // Model output boundary: the forge marks assistant messages as private
+    // (outside Evidence and memory) instead of the legacy "No admitido" copy.
+    expect(screen.getByText('Privado')).toBeTruthy();
     expect(requests.some((request) => request.method === 'POST' && new URL(request.url).pathname === '/api/chat/stream')).toBe(true);
     expect(window.sessionStorage.getItem('hephaestus.owner.connection.session.v1')).toBeNull();
   });
