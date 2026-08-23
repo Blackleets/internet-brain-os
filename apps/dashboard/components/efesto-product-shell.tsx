@@ -12,6 +12,7 @@ import { loadGoalSurfaces, type GoalSurface, type GoalSurfaceWorkState } from '.
 import { loadOverview, type OverviewSnapshot } from '../lib/kernel/overview';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { connectionStore } from '../lib/session/connection-store';
+import { ProductValueScorecardPanel } from './overview/product-value-scorecard';
 import {
   AgentsView, AutomationsView, EvidenceView, FindsView, HomeView, MissionsView, ModelsView, SettingsView,
   type BrainPhase, type CaseDetail, type ChatMessage, type EvidenceRecord, type Provider,
@@ -408,7 +409,7 @@ export default function EfestoProductShell() {
       </header>
       <main className="efesto-main">
         {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} /> : null}
-        {view === 'missions' ? <MissionsView snapshot={snapshot} onNew={newGoal} /> : null}
+        {view === 'missions' ? <div className="missions-route"><MissionsView snapshot={snapshot} onNew={newGoal} /><ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot?.productScorecard} /></div> : null}
         {view === 'finds' ? <FindsView opportunities={snapshot?.opportunities ?? []} connected={Boolean(connection)} onFeedback={(id, signal) => void recordFeedback(id, signal)} /> : null}
         {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} onOpen={(record) => void openCase(record)} /> : null}
         {view === 'models' ? <ModelsView providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} modelForge={snapshot?.readiness.modelForge} connected={Boolean(connection)} onSelect={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); setChatMode(true); navigate('home'); }} onAdd={addProvider} /> : null}
