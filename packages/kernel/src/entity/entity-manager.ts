@@ -69,7 +69,7 @@ export class EntityManager {
       ...current,
       updatedAt,
       evidenceIds,
-      verificationStatus: evidenceIds.length > 0 ? 'hypothesis' : 'hypothesis',
+      verificationStatus: evidenceIds.length > 0 ? 'verified' : 'hypothesis',
     };
     await this.repository.update(updated);
     return clone(updated);

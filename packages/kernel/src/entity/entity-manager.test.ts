@@ -67,6 +67,17 @@ describe('EntityManager verification', () => {
     expect(updated.verificationStatus).toBe('hypothesis');
   });
 
+  it('stays verified while other evidence remains after unverify', async () => {
+    const repo = makeRepo();
+    seed(repo);
+    const mgr = new EntityManager(repo);
+    await mgr.verify(id('acme'), ev('ev1'), iso('2026-08-22T00:00:00.000Z'));
+    await mgr.verify(id('acme'), ev('ev2'), iso('2026-08-22T01:00:00.000Z'));
+    const updated = await mgr.unverify(id('acme'), ev('ev1'), iso('2026-08-23T00:00:00.000Z'));
+    expect(updated.evidenceIds).toContain(ev('ev2'));
+    expect(updated.verificationStatus).toBe('verified');
+  });
+
   it('rejects verify for a missing entity', async () => {
     const repo = makeRepo();
     const mgr = new EntityManager(repo);
