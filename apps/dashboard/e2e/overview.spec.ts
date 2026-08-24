@@ -106,6 +106,8 @@ test('disconnect removes the session credential and returns truthful offline sta
   // Back in Settings after disconnect: the connection card flips to its
   // offline form (URL/token inputs visible again).
   await expect(page.getByRole('textbox', { name: 'URL del Kernel' })).toBeVisible();
+  // The scorecard's truthful unavailable copy appears once no snapshot exists.
+  await page.locator('.efesto-sidebar nav').getByRole('button', { name: /^Misiones/ }).click();
   await expect(page.getByText('Métricas temporalmente no disponibles', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.getItem('hephaestus.owner.connection.session.v1'))).toBeNull();
 });
