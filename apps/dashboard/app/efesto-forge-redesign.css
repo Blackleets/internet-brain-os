@@ -1695,6 +1695,13 @@
   top: 16px;
   border-color: #493226;
   background: #1d1511;
+  /* A toast is an announcement, not a modal: it must never block clicks on
+     the surface beneath it. Only its own close button stays interactive. */
+  pointer-events: none;
+}
+
+.efesto-toast button {
+  pointer-events: auto;
 }
 
 @keyframes forge-pulse {

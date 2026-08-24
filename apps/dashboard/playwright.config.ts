@@ -21,7 +21,7 @@ export default defineConfig({
       timeout: 15_000,
     },
     {
-      command: './node_modules/.bin/next dev --hostname 127.0.0.1 --port 3000',
+      command: 'node ./node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port 3000',
       cwd: __dirname,
       url: 'http://127.0.0.1:3000',
       reuseExistingServer: false,
