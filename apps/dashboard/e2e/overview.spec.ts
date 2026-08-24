@@ -103,7 +103,9 @@ test('disconnect removes the session credential and returns truthful offline sta
   await connect(page);
   await page.getByRole('button', { name: /Kernel ready/ }).click();
   await page.getByRole('button', { name: 'Desconectar', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Conectar Kernel' }).first()).toBeVisible();
+  // Back in Settings after disconnect: the connection card flips to its
+  // offline form (URL/token inputs visible again).
+  await expect(page.getByRole('textbox', { name: 'URL del Kernel' })).toBeVisible();
   await expect(page.getByText('Métricas temporalmente no disponibles', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.getItem('hephaestus.owner.connection.session.v1'))).toBeNull();
 });
@@ -162,6 +164,7 @@ test.describe('mobile Efesto product shell', () => {
 
     await connect(page);
     await page.getByRole('button', { name: 'Alternar navegación' }).first().click();
+    await page.getByRole('button', { name: 'Inicio', exact: true }).click();
     await switchToGoalMode(page);
     await page.getByRole('textbox', { name: 'Goal', exact: true }).fill('Busca oportunidades reales');
     const composer = page.locator('.forge-composer-zone');
