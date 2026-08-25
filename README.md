@@ -115,6 +115,12 @@ When hosted, the dashboard remains presentation-only. Kernel authority, credenti
 
 Replay Lab is the forensic surface for explaining what happened. It may inspect causality, replay and recorded decisions, but it never gains authority to rewrite durable memory.
 
+### Efesto MCP Server
+
+Your kernel knowledge as **read-only tools for any MCP client** (Claude Desktop, Cursor, Windsurf, Hermes…). Five tools — `kernel_status`, `list_goals`, `list_missions`, `list_cases`, `get_case` — expose Goals, research missions, Cases and their Evidence receipts with full provenance. Stdio transport only: no ports open, token never echoed, read-only by construction. Setup in 2 minutes: [`apps/local-kernel/MCP_SERVER.md`](apps/local-kernel/MCP_SERVER.md).
+
+> Most agent memory is embeddings without provenance. Efesto's is different: every claim a model makes from `get_case` traces back to what was actually observed.
+
 ## Opportunity intelligence and privacy
 
 Efesto can capture authorized public-page context, classify opportunities, match them against private Goals, rank them and project useful records to an Obsidian-compatible vault.
