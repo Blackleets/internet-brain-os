@@ -16,6 +16,16 @@ export default defineConfig({
     passWithNoTests: true,
     // Keep vitest's default excludes (node_modules, dist, etc.) and add the
     // dashboard e2e specs, which are Playwright files that must not run under vitest.
-    exclude: [...configDefaults.exclude, '**/e2e/**'],
+    exclude: [
+      ...configDefaults.exclude,
+      '**/e2e/**',
+      // Compiled test artifacts (tsc -p tsconfig.sqlite-test.json output) must
+      // never be scanned as sources.
+      'dist-sqlite-test/**',
+      // node:sqlite cannot be resolved by Vite 5's transform pipeline
+      // (vitest-dev/vitest#7177). This spec has a dedicated runner:
+      // `node --test sqlite-entity-repository.nodetest.mjs` in packages/kernel.
+      'packages/kernel/src/entity/sqlite-entity-repository.test.ts',
+    ],
   },
 });

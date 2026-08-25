@@ -19,4 +19,8 @@ export type {
   EntityResolutionRegistry,
 } from './entity-resolution-registry';
 export type { EntityRepository } from './entity-repository';
-export { SqliteEntityRepository } from './sqlite-entity-repository';
+// SqliteEntityRepository is intentionally NOT re-exported from the barrel:
+// it imports node:sqlite, which Vite 5 cannot resolve (vitest-dev/vitest#7177),
+// so a barrel reference would break every vitest suite importing '../src'.
+// Import it directly: `import { SqliteEntityRepository } from './entity/sqlite-entity-repository'`
+// (or the compiled deep path at runtime).
