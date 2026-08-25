@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "lib": ["ES2021"],
+    "outDir": "../../dist-sqlite-test",
+    "rootDir": "../..",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": "..",
+    "paths": {
+      "@internet-brain-os/shared": ["../shared/src/index.ts"]
+    }
+  },
+  "include": ["src/entity/sqlite-entity-repository.ts", "src/entity/sqlite-entity-repository.test.ts", "../shared/src/index.ts"]
+}

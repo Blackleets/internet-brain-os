@@ -19,3 +19,4 @@ export type {
   EntityResolutionRegistry,
 } from './entity-resolution-registry';
 export type { EntityRepository } from './entity-repository';
+export { SqliteEntityRepository } from './sqlite-entity-repository';
