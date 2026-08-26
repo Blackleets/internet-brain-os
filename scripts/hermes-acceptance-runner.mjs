@@ -33,9 +33,9 @@ const BOUNDARY_GOAL = {
 };
 
 export const LIVE_VALUE_GOAL = {
-  title: 'Find the official documentation for the Python programming language',
+  title: 'Find the official documentation for the Git version control system',
   categories: ['tool'],
-  keywords: ['Python', 'documentation', 'installation', 'license', 'API', 'open source', 'developer'],
+  keywords: ['Git', 'documentation', 'installation', 'license', 'API', 'open source', 'version control'],
   priority: 2,
 };
 
