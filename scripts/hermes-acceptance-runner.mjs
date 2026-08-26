@@ -33,9 +33,9 @@ const BOUNDARY_GOAL = {
 };
 
 export const LIVE_VALUE_GOAL = {
-  title: 'Find a public open-source developer tool with API, documentation, installation and license details',
+  title: 'Find the official documentation for the Python programming language',
   categories: ['tool'],
-  keywords: ['open source', 'developer tool', 'GitHub', 'API', 'documentation', 'install', 'license'],
+  keywords: ['Python', 'documentation', 'installation', 'license', 'API', 'open source', 'developer'],
   priority: 2,
 };
 
