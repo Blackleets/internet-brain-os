@@ -62,6 +62,22 @@ describe('dashboard Shared Goal Truth client boundary', () => {
     expect(parsed[0].mission?.workState).toBe('investigating');
   });
 
+  it('preserves Kernel policy blocks so the UI cannot invent queued progress', () => {
+    const blocked = surface({
+      mission: {
+        ...surface().mission,
+        status: 'failed',
+        executionPhase: 'failed',
+        workState: 'failed',
+        blockedReason: 'automatic_r0_policy_denied',
+      },
+    });
+    expect(parseGoalSurfaces({ ok: true, surfaces: [blocked] })[0].mission).toMatchObject({
+      workState: 'failed',
+      blockedReason: 'automatic_r0_policy_denied',
+    });
+  });
+
   it('parses one exact surface and preserves UniversalGoal policy labelling', () => {
     const canonical = surface({
       goal: {

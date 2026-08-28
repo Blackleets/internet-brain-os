@@ -2,8 +2,8 @@
 
 import Image from 'next/image';
 import {
-  Bot, BrainCircuit, ChevronRight, Home, Menu, RefreshCw, Settings,
-  ShieldCheck, Sparkles, SquarePen, Target, Workflow, X,
+  Activity, Bot, BrainCircuit, ChevronRight, Database, Home, Menu, RefreshCw, Settings,
+  ShieldCheck, Sparkles, SquarePen, Target, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { KernelClient, KernelClientError } from '../lib/kernel/client';
@@ -14,11 +14,11 @@ import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { connectionStore } from '../lib/session/connection-store';
 import { ProductValueScorecardPanel } from './overview/product-value-scorecard';
 import {
-  AgentsView, AutomationsView, EvidenceView, FindsView, HomeView, MissionsView, ModelsView, SettingsView,
+  ActivityView, AgentsView, EvidenceView, FindsView, GoalsView, HomeView, MemoryView, ModelsView, SettingsView,
   type BrainPhase, type CaseDetail, type ChatMessage, type EvidenceRecord, type Provider,
 } from './efesto-product-views';
 
-type View = 'home' | 'missions' | 'finds' | 'evidence' | 'models' | 'agents' | 'automations' | 'settings';
+type View = 'home' | 'goals' | 'finds' | 'evidence' | 'memory' | 'activity' | 'models' | 'agents' | 'settings';
 type Connection = { baseUrl: string; token: string };
 type StreamEvent = { type?: 'conversation' | 'delta' | 'done' | 'error'; delta?: string; error?: string; response?: { model?: string } };
 
@@ -27,19 +27,20 @@ const DEFAULT_BASE_URL = 'http://127.0.0.1:4000';
 type NavItem = { id: View; label: string; icon: typeof Home };
 const workspaceNav: NavItem[] = [
   { id: 'home', label: 'Inicio', icon: Home },
-  { id: 'missions', label: 'Misiones', icon: Target },
+  { id: 'goals', label: 'Objetivos', icon: Target },
   { id: 'finds', label: 'Hallazgos', icon: Sparkles },
   { id: 'evidence', label: 'Evidencia', icon: ShieldCheck },
+  { id: 'memory', label: 'Memoria', icon: Database },
+  { id: 'activity', label: 'Actividad', icon: Activity },
 ];
 const systemNav: NavItem[] = [
   { id: 'models', label: 'Modelos', icon: BrainCircuit },
   { id: 'agents', label: 'Agentes', icon: Bot },
-  { id: 'automations', label: 'Automatizaciones', icon: Workflow },
 ];
 const settingsNav: NavItem = { id: 'settings', label: 'Ajustes', icon: Settings };
 const navGroups = [
-  { label: 'Inteligencia', items: workspaceNav },
-  { label: 'Sistema', items: systemNav },
+  { label: 'Producto', items: workspaceNav },
+  { label: 'Interno', items: systemNav },
 ];
 const nav = [...workspaceNav, ...systemNav, settingsNav];
 
@@ -56,7 +57,7 @@ export default function EfestoProductShell() {
   const [input, setInput] = useState('');
   const [preparedGoal, setPreparedGoal] = useState('');
   const [goalPending, setGoalPending] = useState(false);
-  const [chatMode, setChatMode] = useState(true);
+  const [chatMode, setChatMode] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatPending, setChatPending] = useState(false);
   const [caseDetails, setCaseDetails] = useState<Record<string, CaseDetail>>({});
@@ -72,8 +73,14 @@ export default function EfestoProductShell() {
   const brainPhase = useMemo<BrainPhase>(() => {
     if (!connection || snapshot?.readiness.kernel !== 'online') return 'offline';
     if (chatPending) return 'thinking';
-    return brainPhaseFromWorkState(focusedGoalSurface?.mission?.workState);
-  }, [chatPending, connection, focusedGoalSurface?.mission?.workState, snapshot?.readiness.kernel]);
+    const mission = focusedGoalSurface?.mission;
+    if (mission?.blockedReason) return 'blocked';
+    const hermes = snapshot?.readiness.bootstrap?.hermes;
+    const hermesUnavailable = hermes === 'missing' || hermes === 'invalid' || hermes === 'failed';
+    const waiting = mission?.workState === 'waiting_for_agent' || mission?.workState === 'queued';
+    if (hermesUnavailable && waiting) return 'unavailable';
+    return brainPhaseFromWorkState(mission?.workState);
+  }, [chatPending, connection, focusedGoalSurface?.mission, snapshot?.readiness.bootstrap?.hermes, snapshot?.readiness.kernel]);
 
   useEffect(() => {
     try {
@@ -276,7 +283,7 @@ export default function EfestoProductShell() {
       await client.request(`/api/goals/${encodeURIComponent(goal.id)}/missions`, {
         method: 'POST', body: JSON.stringify({ confirmed: true, agent: 'hermes', cadence: 'manual' }),
       }, parseOk);
-      setInput(''); setPreparedGoal(''); await refresh(); navigate('missions');
+      setInput(''); setPreparedGoal(''); await refresh(); navigate('goals');
       setToast('Goal persistido y misión confirmada para Hermes.');
     } catch { setToast('El Kernel rechazó la misión. No se creó actividad falsa ni trabajo parcial.'); }
     finally { setGoalPending(false); }
@@ -387,7 +394,7 @@ export default function EfestoProductShell() {
           <span className="nav-label">{group.label}</span>
           {group.items.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} title={label}>
             <Icon /><span>{label}</span>
-            {id === 'missions' && snapshot ? <b>{snapshot.missions.length}</b> : null}
+            {id === 'goals' && snapshot ? <b>{snapshot.goals.length}</b> : null}
             {id === 'finds' && snapshot ? <b>{snapshot.opportunities.filter((item) => item.status === 'new').length}</b> : null}
           </button>)}
         </div>)}
@@ -404,17 +411,18 @@ export default function EfestoProductShell() {
     <section className="efesto-stage">
       <header className="efesto-topbar">
         <div><button type="button" className="menu-button" onClick={toggleNavigation} aria-label="Alternar navegación"><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view)}</button></div>
-        <div className="top-context"><span className="local-first-status"><ShieldCheck /> Local-first</span><span className="private-status">Private by design</span></div>
-        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? 'Kernel ready' : 'Conectar'}</button></div>
+        <div className="top-context"><span className="local-first-status"><ShieldCheck /> Primero local</span><span className="private-status">Privado por diseño</span></div>
+        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? 'Kernel listo' : 'Conectar'}</button></div>
       </header>
       <main className="efesto-main">
         {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} /> : null}
-        {view === 'missions' ? <div className="missions-route"><MissionsView snapshot={snapshot} onNew={newGoal} /><ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot?.productScorecard} /></div> : null}
-        {view === 'finds' ? <FindsView opportunities={snapshot?.opportunities ?? []} connected={Boolean(connection)} onFeedback={(id, signal) => void recordFeedback(id, signal)} /> : null}
+        {view === 'goals' ? <div className="missions-route"><GoalsView snapshot={snapshot} onNew={newGoal} /><ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot?.productScorecard} /></div> : null}
+        {view === 'finds' ? <FindsView opportunities={snapshot?.opportunities ?? []} connected={Boolean(connection)} onFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
         {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} onOpen={(record) => void openCase(record)} /> : null}
+        {view === 'memory' ? <MemoryView connected={Boolean(connection)} /> : null}
+        {view === 'activity' ? <ActivityView snapshot={snapshot} connected={Boolean(connection)} /> : null}
         {view === 'models' ? <ModelsView providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} modelForge={snapshot?.readiness.modelForge} connected={Boolean(connection)} onSelect={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); setChatMode(true); navigate('home'); }} onAdd={addProvider} /> : null}
         {view === 'agents' ? <AgentsView snapshot={snapshot} onSettings={() => navigate('settings')} onNewGoal={newGoal} /> : null}
-        {view === 'automations' ? <AutomationsView missions={snapshot?.missions ?? []} connected={Boolean(connection)} onNewGoal={newGoal} /> : null}
         {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} onConnect={connect} onDisconnect={disconnect} onRefresh={() => void refresh()} /> : null}
       </main>
 

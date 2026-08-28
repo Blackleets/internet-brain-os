@@ -587,3 +587,17 @@ This completes the web-first design slice. Responsive mobile use is included thr
 - No Kernel, authentication, persistence, agent, Evidence, Find, replay or memory-authority contract changed.
 - No native app or phone→PC transport was added.
 - Do not merge the draft automatically.
+
+## Handoff 2026-08-29 - Grok - Efesto Phase 1 product IA
+
+### What I changed
+- Home defaults to Goal mode. Example chips fill the composer and do not POST.
+- Primary nav: Inicio, Objetivos, Hallazgos, Evidencia, Memoria, Actividad, Ajustes.
+- Findings labeled as unverified leads. Evidence progressive provenance. Memory honest unavailable. BLOCKED from Shared Goal Truth.
+- Kernel not rewritten. Dashboard parses mission.blockedReason.
+
+### Tests or checks performed
+- Unit 22 PASS. architecture:check PASS. tsc -b PASS. Dashboard Vitest 130 PASS. Build PASS. Playwright e2e 6/6 PASS.
+
+### Risks / next
+- publicLaunchApproved remains false. No UAT or live Hermes L1-L7 claimed. Phase 2 Memory polish only after Phase 1 stays green.

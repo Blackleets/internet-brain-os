@@ -31,6 +31,7 @@ PR #201 froze adversarial Memory Safety v1 at `dff2c2167fd16ad609dd5042ca61ee588
 
 - PR #202 / G0: **Goal-first shell**, Forge Focus and one Kernel-owned persisted Goal truth.
 - The **living-forge** visual baseline remains a machine-checkable release requirement.
+- Branch feat/efesto-golden-path-ux (2026-08-29): dashboard Phase 1 presentation IA. Goal-default Home, Spanish primary nav, Finding/Evidence from Kernel records only, honest Memory unavailable. publicLaunchApproved remains false. This work does not claim UAT or live Hermes L1 to L7.
 - PR #203 / G1: Shared Goal Truth v1, authenticated read-only list/detail routes.
 - PR #204 / G2: responsive Control Center consumes Shared Goal Truth; desktop, 390×844, keyboard/focus and reduced-motion acceptance green.
 - PR #205 / G3: extension consumes the same Shared Goal Truth semantics.

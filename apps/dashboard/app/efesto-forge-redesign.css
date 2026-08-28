@@ -2304,3 +2304,151 @@
     transition: none;
   }
 }
+
+/* Phase 1: Goal-first chips, finding provenance, evidence disclosure */
+.forge-quick-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+}
+.forge-quick-prompts button {
+  min-height: 44px;
+  max-width: 100%;
+}
+.forge-quick-prompts button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lead-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border: 1px solid #3d342c;
+  border-radius: 999px;
+  background: #1a1613;
+  color: #d7c4b3;
+  font-size: 9px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.find-signals {
+  margin: 6px 0 0;
+  color: #8d837a;
+  font-size: 10px;
+}
+.find-provenance {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 8px;
+}
+.find-provenance div {
+  display: grid;
+  gap: 2px;
+}
+.find-provenance dt {
+  color: #6f6c69;
+  font-size: 8px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.find-provenance dd {
+  margin: 0;
+  color: #c9c3bc;
+  font-size: 10px;
+}
+.provenance-link,
+.find-source {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #e1a077;
+  cursor: pointer;
+  font-size: 10px;
+}
+.evidence-toggle {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 22px minmax(0, 1fr) 16px;
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.evidence-toggle svg {
+  width: 15px;
+  color: #77757c;
+}
+.evidence-toggle .evidence-check {
+  color: var(--forge-green, #8eb77a);
+}
+.evidence-disclosure {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 0 0;
+  border-top: 1px solid #262628;
+}
+.evidence-disclosure div {
+  display: grid;
+  gap: 2px;
+}
+.evidence-disclosure dt {
+  color: #6f6c69;
+  font-size: 8px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.evidence-disclosure dd {
+  margin: 0;
+  color: #c9c3bc;
+  font-size: 10px;
+}
+.forge-state-action.phase-blocked {
+  border-color: #5d302d;
+  color: #eab6b1;
+}
+.forge-state-action.phase-unavailable {
+  border-color: #3d3d42;
+  color: #b7b3ae;
+}
+@media (max-width: 720px) {
+  .forge-quick-prompts {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .find-provenance,
+  .evidence-disclosure {
+    overflow-wrap: anywhere;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .evidence-toggle svg,
+  .forge-quick-prompts button {
+    transition: none;
+  }
+}
+
+.evidence-receipts > article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+.evidence-receipts > article .evidence-toggle {
+  grid-column: 1 / -1;
+}
+.evidence-receipts > article .evidence-disclosure {
+  grid-column: 1 / -1;
+}
