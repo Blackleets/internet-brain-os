@@ -249,20 +249,20 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
   const suffix = createHash('sha256').update(`${mission.id}\n${candidate.id}`).digest('hex');
   const caseId = `case:verified:${suffix}`;
   const evidenceId = `evidence:verified:${suffix}`;
-  const sourceUrl = String(document.sourceUrl ?? candidate.url);
+  const sourceUrl = String(document.sourceUrl ?? '').trim();
   const capturedAt = String(document.fetchedAt ?? new Date().toISOString());
   const text = String(document.text ?? '').trim();
   const projectionText = boundedProjectionText(text);
   const fetchedTitle = String(document.title ?? '').trim().slice(0, 240);
   const fetchedDescription = (projectionText || fetchedTitle).slice(0, 500) || undefined;
-  const title = fetchedTitle || (projectionText ? projectionText.slice(0, 240) : '') || sourceUrl;
+  const title = fetchedTitle || (projectionText ? projectionText.slice(0, 240) : '') || fetchedHostPath(sourceUrl);
   const context = {
     schemaVersion: 'hephaestus.page-context.v1',
     url: sourceUrl,
     canonicalUrl: sourceUrl,
     title,
     visibleText: projectionText,
-    description: fetchedDescription ?? '',
+    ...(fetchedDescription ? { description: fetchedDescription } : {}),
     capturedAt,
   };
   const existing = (data.evidence ?? []).find((item) => item.id === evidenceId);
@@ -318,6 +318,16 @@ function verificationSealDigest(searchCandidateDigest, verificationResults) {
     return `${item.candidateId}:${item.status}:${item.evidenceId ?? ''}:${support}:${item.supportReason ?? ''}`;
   });
   return createHash('sha256').update(`${searchCandidateDigest ?? ''}\n${lines.join('\n')}`).digest('hex');
+}
+
+function fetchedHostPath(sourceUrl) {
+  try {
+    const parsed = new URL(String(sourceUrl ?? ''));
+    const value = `${parsed.host}${parsed.pathname}`.replace(/\/$/, '');
+    return (value || parsed.host || String(sourceUrl ?? '')).slice(0, 240);
+  } catch {
+    return String(sourceUrl ?? '').slice(0, 240);
+  }
 }
 
 function boundedProjectionText(text) {

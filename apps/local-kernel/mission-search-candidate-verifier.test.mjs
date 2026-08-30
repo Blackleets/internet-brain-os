@@ -13,7 +13,7 @@ import { OpportunityProjector } from './opportunity-classifier.mjs';
 
 const interactive = { confirmationActor: { actorType: 'interactive_user', decidedBy: 'dashboard-ui' } };
 
-async function fixture(reader, goalInput = { title: 'Find a drill offer', categories: ['offer'], keywords: ['drill'] }, findings = [{ url: 'https://shop.example/drill', title: 'Search result drill', text: 'UNTRUSTED SEARCH SNIPPET' }]) {
+async function fixture(reader, goalInput = { title: 'Find a drill offer', categories: ['offer'], keywords: ['drill'] }, findings = [{ url: 'https://shop.example/drill', title: 'Search result drill', text: 'UNTRUSTED SEARCH SNIPPET', summary: 'UNTRUSTED SEARCH SNIPPET' }]) {
   const store = new LocalKnowledgeStore(join(await mkdtemp(join(tmpdir(), 'efesto-web-read-')), 'store.json'));
   const goal = await new GoalManager(store).create(goalInput);
   const mission = await new AgentMissionManager(store, { isAgentReady: () => true }).create(goal.id, { agent: 'hermes', confirmed: true }, interactive);
@@ -70,6 +70,9 @@ describe('Kernel-owned search candidate verification', () => {
     expect(data.evidence[0].summary).not.toContain('UNTRUSTED SEARCH SNIPPET');
     expect(data.evidence[0].summary).toBe('Quality drill 24.99 EUR');
     expect(data.cases[0].description).not.toContain('UNTRUSTED SEARCH SNIPPET');
+    expect(data.cases[0].description).toContain('cordless drill');
+    expect(data.cases[0].description).toContain('24.99 EUR');
+    expect(data.opportunities[0].title).toBe('Quality drill 24.99 EUR');
     expect(data.opportunities).toHaveLength(1);
     expect(data.agentMissions[0].searchCandidates[0]).toMatchObject({ status: 'verified', evidenceId: data.evidence[0].id });
   });
