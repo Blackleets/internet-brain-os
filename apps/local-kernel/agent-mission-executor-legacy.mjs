@@ -64,60 +64,22 @@ export class AgentMissionExecutor {
     });
   }
 
-  async complete(missionId, input) {
-    const leaseId = clean(input?.leaseId, 80, 'leaseId');
+  /**
+   * FAIL-CLOSE: this class remains imported by the live executor for claim/fail.
+   * Ingested Hermes findings must not become Evidence or seal Completado.
+   * Completado is owned by Kernel web.read + evidenceSupportsGoal on fetched pages.
+   * URL bounds are still checked so a direct call cannot smuggle private hosts either.
+   */
+  async complete(_missionId, input) {
     if (!Array.isArray(input?.findings) || input.findings.length > MAX_FINDINGS) {
       throw invalid(`findings must be an array with at most ${MAX_FINDINGS} items`);
     }
-    const findings = input.findings.map(validateFinding);
-
-    return this.store.project(async (data) => {
-      const missions = data.agentMissions ?? [];
-      const index = missions.findIndex((item) => item.id === missionId);
-      const current = missions[index];
-      if (current?.status === 'completed') {
-        return {
-          changed: false,
-          data,
-          result: { mission: current, findings: [], idempotent: true },
-        };
-      }
-      requireActiveLease(current, leaseId, this.now());
-
-      let nextData = data;
-      const accepted = [];
-      for (const finding of findings) {
-        const ingested = this.#ingestInto(nextData, current, finding);
-        nextData = ingested.data;
-        accepted.push(ingested.result);
-      }
-
-      const promoted = accepted.filter((item) => item.opportunity?.status === 'opportunity').length;
-      const verifyingAt = this.now().toISOString();
-      const completedAt = this.now().toISOString();
-      const completed = {
-        ...current,
-        status: 'completed',
-        executionPhase: 'forged',
-        verifyingAt,
-        completedAt,
-        forgedAt: completedAt,
-        resultSummary: {
-          received: findings.length,
-          evidenceCreated: accepted.filter((item) => !item.duplicate).length,
-          opportunitiesPromoted: promoted,
-        },
-      };
-      delete completed.leaseId;
-      delete completed.leaseExpiresAt;
-      const updated = [...missions];
-      updated[index] = completed;
-      return {
-        changed: true,
-        data: { ...nextData, agentMissions: updated },
-        result: { mission: completed, findings: accepted },
-      };
-    });
+    input.findings.map(validateFinding);
+    throw new InboxError(
+      'AGENT_FINDINGS_NOT_EVIDENCE',
+      'Hermes findings are not Evidence. Completado requires Kernel SUPPORT on fetched page content.',
+      409,
+    );
   }
 
   async fail(missionId, input) {

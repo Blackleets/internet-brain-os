@@ -49,19 +49,18 @@ describe('agent mission executor SSRF hardening', () => {
   const executor = () => new AgentMissionExecutor(createStore(), createOpportunityProjectionPort());
 
   for (const url of BLOCKED) {
-    it(`rejects ${url}`, async () => {
+    it(`rejects ${url} as snippet Completado`, async () => {
       await expect(executor().complete('mission:1', {
         leaseId: 'lease-1',
         findings: [{ url, title: 'probe', text: 'bounded probe text' }],
-      })).rejects.toMatchObject({ code: 'INVALID_AGENT_RESULT' });
+      })).rejects.toMatchObject({ code: 'AGENT_FINDINGS_NOT_EVIDENCE' });
     });
   }
 
-  it('still accepts a genuinely public URL through the transactional projection port', async () => {
-    const result = await executor().complete('mission:1', {
+  it('does not forge Completado from a public URL snippet without Kernel SUPPORT', async () => {
+    await expect(executor().complete('mission:1', {
       leaseId: 'lease-1',
       findings: [{ url: 'https://example.com/public', title: 'probe', text: 'bounded probe text' }],
-    });
-    expect(result.mission.status).toBe('completed');
+    })).rejects.toMatchObject({ code: 'AGENT_FINDINGS_NOT_EVIDENCE' });
   });
 });

@@ -9,25 +9,26 @@ import { GoalManager } from './goals.mjs';
 import { OpportunityProjector } from './opportunity-classifier.mjs';
 
 describe('external agent mission executor boundary', () => {
-  it('leases a consented mission and converts bounded public results into Evidence and Opportunities', async () => {
+  it('leases a consented mission but refuses to seal Completado from Hermes snippets', async () => {
     const store = new LocalKnowledgeStore(join(await mkdtemp(join(tmpdir(), 'efesto-executor-')), 'store.json'));
-    const goal = await new GoalManager(store).create({ title: 'Find remote AI work', categories: ['job'], keywords: ['remote'] });
+    const unique = 'xyz-nonexist-token-9f3a';
+    const goal = await new GoalManager(store).create({ title: `Locate record ${unique} in public filings`, categories: ['job'], keywords: [unique] });
     const manager = new AgentMissionManager(store, { isAgentReady: () => true, now: () => new Date('2026-07-22T18:00:00.000Z') });
     const mission = await manager.create(goal.id, { agent: 'hermes', confirmed: true });
     const executor = new AgentMissionExecutor(store, new OpportunityProjector(store), { now: () => new Date('2026-07-22T18:01:00.000Z') });
     const claim = await executor.claim();
     expect(claim).toMatchObject({ id: mission.id, attempt: 1, scope: { categories: ['job'] }, leaseExpiresAt: '2026-07-22T18:31:00.000Z' });
     expect((await store.read()).agentMissions[0]).toMatchObject({ status: 'running', executionPhase: 'investigating', investigatingAt: '2026-07-22T18:01:00.000Z' });
-    const completed = await executor.complete(mission.id, { leaseId: claim.leaseId, findings: [{
-      url: 'https://jobs.example/ai', title: 'Remote AI engineer role',
-      text: 'We are hiring. Open role with salary, full-time remote. Apply now.',
+    await expect(executor.complete(mission.id, { leaseId: claim.leaseId, findings: [{
+      url: 'https://jwt.io/', title: `Search result ${unique}`,
+      text: `UNTRUSTED SEARCH SNIPPET ${unique}`,
       discoveredAt: '2026-07-22T18:00:30.000Z',
-    }] });
-    expect(completed.mission).toMatchObject({ status: 'completed', executionPhase: 'forged', verifyingAt: '2026-07-22T18:01:00.000Z', forgedAt: '2026-07-22T18:01:00.000Z', resultSummary: { received: 1, evidenceCreated: 1, opportunitiesPromoted: 1 } });
+    }] })).rejects.toMatchObject({ code: 'AGENT_FINDINGS_NOT_EVIDENCE' });
     const data = await store.read();
-    expect(data.evidence).toHaveLength(1);
-    expect(data.evidence[0]).toMatchObject({ missionId: mission.id, confidence: 0.4, tags: ['agent-research', 'unverified'] });
-    expect(data.opportunities).toHaveLength(1);
+    expect(data.agentMissions[0]).toMatchObject({ status: 'running', executionPhase: 'investigating' });
+    expect(data.agentMissions[0].executionPhase).not.toBe('forged');
+    expect(data.evidence ?? []).toHaveLength(0);
+    expect(data.opportunities ?? []).toHaveLength(0);
   });
 
   it('rejects invalid leases, private credential URLs, oversized batches and out-of-scope promotion', async () => {
@@ -37,14 +38,15 @@ describe('external agent mission executor boundary', () => {
     const mission = await manager.create(goal.id, { agent: 'hermes', confirmed: true });
     const executor = new AgentMissionExecutor(store, new OpportunityProjector(store));
     const claim = await executor.claim();
-    await expect(executor.complete(mission.id, { leaseId: 'wrong', findings: [] })).rejects.toMatchObject({ code: 'AGENT_MISSION_LEASE_INVALID' });
-    await expect(executor.complete(mission.id, { leaseId: claim.leaseId, findings: [{ url: 'https://user:pass@example.com', title: 'Bad', text: 'Bad' }] })).rejects.toMatchObject({ code: 'INVALID_AGENT_RESULT' });
-    await expect(executor.complete(mission.id, { leaseId: claim.leaseId, findings: Array.from({ length: 21 }, () => ({})) })).rejects.toMatchObject({ code: 'INVALID_AGENT_RESULT' });
-    const result = await executor.complete(mission.id, { leaseId: claim.leaseId, findings: [{
+    await expect(executor.complete(mission.id, { leaseId: 'wrong', resultKind: 'search_candidates', findings: [] })).rejects.toMatchObject({ code: 'AGENT_MISSION_LEASE_INVALID' });
+    await expect(executor.complete(mission.id, { leaseId: claim.leaseId, findings: [{ url: 'https://user:pass@example.com', title: 'Bad', text: 'Bad' }] })).rejects.toMatchObject({ code: 'AGENT_FINDINGS_NOT_EVIDENCE' });
+    await expect(executor.complete(mission.id, { leaseId: claim.leaseId, resultKind: 'search_candidates', findings: [{ url: 'https://user:pass@example.com', title: 'Bad', text: 'Bad' }] })).rejects.toMatchObject({ code: 'INVALID_AGENT_RESULT' });
+    await expect(executor.complete(mission.id, { leaseId: claim.leaseId, resultKind: 'search_candidates', findings: Array.from({ length: 21 }, () => ({})) })).rejects.toMatchObject({ code: 'INVALID_AGENT_RESULT' });
+    await expect(executor.complete(mission.id, { leaseId: claim.leaseId, findings: [{
       url: 'https://jobs.example/out-of-scope', title: 'Remote AI engineer role', text: 'We are hiring. Open role with salary. Apply now. Full-time remote.',
-    }] });
-    expect(result.findings[0].status).toBe('out_of_scope');
-    expect((await store.read()).opportunities).toHaveLength(0);
+    }] })).rejects.toMatchObject({ code: 'AGENT_FINDINGS_NOT_EVIDENCE' });
+    expect((await store.read()).opportunities ?? []).toHaveLength(0);
+    expect((await store.read()).agentMissions[0].executionPhase).not.toBe('forged');
   });
 
   it('records bounded failures and stops retrying after three attempts', async () => {
@@ -68,9 +70,10 @@ describe('external agent mission executor boundary', () => {
     const executor = new AgentMissionExecutor(store, new OpportunityProjector(store));
     const claim = await executor.claim();
     const finding = { url: 'https://jobs.example/repeated', title: 'Remote AI role', text: 'We are hiring for a full-time remote role with salary. Apply now.' };
-    const completed = await executor.complete(mission.id, { leaseId: claim.leaseId, findings: [finding, finding] });
-    expect(completed.mission.resultSummary).toMatchObject({ received: 2, evidenceCreated: 1 });
-    expect((await store.read()).evidence).toHaveLength(1);
+    await expect(executor.complete(mission.id, { leaseId: claim.leaseId, findings: [finding, finding] }))
+      .rejects.toMatchObject({ code: 'AGENT_FINDINGS_NOT_EVIDENCE' });
+    expect((await store.read()).evidence ?? []).toHaveLength(0);
+    expect((await store.read()).agentMissions[0].status).not.toBe('completed');
   });
 
   it.each([
@@ -86,6 +89,6 @@ describe('external agent mission executor boundary', () => {
     const executor = new AgentMissionExecutor(store, new OpportunityProjector(store));
     const claim = await executor.claim();
     await expect(executor.complete(mission.id, { leaseId: claim.leaseId, findings: [{ url, title: 'Private', text: 'Private result' }] }))
-      .rejects.toMatchObject({ code: 'INVALID_AGENT_RESULT' });
+      .rejects.toMatchObject({ code: 'AGENT_FINDINGS_NOT_EVIDENCE' });
   });
 });

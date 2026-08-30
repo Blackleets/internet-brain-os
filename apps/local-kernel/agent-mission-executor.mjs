@@ -16,8 +16,12 @@ export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
       const verified = await this.candidateVerifier.verify(missionId);
       return { ...verified, findings: verified.evidence ?? [] };
     }
-    if (input?.resultKind !== 'search_candidates') return super.complete(missionId, input);
-    return this.#recordSearchCandidates(missionId, input);
+    if (input?.resultKind === 'search_candidates') {
+      return this.#recordSearchCandidates(missionId, input);
+    }
+    // FAIL-CLOSE: Hermes/snippet findings are not Evidence. Do not inherit
+    // legacy complete(), which previously sealed Completado from ingested text.
+    throw refuseSnippetCompletion();
   }
 
   async #recordSearchCandidates(missionId, input) {
@@ -138,6 +142,14 @@ function isPrivateLiteralHost(hostname) {
   return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254)
     || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)
     || (a === 100 && b >= 64 && b <= 127) || a >= 224;
+}
+
+function refuseSnippetCompletion() {
+  return new InboxError(
+    'AGENT_FINDINGS_NOT_EVIDENCE',
+    'Hermes findings are not Evidence. Completado requires Kernel SUPPORT on fetched page content.',
+    409,
+  );
 }
 
 function invalid(message) {
