@@ -66,6 +66,10 @@ describe('Kernel-owned search candidate verification', () => {
     });
     expect(data.evidence[0].rawText).toContain('24.99 EUR');
     expect(data.evidence[0].rawText).not.toContain('UNTRUSTED SEARCH SNIPPET');
+    expect(data.evidence[0].summary).not.toBe('UNTRUSTED SEARCH SNIPPET');
+    expect(data.evidence[0].summary).not.toContain('UNTRUSTED SEARCH SNIPPET');
+    expect(data.evidence[0].summary).toBe('Quality drill 24.99 EUR');
+    expect(data.cases[0].description).not.toContain('UNTRUSTED SEARCH SNIPPET');
     expect(data.opportunities).toHaveLength(1);
     expect(data.agentMissions[0].searchCandidates[0]).toMatchObject({ status: 'verified', evidenceId: data.evidence[0].id });
   });
@@ -194,6 +198,8 @@ describe('Kernel-owned search candidate verification', () => {
     });
     const data = await store.read();
     expect(data.evidence.length).toBeGreaterThanOrEqual(0);
+    expect(data.evidence[0].summary).not.toContain(unique);
+    expect(data.cases[0].description).not.toContain(unique);
     expect(data.agentMissions[0].searchCandidates[0].supported).toBe(false);
     expect(result.mission.verificationDigest).toBeUndefined();
   });

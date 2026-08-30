@@ -251,16 +251,18 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
   const evidenceId = `evidence:verified:${suffix}`;
   const sourceUrl = String(document.sourceUrl ?? candidate.url);
   const capturedAt = String(document.fetchedAt ?? new Date().toISOString());
-  const title = String(document.title ?? candidate.title).slice(0, 240) || candidate.title;
   const text = String(document.text ?? '').trim();
   const projectionText = boundedProjectionText(text);
+  const fetchedTitle = String(document.title ?? '').trim().slice(0, 240);
+  const fetchedDescription = (projectionText || fetchedTitle).slice(0, 500) || undefined;
+  const title = fetchedTitle || (projectionText ? projectionText.slice(0, 240) : '') || sourceUrl;
   const context = {
     schemaVersion: 'hephaestus.page-context.v1',
     url: sourceUrl,
     canonicalUrl: sourceUrl,
     title,
     visibleText: projectionText,
-    description: candidate.summary,
+    description: fetchedDescription ?? '',
     capturedAt,
   };
   const existing = (data.evidence ?? []).find((item) => item.id === evidenceId);
@@ -272,7 +274,7 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
       id: caseId,
       title,
       objective: `Verify a public finding returned for Goal: ${mission.goalTitle}`,
-      description: candidate.summary,
+      description: fetchedDescription ?? title,
       status: 'draft',
       tags: ['kernel-verified', 'web.read'],
       createdAt: capturedAt,
@@ -287,7 +289,7 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
       mimeType: String(document.contentType ?? 'text/plain').slice(0, 160),
       contentHash: createHash('sha256').update(text).digest('hex'),
       rawText: text,
-      summary: candidate.summary ?? title,
+      summary: fetchedTitle || (projectionText ? projectionText.slice(0, 500) : title),
       capturedAt,
       extractionMethod: 'kernel-web-read-v1',
       confidence: 0.9,
