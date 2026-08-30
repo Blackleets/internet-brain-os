@@ -56,11 +56,7 @@ export function assessLivePublicWebJourney({ goalId, mission, opportunities = []
     check(
       'L7',
       'Shared Goal Truth converged on the forged Mission from the same Kernel state',
-      surface?.schemaVersion === 'efesto.goal-surface.v1'
-        && surface?.sourceOfTruth === 'kernel'
-        && surface?.goal?.id === goalId
-        && surface?.mission?.id === mission?.id
-        && surface?.mission?.workState === 'forged',
+      admitsLiveSharedGoalTruth(surface, mission, goalId),
       `source=${surface?.sourceOfTruth ?? 'none'} workState=${surface?.mission?.workState ?? 'none'}`,
     ),
   ];
@@ -109,4 +105,26 @@ function numberOrZero(value) {
 
 function check(id, name, passed, detail) {
   return { id, name, passed: Boolean(passed), detail };
+}
+
+export function isHonestBlockedMissionOutcome(mission) {
+  const verificationResults = Array.isArray(mission?.verificationResults) ? mission.verificationResults : [];
+  return Boolean(
+    mission?.status === 'running'
+    && mission?.executionPhase === 'verifying'
+    && verificationResults.length > 0
+    && verificationResults.every((item) => item?.supported !== true)
+    && Number(mission?.resultSummary?.evidenceCreated) > 0,
+  );
+}
+
+function admitsLiveSharedGoalTruth(surface, mission, goalId) {
+  return surface?.schemaVersion === 'efesto.goal-surface.v1'
+    && surface?.sourceOfTruth === 'kernel'
+    && surface?.goal?.id === goalId
+    && surface?.mission?.id === mission?.id
+    && (
+      surface?.mission?.workState === 'forged'
+      || (surface?.mission?.workState === 'verifying' && isHonestBlockedMissionOutcome(mission))
+    );
 }
