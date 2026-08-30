@@ -59,11 +59,12 @@ export class MissionSearchCandidateVerifier {
 
     const verified = outcomes.filter((item) => item.ok);
     if (!verified.length) return this.#recordFailures(missionId, freshMission, outcomes);
-    return this.#projectVerified(missionId, freshMission, outcomes);
+    return this.#projectVerified(missionId, freshMission, outcomes, freshGoal);
   }
 
-  async #projectVerified(missionId, expectedMission, outcomes) {
+  async #projectVerified(missionId, expectedMission, outcomes, goal) {
     const now = this.now().toISOString();
+    const kernel = await this.#kernel();
     return this.store.project(async (data) => {
       const missions = data.agentMissions ?? [];
       const index = missions.findIndex((item) => item.id === missionId);
@@ -86,43 +87,71 @@ export class MissionSearchCandidateVerifier {
         nextData = projected.data;
         evidenceResults.push(projected.result);
         if (projected.result.opportunity?.status === 'opportunity') promoted += 1;
+        const liveGoal = (nextData.goals ?? []).find((item) => item?.id === current.goalId) ?? goal;
+        const support = kernel.evidenceSupportsGoal(
+          {
+            title: liveGoal?.title,
+            keywords: Array.isArray(liveGoal?.keywords) ? liveGoal.keywords : [],
+          },
+          {
+            title: String(outcome.document.title ?? outcome.candidate.title ?? ''),
+            excerpt: typeof outcome.candidate.summary === 'string' ? outcome.candidate.summary : undefined,
+            text: String(outcome.document.text ?? ''),
+            url: String(outcome.document.sourceUrl ?? outcome.candidate.url ?? ''),
+          },
+        );
         verificationResults.push({
           candidateId: outcome.candidate.id,
           status: 'verified',
           sourceUrl: projected.result.sourceUrl,
           evidenceId: projected.result.evidenceId,
+          supported: support.supported,
+          supportReason: support.reason,
         });
       }
 
       const digest = createHash('sha256')
         .update(`${current.searchCandidateDigest ?? ''}\n${verificationResults.map((item) => `${item.candidateId}:${item.status}:${item.evidenceId ?? ''}`).join('\n')}`)
         .digest('hex');
-      const completed = {
-        ...current,
-        status: 'completed',
-        executionPhase: 'forged',
-        completedAt: now,
-        forgedAt: now,
-        verificationResults,
-        verificationDigest: digest,
-        searchCandidates: current.searchCandidates.map((candidate) => {
-          const result = verificationResults.find((item) => item.candidateId === candidate.id);
-          return result ? { ...candidate, ...result } : candidate;
-        }),
-        limitation: 'Kernel web.read verification completed; only fetched page content became Evidence',
-        resultSummary: {
-          received: current.searchCandidates.length,
-          evidenceCreated: evidenceResults.filter((item) => !item.duplicate).length,
-          opportunitiesPromoted: promoted,
-        },
+      const searchCandidates = current.searchCandidates.map((candidate) => {
+        const result = verificationResults.find((item) => item.candidateId === candidate.id);
+        return result ? { ...candidate, ...result } : candidate;
+      });
+      const resultSummary = {
+        received: current.searchCandidates.length,
+        evidenceCreated: evidenceResults.filter((item) => !item.duplicate).length,
+        opportunitiesPromoted: promoted,
       };
-      delete completed.verificationBlock;
+      const anySupported = verificationResults.some((item) => item.supported === true);
+      const nextMission = anySupported
+        ? {
+          ...current,
+          status: 'completed',
+          executionPhase: 'forged',
+          completedAt: now,
+          forgedAt: now,
+          verificationResults,
+          verificationDigest: digest,
+          searchCandidates,
+          limitation: 'Kernel web.read verification completed; only fetched page content became Evidence',
+          resultSummary,
+        }
+        : {
+          ...current,
+          status: 'running',
+          executionPhase: 'verifying',
+          verificationResults,
+          searchCandidates,
+          limitation: 'Kernel web.read retrieved page content as Evidence; none of the pages support the Goal, so investigation remains incomplete',
+          resultSummary,
+        };
+      delete nextMission.verificationBlock;
       const updated = [...missions];
-      updated[index] = completed;
+      updated[index] = nextMission;
       return {
         changed: true,
         data: { ...nextData, agentMissions: updated },
-        result: { mission: completed, evidence: evidenceResults, idempotent: false },
+        result: { mission: nextMission, evidence: evidenceResults, idempotent: false },
       };
     });
   }
@@ -315,7 +344,8 @@ function deterministicExecutionId(missionId, candidateId) {
 }
 function requireKernel(kernel) {
   if (!kernel || typeof kernel.CapabilityRegistry !== 'function' || !kernel.PUBLIC_WEB_READ_CAPABILITY
-    || typeof kernel.PublicWebReadExecutionAdapter !== 'function' || typeof kernel.evaluateAutomaticReadOnlyContinuation !== 'function') {
+    || typeof kernel.PublicWebReadExecutionAdapter !== 'function' || typeof kernel.evaluateAutomaticReadOnlyContinuation !== 'function'
+    || typeof kernel.evidenceSupportsGoal !== 'function') {
     throw new InboxError('KERNEL_RUNTIME_INVALID', 'Trusted Kernel runtime does not expose web.read verification contracts', 503);
   }
 }

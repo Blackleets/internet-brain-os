@@ -13,9 +13,9 @@ import { OpportunityProjector } from './opportunity-classifier.mjs';
 
 const interactive = { confirmationActor: { actorType: 'interactive_user', decidedBy: 'dashboard-ui' } };
 
-async function fixture(reader) {
+async function fixture(reader, goalInput = { title: 'Find a drill offer', categories: ['offer'], keywords: ['drill'] }) {
   const store = new LocalKnowledgeStore(join(await mkdtemp(join(tmpdir(), 'efesto-web-read-')), 'store.json'));
-  const goal = await new GoalManager(store).create({ title: 'Find a drill offer', categories: ['offer'], keywords: ['drill'] });
+  const goal = await new GoalManager(store).create(goalInput);
   const mission = await new AgentMissionManager(store, { isAgentReady: () => true }).create(goal.id, { agent: 'hermes', confirmed: true }, interactive);
   const executor = new AgentMissionExecutor(store, new OpportunityProjector(store), { automaticClaims: false });
   const claim = await executor.claim('hermes', mission.id);
@@ -125,5 +125,37 @@ describe('Kernel-owned search candidate verification', () => {
     });
     expect(result.mission.verificationResults[0]).toMatchObject({ status: 'verification_failed' });
     expect((await store.read()).evidence ?? []).toHaveLength(0);
+  });
+  it('does not forge Completado from HTTP 200 off-topic pages when the Goal token is absent', async () => {
+    const { store, mission, verifier } = await fixture(
+      {
+        fetch: async () => ({
+          url: 'https://jwt.io/',
+          title: 'JSON Web Tokens - jwt.io',
+          text: 'Decode, verify and generate JSON Web Tokens. AWS Cognito JWT docs. noindex documentation.',
+          fetchedAt: '2026-08-09T22:19:00.000Z',
+          contentType: 'text/html',
+          status: 200,
+        }),
+      },
+      {
+        title: 'Locate record xyz-nonexist-token-9f3a in public filings',
+        categories: ['offer'],
+        keywords: ['xyz-nonexist-token-9f3a'],
+      },
+    );
+    const result = await verifier.verify(mission.id);
+    expect(result.mission.status).not.toBe('completed');
+    expect(result.mission.executionPhase).not.toBe('forged');
+    expect(result.mission).toMatchObject({
+      status: 'running',
+      executionPhase: 'verifying',
+    });
+    expect(result.mission.limitation).toMatch(/none of the pages support the Goal/);
+    const data = await store.read();
+    expect(data.evidence).toHaveLength(1);
+    expect(data.cases).toHaveLength(1);
+    expect(data.evidence[0].rawText).toContain('JSON Web Tokens');
+    expect(data.agentMissions[0].searchCandidates[0].supported).toBe(false);
   });
 });
