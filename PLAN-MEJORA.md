@@ -2,6 +2,13 @@
 
 > Canonical truth: `PROJECT_STATE.md`, live GitHub `main`, and the exact current CI run. This file is a planning view, not an older branch checkpoint.
 
+## Current checkpoint - 2026-08-31
+
+- PR #237 merged to `main` (`f325611`).
+- PR #238 OPEN: Kernel SUPPORT gate; Completado is not HTTP 200; live UAT not run; `publicLaunchApproved` remains false.
+- Next: live UAT-D, then merge #238 only if Lewis says so; then packaged UAT-1 through UAT-6; then local scorecard.
+- No new features, UI, PWA-OG or launch until asked.
+
 ## Verified baseline — 2026-08-09
 
 - Kernel authority, Evidence, contradiction/admission, exact replay and altered-replay rejection are implemented.
