@@ -1,7 +1,6 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { createAutomaticMissionClaimGate } from './automatic-mission-claim-gate.mjs';
 import { InboxError } from './page-context-inbox.mjs';
-import { classifyOpportunity } from './opportunity-classifier.mjs';
 
 const MAX_FINDINGS = 20;
 const MAX_ATTEMPTS = 3;
@@ -106,84 +105,17 @@ export class AgentMissionExecutor {
     });
   }
 
-  #ingestInto(data, mission, finding) {
-    const suffix = createHash('sha256').update(`${mission.id}\n${finding.url}`).digest('hex');
-    const caseId = `case:agent:${suffix}`;
-    const evidenceId = `evidence:agent:${suffix}`;
-    const capturedAt = finding.discoveredAt ?? this.now().toISOString();
-    const context = {
-      schemaVersion: 'hephaestus.page-context.v1',
-      url: finding.url,
-      title: finding.title,
-      visibleText: finding.text,
-      description: finding.summary,
-      capturedAt,
-    };
-
-    const existing = (data.evidence ?? []).find((item) => item.id === evidenceId);
-    if (existing) {
-      const evidence = { caseId: existing.caseId, evidenceId, duplicate: true };
-      const classified = classifyOpportunity(context, evidence);
-      if (classified.status === 'opportunity'
-        && mission.scope.categories?.length
-        && !mission.scope.categories.includes(classified.opportunity.category)) {
-        return { data, result: { ...evidence, status: 'out_of_scope', sourceUrl: finding.url } };
-      }
-      const opportunity = this.opportunityProjector.projectInto(data, context, evidence);
-      return {
-        data: opportunity.data,
-        result: { ...evidence, sourceUrl: finding.url, opportunity: opportunity.result },
-      };
-    }
-
-    const caseRecord = {
-      id: caseId,
-      title: finding.title,
-      objective: `Verify a public finding returned for Goal: ${mission.goalTitle}`,
-      description: finding.summary,
-      status: 'draft',
-      tags: ['agent-research', mission.agent],
-      createdAt: capturedAt,
-      updatedAt: capturedAt,
-    };
-    const evidenceRecord = {
-      id: evidenceId,
-      caseId,
-      sourceReceiptId: `agent-result:${suffix}`,
-      sourceUrl: finding.url,
-      contentType: 'webpage',
-      mimeType: 'text/plain',
-      contentHash: createHash('sha256').update(finding.text).digest('hex'),
-      rawText: finding.text,
-      summary: finding.summary ?? finding.title,
-      capturedAt,
-      extractionMethod: `${mission.agent}-public-research-v1`,
-      confidence: 0.4,
-      tags: ['agent-research', 'unverified'],
-      entityIds: [],
-      relationshipIds: [],
-      missionId: mission.id,
-    };
-    const nextData = {
-      ...data,
-      cases: [...(data.cases ?? []), caseRecord],
-      evidence: [...(data.evidence ?? []), evidenceRecord],
-    };
-    const evidence = { caseId, evidenceId, duplicate: false };
-    const classified = classifyOpportunity(context, evidence);
-    if (classified.status === 'opportunity'
-      && mission.scope.categories?.length
-      && !mission.scope.categories.includes(classified.opportunity.category)) {
-      return {
-        data: nextData,
-        result: { ...evidence, status: 'out_of_scope', sourceUrl: finding.url },
-      };
-    }
-    const opportunity = this.opportunityProjector.projectInto(nextData, context, evidence);
-    return {
-      data: opportunity.data,
-      result: { ...evidence, sourceUrl: finding.url, opportunity: opportunity.result },
-    };
+  /**
+   * FAIL-CLOSE: keep the private ingest path so a future same-class caller cannot
+   * mint Evidence/Case from Hermes text. Completado is Kernel SUPPORT on a fetched
+   * page, never ingested snippets.
+   */
+  #ingestInto(_data, _mission, _finding) {
+    throw new InboxError(
+      'AGENT_FINDINGS_NOT_EVIDENCE',
+      'Hermes findings are not Evidence. Completado requires Kernel SUPPORT on fetched page content.',
+      409,
+    );
   }
 }
 
