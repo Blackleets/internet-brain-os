@@ -14,9 +14,18 @@ describe('mission Watchtower', () => {
   it('emits one private event when a known mission reaches a terminal state', () => {
     const baseline = reconcileMissionWatchtower([queued]).state;
     const result = reconcileMissionWatchtower([completed], baseline, Date.parse('2026-07-22T10:06:00Z'));
-    expect(result.transitions).toEqual([expect.objectContaining({ missionId: 'mission:1', status: 'completed', unread: true })]);
+    expect(result.transitions).toEqual([expect.objectContaining({ missionId: 'mission:1', status: 'completed', executionPhase: 'forged', unread: true })]);
     expect(unreadWatchtowerCount(result.state)).toBe(1);
     expect(reconcileMissionWatchtower([completed], result.state).transitions).toEqual([]);
+  });
+
+  it('does not mark completed-without-forged as Kernel forged', () => {
+    const baseline = reconcileMissionWatchtower([queued]).state;
+    const empty = { ...queued, status: 'completed', completedAt: '2026-07-22T10:05:00Z' };
+    const result = reconcileMissionWatchtower([empty], baseline, Date.parse('2026-07-22T10:06:00Z'));
+    expect(result.transitions).toEqual([expect.objectContaining({ status: 'completed', unread: true })]);
+    expect(result.transitions[0].executionPhase).toBeUndefined();
+    expect(result.transitions[0].workState).toBeUndefined();
   });
 
   it('does not notify newly discovered historical missions and bounds retained state', () => {

@@ -23,6 +23,8 @@ export function reconcileMissionWatchtower(missions, previous = {}, now = Date.n
       id: `${mission.id}:${mission.status}:${terminalTimestamp(mission)}`,
       missionId: mission.id,
       status: mission.status,
+      executionPhase: typeof mission.executionPhase === 'string' ? mission.executionPhase : undefined,
+      workState: typeof mission.workState === 'string' ? mission.workState : undefined,
       occurredAt: terminalTimestamp(mission),
       observedAt: new Date(now).toISOString(),
       unread: true,

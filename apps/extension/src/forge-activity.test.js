@@ -11,13 +11,20 @@ describe('pixel forge activity contract', () => {
     expect(forgeActivityForMission({ status: 'failed' }).tone).toBe('error');
   });
 
-  it('reports completed result counts without inventing findings', () => {
-    expect(forgeActivityForMission({ status: 'completed', resultSummary: { opportunitiesPromoted: 1 } })).toMatchObject({
+  it('reports Kernel-forged result counts without inventing findings', () => {
+    expect(forgeActivityForMission({ status: 'completed', executionPhase: 'forged', resultSummary: { opportunitiesPromoted: 1 } })).toMatchObject({
       tone: 'success', detail: '1 opportunity passed local checks and saved.',
     });
-    expect(forgeActivityForMission({ status: 'completed', resultSummary: { opportunitiesPromoted: 0 } })).toMatchObject({
+    expect(forgeActivityForMission({ status: 'completed', workState: 'forged', resultSummary: { opportunitiesPromoted: 0 } })).toMatchObject({
       tone: 'success', label: 'Research completed', detail: 'No strong opportunity passed the local checks.',
     });
+  });
+
+  it('does not present completed-without-forged as Forge complete', () => {
+    const idle = forgeActivityForMission({ status: 'completed', resultSummary: { opportunitiesPromoted: 1 } });
+    expect(idle.tone).toBe('idle');
+    expect(idle.label).not.toMatch(/completado|forged|Forge complete|Research completed/i);
+    expect(forgeActivityForMission({ status: 'completed' }).tone).toBe('idle');
   });
 
   it('uses explicit temporary states for manual capture', () => {

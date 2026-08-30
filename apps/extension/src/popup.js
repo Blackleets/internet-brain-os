@@ -136,7 +136,8 @@ function renderWatchtower(watchtower) {
   $('#watchtower-result').hidden = unread === 0;
   if (unread === 0) return;
   const latest = watchtower.events.find((event) => event.unread);
-  $('#watchtower-copy').textContent = latest?.status === 'completed'
+  const forged = latest?.status === 'completed' && (latest?.executionPhase === 'forged' || latest?.workState === 'forged');
+  $('#watchtower-copy').textContent = forged
     ? `${unread} new forge result${unread === 1 ? '' : 's'} ready to inspect.`
     : `${unread} mission update${unread === 1 ? '' : 's'} needs attention.`;
   $('#watchtower-open').onclick = async () => {
