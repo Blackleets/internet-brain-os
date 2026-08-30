@@ -94,10 +94,9 @@ export class MissionSearchCandidateVerifier {
             keywords: Array.isArray(liveGoal?.keywords) ? liveGoal.keywords : [],
           },
           {
-            title: String(outcome.document.title ?? outcome.candidate.title ?? ''),
-            excerpt: typeof outcome.candidate.summary === 'string' ? outcome.candidate.summary : undefined,
+            title: String(outcome.document.title ?? ''),
             text: String(outcome.document.text ?? ''),
-            url: String(outcome.document.sourceUrl ?? outcome.candidate.url ?? ''),
+            url: String(outcome.document.sourceUrl ?? ''),
           },
         );
         verificationResults.push({
