@@ -105,3 +105,11 @@ Implications:
 - Do not expose the Kernel token in URLs or add a public proxy.
 - A native companion requires a separate reviewed transport, pairing and
   authorization contract before implementation.
+
+## 2026-08-29 - Goal-first Spanish product IA (Phase 1)
+
+Decision: The authenticated Efesto dashboard primary navigation is Inicio, Objetivos, Hallazgos, Evidencia, Memoria, Actividad and Ajustes. Home defaults to Goal mode. Chat, Modelos, Agentes and Replay Lab remain secondary. Memory is Kernel-controlled only and renders honest unavailable when no dashboard memory list exists. Findings remain unverified leads.
+
+Reason: The previous Home defaulted to Chat and mixed mission/system internals into the primary nav, which hid the Goal to confirmation to Evidence path.
+
+Implications: Example chips only fill the composer. Goal create still does not authorize network. Green checks and confidence appear only from persisted Kernel fields. This is not UAT, public launch, or live Hermes L1 to L7 proof.

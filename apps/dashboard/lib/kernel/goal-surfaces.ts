@@ -46,6 +46,7 @@ export type GoalSurface = {
     updatedAt: string;
     attempt?: number;
     limitation?: string;
+    blockedReason?: string;
     findCount?: number;
   };
 };
@@ -142,6 +143,7 @@ function parseMission(value: unknown, path: string): NonNullable<GoalSurface['mi
     );
   const attempt = mission.attempt === undefined ? undefined : nonNegativeInteger(mission.attempt, `${path}.attempt`);
   const limitation = mission.limitation === undefined ? undefined : requireText(mission.limitation, `${path}.limitation`, 500);
+  const blockedReason = mission.blockedReason === undefined ? undefined : requireText(mission.blockedReason, `${path}.blockedReason`, 240);
   const findCount = mission.findCount === undefined ? undefined : nonNegativeInteger(mission.findCount, `${path}.findCount`);
   return {
     id: requireText(mission.id, `${path}.id`, 240),
@@ -160,6 +162,7 @@ function parseMission(value: unknown, path: string): NonNullable<GoalSurface['mi
     updatedAt: dateTime(mission.updatedAt, `${path}.updatedAt`),
     ...(attempt !== undefined ? { attempt } : {}),
     ...(limitation !== undefined ? { limitation } : {}),
+    ...(blockedReason !== undefined ? { blockedReason } : {}),
     ...(findCount !== undefined ? { findCount } : {}),
   };
 }

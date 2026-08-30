@@ -19,16 +19,14 @@ test.afterEach(async ({ page }) => { expect(browserProblems.get(page) ?? []).toE
 
 async function connect(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Conectar Kernel' }).first().click();
-  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ajustes', exact: true })).toBeVisible();
   await page.getByRole('textbox', { name: 'URL del Kernel', exact: true }).fill('http://127.0.0.1:4100');
   await page.getByLabel('Token privado', { exact: true }).fill(token);
   await page.getByRole('button', { name: 'Autorizar dispositivo', exact: true }).click();
-  await expect(page.getByRole('button', { name: /Kernel ready/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Kernel listo/ })).toBeVisible();
 }
 
 async function switchToGoalMode(page: Page): Promise<void> {
-  // The forge boots in chat mode; preparing a Goal requires Goal mode.
-  await page.getByRole('button', { name: 'Goal', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Goal', exact: true })).toHaveAttribute('aria-pressed', 'true');
 }
 
@@ -45,9 +43,9 @@ test('runs the Goal-first journey only after explicit confirmation', async ({ pa
   await page.goto('/');
   expect(page.viewportSize()).toEqual({ width: 1536, height: 1024 });
   await expect(page.locator('.efesto-product')).toHaveCSS('grid-template-columns', /236px/);
-  await expect(page.getByRole('heading', { name: '¿En qué trabajamos?', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Chat', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByText('Privado por diseño', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '¿Qué estás buscando?', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Goal', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('Controlado por el Kernel', { exact: true })).toBeVisible();
 
   await connect(page);
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
@@ -56,7 +54,7 @@ test('runs the Goal-first journey only after explicit confirmation', async ({ pa
   // follow the goal surface, not the legacy record.
   await expect(page.getByText('Investigando', { exact: true })).toBeVisible();
   // The product scorecard lives on the Missions route (G5.2 contract).
-  await page.locator('.efesto-sidebar nav').getByRole('button', { name: /^Misiones/ }).click();
+  await page.locator('.efesto-sidebar nav').getByRole('button', { name: /^Objetivos/ }).click();
   await expectLocalScorecard(page);
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
   await switchToGoalMode(page);
@@ -67,7 +65,7 @@ test('runs the Goal-first journey only after explicit confirmation', async ({ pa
   expect(writes).toEqual([]);
 
   await page.getByRole('button', { name: 'Confirmar y ejecutar', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Missions', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Objetivos', exact: true })).toBeVisible();
   expect(writes).toEqual(['/api/goals', '/api/goals/goal-e2e/missions']);
 });
 
@@ -83,7 +81,7 @@ test('wires Finds, Evidence and model Chat to real product contracts', async ({ 
   await expect.poll(() => writes).toContain('/api/opportunities/opportunity-1/feedback');
 
   await page.locator('.efesto-sidebar nav').getByRole('button', { name: /^Evidencia/ }).click();
-  await expect(page.getByRole('heading', { name: 'Evidence', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Evidencia', exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Supplier research/ }).click();
   const source = page.getByRole('link', { name: /Abrir fuente/ });
   await expect(source).toBeVisible();
@@ -101,13 +99,13 @@ test('wires Finds, Evidence and model Chat to real product contracts', async ({ 
 test('disconnect removes the session credential and returns truthful offline state', async ({ page }) => {
   await page.goto('/');
   await connect(page);
-  await page.getByRole('button', { name: /Kernel ready/ }).click();
+  await page.getByRole('button', { name: /Kernel listo/ }).click();
   await page.getByRole('button', { name: 'Desconectar', exact: true }).click();
   // Back in Settings after disconnect: the connection card flips to its
   // offline form (URL/token inputs visible again).
   await expect(page.getByRole('textbox', { name: 'URL del Kernel' })).toBeVisible();
   // The scorecard's truthful unavailable copy appears once no snapshot exists.
-  await page.locator('.efesto-sidebar nav').getByRole('button', { name: /^Misiones/ }).click();
+  await page.locator('.efesto-sidebar nav').getByRole('button', { name: /^Objetivos/ }).click();
   await expect(page.getByText('Métricas temporalmente no disponibles', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.getItem('hephaestus.owner.connection.session.v1'))).toBeNull();
 });
@@ -147,7 +145,7 @@ test.describe('mobile Efesto product shell', () => {
   test('uses a drawer, single-column Goal surface and safe composer without horizontal overflow', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('button', { name: 'Alternar navegación' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: '¿En qué trabajamos?', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '¿Qué estás buscando?', exact: true })).toBeVisible();
 
     const initial = await page.evaluate(() => ({ viewportWidth: innerWidth, documentWidth: document.documentElement.scrollWidth }));
     expect(initial.documentWidth).toBe(initial.viewportWidth);

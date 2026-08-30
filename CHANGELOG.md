@@ -31,6 +31,7 @@
 - GitHub Actions CI for frozen install, typecheck, tests, and build.
 
 ### Changed
+- Dashboard Phase 1 product IA: Home defaults to Goal, Spanish primary nav Inicio/Objetivos/Hallazgos/Evidencia/Memoria/Actividad/Ajustes, Findings as unverified leads from Kernel records, Evidence progressive provenance, honest Memory unavailable, and BLOCKED/Hermes-unavailable from Shared Goal Truth. Kernel contracts unchanged. publicLaunchApproved remains false.
 - Raised the workspace `nanoid` override to `3.3.18`, clearing the production audit advisory inherited through Next/PostCSS without changing application behavior.
 - Refined the draft Efesto web redesign into a professional conversation-first surface with a persistent bottom composer, real `Chat / Goal` modes, compact smith identity, direct local forge imagery, and a verified 390×844 no-overflow layout while preserving all existing Kernel action contracts.
 - Internal.81 was qualified on final `main` SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb` by the complete CI/package matrix and authentic remote Hermes L1→L7 run `31686750785` (`14/14`: 14 candidates, 3 verified Evidence records and 3 Evidence-backed Finds); public launch remains blocked on manual UAT.
