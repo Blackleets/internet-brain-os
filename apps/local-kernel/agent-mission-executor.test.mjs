@@ -91,4 +91,32 @@ describe('external agent mission executor boundary', () => {
     await expect(executor.complete(mission.id, { leaseId: claim.leaseId, findings: [{ url, title: 'Private', text: 'Private result' }] }))
       .rejects.toMatchObject({ code: 'AGENT_FINDINGS_NOT_EVIDENCE' });
   });
+
+  it.each([
+    'http://[::1]/finding',
+    'http://[fd00::1]/finding',
+    'http://[fc00::1]/finding',
+    'http://[fe80::1]/finding',
+    'http://[::ffff:127.0.0.1]/finding',
+    'http://[::ffff:192.168.1.2]/finding',
+  ])('rejects private IPv6 search candidate URL %s', async (url) => {
+    const store = new LocalKnowledgeStore(join(await mkdtemp(join(tmpdir(), 'efesto-executor-ipv6-search-')), 'store.json'));
+    const goal = await new GoalManager(store).create({ title: 'Find grants', categories: ['grant'] });
+    const mission = await new AgentMissionManager(store, { isAgentReady: () => true }).create(goal.id, { agent: 'hermes', confirmed: true });
+    const executor = new AgentMissionExecutor(store, new OpportunityProjector(store));
+    const claim = await executor.claim();
+    await expect(executor.complete(mission.id, {
+      leaseId: claim.leaseId,
+      resultKind: 'search_candidates',
+      findings: [{ url, title: 'Private', text: 'Private result' }],
+    })).rejects.toMatchObject({
+      code: 'INVALID_AGENT_RESULT',
+      message: expect.stringContaining('URL contains private or sensitive data'),
+    });
+    const recorded = (await store.read()).agentMissions[0];
+    expect(recorded.searchCandidates).toBeUndefined();
+    expect(recorded.executionPhase).toBe('investigating');
+    expect(recorded.executionPhase).not.toBe('forged');
+    expect(recorded.status).not.toBe('completed');
+  });
 });

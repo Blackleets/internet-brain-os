@@ -63,4 +63,51 @@ describe('agent mission executor SSRF hardening', () => {
       findings: [{ url: 'https://example.com/public', title: 'probe', text: 'bounded probe text' }],
     })).rejects.toMatchObject({ code: 'AGENT_FINDINGS_NOT_EVIDENCE' });
   });
+
+  const PRIVATE_SEARCH_CANDIDATE_URLS = [
+    'http://192.168.1.2/finding',
+    'http://10.0.0.1/finding',
+    'http://127.0.0.1/finding',
+    'http://[::1]/finding',
+    'http://[fd00::1]/finding',
+    'http://[fc00::1]/finding',
+    'http://[fe80::1]/finding',
+    'http://[::ffff:127.0.0.1]/mapped-loopback',
+    'http://[::ffff:10.0.0.1]/mapped-private',
+    'http://[::ffff:192.168.1.2]/mapped-rfc1918',
+  ];
+
+  for (const url of PRIVATE_SEARCH_CANDIDATE_URLS) {
+    it(`rejects ${url} as search_candidates`, async () => {
+      const store = createStore();
+      const agent = new AgentMissionExecutor(store, createOpportunityProjectionPort());
+      await expect(agent.complete('mission:1', {
+        leaseId: 'lease-1',
+        resultKind: 'search_candidates',
+        findings: [{ url, title: 'probe', text: 'bounded probe text' }],
+      })).rejects.toMatchObject({
+        code: 'INVALID_AGENT_RESULT',
+        message: expect.stringContaining('URL contains private or sensitive data'),
+      });
+      const mission = (await store.read()).agentMissions[0];
+      expect(mission.searchCandidates).toBeUndefined();
+      expect(mission.executionPhase).toBe('investigating');
+      expect(mission.executionPhase).not.toBe('forged');
+      expect(mission.status).toBe('running');
+    });
+  }
+
+  it('records a public IPv6 URL as search_candidates without forging', async () => {
+    const store = createStore();
+    const agent = new AgentMissionExecutor(store, createOpportunityProjectionPort());
+    const result = await agent.complete('mission:1', {
+      leaseId: 'lease-1',
+      resultKind: 'search_candidates',
+      findings: [{ url: 'http://[2001:4860:4860::8888]/finding', title: 'probe', text: 'bounded probe text' }],
+    });
+    expect(result.mission.executionPhase).toBe('verifying');
+    expect(result.mission.searchCandidates).toHaveLength(1);
+    expect(result.mission.executionPhase).not.toBe('forged');
+    expect(result.mission.status).not.toBe('completed');
+  });
 });
