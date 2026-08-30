@@ -109,9 +109,7 @@ export class MissionSearchCandidateVerifier {
         });
       }
 
-      const digest = createHash('sha256')
-        .update(`${current.searchCandidateDigest ?? ''}\n${verificationResults.map((item) => `${item.candidateId}:${item.status}:${item.evidenceId ?? ''}`).join('\n')}`)
-        .digest('hex');
+      const digest = verificationSealDigest(current.searchCandidateDigest, verificationResults);
       const searchCandidates = current.searchCandidates.map((candidate) => {
         const result = verificationResults.find((item) => item.candidateId === candidate.id);
         return result ? { ...candidate, ...result } : candidate;
@@ -310,6 +308,14 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
     opportunity = projected.result;
   }
   return { data: nextData, result: { caseId, evidenceId, duplicate, sourceUrl, opportunity } };
+}
+
+function verificationSealDigest(searchCandidateDigest, verificationResults) {
+  const lines = verificationResults.map((item) => {
+    const support = item.supported === true ? 'supported' : 'unsupported';
+    return `${item.candidateId}:${item.status}:${item.evidenceId ?? ''}:${support}:${item.supportReason ?? ''}`;
+  });
+  return createHash('sha256').update(`${searchCandidateDigest ?? ''}\n${lines.join('\n')}`).digest('hex');
 }
 
 function boundedProjectionText(text) {

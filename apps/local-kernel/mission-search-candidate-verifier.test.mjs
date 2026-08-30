@@ -157,6 +157,7 @@ describe('Kernel-owned search candidate verification', () => {
     expect(data.cases).toHaveLength(1);
     expect(data.evidence[0].rawText).toContain('JSON Web Tokens');
     expect(data.agentMissions[0].searchCandidates[0].supported).toBe(false);
+    expect(result.mission.verificationDigest).toBeUndefined();
   });
 
   it('does not seal Completado when only the untrusted Hermes snippet echoes the Goal token', async () => {
@@ -194,5 +195,23 @@ describe('Kernel-owned search candidate verification', () => {
     const data = await store.read();
     expect(data.evidence.length).toBeGreaterThanOrEqual(0);
     expect(data.agentMissions[0].searchCandidates[0].supported).toBe(false);
+    expect(result.mission.verificationDigest).toBeUndefined();
+  });
+
+  it('includes Goal SUPPORT in the forged seal digest so identical IDs with different support cannot collide', async () => {
+    const { mission, verifier } = await fixture({ fetch: async () => verifiedPage() });
+    const result = await verifier.verify(mission.id);
+    expect(result.mission).toMatchObject({ status: 'completed', executionPhase: 'forged' });
+    const candidate = result.mission.searchCandidates[0];
+    expect(candidate.supported).toBe(true);
+    expect(candidate.supportReason).toBeTruthy();
+    const identityWithoutSupport = createHash('sha256')
+      .update(`${result.mission.searchCandidateDigest ?? ''}\n${candidate.id}:verified:${candidate.evidenceId ?? ''}`)
+      .digest('hex');
+    const identityWithSupport = createHash('sha256')
+      .update(`${result.mission.searchCandidateDigest ?? ''}\n${candidate.id}:verified:${candidate.evidenceId ?? ''}:supported:${candidate.supportReason ?? ''}`)
+      .digest('hex');
+    expect(result.mission.verificationDigest).toBe(identityWithSupport);
+    expect(result.mission.verificationDigest).not.toBe(identityWithoutSupport);
   });
 });
