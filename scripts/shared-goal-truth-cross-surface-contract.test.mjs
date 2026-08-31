@@ -26,6 +26,8 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(transport).toContain("readSharedGoalTruth('/api/goal-surfaces'");
     expect(transport).toContain("method: 'GET'");
     expect(transport).not.toContain("method: 'POST'");
+    const presentation = await text('apps/extension/src/goal-surface-presentation.js');
+    expect(presentation).not.toContain("completed: 'Research completed'");
   });
 
   it('preserves explicit Research authorization and per-Goal projected controls', async () => {
