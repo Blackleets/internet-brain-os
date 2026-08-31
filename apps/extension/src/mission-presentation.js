@@ -37,7 +37,15 @@ export function missionTimeline(mission = {}) {
   addEvent(events, mission.claimedAt, `Hermes claimed attempt ${boundedCount(mission.attempt) || 1}`, 'A temporary execution lease was issued.');
   addEvent(events, mission.verifyingAt, 'Kernel verification started', 'Returned findings entered local validation; no opportunity is accepted yet.');
   addEvent(events, mission.lastFailure?.recordedAt, `Attempt ${boundedCount(mission.lastFailure?.attempt) || 1} failed safely`, 'The failure was recorded and the retry remained bounded.');
-  addEvent(events, mission.forgedAt ?? mission.completedAt, 'Kernel verification completed', `${boundedCount(mission.resultSummary?.received)} received · ${boundedCount(mission.resultSummary?.evidenceCreated)} Evidence · ${boundedCount(mission.resultSummary?.opportunitiesPromoted)} promoted`);
+  const counts = `${boundedCount(mission.resultSummary?.received)} received · ${boundedCount(mission.resultSummary?.evidenceCreated)} Evidence · ${boundedCount(mission.resultSummary?.opportunitiesPromoted)} promoted`;
+  const forged = typeof mission.forgedAt === 'string'
+    || mission.executionPhase === 'forged'
+    || mission.workState === 'forged';
+  if (forged) {
+    addEvent(events, mission.forgedAt ?? mission.completedAt, 'Kernel verification completed', counts);
+  } else if (mission.status === 'completed') {
+    addEvent(events, mission.completedAt, 'Research ended without Evidence', counts);
+  }
   return events.sort((left, right) => left.at.localeCompare(right.at));
 }
 
