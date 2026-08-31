@@ -54,6 +54,12 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(dashboardAcceptance).toContain("page.emulateMedia({ reducedMotion: 'reduce' })");
   });
 
+  it('keeps dashboard StatePill Completado lookalike off completed-without-forged', async () => {
+    const views = await text('apps/dashboard/components/efesto-product-views.tsx');
+    expect(views).toContain("['ready', 'forged', 'available', 'new']");
+    expect(views).not.toContain("['ready', 'completed', 'forged', 'available', 'new']");
+  });
+
   it('keeps mobile-width support separate from remote Kernel authority', async () => {
     const designContract = await text('docs/product-design/goal-first-cross-surface-g0.md');
     expect(designContract).toContain('390×844');
