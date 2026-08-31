@@ -11,7 +11,8 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(client).toContain("GOAL_SURFACE_SCHEMA_VERSION = 'efesto.goal-surface.v1'");
     expect(client).toContain("sourceOfTruth: 'kernel'");
     expect(shell).toContain('loadGoalSurfaces(client)');
-    expect(shell).toContain('brainPhaseFromWorkState(focusedGoalSurface?.mission?.workState)');
+    expect(shell).toContain('brainPhaseFromWorkState(mission?.workState)');
+    expect(shell).toContain("if (workState === 'forged') return 'forged'");
   });
 
   it('keeps extension Goal chips and Living Forge on the same read-only projection', async () => {

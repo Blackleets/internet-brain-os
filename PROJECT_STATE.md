@@ -24,7 +24,7 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 ## Current checkpoint - 2026-08-31
 
 - GitHub `main` includes squash-merge PR #237 `f325611` (Goal-first Home and Spanish product nav).
-- Active PR #238 OPEN on `fix/kernel-support-gate-uat-d` (HEAD `7a8effa`). Completado / `workState` `forged` only after Kernel SUPPORT on fetched page title/text/sourceUrl. HTTP 200 is RETRIEVED/VERIFIED only. Evidence/Case/leads MAY exist without Completado. Hermes snippet is not Evidence (haystack fetch-only; Evidence.summary/Case.description from fetched page).
+- Active PR #238 OPEN on `fix/kernel-support-gate-uat-d` (HEAD `104e466`). Completado / `workState` `forged` only after Kernel SUPPORT on fetched page title/text/sourceUrl. Extension Completado, Forge complete, and Evidence forjada only if Kernel forged. HTTP 200 is RETRIEVED/VERIFIED only. Evidence/Case/leads MAY exist without Completado. Hermes snippet is not Evidence (haystack fetch-only; Evidence.summary/Case.description from fetched page).
 - Live UAT A-F and packaged UAT-1 to UAT-6 have NOT been run on this SUPPORT-gate candidate. Do not cite unit tests as UAT.
 - `publicLaunchApproved` remains false.
 - Historical G5.3 / internal.81 live run `31686750785` (SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb`, 14/14 completed/forged) is FROZEN HISTORY from before the SUPPORT gate. It is not current Completado proof and must not be cited as launch-ready or as the live L1 to L7 contract after #238.
