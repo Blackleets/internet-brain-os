@@ -60,6 +60,13 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(views).not.toContain("['ready', 'completed', 'forged', 'available', 'new']");
   });
 
+  it('keeps mission card Commission forged behind Kernel forged', async () => {
+    const presentation = await text('apps/extension/src/mission-presentation.js');
+    expect(presentation).toContain("label: 'Commission forged'");
+    expect(presentation).toContain("mission.executionPhase === 'forged' || mission.workState === 'forged'");
+    expect(presentation).toContain('STATUS_COPY.completedWithoutForge');
+  });
+
   it('keeps mobile-width support separate from remote Kernel authority', async () => {
     const designContract = await text('docs/product-design/goal-first-cross-surface-g0.md');
     expect(designContract).toContain('390×844');

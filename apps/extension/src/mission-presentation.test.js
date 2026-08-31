@@ -25,4 +25,13 @@ describe('mission presentation', () => {
   it('fails closed for impossible result counts', () => {
     expect(presentMission({ status: 'completed', resultSummary: { received: 99, evidenceCreated: -1, opportunitiesPromoted: 'bad' } })).toMatchObject({ received: 0, evidenceCreated: 0, opportunitiesPromoted: 0 });
   });
+
+  it('does not present completed-without-forged as Commission forged', () => {
+    const bare = presentMission({ status: 'completed', resultSummary: { received: 3, evidenceCreated: 0, opportunitiesPromoted: 1 } });
+    expect(bare.statusLabel).toBe('Research ended without Evidence');
+    expect(bare.statusLabel).not.toMatch(/Commission forged|Completado/i);
+    expect(bare.statusDetail).not.toMatch(/passed through the local Kernel/i);
+    expect(presentMission({ status: 'completed', executionPhase: 'forged' }).statusLabel).toBe('Commission forged');
+    expect(presentMission({ status: 'completed', workState: 'forged' }).statusLabel).toBe('Commission forged');
+  });
 });
