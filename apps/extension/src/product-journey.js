@@ -11,14 +11,15 @@ export function newestMission(missions = []) {
 
 export function missionJourney(mission) {
   if (!mission) return { state: 'idle', stages: MISSION_STAGES.map((stage) => ({ ...stage, state: 'pending' })) };
+  const forged = mission.executionPhase === 'forged' || mission.workState === 'forged';
   const activeIndex = mission.executionPhase === 'verifying'
     ? 2
-    : { waiting_for_agent: 0, queued: 1, running: 1, completed: 3, failed: Math.min(Number(mission.attempt ?? 1), 2) }[mission.status] ?? 0;
+    : { waiting_for_agent: 0, queued: 1, running: 1, completed: forged ? 3 : 2, failed: Math.min(Number(mission.attempt ?? 1), 2) }[mission.status] ?? 0;
   return {
     state: mission.status,
     stages: MISSION_STAGES.map((stage, index) => ({
       ...stage,
-      state: mission.status === 'failed' && index === activeIndex ? 'error' : index < activeIndex || mission.status === 'completed' ? 'complete' : index === activeIndex ? 'active' : 'pending',
+      state: mission.status === 'failed' && index === activeIndex ? 'error' : index < activeIndex || (mission.status === 'completed' && (forged || stage.id !== 'forged')) ? 'complete' : index === activeIndex ? 'active' : 'pending',
     })),
   };
 }
