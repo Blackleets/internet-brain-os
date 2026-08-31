@@ -85,6 +85,16 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(feed).toContain("completed_without_forge: 'Terminada sin Evidence'");
   });
 
+  it('keeps GoalsView StatePill Completado off completed-without-forged missions', async () => {
+    const views = await text('apps/dashboard/components/efesto-product-views.tsx');
+    expect(views).toContain('function missionPillState(mission: MissionSummary)');
+    expect(views).toContain("return 'completed_without_forge'");
+    expect(views).toContain('<StatePill state={mission ? missionPillState(mission) : goal.status} />');
+    expect(views).toContain('<StatePill state={missionPillState(mission)} />');
+    expect(views).not.toContain('<StatePill state={mission?.executionPhase ?? mission?.status ?? goal.status} />');
+    expect(views).not.toContain('<StatePill state={mission.executionPhase ?? mission.status} />');
+  });
+
   it('keeps mobile-width support separate from remote Kernel authority', async () => {
     const designContract = await text('docs/product-design/goal-first-cross-surface-g0.md');
     expect(designContract).toContain('390×844');
