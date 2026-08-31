@@ -3,7 +3,7 @@ import { Panel } from '../ui/panel';
 
 type ActivityFeedProps = { activity: OverviewActivity[]; unavailable: boolean; partial: boolean };
 const kindLabels: Record<OverviewActivity['kind'], string> = { goal: 'Meta', mission: 'Mision', opportunity: 'Oportunidad' };
-const stateLabels: Record<string, string> = { active: 'Activa', new: 'Nueva', waiting_for_agent: 'Esperando agente', queued: 'En cola', running: 'En ejecucion', investigating: 'Investigando', verifying: 'Verificando', forged: 'Forjada', completed: 'Completada', failed: 'Fallida' };
+const stateLabels: Record<string, string> = { active: 'Activa', new: 'Nueva', waiting_for_agent: 'Esperando agente', queued: 'En cola', running: 'En ejecucion', investigating: 'Investigando', verifying: 'Verificando', forged: 'Forjada', completed: 'Completada', completed_without_forge: 'Terminada sin Evidence', failed: 'Fallida' };
 
 export function ActivityFeed({ activity, unavailable, partial }: ActivityFeedProps) {
   return <Panel title="Actividad reciente" eyebrow="Registros persistidos" className="overview-activity">{unavailable ? <p className="empty-state" role="status">Datos temporalmente no disponibles</p> : <>{activity.length === 0 ? <p className="empty-state">{partial ? 'No hay actividad persistida de las fuentes disponibles.' : 'No hay actividad persistida para mostrar.'}</p> : <ol className="activity-list">{activity.map((entry) => (

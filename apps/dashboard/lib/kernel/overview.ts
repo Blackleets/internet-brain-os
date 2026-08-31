@@ -175,10 +175,18 @@ function unavailableIssues(endpoints: OverviewEndpoint[]): OverviewIssue[] {
   return endpoints.map((endpoint) => ({ endpoint, code: 'UNAVAILABLE' }));
 }
 
+function missionActivityState(mission: MissionSummary): string {
+  if (mission.executionPhase === 'forged') return 'forged';
+  if (mission.executionPhase) return mission.executionPhase;
+  // Bare status completed (e.g. zero Hermes candidates, no Evidence) is not Completado.
+  if (mission.status === 'completed') return 'completed_without_forge';
+  return mission.status;
+}
+
 function activityFrom(goals: GoalSummary[], missions: MissionSummary[], opportunities: OpportunitySummary[]): OverviewActivity[] {
   const entries = [
     ...goals.map((goal) => activity('goal', goal.id, goal.createdAt, goal.status)),
-    ...missions.map((mission) => activity('mission', mission.id, mission.createdAt, mission.executionPhase ?? mission.status)),
+    ...missions.map((mission) => activity('mission', mission.id, mission.createdAt, missionActivityState(mission))),
     ...opportunities.map((opportunity) => activity('opportunity', opportunity.id, opportunity.detectedAt, opportunity.status)),
   ].filter((entry): entry is OverviewActivity => entry !== undefined);
 

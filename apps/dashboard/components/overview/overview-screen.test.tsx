@@ -303,6 +303,23 @@ describe('OverviewScreen', () => {
     expect(within(panel).getAllByRole('listitem')).toHaveLength(4);
   });
 
+  it('labels completed-without-forged mission activity without Completada', () => {
+    render(<OverviewScreen snapshot={{
+      ...snapshot,
+      activity: [
+        { id: 'mission:forged', recordId: 'forged', kind: 'mission', timestamp: '2026-07-26T10:04:00.000Z', state: 'forged' },
+        { id: 'mission:bare', recordId: 'bare', kind: 'mission', timestamp: '2026-07-26T10:03:00.000Z', state: 'completed_without_forge' },
+        { id: 'goal:done', recordId: 'done', kind: 'goal', timestamp: '2026-07-26T10:02:00.000Z', state: 'completed' },
+      ],
+    }} reload={vi.fn()} disconnect={vi.fn()} />);
+
+    const activity = screen.getByRole('region', { name: 'Actividad reciente' });
+    expect(activity.textContent).toContain('MisionForjada');
+    expect(activity.textContent).toContain('MisionTerminada sin Evidence');
+    expect(activity.textContent).toContain('MetaCompletada');
+    expect(activity.textContent).not.toContain('MisionCompletada');
+  });
+
   it('marks a failed refresh stale until a later refresh succeeds', async () => {
     const reload = vi.fn()
       .mockRejectedValueOnce(new Error('offline'))
