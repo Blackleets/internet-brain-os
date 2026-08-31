@@ -320,6 +320,24 @@ describe('OverviewScreen', () => {
     expect(activity.textContent).not.toContain('MisionCompletada');
   });
 
+  it('does not paint Agent Hub completed-without-forged missions as healthy', () => {
+    const missions = [
+      { ...snapshot.missions[0], id: 'forged', status: 'completed' as const, executionPhase: 'forged' as const },
+      { ...snapshot.missions[0], id: 'bare', status: 'completed' as const, executionPhase: undefined },
+    ];
+    render(<OverviewScreen snapshot={{ ...snapshot, missions, metrics: { ...snapshot.metrics, missions: missions.length, activeMissions: 0 } }} reload={vi.fn()} disconnect={vi.fn()} />);
+    const hub = screen.getByRole('region', { name: 'Agent Hub' });
+    const items = [...hub.querySelectorAll('.workspace-records li')];
+    expect(items).toHaveLength(2);
+    const forgedItem = items.find((item) => item.textContent?.includes('Misión forged'));
+    const bareItem = items.find((item) => item.textContent?.includes('Misión bare'));
+    expect(forgedItem?.querySelector('.status-badge--healthy')).toBeTruthy();
+    expect(forgedItem?.querySelector('.status-badge')?.textContent).toContain('forged');
+    expect(bareItem?.querySelector('.status-badge--healthy')).toBeNull();
+    expect(bareItem?.querySelector('.status-badge--unavailable')).toBeTruthy();
+    expect(bareItem?.querySelector('.status-badge')?.textContent).toBe('completed_without_forge');
+  });
+
   it('marks a failed refresh stale until a later refresh succeeds', async () => {
     const reload = vi.fn()
       .mockRejectedValueOnce(new Error('offline'))

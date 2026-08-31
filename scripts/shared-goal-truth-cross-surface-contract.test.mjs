@@ -95,6 +95,14 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(views).not.toContain('<StatePill state={mission.executionPhase ?? mission.status} />');
   });
 
+  it('keeps Agent Hub workspace Completado off completed-without-forged missions', async () => {
+    const workspaces = await text('apps/dashboard/components/workspaces/kernel-workspaces.tsx');
+    expect(workspaces).toContain('function missionWorkspaceBadge');
+    expect(workspaces).toContain("label: 'completed_without_forge'");
+    expect(workspaces).toContain('<StatusBadge state={badge.state} label={badge.label} />');
+    expect(workspaces).not.toContain("mission.status === 'completed' ? 'healthy'");
+  });
+
   it('keeps mobile-width support separate from remote Kernel authority', async () => {
     const designContract = await text('docs/product-design/goal-first-cross-surface-g0.md');
     expect(designContract).toContain('390×844');

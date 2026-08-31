@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
 import { GoalsView } from './efesto-product-views';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
+
+afterEach(cleanup);
 
 function snapshotWithMissions(missions: OverviewSnapshot['missions']): OverviewSnapshot {
   return {
@@ -20,7 +22,7 @@ function snapshotWithMissions(missions: OverviewSnapshot['missions']): OverviewS
 
 describe('GoalsView mission StatePill honesty', () => {
   it('does not present completed-without-forged as Completado/completed', () => {
-    render(
+    const { container } = render(
       <GoalsView
         snapshot={snapshotWithMissions([
           {
@@ -34,7 +36,7 @@ describe('GoalsView mission StatePill honesty', () => {
         onNew={() => undefined}
       />,
     );
-    const pill = document.querySelector('.state-pill');
+    const pill = container.querySelector('.state-pill');
     expect(pill?.textContent).toMatch(/completed without forge/i);
     expect(pill?.textContent).not.toMatch(/^\s*completed\s*$/i);
     expect(pill?.className).not.toMatch(/\bgood\b/);
@@ -42,7 +44,7 @@ describe('GoalsView mission StatePill honesty', () => {
   });
 
   it('presents Kernel forged missions as forged', () => {
-    render(
+    const { container } = render(
       <GoalsView
         snapshot={snapshotWithMissions([
           {
@@ -57,7 +59,7 @@ describe('GoalsView mission StatePill honesty', () => {
         onNew={() => undefined}
       />,
     );
-    const pill = document.querySelector('.state-pill');
+    const pill = container.querySelector('.state-pill');
     expect(pill?.textContent).toMatch(/forged/i);
     expect(pill?.className).toMatch(/\bgood\b/);
   });
