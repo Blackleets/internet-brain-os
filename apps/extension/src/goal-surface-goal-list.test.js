@@ -56,4 +56,11 @@ describe('Shared Goal Truth Goal-list renderer', () => {
     expect(onResearch).toHaveBeenCalledTimes(1);
     expect(onResearch.mock.calls[0][0]).toMatchObject({ id: 'goal:1', canResearch: true });
   });
+
+  it('does not present completed-without-forged as Completado on Goal chips', () => {
+    const list = document.querySelector('#goals');
+    renderGoalSurfaceList({ document, list, surfaces: [surface('goal:1', 'completed')] });
+    expect(list.textContent).not.toMatch(/completado|forged|Forge complete|Research completed/i);
+    expect(list.querySelector('.goal-research').dataset.workState).toBe('completed');
+  });
 });

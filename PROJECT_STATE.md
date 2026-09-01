@@ -21,6 +21,14 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 - Search snippet/agent text ≠ Evidence.
 - Responsive mobile-width support does not imply phone → PC Kernel authority.
 
+## Current checkpoint - 2026-08-31
+
+- GitHub `main` includes squash-merge PR #237 `f325611` (Goal-first Home and Spanish product nav).
+- Active PR #238 OPEN on `fix/kernel-support-gate-uat-d` (HEAD `104e466`). Completado / `workState` `forged` only after Kernel SUPPORT on fetched page title/text/sourceUrl. Extension Completado, Forge complete, and Evidence forjada only if Kernel forged. HTTP 200 is RETRIEVED/VERIFIED only. Evidence/Case/leads MAY exist without Completado. Hermes snippet is not Evidence (haystack fetch-only; Evidence.summary/Case.description from fetched page).
+- Live UAT A-F and packaged UAT-1 to UAT-6 have NOT been run on this SUPPORT-gate candidate. Do not cite unit tests as UAT.
+- `publicLaunchApproved` remains false.
+- Historical G5.3 / internal.81 live run `31686750785` (SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb`, 14/14 completed/forged) is FROZEN HISTORY from before the SUPPORT gate. It is not current Completado proof and must not be cited as launch-ready or as the live L1 to L7 contract after #238.
+
 ## Verified foundation ✅
 
 ### Memory Safety v1
@@ -31,7 +39,7 @@ PR #201 froze adversarial Memory Safety v1 at `dff2c2167fd16ad609dd5042ca61ee588
 
 - PR #202 / G0: **Goal-first shell**, Forge Focus and one Kernel-owned persisted Goal truth.
 - The **living-forge** visual baseline remains a machine-checkable release requirement.
-- Branch feat/efesto-golden-path-ux (2026-08-29): dashboard Phase 1 presentation IA. Goal-default Home, Spanish primary nav, Finding/Evidence from Kernel records only, honest Memory unavailable. publicLaunchApproved remains false. This work does not claim UAT or live Hermes L1 to L7.
+- PR #237 merged to `main` as `f325611` (Goal-first Home and Spanish product nav, originally branch feat/efesto-golden-path-ux, 2026-08-29): dashboard Phase 1 presentation IA. Goal-default Home, Spanish primary nav, Finding/Evidence from Kernel records only, honest Memory unavailable. publicLaunchApproved remains false. This work does not claim UAT or live Hermes L1 to L7.
 - PR #203 / G1: Shared Goal Truth v1, authenticated read-only list/detail routes.
 - PR #204 / G2: responsive Control Center consumes Shared Goal Truth; desktop, 390×844, keyboard/focus and reduced-motion acceptance green.
 - PR #205 / G3: extension consumes the same Shared Goal Truth semantics.
@@ -111,14 +119,14 @@ The existing explicit `pnpm hermes:acceptance:live` path now requires:
 - L6 Find → Case/Evidence → Mission/candidate provenance proves `kernel-web-read-v1` + `web-read:` receipt + fetched content hash;
 - L7 Shared Goal Truth converges on the same forged Mission.
 
-Default CI remains deterministic/offline. The authentic remote Internet/Hermes L1→L7 proof is now green on the final `main` candidate:
+Default CI remains deterministic/offline. Frozen history from 2026-08-11: the authentic remote Internet/Hermes L1->L7 proof was green on SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb` as the then-final `main` candidate:
 
 - GitHub run `31686750785` on SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb`;
 - sanitized report `14/14`, one bounded attempt and terminal `completed/forged`;
 - 14 bounded search candidates, 3 Kernel-verified Evidence records and 3 Evidence-backed Finds with provenance resolved to Kernel-fetched Evidence;
 - Shared Goal Truth converged on the same Kernel `forged` state.
 
-The report contains no provider credential or raw model output. This proves the remote authentic path; public launch still requires manual UAT on the exact packaged candidate.
+The report contains no provider credential or raw model output. After PR #238 the live L1/L7 contract admits honest SUPPORT-blocked journeys without Completado, so that 14/14 is not the current gate. Public launch still requires manual UAT on the exact packaged candidate.
 
 ## G5.4 — Kernel-owned one-line Goal intent ✅ implementation / internal.61 frozen failure
 
@@ -433,16 +441,16 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 
 ## What remains
 
-1. ✅ Qualify and merge immutable `internal.81` on final `main` SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb`; the complete automated matrix is green.
-2. ✅ Require the exact-SHA credential-free remote `Hermes live public-web acceptance` report; run `31686750785` passed `14/14`.
-3. Run UAT-1→UAT-6 on the same exact packaged candidate using the natural one-line Goals and verify Goal → Evidence-backed Find with zero unauthorized side effects.
-4. Use the Kernel-owned local-installation scorecard to establish the first real activation, repeat usage and useful-Find baselines before growth/retention/willingness-to-pay claims.
+1. PR #238 OPEN: live UAT-D / UAT A-F on an isolated Kernel store is Lewis's call before merge. Do not merge without that go-ahead.
+2. Packaged UAT-1 to UAT-6 on an immutable artifact after the seal is honest.
+3. Local scorecard (Useful Find Rate) after that.
+4. `publicLaunchApproved` stays false until UAT on the exact candidate.
 5. Treat notification delivery, aggregate sharing, scheduling expansion, cross-device authority and irreversible actions as separate security/privacy slices.
 
 ## Recovery prompt
 
 ```text
-Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.81 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3.5 2B inference, truthful 256K model context, bounded 8K runtime context, Qwen non-thinking mode, one live attempt capped authoritatively at four turns through quiet `chat --query --max-turns`, startup-visible isolated provider/model routing and exactly one search, strict JSON or literal URL-only candidates, first-fenced-payload extraction, bounded deterministic syntax repair, neutral locally derived candidate labels, canonical directly readable discovery targets, full fetched Evidence with a bounded 12,000-character classifier projection, 25/26/32/60-minute nested deadlines and no founder-owned provider credential or PC installation. Search snippets and discarded prose are never Evidence. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, or imply phone→PC authority. Workflow presence is not live proof; require the exact green L1→L7 report. Finish/verify the exact active candidate before starting a new slice.
+Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.md, AGENTS.md, ARCHITECTURE.md and live GitHub first. Preserve Kernel authority, Memory Safety v1, Evidence provenance, exact replay and approval gates. G0-G4 are frozen. G5.1 measures local value, G5.2 surfaces the same Kernel scorecard, G5.3 defines explicit live provenance acceptance, G5.4 keeps the Home one-line while the Kernel enriches bounded Goal intent, G5.5 measures activation/repeat usage only for one private local installation, and G5.6/internal.81 runs the authentic Hermes public-web proof remotely with checksum-verified loopback Qwen3.5 2B inference, truthful 256K model context, bounded 8K runtime context, Qwen non-thinking mode, one live attempt capped authoritatively at four turns through quiet `chat --query --max-turns`, startup-visible isolated provider/model routing and exactly one search, strict JSON or literal URL-only candidates, first-fenced-payload extraction, bounded deterministic syntax repair, neutral locally derived candidate labels, canonical directly readable discovery targets, full fetched Evidence with a bounded 12,000-character classifier projection, 25/26/32/60-minute nested deadlines and no founder-owned provider credential or PC installation. Search snippets and discarded prose are never Evidence. Completado requires Kernel SUPPORT on the fetched page; live L1 may be honest-blocked without Completado; do not treat G5.3 internal.81 14/14 as current Completado proof. Never introduce central telemetry, global user/device identity, auto-promote R1/R2/R3 side effects, fake UI, or imply phone->PC authority. Workflow presence is not live proof. Finish/verify the exact active candidate before starting a new slice.
 ```
 
 ## Update rule

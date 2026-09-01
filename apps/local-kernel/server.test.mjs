@@ -383,11 +383,12 @@ describe('local Kernel HTTP receiver', () => {
     expect(await (await fetch(`${endpoint}/api/preferences`, { method: 'DELETE', headers: authHeaders })).json()).toEqual({ ok: true, reset: true });
   });
 
-  it('lets an authenticated Hermes worker claim a consented mission and return bounded public Evidence', async () => {
+  it('lets an authenticated Hermes worker claim a mission but refuses snippet Completado', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'efesto-agent-http-'));
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));
     const goals = new GoalManager(store);
-    const goal = await goals.create({ title: 'Find remote AI work', categories: ['job'], keywords: ['remote'] });
+    const unique = 'xyz-nonexist-token-9f3a';
+    const goal = await goals.create({ title: `Locate record ${unique} in public filings`, categories: ['job'], keywords: [unique] });
     const missions = new AgentMissionManager(store, { isAgentReady: () => true });
     await missions.create(goal.id, { agent: 'hermes', confirmed: true });
     const opportunities = new OpportunityProjector(store);
@@ -401,47 +402,29 @@ describe('local Kernel HTTP receiver', () => {
     const claimResponse = await fetch(`${endpoint}/api/agent-missions/claim`, { method: 'POST', headers: authHeaders });
     expect(claimResponse.status).toBe(200);
     const { mission } = await claimResponse.json();
-    const completionInput = { leaseId: mission.leaseId, findings: [{
-      url: 'https://jobs.example/remote-ai', title: 'Remote AI engineer role',
-      text: 'We are hiring. Open role with salary. Apply now for this full-time remote position.',
+    const snippetInput = { leaseId: mission.leaseId, findings: [{
+      url: 'https://jwt.io/', title: `Search result ${unique}`,
+      text: `UNTRUSTED SEARCH SNIPPET ${unique}`,
     }] };
-    const completed = await fetch(`${endpoint}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, {
+    const refused = await fetch(`${endpoint}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, {
       method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' },
-      body: JSON.stringify(completionInput),
+      body: JSON.stringify(snippetInput),
     });
-    expect(completed.status).toBe(202);
-    const completedBody = await completed.json();
-    expect(completedBody).toMatchObject({
-      ok: true,
-      mission: { status: 'completed', obsidianReceipt: { status: 'synced' }, resultSummary: { obsidianNotesWritten: 4 } },
-      obsidianReceipt: { status: 'synced', notesWritten: 4 },
-      findings: [{ opportunity: { opportunity: { category: 'job' } } }],
-    });
-    expect((await store.read()).agentMissions[0]).toMatchObject({
-      status: 'completed',
-      obsidianReceipt: completedBody.obsidianReceipt,
-      resultSummary: { obsidianNotesWritten: completedBody.obsidianReceipt.notesWritten },
-    });
-    const beforeReplay = await store.read();
-    const replay = await fetch(`${endpoint}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, {
+    expect(refused.status).toBe(409);
+    expect(await refused.json()).toMatchObject({ ok: false, code: 'AGENT_FINDINGS_NOT_EVIDENCE' });
+    expect((await store.read()).agentMissions[0]).toMatchObject({ status: 'running', executionPhase: 'investigating' });
+    expect((await store.read()).evidence ?? []).toHaveLength(0);
+
+    const candidates = await fetch(`${endpoint}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, {
       method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' },
-      body: JSON.stringify(completionInput),
+      body: JSON.stringify({ ...snippetInput, resultKind: 'search_candidates' }),
     });
-    expect(replay.status).toBe(202);
-    expect(await replay.json()).toMatchObject({
-      ok: true,
-      idempotent: true,
-      mission: {
-        status: 'completed',
-        obsidianReceipt: completedBody.obsidianReceipt,
-        resultSummary: { obsidianNotesWritten: completedBody.obsidianReceipt.notesWritten },
-      },
-      obsidianReceipt: completedBody.obsidianReceipt,
-      findings: [],
-    });
-    expect(await store.read()).toEqual(beforeReplay);
-    const evidenceId = (await store.read()).evidence[0].id.replace(/[^A-Za-z0-9._-]/g, '-');
-    expect(await readFile(join(dir, 'vault', 'Evidence', `${evidenceId}.md`), 'utf8')).toContain('hermes-public-research-v1');
+    expect(candidates.status).toBe(202);
+    const candidateBody = await candidates.json();
+    expect(candidateBody.mission).toMatchObject({ status: 'running', executionPhase: 'verifying' });
+    expect(candidateBody.mission.executionPhase).not.toBe('forged');
+    expect(candidateBody.mission.status).not.toBe('completed');
+    expect((await store.read()).evidence ?? []).toHaveLength(0);
   });
 
   it('lists Replay Lab cases through the authenticated local API', async () => {

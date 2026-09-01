@@ -16,3 +16,10 @@ export {
   StaleEvidenceUpdateError,
 } from './evidence-errors';
 export type { InvalidEvidenceInputField } from './evidence-errors';
+
+export { evidenceSupportsGoal } from './support';
+export type {
+  EvidenceSupportResult,
+  GoalSupportInput,
+  PageSupportInput,
+} from './support';

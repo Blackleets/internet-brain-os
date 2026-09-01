@@ -9,7 +9,9 @@ describe('Efesto product journey', () => {
   it('maps persisted mission state to honest named stages', () => {
     expect(missionJourney({ status: 'running' }).stages.map((stage) => stage.state)).toEqual(['complete', 'active', 'pending', 'pending']);
     expect(missionJourney({ status: 'running', executionPhase: 'verifying' }).stages.map((stage) => stage.state)).toEqual(['complete', 'complete', 'active', 'pending']);
-    expect(missionJourney({ status: 'completed' }).stages.every((stage) => stage.state === 'complete')).toBe(true);
+    expect(missionJourney({ status: 'completed' }).stages.map((stage) => stage.state)).toEqual(['complete', 'complete', 'complete', 'pending']);
+    expect(missionJourney({ status: 'completed', executionPhase: 'forged' }).stages.every((stage) => stage.state === 'complete')).toBe(true);
+    expect(missionJourney({ status: 'completed', workState: 'forged' }).stages.every((stage) => stage.state === 'complete')).toBe(true);
     expect(missionJourney({ status: 'failed', attempt: 2 }).stages[2].state).toBe('error');
   });
 

@@ -38,9 +38,22 @@ describe('Efesto orb deterministic UI state', () => {
   });
 
   it('shows completed summaries and only confirmed Obsidian receipts', () => {
-    const view = deriveEfestoOrbState({ enabled: true, kernel: 'ready', services, mission: { status: 'completed', resultSummary: { received: 2, evidenceCreated: 1, opportunitiesPromoted: 1, obsidianNotesWritten: 4 }, obsidianReceipt: { status: 'synced', notesWritten: 4, vaultRelativePath: '.hephaestus/obsidian-vault', lastSyncedAt: '2026-07-22T18:11:00.000Z' } }, now });
+    const view = deriveEfestoOrbState({ enabled: true, kernel: 'ready', services, mission: { status: 'completed', executionPhase: 'forged', resultSummary: { received: 2, evidenceCreated: 1, opportunitiesPromoted: 1, obsidianNotesWritten: 4 }, obsidianReceipt: { status: 'synced', notesWritten: 4, vaultRelativePath: '.hephaestus/obsidian-vault', lastSyncedAt: '2026-07-22T18:11:00.000Z' } }, now });
+    expect(view).toMatchObject({ state: 'completed', label: 'Forge complete' });
     expect(view.summary).toEqual({ findingsReceived: 2, evidenceCreated: 1, opportunitiesForged: 1, obsidianNotesWritten: 4 });
     expect(view.obsidianReceipt).toMatchObject({ status: 'synced', notesWritten: 4 });
+  });
+
+  it('shows Forge complete when Kernel workState is forged', () => {
+    const view = deriveEfestoOrbState({ enabled: true, kernel: 'ready', services, mission: { status: 'completed', workState: 'forged' }, now });
+    expect(view).toMatchObject({ state: 'completed', label: 'Forge complete' });
+  });
+
+  it('does not present completed-without-forged as Forge complete', () => {
+    const view = deriveEfestoOrbState({ enabled: true, kernel: 'ready', services, mission: { status: 'completed' }, now });
+    expect(view.state).not.toBe('completed');
+    expect(view.label).not.toBe('Forge complete');
+    expect(view.label).not.toMatch(/completado|forged|Forge complete/i);
   });
 
   it('selects the highest-priority unfinished Goal and prevents duplicate missions', () => {

@@ -59,11 +59,12 @@ export class MissionSearchCandidateVerifier {
 
     const verified = outcomes.filter((item) => item.ok);
     if (!verified.length) return this.#recordFailures(missionId, freshMission, outcomes);
-    return this.#projectVerified(missionId, freshMission, outcomes);
+    return this.#projectVerified(missionId, freshMission, outcomes, freshGoal);
   }
 
-  async #projectVerified(missionId, expectedMission, outcomes) {
+  async #projectVerified(missionId, expectedMission, outcomes, goal) {
     const now = this.now().toISOString();
+    const kernel = await this.#kernel();
     return this.store.project(async (data) => {
       const missions = data.agentMissions ?? [];
       const index = missions.findIndex((item) => item.id === missionId);
@@ -86,43 +87,68 @@ export class MissionSearchCandidateVerifier {
         nextData = projected.data;
         evidenceResults.push(projected.result);
         if (projected.result.opportunity?.status === 'opportunity') promoted += 1;
+        const liveGoal = (nextData.goals ?? []).find((item) => item?.id === current.goalId) ?? goal;
+        const support = kernel.evidenceSupportsGoal(
+          {
+            title: liveGoal?.title,
+            keywords: Array.isArray(liveGoal?.keywords) ? liveGoal.keywords : [],
+          },
+          {
+            title: String(outcome.document.title ?? ''),
+            text: String(outcome.document.text ?? ''),
+            url: String(outcome.document.sourceUrl ?? ''),
+          },
+        );
         verificationResults.push({
           candidateId: outcome.candidate.id,
           status: 'verified',
           sourceUrl: projected.result.sourceUrl,
           evidenceId: projected.result.evidenceId,
+          supported: support.supported,
+          supportReason: support.reason,
         });
       }
 
-      const digest = createHash('sha256')
-        .update(`${current.searchCandidateDigest ?? ''}\n${verificationResults.map((item) => `${item.candidateId}:${item.status}:${item.evidenceId ?? ''}`).join('\n')}`)
-        .digest('hex');
-      const completed = {
-        ...current,
-        status: 'completed',
-        executionPhase: 'forged',
-        completedAt: now,
-        forgedAt: now,
-        verificationResults,
-        verificationDigest: digest,
-        searchCandidates: current.searchCandidates.map((candidate) => {
-          const result = verificationResults.find((item) => item.candidateId === candidate.id);
-          return result ? { ...candidate, ...result } : candidate;
-        }),
-        limitation: 'Kernel web.read verification completed; only fetched page content became Evidence',
-        resultSummary: {
-          received: current.searchCandidates.length,
-          evidenceCreated: evidenceResults.filter((item) => !item.duplicate).length,
-          opportunitiesPromoted: promoted,
-        },
+      const digest = verificationSealDigest(current.searchCandidateDigest, verificationResults);
+      const searchCandidates = current.searchCandidates.map((candidate) => {
+        const result = verificationResults.find((item) => item.candidateId === candidate.id);
+        return result ? { ...candidate, ...result } : candidate;
+      });
+      const resultSummary = {
+        received: current.searchCandidates.length,
+        evidenceCreated: evidenceResults.filter((item) => !item.duplicate).length,
+        opportunitiesPromoted: promoted,
       };
-      delete completed.verificationBlock;
+      const anySupported = verificationResults.some((item) => item.supported === true);
+      const nextMission = anySupported
+        ? {
+          ...current,
+          status: 'completed',
+          executionPhase: 'forged',
+          completedAt: now,
+          forgedAt: now,
+          verificationResults,
+          verificationDigest: digest,
+          searchCandidates,
+          limitation: 'Kernel web.read verification completed; only fetched page content became Evidence',
+          resultSummary,
+        }
+        : {
+          ...current,
+          status: 'running',
+          executionPhase: 'verifying',
+          verificationResults,
+          searchCandidates,
+          limitation: 'Kernel web.read retrieved page content as Evidence; none of the pages support the Goal, so investigation remains incomplete',
+          resultSummary,
+        };
+      delete nextMission.verificationBlock;
       const updated = [...missions];
-      updated[index] = completed;
+      updated[index] = nextMission;
       return {
         changed: true,
         data: { ...nextData, agentMissions: updated },
-        result: { mission: completed, evidence: evidenceResults, idempotent: false },
+        result: { mission: nextMission, evidence: evidenceResults, idempotent: false },
       };
     });
   }
@@ -223,18 +249,20 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
   const suffix = createHash('sha256').update(`${mission.id}\n${candidate.id}`).digest('hex');
   const caseId = `case:verified:${suffix}`;
   const evidenceId = `evidence:verified:${suffix}`;
-  const sourceUrl = String(document.sourceUrl ?? candidate.url);
+  const sourceUrl = String(document.sourceUrl ?? '').trim();
   const capturedAt = String(document.fetchedAt ?? new Date().toISOString());
-  const title = String(document.title ?? candidate.title).slice(0, 240) || candidate.title;
   const text = String(document.text ?? '').trim();
   const projectionText = boundedProjectionText(text);
+  const fetchedTitle = String(document.title ?? '').trim().slice(0, 240);
+  const fetchedDescription = (projectionText || fetchedTitle).slice(0, 500) || undefined;
+  const title = fetchedTitle || (projectionText ? projectionText.slice(0, 240) : '') || fetchedHostPath(sourceUrl);
   const context = {
     schemaVersion: 'hephaestus.page-context.v1',
     url: sourceUrl,
     canonicalUrl: sourceUrl,
     title,
     visibleText: projectionText,
-    description: candidate.summary,
+    ...(fetchedDescription ? { description: fetchedDescription } : {}),
     capturedAt,
   };
   const existing = (data.evidence ?? []).find((item) => item.id === evidenceId);
@@ -246,7 +274,7 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
       id: caseId,
       title,
       objective: `Verify a public finding returned for Goal: ${mission.goalTitle}`,
-      description: candidate.summary,
+      description: fetchedDescription ?? title,
       status: 'draft',
       tags: ['kernel-verified', 'web.read'],
       createdAt: capturedAt,
@@ -261,7 +289,7 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
       mimeType: String(document.contentType ?? 'text/plain').slice(0, 160),
       contentHash: createHash('sha256').update(text).digest('hex'),
       rawText: text,
-      summary: candidate.summary ?? title,
+      summary: fetchedTitle || (projectionText ? projectionText.slice(0, 500) : title),
       capturedAt,
       extractionMethod: 'kernel-web-read-v1',
       confidence: 0.9,
@@ -282,6 +310,24 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
     opportunity = projected.result;
   }
   return { data: nextData, result: { caseId, evidenceId, duplicate, sourceUrl, opportunity } };
+}
+
+function verificationSealDigest(searchCandidateDigest, verificationResults) {
+  const lines = verificationResults.map((item) => {
+    const support = item.supported === true ? 'supported' : 'unsupported';
+    return `${item.candidateId}:${item.status}:${item.evidenceId ?? ''}:${support}:${item.supportReason ?? ''}`;
+  });
+  return createHash('sha256').update(`${searchCandidateDigest ?? ''}\n${lines.join('\n')}`).digest('hex');
+}
+
+function fetchedHostPath(sourceUrl) {
+  try {
+    const parsed = new URL(String(sourceUrl ?? ''));
+    const value = `${parsed.host}${parsed.pathname}`.replace(/\/$/, '');
+    return (value || parsed.host || String(sourceUrl ?? '')).slice(0, 240);
+  } catch {
+    return String(sourceUrl ?? '').slice(0, 240);
+  }
 }
 
 function boundedProjectionText(text) {
@@ -315,7 +361,8 @@ function deterministicExecutionId(missionId, candidateId) {
 }
 function requireKernel(kernel) {
   if (!kernel || typeof kernel.CapabilityRegistry !== 'function' || !kernel.PUBLIC_WEB_READ_CAPABILITY
-    || typeof kernel.PublicWebReadExecutionAdapter !== 'function' || typeof kernel.evaluateAutomaticReadOnlyContinuation !== 'function') {
+    || typeof kernel.PublicWebReadExecutionAdapter !== 'function' || typeof kernel.evaluateAutomaticReadOnlyContinuation !== 'function'
+    || typeof kernel.evidenceSupportsGoal !== 'function') {
     throw new InboxError('KERNEL_RUNTIME_INVALID', 'Trusted Kernel runtime does not expose web.read verification contracts', 503);
   }
 }

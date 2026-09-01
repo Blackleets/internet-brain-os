@@ -13,12 +13,13 @@ export function forgeActivityForMission(mission) {
   if (mission.status === 'running') return ACTIVITIES.working;
   if (mission.status === 'waiting_for_agent') return { ...ACTIVITIES.error, label: 'Hermes not available', detail: 'The mission is authorized, but no Hermes worker is connected.' };
   if (mission.status === 'queued') return ACTIVITIES.queued;
-  if (mission.status === 'completed') {
+  if (mission.status === 'completed' && (mission.executionPhase === 'forged' || mission.workState === 'forged')) {
     const found = Number(mission.resultSummary?.opportunitiesPromoted) || 0;
     return found > 0
       ? { ...ACTIVITIES.success, detail: `${found} ${found === 1 ? 'opportunity' : 'opportunities'} passed local checks and saved.` }
       : { ...ACTIVITIES.success, label: 'Research completed', detail: 'No strong opportunity passed the local checks.' };
   }
+  if (mission.status === 'completed') return ACTIVITIES.idle;
   if (mission.status === 'failed') return ACTIVITIES.error;
   return ACTIVITIES.idle;
 }

@@ -19,7 +19,7 @@ async function fixture(prefix) {
 }
 
 describe('Agent Hub atomic completion', () => {
-  it('Given a completed result, When the exact completion is retried, Then persisted state is unchanged', async () => {
+  it('Given Hermes snippet findings, When complete is retried, Then Completado is refused and store stays investigating', async () => {
     const { store, mission } = await fixture('efesto-executor-idempotent-');
     const executor = new AgentMissionExecutor(store, new OpportunityProjector(store));
     const claim = await executor.claim();
@@ -32,16 +32,15 @@ describe('Agent Hub atomic completion', () => {
       }],
     };
 
-    const first = await executor.complete(mission.id, input);
+    await expect(executor.complete(mission.id, input)).rejects.toMatchObject({ code: 'AGENT_FINDINGS_NOT_EVIDENCE' });
     const beforeReplay = await store.read();
-    const replay = await executor.complete(mission.id, input);
-
-    expect(first.mission.resultSummary).toMatchObject({ received: 1, evidenceCreated: 1 });
-    expect(replay).toMatchObject({ idempotent: true, mission: { id: mission.id, status: 'completed' }, findings: [] });
+    await expect(executor.complete(mission.id, input)).rejects.toMatchObject({ code: 'AGENT_FINDINGS_NOT_EVIDENCE' });
     expect(await store.read()).toEqual(beforeReplay);
+    expect(beforeReplay.agentMissions[0]).toMatchObject({ status: 'running', executionPhase: 'investigating' });
+    expect(beforeReplay.evidence ?? []).toHaveLength(0);
   });
 
-  it('Given a later projection failure, When completion aborts, Then no partial Evidence or Opportunity is persisted', async () => {
+  it('Given snippet-only complete, When the gate refuses, Then no partial Evidence or Opportunity is persisted', async () => {
     const { store, mission } = await fixture('efesto-executor-atomic-');
     const baseProjector = new OpportunityProjector(store);
     const failingProjector = {
@@ -59,21 +58,21 @@ describe('Agent Hub atomic completion', () => {
         { url: 'https://jobs.example/first', title: 'First role', text: 'We are hiring for a remote role.' },
         { url: 'https://jobs.example/second', title: 'Second role', text: 'We are hiring for another remote role.' },
       ],
-    })).rejects.toThrow('simulated opportunity projection failure');
+    })).rejects.toMatchObject({ code: 'AGENT_FINDINGS_NOT_EVIDENCE' });
 
     const data = await store.read();
     expect(data.agentMissions[0]).toMatchObject({ status: 'running', executionPhase: 'investigating' });
-    expect(data.cases).toHaveLength(0);
-    expect(data.evidence).toHaveLength(0);
-    expect(data.opportunities).toHaveLength(0);
+    expect(data.cases ?? []).toHaveLength(0);
+    expect(data.evidence ?? []).toHaveLength(0);
+    expect(data.opportunities ?? []).toHaveLength(0);
   });
 
-  it('Given competing completion calls for one lease, When they race, Then only one result creates side effects', async () => {
+  it('Given competing snippet completions for one lease, When they race, Then neither forges Completado', async () => {
     const { store, mission } = await fixture('efesto-executor-race-');
     const executor = new AgentMissionExecutor(store, new OpportunityProjector(store));
     const claim = await executor.claim();
 
-    const results = await Promise.all([
+    const results = await Promise.allSettled([
       executor.complete(mission.id, {
         leaseId: claim.leaseId,
         findings: [{ url: 'https://jobs.example/race-first', title: 'First role', text: 'We are hiring for a remote role.' }],
@@ -84,10 +83,11 @@ describe('Agent Hub atomic completion', () => {
       }),
     ]);
 
-    expect(results.some((result) => result.findings.length === 1)).toBe(true);
-    expect(results.some((result) => result.findings.length === 0)).toBe(true);
+    expect(results.every((result) => result.status === 'rejected')).toBe(true);
+    expect(results.every((result) => result.reason?.code === 'AGENT_FINDINGS_NOT_EVIDENCE')).toBe(true);
     const data = await store.read();
-    expect(data.evidence).toHaveLength(1);
-    expect(data.agentMissions[0]?.status).toBe('completed');
+    expect(data.evidence ?? []).toHaveLength(0);
+    expect(data.agentMissions[0]?.status).not.toBe('completed');
+    expect(data.agentMissions[0]?.executionPhase).not.toBe('forged');
   });
 });

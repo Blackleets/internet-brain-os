@@ -13,16 +13,16 @@ import { OpportunityProjector } from './opportunity-classifier.mjs';
 
 const interactive = { confirmationActor: { actorType: 'interactive_user', decidedBy: 'dashboard-ui' } };
 
-async function fixture(reader) {
+async function fixture(reader, goalInput = { title: 'Find a drill offer', categories: ['offer'], keywords: ['drill'] }, findings = [{ url: 'https://shop.example/drill', title: 'Search result drill', text: 'UNTRUSTED SEARCH SNIPPET', summary: 'UNTRUSTED SEARCH SNIPPET' }]) {
   const store = new LocalKnowledgeStore(join(await mkdtemp(join(tmpdir(), 'efesto-web-read-')), 'store.json'));
-  const goal = await new GoalManager(store).create({ title: 'Find a drill offer', categories: ['offer'], keywords: ['drill'] });
+  const goal = await new GoalManager(store).create(goalInput);
   const mission = await new AgentMissionManager(store, { isAgentReady: () => true }).create(goal.id, { agent: 'hermes', confirmed: true }, interactive);
   const executor = new AgentMissionExecutor(store, new OpportunityProjector(store), { automaticClaims: false });
   const claim = await executor.claim('hermes', mission.id);
   await executor.complete(mission.id, {
     leaseId: claim.leaseId,
     resultKind: 'search_candidates',
-    findings: [{ url: 'https://shop.example/drill', title: 'Search result drill', text: 'UNTRUSTED SEARCH SNIPPET' }],
+    findings,
   });
   return {
     store,
@@ -66,6 +66,13 @@ describe('Kernel-owned search candidate verification', () => {
     });
     expect(data.evidence[0].rawText).toContain('24.99 EUR');
     expect(data.evidence[0].rawText).not.toContain('UNTRUSTED SEARCH SNIPPET');
+    expect(data.evidence[0].summary).not.toBe('UNTRUSTED SEARCH SNIPPET');
+    expect(data.evidence[0].summary).not.toContain('UNTRUSTED SEARCH SNIPPET');
+    expect(data.evidence[0].summary).toBe('Quality drill 24.99 EUR');
+    expect(data.cases[0].description).not.toContain('UNTRUSTED SEARCH SNIPPET');
+    expect(data.cases[0].description).toContain('cordless drill');
+    expect(data.cases[0].description).toContain('24.99 EUR');
+    expect(data.opportunities[0].title).toBe('Quality drill 24.99 EUR');
     expect(data.opportunities).toHaveLength(1);
     expect(data.agentMissions[0].searchCandidates[0]).toMatchObject({ status: 'verified', evidenceId: data.evidence[0].id });
   });
@@ -125,5 +132,95 @@ describe('Kernel-owned search candidate verification', () => {
     });
     expect(result.mission.verificationResults[0]).toMatchObject({ status: 'verification_failed' });
     expect((await store.read()).evidence ?? []).toHaveLength(0);
+  });
+  it('does not forge Completado from HTTP 200 off-topic pages when the Goal token is absent', async () => {
+    const { store, mission, verifier } = await fixture(
+      {
+        fetch: async () => ({
+          url: 'https://jwt.io/',
+          title: 'JSON Web Tokens - jwt.io',
+          text: 'Decode, verify and generate JSON Web Tokens. AWS Cognito JWT docs. noindex documentation.',
+          fetchedAt: '2026-08-09T22:19:00.000Z',
+          contentType: 'text/html',
+          status: 200,
+        }),
+      },
+      {
+        title: 'Locate record xyz-nonexist-token-9f3a in public filings',
+        categories: ['offer'],
+        keywords: ['xyz-nonexist-token-9f3a'],
+      },
+    );
+    const result = await verifier.verify(mission.id);
+    expect(result.mission.status).not.toBe('completed');
+    expect(result.mission.executionPhase).not.toBe('forged');
+    expect(result.mission).toMatchObject({
+      status: 'running',
+      executionPhase: 'verifying',
+    });
+    expect(result.mission.limitation).toMatch(/none of the pages support the Goal/);
+    const data = await store.read();
+    expect(data.evidence).toHaveLength(1);
+    expect(data.cases).toHaveLength(1);
+    expect(data.evidence[0].rawText).toContain('JSON Web Tokens');
+    expect(data.agentMissions[0].searchCandidates[0].supported).toBe(false);
+    expect(result.mission.verificationDigest).toBeUndefined();
+  });
+
+  it('does not seal Completado when only the untrusted Hermes snippet echoes the Goal token', async () => {
+    const unique = 'xyz-nonexist-token-9f3a';
+    const { store, mission, verifier } = await fixture(
+      {
+        fetch: async () => ({
+          url: 'https://jwt.io/',
+          title: 'JSON Web Tokens - jwt.io',
+          text: 'Decode, verify and generate JSON Web Tokens. AWS Cognito JWT docs. noindex documentation.',
+          fetchedAt: '2026-08-09T22:19:00.000Z',
+          contentType: 'text/html',
+          status: 200,
+        }),
+      },
+      {
+        title: 'Locate record xyz-nonexist-token-9f3a in public filings',
+        categories: ['offer'],
+        keywords: [unique],
+      },
+      [{
+        url: 'https://jwt.io/',
+        title: `Search result ${unique}`,
+        text: `UNTRUSTED SEARCH SNIPPET ${unique}`,
+        summary: `UNTRUSTED SEARCH SNIPPET ${unique}`,
+      }],
+    );
+    const result = await verifier.verify(mission.id);
+    expect(result.mission.status).not.toBe('completed');
+    expect(result.mission.executionPhase).not.toBe('forged');
+    expect(result.mission).toMatchObject({
+      status: 'running',
+      executionPhase: 'verifying',
+    });
+    const data = await store.read();
+    expect(data.evidence.length).toBeGreaterThanOrEqual(0);
+    expect(data.evidence[0].summary).not.toContain(unique);
+    expect(data.cases[0].description).not.toContain(unique);
+    expect(data.agentMissions[0].searchCandidates[0].supported).toBe(false);
+    expect(result.mission.verificationDigest).toBeUndefined();
+  });
+
+  it('includes Goal SUPPORT in the forged seal digest so identical IDs with different support cannot collide', async () => {
+    const { mission, verifier } = await fixture({ fetch: async () => verifiedPage() });
+    const result = await verifier.verify(mission.id);
+    expect(result.mission).toMatchObject({ status: 'completed', executionPhase: 'forged' });
+    const candidate = result.mission.searchCandidates[0];
+    expect(candidate.supported).toBe(true);
+    expect(candidate.supportReason).toBeTruthy();
+    const identityWithoutSupport = createHash('sha256')
+      .update(`${result.mission.searchCandidateDigest ?? ''}\n${candidate.id}:verified:${candidate.evidenceId ?? ''}`)
+      .digest('hex');
+    const identityWithSupport = createHash('sha256')
+      .update(`${result.mission.searchCandidateDigest ?? ''}\n${candidate.id}:verified:${candidate.evidenceId ?? ''}:supported:${candidate.supportReason ?? ''}`)
+      .digest('hex');
+    expect(result.mission.verificationDigest).toBe(identityWithSupport);
+    expect(result.mission.verificationDigest).not.toBe(identityWithoutSupport);
   });
 });

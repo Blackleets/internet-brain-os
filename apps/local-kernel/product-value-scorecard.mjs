@@ -27,7 +27,7 @@ export function buildProductValueScorecard(data = {}, options = {}) {
     if (!previous || Date.parse(execution.decidedAt) < Date.parse(previous.decidedAt)) {
       executedGoals.set(execution.key, execution);
     }
-    if (mission?.status === 'completed') completedGoalKeys.add(execution.key);
+    if (isKernelForgedMission(mission)) completedGoalKeys.add(execution.key);
   }
 
   for (const opportunity of opportunities) {
@@ -109,7 +109,7 @@ export function buildProductValueScorecard(data = {}, options = {}) {
           }),
     },
     drivers: {
-      missionCompletionRate: ratioMetric(missions.filter((mission) => mission?.status === 'completed').length, missions.length, 'no_missions'),
+      missionCompletionRate: ratioMetric(missions.filter(isKernelForgedMission).length, missions.length, 'no_missions'),
       findsPerCompletedGoal: averageMetric(completedGoalFindIds.length, completedGoalKeys.size, 'no_completed_goals'),
       usefulSavedFindShare: ratioMetric(positiveFindIds.size, goalLinkedFinds.size, 'no_goal_linked_finds'),
       installationToFirstGoalActivationRate: productCohort.status === 'valid'
@@ -137,6 +137,14 @@ export function buildProductValueScorecard(data = {}, options = {}) {
       invalidTimestampEvents,
     },
   };
+}
+
+
+function isKernelForgedMission(mission) {
+  if (mission?.status !== 'completed') return false;
+  return mission.executionPhase === 'forged'
+    || mission.workState === 'forged'
+    || (typeof mission.forgedAt === 'string' && mission.forgedAt.length > 0);
 }
 
 function executionIdentity(mission) {

@@ -3,13 +3,12 @@ const STATUS_COPY = Object.freeze({
   queued: { label: 'Ready for Hermes', detail: 'The commission is queued for a bounded public-source attempt.' },
   running: { label: 'Researching public sources', detail: 'Hermes holds a temporary lease. Efesto will verify every returned finding locally.' },
   completed: { label: 'Commission forged', detail: 'The bounded attempt finished and its findings passed through the local Kernel.' },
+  completedWithoutForge: { label: 'Research ended without Evidence', detail: 'The bounded attempt finished. No Kernel-sealed lead was saved.' },
   failed: { label: 'Research stopped safely', detail: 'Three bounded attempts were exhausted. The Goal and existing Evidence remain intact.' },
 });
 
 export function presentMission(mission) {
-  const status = mission?.executionPhase === 'verifying'
-    ? { label: 'Verifying returned findings', detail: 'Efesto is validating and preserving the returned material inside the local Kernel.' }
-    : STATUS_COPY[mission?.status] ?? { label: 'Unknown mission state', detail: 'Inspect the persisted mission before taking action.' };
+  const status = missionStatusCopy(mission);
   const summary = mission?.resultSummary ?? {};
   return {
     title: String(mission?.goalTitle ?? 'Untitled commission'), status: String(mission?.status ?? 'unknown'),
@@ -21,13 +20,32 @@ export function presentMission(mission) {
   };
 }
 
+function missionStatusCopy(mission) {
+  if (mission?.executionPhase === 'verifying') {
+    return { label: 'Verifying returned findings', detail: 'Efesto is validating and preserving the returned material inside the local Kernel.' };
+  }
+  if (mission?.status === 'completed' && (mission.executionPhase === 'forged' || mission.workState === 'forged')) {
+    return STATUS_COPY.completed;
+  }
+  if (mission?.status === 'completed') return STATUS_COPY.completedWithoutForge;
+  return STATUS_COPY[mission?.status] ?? { label: 'Unknown mission state', detail: 'Inspect the persisted mission before taking action.' };
+}
+
 export function missionTimeline(mission = {}) {
   const events = [];
   addEvent(events, mission.createdAt, 'Commission authorized', 'Efesto stored the Goal scope after explicit approval.');
   addEvent(events, mission.claimedAt, `Hermes claimed attempt ${boundedCount(mission.attempt) || 1}`, 'A temporary execution lease was issued.');
   addEvent(events, mission.verifyingAt, 'Kernel verification started', 'Returned findings entered local validation; no opportunity is accepted yet.');
   addEvent(events, mission.lastFailure?.recordedAt, `Attempt ${boundedCount(mission.lastFailure?.attempt) || 1} failed safely`, 'The failure was recorded and the retry remained bounded.');
-  addEvent(events, mission.forgedAt ?? mission.completedAt, 'Kernel verification completed', `${boundedCount(mission.resultSummary?.received)} received · ${boundedCount(mission.resultSummary?.evidenceCreated)} Evidence · ${boundedCount(mission.resultSummary?.opportunitiesPromoted)} promoted`);
+  const counts = `${boundedCount(mission.resultSummary?.received)} received · ${boundedCount(mission.resultSummary?.evidenceCreated)} Evidence · ${boundedCount(mission.resultSummary?.opportunitiesPromoted)} promoted`;
+  const forged = typeof mission.forgedAt === 'string'
+    || mission.executionPhase === 'forged'
+    || mission.workState === 'forged';
+  if (forged) {
+    addEvent(events, mission.forgedAt ?? mission.completedAt, 'Kernel verification completed', counts);
+  } else if (mission.status === 'completed') {
+    addEvent(events, mission.completedAt, 'Research ended without Evidence', counts);
+  }
   return events.sort((left, right) => left.at.localeCompare(right.at));
 }
 

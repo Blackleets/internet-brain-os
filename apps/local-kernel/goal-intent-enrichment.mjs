@@ -31,7 +31,8 @@ export function enrichGoalIntent({ title, categories = [], keywords = [], keywor
     ? [...explicitCategories]
     : inferGoalCategories(`${title ?? ''} ${explicitKeywords.join(' ')}`);
   const numericKeywords = extractNumericGoalKeywords(title);
-  const keywordsResult = unique([...explicitKeywords, ...numericKeywords]).slice(0, keywordLimit);
+  const uniqueKeywords = extractUniqueGoalKeywords(title);
+  const keywordsResult = unique([...explicitKeywords, ...numericKeywords, ...uniqueKeywords]).slice(0, keywordLimit);
   return { categories: categoriesResult, keywords: keywordsResult };
 }
 
@@ -45,6 +46,22 @@ export function inferGoalCategories(value) {
     && (PURCHASE_PRICE_CONTEXT.test(searchable) || matches.some((category) => CONSUMER_CATEGORIES.has(category)));
   if (currencyPriceIntent && !matches.includes('offer')) matches.push('offer');
   return matches.slice(0, MAX_INFERRED_CATEGORIES);
+}
+
+export function extractUniqueGoalKeywords(value) {
+  const tokens = foldUnique(value).match(/[a-z0-9]+(?:-[a-z0-9]+)*/g) ?? [];
+  return unique(tokens.filter(isUniqueGoalId));
+}
+
+function isUniqueGoalId(token) {
+  if (token.length >= 16) return true;
+  if (token.length >= 12 && token.includes('-')) return true;
+  if (token.length >= 10 && /[a-z]/.test(token) && /\d/.test(token)) return true;
+  return false;
+}
+
+function foldUnique(value) {
+  return String(value ?? '').toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').trim();
 }
 
 export function extractNumericGoalKeywords(value) {

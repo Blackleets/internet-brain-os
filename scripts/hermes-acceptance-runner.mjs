@@ -12,7 +12,7 @@ import {
   checkReplayIdempotentAfterCompletion, checkTerminalStateOwnedByKernel,
   checkUnauthenticatedAccessRejected,
 } from './hermes-acceptance-checks.mjs';
-import { assessLivePublicWebJourney } from './hermes-live-journey-assessment.mjs';
+import { assessLivePublicWebJourney, isHonestBlockedMissionOutcome } from './hermes-live-journey-assessment.mjs';
 
 const PORT = Number(process.env.HEPHAESTUS_ACCEPTANCE_PORT ?? 4310);
 const INTERNAL_PORT = Number(process.env.HEPHAESTUS_ACCEPTANCE_INTERNAL_PORT ?? 4311);
@@ -103,7 +103,7 @@ export async function runAcceptance(options = {}) {
       checks.push({
         id: 'L1',
         name: 'Authentic Hermes runtime drove the mission to a terminal state',
-        passed: outcome.status === 'completed',
+        passed: outcome.status === 'completed' || isHonestBlockedMissionOutcome(outcome),
         detail: liveTerminalDetail(outcome),
       });
       checks.push({
@@ -235,7 +235,8 @@ async function waitForTerminal(baseUrl, token, missionId, timeoutMs = DEFAULT_TE
 export function isObservableMissionOutcome(mission) {
   return Boolean(mission?.status === 'completed'
     || mission?.status === 'failed'
-    || (mission?.status === 'queued' && mission?.lastFailure && Number(mission?.attempt ?? 0) > 0));
+    || (mission?.status === 'queued' && mission?.lastFailure && Number(mission?.attempt ?? 0) > 0)
+    || isHonestBlockedMissionOutcome(mission));
 }
 
 export function liveTerminalDetail(outcome = {}) {

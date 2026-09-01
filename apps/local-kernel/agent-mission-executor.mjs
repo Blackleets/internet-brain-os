@@ -16,8 +16,12 @@ export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
       const verified = await this.candidateVerifier.verify(missionId);
       return { ...verified, findings: verified.evidence ?? [] };
     }
-    if (input?.resultKind !== 'search_candidates') return super.complete(missionId, input);
-    return this.#recordSearchCandidates(missionId, input);
+    if (input?.resultKind === 'search_candidates') {
+      return this.#recordSearchCandidates(missionId, input);
+    }
+    // FAIL-CLOSE: Hermes/snippet findings are not Evidence. Do not inherit
+    // legacy complete(), which previously sealed Completado from ingested text.
+    throw refuseSnippetCompletion();
   }
 
   async #recordSearchCandidates(missionId, input) {
@@ -130,7 +134,25 @@ function normalizeDate(value) {
 
 function isPrivateLiteralHost(hostname) {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
-  if (host === 'localhost' || host === '::1' || host.endsWith('.local')) return true;
+  if (host === 'localhost' || host === '::1' || host === '::' || host.endsWith('.local')) return true;
+  // Reuse Kernel/connector intent from packages/connectors/src/web-page.ts isPublicAddress:
+  // loopback, unique-local fc00::/7, link-local fe80::/10, IPv4-mapped ::ffff:x.x.x.x.
+  if (host.includes(':') && (host.startsWith('fe80:') || host.startsWith('fc') || host.startsWith('fd'))) return true;
+  return isPrivateIpv4Literal(ipv4MappedFromLiteral(host) ?? host);
+}
+
+function ipv4MappedFromLiteral(host) {
+  const dotted = host.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (dotted) return dotted[1];
+  // WHATWG URL serializes mapped IPv4 as ::ffff:7f00:1, not ::ffff:127.0.0.1.
+  const hex = host.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (!hex) return undefined;
+  const hi = Number.parseInt(hex[1], 16);
+  const lo = Number.parseInt(hex[2], 16);
+  return `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
+}
+
+function isPrivateIpv4Literal(host) {
   const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (!ipv4) return false;
   const [a, b, c, d] = ipv4.slice(1).map(Number);
@@ -138,6 +160,14 @@ function isPrivateLiteralHost(hostname) {
   return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254)
     || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)
     || (a === 100 && b >= 64 && b <= 127) || a >= 224;
+}
+
+function refuseSnippetCompletion() {
+  return new InboxError(
+    'AGENT_FINDINGS_NOT_EVIDENCE',
+    'Hermes findings are not Evidence. Completado requires Kernel SUPPORT on fetched page content.',
+    409,
+  );
 }
 
 function invalid(message) {

@@ -165,12 +165,12 @@ async function inspectMissionTransitions() {
 }
 
 async function notifyMissionTransition(transition) {
-  const succeeded = transition.status === 'completed';
+  const forged = transition.status === 'completed' && (transition.executionPhase === 'forged' || transition.workState === 'forged');
   await chrome.notifications.create(`efesto-mission:${transition.id}`, {
     type: 'basic',
     iconUrl: 'icons/efesto-notification.svg',
-    title: succeeded ? 'Efesto finished forging' : 'Efesto needs your attention',
-    message: succeeded
+    title: forged ? 'Efesto finished forging' : 'Efesto needs your attention',
+    message: forged
       ? 'A local mission finished. Open Efesto to inspect the Evidence.'
       : 'A local mission stopped safely. Open Efesto to review the Forge Ledger.',
     priority: 1,

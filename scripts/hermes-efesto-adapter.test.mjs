@@ -9,7 +9,13 @@ import {
   normalizeHermesExecutable,
   parseHermesFindings,
   prepareHermesHome,
+  resolveSourceHermesHome,
   runHermesProcess,
+  runHermesOneShot,
+  seedIsolatedHermesCredentials,
+  wipeCopiedHermesCredentials,
+  applySourceHermesModelRoute,
+  parseTopLevelHermesModelRoute,
 } from './hermes-efesto-adapter.mjs';
 
 describe('Hermes Efesto adapter', () => {
@@ -59,6 +65,123 @@ describe('Hermes Efesto adapter', () => {
     expect(env).not.toHaveProperty('HERMES_SAFE_MODE');
     expect(env).not.toHaveProperty('HERMES_ENABLE_PROJECT_PLUGINS');
     expect(env).not.toHaveProperty('HERMES_IGNORE_USER_CONFIG');
+  });
+
+  it('resolves the process Hermes home without using the isolated destination', () => {
+    expect(resolveSourceHermesHome({ HERMES_HOME: '/user-owned-hermes', LOCALAPPDATA: 'C:\\Users\\x\\AppData\\Local' })).toBe('/user-owned-hermes');
+    expect(resolveSourceHermesHome({ LOCALAPPDATA: 'C:\\Users\\x\\AppData\\Local' })).toMatch(/hermes$/);
+  });
+
+  it('copies only credential files into the isolated Hermes home and never state.db', async () => {
+    const source = await mkdtemp(join(tmpdir(), 'efesto-hermes-cred-src-'));
+    const isolated = await mkdtemp(join(tmpdir(), 'efesto-hermes-cred-dst-'));
+    try {
+      await writeFile(join(source, 'auth.json'), '{"active_provider":"test"}\n', 'utf8');
+      await writeFile(join(source, '.env'), 'OPENROUTER_API_KEY=test-not-a-real-secret\n', 'utf8');
+      await writeFile(join(source, 'state.db'), 'founder-state-must-not-copy', 'utf8');
+      await writeFile(join(source, 'config.yaml'), 'founder-config-must-not-replace-isolated\n', 'utf8');
+      const copied = await seedIsolatedHermesCredentials(isolated, source);
+      expect(copied.sort()).toEqual(['.env', 'auth.json']);
+      expect(await readFile(join(isolated, 'auth.json'), 'utf8')).toContain('active_provider');
+      await expect(readFile(join(isolated, 'state.db'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+      await expect(readFile(join(isolated, 'config.yaml'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(await seedIsolatedHermesCredentials(isolated, isolated)).toEqual([]);
+      expect(await seedIsolatedHermesCredentials(isolated, '')).toEqual([]);
+    } finally {
+      await rm(source, { recursive: true, force: true });
+      await rm(isolated, { recursive: true, force: true });
+    }
+  });
+
+  it('wipes only copied credential names and never the source home', async () => {
+    const source = await mkdtemp(join(tmpdir(), 'efesto-hermes-wipe-src-'));
+    const isolated = await mkdtemp(join(tmpdir(), 'efesto-hermes-wipe-dst-'));
+    try {
+      await writeFile(join(source, 'auth.json'), '{"active_provider":"test"}\n', 'utf8');
+      await writeFile(join(source, '.env'), 'OPENROUTER_API_KEY=test-not-a-real-secret\n', 'utf8');
+      await writeFile(join(isolated, 'auth.json'), '{"active_provider":"copied"}\n', 'utf8');
+      await writeFile(join(isolated, 'state.db'), 'must-remain', 'utf8');
+      await wipeCopiedHermesCredentials(isolated, ['auth.json', 'state.db', '.env']);
+      await expect(readFile(join(isolated, 'auth.json'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(await readFile(join(isolated, 'state.db'), 'utf8')).toBe('must-remain');
+      expect(await readFile(join(source, 'auth.json'), 'utf8')).toContain('active_provider');
+      expect(await readFile(join(source, '.env'), 'utf8')).toContain('test-not-a-real-secret');
+      await wipeCopiedHermesCredentials(isolated, ['auth.json']);
+    } finally {
+      await rm(source, { recursive: true, force: true });
+      await rm(isolated, { recursive: true, force: true });
+    }
+  });
+
+  it('unlinks copied credentials after a caller-owned one-shot and never deletes the source home', async () => {
+    const source = await mkdtemp(join(tmpdir(), 'efesto-hermes-oneshot-src-'));
+    const isolated = await mkdtemp(join(tmpdir(), 'efesto-hermes-oneshot-dst-'));
+    try {
+      await writeFile(join(source, 'auth.json'), '{"active_provider":"test"}\n', 'utf8');
+      await writeFile(join(source, '.env'), 'OPENROUTER_API_KEY=test-not-a-real-secret\n', 'utf8');
+      await writeFile(join(source, '.anthropic_oauth.json'), '{"test":true}\n', 'utf8');
+      await writeFile(join(isolated, 'chat'), 'process.stdout.write(JSON.stringify({findings:[{url:"https://example.com/a"}]}));\n', 'utf8');
+      const result = await runHermesOneShot({
+        schemaVersion: 'efesto.hermes-mission.v1',
+        mission: { id: 'mission-1', goalTitle: 'Find grants', cadence: 'once', scope: {} },
+      }, {
+        executable: process.execPath,
+        hermesHome: isolated,
+        timeoutMs: 4_000,
+        env: { ...process.env, HERMES_HOME: source },
+      });
+      expect(result.findings[0].url).toBe('https://example.com/a');
+      await expect(readFile(join(isolated, 'auth.json'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+      await expect(readFile(join(isolated, '.env'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+      await expect(readFile(join(isolated, '.anthropic_oauth.json'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(await readFile(join(source, 'auth.json'), 'utf8')).toContain('active_provider');
+      expect(await readFile(join(source, '.env'), 'utf8')).toContain('test-not-a-real-secret');
+      expect(await readFile(join(source, '.anthropic_oauth.json'), 'utf8')).toContain('test');
+    } finally {
+      await rm(source, { recursive: true, force: true });
+      await rm(isolated, { recursive: true, force: true });
+    }
+  });
+
+  it('does not unlink source credentials when the isolated home is the source home', async () => {
+    const source = await mkdtemp(join(tmpdir(), 'efesto-hermes-oneshot-same-'));
+    try {
+      await writeFile(join(source, 'auth.json'), '{"active_provider":"test"}\n', 'utf8');
+      await writeFile(join(source, '.env'), 'OPENROUTER_API_KEY=test-not-a-real-secret\n', 'utf8');
+      await writeFile(join(source, 'chat'), 'process.stdout.write(JSON.stringify({findings:[]}));\n', 'utf8');
+      await runHermesOneShot({
+        schemaVersion: 'efesto.hermes-mission.v1',
+        mission: { id: 'mission-1', goalTitle: 'Find grants', cadence: 'once', scope: {} },
+      }, {
+        executable: process.execPath,
+        hermesHome: source,
+        timeoutMs: 4_000,
+        env: { ...process.env, HERMES_HOME: source },
+      });
+      expect(await readFile(join(source, 'auth.json'), 'utf8')).toContain('active_provider');
+      expect(await readFile(join(source, '.env'), 'utf8')).toContain('test-not-a-real-secret');
+    } finally {
+      await rm(source, { recursive: true, force: true });
+    }
+  });
+
+  it('copies only the source model route into isolated config.yaml and never toolsets', async () => {
+    const source = await mkdtemp(join(tmpdir(), 'efesto-hermes-model-src-'));
+    const isolated = await mkdtemp(join(tmpdir(), 'efesto-hermes-model-dst-'));
+    try {
+      await writeFile(join(source, 'config.yaml'), 'model:\n  default: nvidia/nemotron-test\n  provider: nvidia\n  base_url: https://example.invalid/v1\ntoolsets:\n  - hermes-cli\nagent:\n  max_turns: 60\n', 'utf8');
+      const isolatedConfig = await prepareHermesHome(isolated, 4);
+      const route = await applySourceHermesModelRoute(isolated, source);
+      expect(route).toEqual({ default: 'nvidia/nemotron-test', provider: 'nvidia', base_url: 'https://example.invalid/v1' });
+      expect(JSON.parse(await readFile(isolatedConfig, 'utf8'))).toEqual({
+        agent: { max_turns: 4 },
+        model: { default: 'nvidia/nemotron-test', provider: 'nvidia', base_url: 'https://example.invalid/v1' },
+      });
+      expect(parseTopLevelHermesModelRoute('not-model: true\n')).toBeUndefined();
+    } finally {
+      await rm(source, { recursive: true, force: true });
+      await rm(isolated, { recursive: true, force: true });
+    }
   });
 
   it('writes one exclusive bounded-turn config into the isolated Hermes home', async () => {

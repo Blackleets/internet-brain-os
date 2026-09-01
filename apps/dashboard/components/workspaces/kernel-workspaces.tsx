@@ -7,7 +7,7 @@ import { useState, type FormEvent } from 'react';
 import type { OverviewSnapshot } from '../../lib/kernel/overview';
 import type { DashboardActions } from '../overview/overview-screen';
 import { Panel } from '../ui/panel';
-import { StatusBadge } from '../ui/status-badge';
+import { StatusBadge, type StatusState } from '../ui/status-badge';
 
 export function KernelWorkspaces({ snapshot, actions }: { snapshot: OverviewSnapshot; actions?: DashboardActions }) {
   const [actionState, setActionState] = useState<string>();
@@ -45,7 +45,7 @@ export function KernelWorkspaces({ snapshot, actions }: { snapshot: OverviewSnap
         <div className="workspace-kpis"><Kpi label="Hermes" value={status?.hermes === 'ready' ? 'Online' : 'No configurado'} /><Kpi label="Activas" value={String(activeMissions.length)} /><Kpi label="Total" value={String(snapshot.missions.length)} /></div>
         {snapshot.missions.length === 0 ? <Empty text="No hay misiones persistidas." /> : (
           <ul className="workspace-records">
-            {snapshot.missions.slice(0, 6).map((mission) => <li key={mission.id}><div><strong>{typeof mission.goalTitle === 'string' ? mission.goalTitle : `Misión ${mission.id}`}</strong><span>Intento {mission.attempt ?? 0} · {date(mission.createdAt)}</span></div><StatusBadge state={mission.status === 'failed' ? 'failed' : mission.status === 'completed' ? 'healthy' : 'working'} label={mission.executionPhase ?? mission.status} /></li>)}
+            {snapshot.missions.slice(0, 6).map((mission) => { const badge = missionWorkspaceBadge(mission); return <li key={mission.id}><div><strong>{typeof mission.goalTitle === 'string' ? mission.goalTitle : `Misión ${mission.id}`}</strong><span>Intento {mission.attempt ?? 0} · {date(mission.createdAt)}</span></div><StatusBadge state={badge.state} label={badge.label} /></li>; })}
           </ul>
         )}
         {actions && snapshot.goals.length ? <div className="mission-launchers"><p>Iniciar misión manual con confirmación explícita:</p>{snapshot.goals.map((goal) => <button type="button" key={goal.id} onClick={() => run(() => actions.createMission(goal.id), setActionState, 'Misión enviada al Agent Hub')}>{goal.title}</button>)}</div> : null}
@@ -109,6 +109,19 @@ function GoalComposer({ createGoal, onState }: { createGoal: DashboardActions['c
     }
   }
   return <form className="goal-composer" onSubmit={submit}><label>Nueva meta<input name="title" required minLength={3} maxLength={120} placeholder="Ej. Encontrar clientes de automatización" /></label><label>Palabras clave<input name="keywords" required placeholder="IA, automatización, Madrid" /></label><label>Prioridad<select name="priority" defaultValue="2"><option value="1">Baja</option><option value="2">Media</option><option value="3">Alta</option></select></label><button type="submit" disabled={pending}>{pending ? 'Creando…' : 'Crear meta privada'}</button></form>;
+}
+
+
+function missionWorkspaceBadge(mission: OverviewSnapshot['missions'][number]): { state: StatusState; label: string } {
+  if (mission.executionPhase === 'forged') return { state: 'healthy', label: 'forged' };
+  if (mission.executionPhase === 'failed' || mission.status === 'failed') {
+    return { state: 'failed', label: mission.executionPhase ?? mission.status };
+  }
+  if (mission.executionPhase) return { state: 'working', label: mission.executionPhase };
+  // Bare status completed (e.g. zero Hermes candidates, no Evidence) is not Completado.
+  if (mission.status === 'completed') return { state: 'unavailable', label: 'completed_without_forge' };
+  if (mission.status === 'waiting_for_agent') return { state: 'attention', label: mission.status };
+  return { state: 'working', label: mission.status };
 }
 
 function Workspace({ id, icon: Icon, title, eyebrow, children }: { id: string; icon: typeof FolderSearch; title: string; eyebrow: string; children: ReactNode }) {

@@ -16,7 +16,7 @@ const WORK_COPY = Object.freeze({
   investigating: 'Hermes is researching',
   verifying: 'Efesto is verifying findings',
   forged: 'Evidence-backed findings forged',
-  completed: 'Research completed',
+  completed: 'No research mission yet',
   failed: 'Research needs attention',
 });
 

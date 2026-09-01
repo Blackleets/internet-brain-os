@@ -105,6 +105,47 @@ describe('loadOverview', () => {
     });
   });
 
+  it('does not label completed-without-forged mission activity as Completado', async () => {
+    const snapshot = await loadOverview(clientWith({
+      '/api/agent-missions': Response.json({
+        ok: true,
+        missions: [
+          {
+            id: 'mission-bare-completed',
+            goalId: 'goal-1',
+            status: 'completed',
+            attempt: 1,
+            createdAt: '2026-07-26T10:03:00.000Z',
+          },
+          {
+            id: 'mission-forged',
+            goalId: 'goal-1',
+            status: 'completed',
+            executionPhase: 'forged',
+            attempt: 1,
+            createdAt: '2026-07-26T10:04:00.000Z',
+          },
+        ],
+      }),
+    }));
+
+    expect(snapshot.activity).toContainEqual({
+      id: 'mission:mission-bare-completed',
+      recordId: 'mission-bare-completed',
+      kind: 'mission',
+      timestamp: '2026-07-26T10:03:00.000Z',
+      state: 'completed_without_forge',
+    });
+    expect(snapshot.activity).toContainEqual({
+      id: 'mission:mission-forged',
+      recordId: 'mission-forged',
+      kind: 'mission',
+      timestamp: '2026-07-26T10:04:00.000Z',
+      state: 'forged',
+    });
+    expect(snapshot.activity.some((entry) => entry.kind === 'mission' && entry.state === 'completed')).toBe(false);
+  });
+
   it('retains server failures as HTTP_ERROR instead of optional unavailability', async () => {
     const snapshot = await loadOverview(clientWith({
       '/api/model-forge': new Response(null, { status: 500 }),

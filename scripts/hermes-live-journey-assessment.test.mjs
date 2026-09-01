@@ -46,6 +46,27 @@ describe('authentic live public-web journey assessment', () => {
     expect(checks.every(({ passed }) => passed)).toBe(true);
   });
 
+  it('admits an honest blocked investigation that kept Evidence without Completado', () => {
+    const data = fixture();
+    const checks = assessLivePublicWebJourney({
+      ...data,
+      mission: {
+        ...data.mission,
+        status: 'running',
+        executionPhase: 'verifying',
+        verificationResults: data.mission.verificationResults.map((item) => (
+          item.status === 'verified' ? { ...item, supported: false } : item
+        )),
+      },
+      surface: {
+        ...data.surface,
+        mission: { id: 'mission:live', workState: 'verifying' },
+      },
+    });
+    expect(checks.map(({ id }) => id)).toEqual(LIVE_PUBLIC_WEB_CHECK_IDS);
+    expect(checks.every(({ passed }) => passed)).toBe(true);
+  });
+
   it('does not mistake a terminal mission with no useful provenance for live product value', () => {
     const data = fixture();
     const checks = assessLivePublicWebJourney({

@@ -20,7 +20,7 @@ describe('local-first product value scorecard', () => {
     const scorecard = buildProductValueScorecard({
       productCohort,
       agentMissions: [
-        { id: 'mission:1', goalId: 'goal:1', status: 'completed', authorization: authorization('goal:1', '2026-08-10T10:00:00.000Z') },
+        { id: 'mission:1', goalId: 'goal:1', status: 'completed', executionPhase: 'forged', authorization: authorization('goal:1', '2026-08-10T10:00:00.000Z') },
         { id: 'mission:2', goalId: 'goal:2', status: 'failed', authorization: authorization('goal:2', '2026-08-10T11:00:00.000Z') },
       ],
       evidence: [
@@ -61,6 +61,21 @@ describe('local-first product value scorecard', () => {
       },
       coverage: { executedGoals: 2, completedGoals: 1, goalLinkedFinds: 2, feedbackEvents: 3 },
     });
+  });
+
+
+  it('does not count completed-without-forged as Misiones completadas', () => {
+    const scorecard = buildProductValueScorecard({
+      productCohort,
+      agentMissions: [
+        { id: 'mission:bare', goalId: 'goal:1', status: 'completed', authorization: authorization('goal:1', '2026-08-10T10:00:00.000Z') },
+        { id: 'mission:failed', goalId: 'goal:2', status: 'failed', authorization: authorization('goal:2', '2026-08-10T11:00:00.000Z') },
+      ],
+    }, { now: '2026-08-10T12:00:00.000Z' });
+
+    expect(scorecard.drivers.missionCompletionRate).toMatchObject({ status: 'measured', value: 0, numerator: 0, denominator: 2 });
+    expect(scorecard.drivers.findsPerCompletedGoal).toMatchObject({ status: 'not_measurable', value: null, reason: 'no_completed_goals' });
+    expect(scorecard.coverage.completedGoals).toBe(0);
   });
 
   it('reports a measurable zero Useful Find Rate while refusing to invent time-to-value without positive feedback', () => {

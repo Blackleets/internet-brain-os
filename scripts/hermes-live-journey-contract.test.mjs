@@ -7,7 +7,7 @@ const assessment = readFileSync(new URL('./hermes-live-journey-assessment.mjs', 
 
 describe('G5.3 authentic public-web acceptance contract', () => {
   it('extends the existing live runner instead of creating a second executor path', () => {
-    expect(runner).toContain("import { assessLivePublicWebJourney } from './hermes-live-journey-assessment.mjs';");
+    expect(runner).toContain("import { assessLivePublicWebJourney, isHonestBlockedMissionOutcome } from './hermes-live-journey-assessment.mjs';");
     expect(runner).toContain('const journey = await readLiveJourney(baseUrl, token, goalId, outcome);');
     expect(runner).toContain('checks.push(...assessLivePublicWebJourney(journey));');
   });
@@ -21,9 +21,9 @@ describe('G5.3 authentic public-web acceptance contract', () => {
 
   it('uses a durable public-page goal whose fetched body can independently satisfy the tool classifier', () => {
     expect(LIVE_VALUE_GOAL).toEqual({
-      title: 'Find a public open-source developer tool with API, documentation, installation and license details',
+      title: 'Find the official documentation for the Git version control system',
       categories: ['tool'],
-      keywords: ['open source', 'developer tool', 'GitHub', 'API', 'documentation', 'install', 'license'],
+      keywords: ['Git', 'documentation', 'installation', 'license', 'API', 'open source', 'version control'],
       priority: 2,
     });
   });
@@ -66,6 +66,34 @@ describe('G5.3 authentic public-web acceptance contract', () => {
     expect(isObservableMissionOutcome({ status: 'queued', attempt: 1, lastFailure: { reason: 'adapter timeout' } })).toBe(true);
     expect(isObservableMissionOutcome({ status: 'completed' })).toBe(true);
     expect(isObservableMissionOutcome({ status: 'failed' })).toBe(true);
+  });
+
+  it('admits an honest blocked Kernel investigation without requiring Completado', () => {
+    expect(isObservableMissionOutcome({
+      status: 'running',
+      executionPhase: 'verifying',
+      verificationResults: [{ candidateId: 'search-candidate:a', status: 'verified', supported: false }],
+      resultSummary: { evidenceCreated: 1 },
+    })).toBe(true);
+    expect(isObservableMissionOutcome({
+      status: 'running',
+      executionPhase: 'verifying',
+    })).toBe(false);
+    expect(isObservableMissionOutcome({
+      status: 'running',
+      executionPhase: 'verifying',
+      verificationResults: [],
+      resultSummary: { evidenceCreated: 1 },
+    })).toBe(false);
+    expect(isObservableMissionOutcome({
+      status: 'running',
+      executionPhase: 'verifying',
+      verificationResults: [{ candidateId: 'search-candidate:a', status: 'verification_failed' }],
+      resultSummary: { evidenceCreated: 0 },
+    })).toBe(false);
+    expect(runner).toContain("passed: outcome.status === 'completed' || isHonestBlockedMissionOutcome(outcome)");
+    expect(assessment).toContain("surface?.mission?.workState === 'forged'");
+    expect(assessment).toContain("surface?.mission?.workState === 'verifying' && isHonestBlockedMissionOutcome(mission)");
   });
 
   it('carries the bounded failure reason into the sanitizable live report detail', () => {
