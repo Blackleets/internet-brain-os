@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { chmod, copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdtemp, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -234,12 +234,12 @@ export function resolveSourceHermesHome(env = process.env) {
   return '';
 }
 
-export async function seedIsolatedHermesCredentials(isolatedHome, sourceHome) {
+export async function seedIsolatedHermesCredentials(isolatedHome, sourceHome, copiedNames) {
+  const copied = Array.isArray(copiedNames) ? copiedNames : [];
   if (typeof isolatedHome !== 'string' || !isolatedHome.trim() || typeof sourceHome !== 'string' || !sourceHome.trim()) {
-    return [];
+    return copied;
   }
-  if (resolve(isolatedHome) === resolve(sourceHome)) return [];
-  const copied = [];
+  if (resolve(isolatedHome) === resolve(sourceHome)) return copied;
   for (const name of HERMES_CREDENTIAL_FILES) {
     const from = join(sourceHome, name);
     const to = join(isolatedHome, name);
@@ -253,6 +253,18 @@ export async function seedIsolatedHermesCredentials(isolatedHome, sourceHome) {
     }
   }
   return copied;
+}
+
+export async function wipeCopiedHermesCredentials(isolatedHome, copiedNames) {
+  if (typeof isolatedHome !== 'string' || !isolatedHome.trim() || !Array.isArray(copiedNames) || copiedNames.length === 0) return;
+  const allowed = new Set(HERMES_CREDENTIAL_FILES);
+  for (const name of copiedNames) {
+    if (!allowed.has(name)) continue;
+    try { await unlink(join(isolatedHome, name)); }
+    catch (error) {
+      if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) continue;
+    }
+  }
 }
 
 
@@ -319,10 +331,11 @@ export async function runHermesOneShot(payload, options = {}) {
   const baseEnv = options.env ?? process.env;
   const maxTurns = configuredMaxTurns(options.maxTurns ?? baseEnv.HEPHAESTUS_HERMES_MAX_TURNS);
   const args = buildHermesArgs(prompt, maxTurns, baseEnv.HERMES_INFERENCE_PROVIDER, baseEnv.HERMES_INFERENCE_MODEL);
+  const copied = [];
   try {
     await prepareHermesHome(hermesHome, maxTurns, baseEnv.HERMES_INFERENCE_PROVIDER, baseEnv.HERMES_INFERENCE_MODEL);
     const sourceHome = resolveSourceHermesHome(baseEnv);
-    await seedIsolatedHermesCredentials(hermesHome, sourceHome);
+    await seedIsolatedHermesCredentials(hermesHome, sourceHome, copied);
     await applySourceHermesModelRoute(hermesHome, sourceHome);
     return await runHermesProcess({
       executable,
@@ -332,6 +345,7 @@ export async function runHermesOneShot(payload, options = {}) {
       cwd: hermesHome,
     });
   } finally {
+    await wipeCopiedHermesCredentials(hermesHome, copied);
     if (ownsHermesHome) {
       await rm(hermesHome, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }

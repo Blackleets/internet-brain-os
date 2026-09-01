@@ -30,6 +30,7 @@ describe('G4 final automatic read-only adversarial contract', () => {
     expect(adapter).toContain("delete env.HERMES_ENABLE_PROJECT_PLUGINS");
     expect(adapter).toContain("HERMES_ALLOW_PRIVATE_URLS: 'false'");
     expect(adapter).toContain('cwd: hermesHome');
+    expect(adapter).toContain('wipeCopiedHermesCredentials');
     expect(worker).toContain("resultKind: 'search_candidates'");
     expect(executor).toContain("status: 'pending_verification'");
     expect(executor).toContain('evidenceCreated: 0');
