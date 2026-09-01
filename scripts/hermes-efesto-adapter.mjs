@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { chmod, copyFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -255,6 +255,61 @@ export async function seedIsolatedHermesCredentials(isolatedHome, sourceHome) {
   return copied;
 }
 
+
+export function parseTopLevelHermesModelRoute(configText) {
+  if (typeof configText !== 'string' || !configText.trim()) return undefined;
+  try {
+    const parsed = JSON.parse(configText);
+    if (parsed?.model && typeof parsed.model === 'object' && !Array.isArray(parsed.model)) {
+      return sanitizeModelRoute(parsed.model);
+    }
+  } catch {}
+  const lines = configText.split(/\r?\n/);
+  if ((lines[0] ?? '').trim() !== 'model:') return undefined;
+  const route = {};
+  for (let i = 1; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!/^[ \t]/.test(line) || !line.trim()) break;
+    const match = line.match(/^[ \t]+([A-Za-z0-9_]+):\s*(.+?)\s*$/);
+    if (!match) continue;
+    const key = match[1];
+    const value = match[2].replace(/^['"]|['"]$/g, '');
+    if (['default', 'provider', 'base_url'].includes(key) && value && value !== '[]' && value !== '{}') route[key] = value;
+  }
+  return Object.keys(route).length ? route : undefined;
+}
+
+function sanitizeModelRoute(model) {
+  const route = {};
+  for (const key of ['default', 'provider', 'base_url']) {
+    if (typeof model[key] === 'string' && model[key].trim() && model[key].length <= 240 && !/[\u0000-\u001f\u007f]/.test(model[key])) {
+      route[key] = model[key].trim();
+    }
+  }
+  return Object.keys(route).length ? route : undefined;
+}
+
+export async function applySourceHermesModelRoute(isolatedHome, sourceHome) {
+  if (typeof isolatedHome !== 'string' || !isolatedHome.trim() || typeof sourceHome !== 'string' || !sourceHome.trim()) return undefined;
+  if (resolve(isolatedHome) === resolve(sourceHome)) return undefined;
+  const isolatedPath = join(isolatedHome, 'config.yaml');
+  let isolated;
+  try { isolated = JSON.parse(await readFile(isolatedPath, 'utf8')); }
+  catch { return undefined; }
+  if (isolated?.model && typeof isolated.model === 'object' && Object.keys(isolated.model).length) return isolated.model;
+  let sourceText;
+  try { sourceText = await readFile(join(sourceHome, 'config.yaml'), 'utf8'); }
+  catch (error) {
+    if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) return undefined;
+    throw error;
+  }
+  const route = parseTopLevelHermesModelRoute(sourceText);
+  if (!route) return undefined;
+  isolated.model = route;
+  await writeFile(isolatedPath, `${JSON.stringify(isolated, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
+  return route;
+}
+
 export async function runHermesOneShot(payload, options = {}) {
   const executable = normalizeHermesExecutable(options.executable ?? process.env.HEPHAESTUS_HERMES_EXECUTABLE ?? 'hermes');
   const prompt = buildHermesPrompt(payload);
@@ -266,7 +321,9 @@ export async function runHermesOneShot(payload, options = {}) {
   const args = buildHermesArgs(prompt, maxTurns, baseEnv.HERMES_INFERENCE_PROVIDER, baseEnv.HERMES_INFERENCE_MODEL);
   try {
     await prepareHermesHome(hermesHome, maxTurns, baseEnv.HERMES_INFERENCE_PROVIDER, baseEnv.HERMES_INFERENCE_MODEL);
-    await seedIsolatedHermesCredentials(hermesHome, resolveSourceHermesHome(baseEnv));
+    const sourceHome = resolveSourceHermesHome(baseEnv);
+    await seedIsolatedHermesCredentials(hermesHome, sourceHome);
+    await applySourceHermesModelRoute(hermesHome, sourceHome);
     return await runHermesProcess({
       executable,
       args,

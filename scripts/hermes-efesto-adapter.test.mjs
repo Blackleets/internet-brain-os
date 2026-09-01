@@ -12,6 +12,8 @@ import {
   resolveSourceHermesHome,
   runHermesProcess,
   seedIsolatedHermesCredentials,
+  applySourceHermesModelRoute,
+  parseTopLevelHermesModelRoute,
 } from './hermes-efesto-adapter.mjs';
 
 describe('Hermes Efesto adapter', () => {
@@ -83,6 +85,25 @@ describe('Hermes Efesto adapter', () => {
       await expect(readFile(join(isolated, 'config.yaml'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
       expect(await seedIsolatedHermesCredentials(isolated, isolated)).toEqual([]);
       expect(await seedIsolatedHermesCredentials(isolated, '')).toEqual([]);
+    } finally {
+      await rm(source, { recursive: true, force: true });
+      await rm(isolated, { recursive: true, force: true });
+    }
+  });
+
+  it('copies only the source model route into isolated config.yaml and never toolsets', async () => {
+    const source = await mkdtemp(join(tmpdir(), 'efesto-hermes-model-src-'));
+    const isolated = await mkdtemp(join(tmpdir(), 'efesto-hermes-model-dst-'));
+    try {
+      await writeFile(join(source, 'config.yaml'), 'model:\n  default: nvidia/nemotron-test\n  provider: nvidia\n  base_url: https://example.invalid/v1\ntoolsets:\n  - hermes-cli\nagent:\n  max_turns: 60\n', 'utf8');
+      const isolatedConfig = await prepareHermesHome(isolated, 4);
+      const route = await applySourceHermesModelRoute(isolated, source);
+      expect(route).toEqual({ default: 'nvidia/nemotron-test', provider: 'nvidia', base_url: 'https://example.invalid/v1' });
+      expect(JSON.parse(await readFile(isolatedConfig, 'utf8'))).toEqual({
+        agent: { max_turns: 4 },
+        model: { default: 'nvidia/nemotron-test', provider: 'nvidia', base_url: 'https://example.invalid/v1' },
+      });
+      expect(parseTopLevelHermesModelRoute('not-model: true\n')).toBeUndefined();
     } finally {
       await rm(source, { recursive: true, force: true });
       await rm(isolated, { recursive: true, force: true });
