@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { enrichGoalIntent, extractNumericGoalKeywords, inferGoalCategories } from './goal-intent-enrichment.mjs';
+import { enrichGoalIntent, extractNumericGoalKeywords, extractUniqueGoalKeywords, inferGoalCategories } from './goal-intent-enrichment.mjs';
 
 describe('Kernel-owned Goal intent enrichment', () => {
   it('infers offer + tool and preserves price bounds for a natural drill Goal', () => {
@@ -33,6 +33,14 @@ describe('Kernel-owned Goal intent enrichment', () => {
 
   it('does not invent categories for generic text without a supported intent signal', () => {
     expect(inferGoalCategories('Anything please')).toEqual([]);
+  });
+
+  it('keeps unique identifiers from a title as keywords without inventing categories', () => {
+    const filings = enrichGoalIntent({ title: 'Locate record xyz-nonexist-token-9f3a in public filings' });
+    expect(filings.categories).toEqual([]);
+    expect(filings.keywords).toEqual(['xyz-nonexist-token-9f3a']);
+    expect(extractUniqueGoalKeywords('Find uatd-c-sniponly-k7m2q9x4')).toEqual(['uatd-c-sniponly-k7m2q9x4']);
+    expect(extractUniqueGoalKeywords('Find a drill offer')).toEqual([]);
   });
 
   it('extracts bounded price/rate numbers without treating one-digit prose numbers as intent', () => {

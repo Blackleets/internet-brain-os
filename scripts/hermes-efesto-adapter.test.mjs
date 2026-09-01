@@ -9,7 +9,9 @@ import {
   normalizeHermesExecutable,
   parseHermesFindings,
   prepareHermesHome,
+  resolveSourceHermesHome,
   runHermesProcess,
+  seedIsolatedHermesCredentials,
 } from './hermes-efesto-adapter.mjs';
 
 describe('Hermes Efesto adapter', () => {
@@ -59,6 +61,32 @@ describe('Hermes Efesto adapter', () => {
     expect(env).not.toHaveProperty('HERMES_SAFE_MODE');
     expect(env).not.toHaveProperty('HERMES_ENABLE_PROJECT_PLUGINS');
     expect(env).not.toHaveProperty('HERMES_IGNORE_USER_CONFIG');
+  });
+
+  it('resolves the process Hermes home without using the isolated destination', () => {
+    expect(resolveSourceHermesHome({ HERMES_HOME: '/user-owned-hermes', LOCALAPPDATA: 'C:\\Users\\x\\AppData\\Local' })).toBe('/user-owned-hermes');
+    expect(resolveSourceHermesHome({ LOCALAPPDATA: 'C:\\Users\\x\\AppData\\Local' })).toMatch(/hermes$/);
+  });
+
+  it('copies only credential files into the isolated Hermes home and never state.db', async () => {
+    const source = await mkdtemp(join(tmpdir(), 'efesto-hermes-cred-src-'));
+    const isolated = await mkdtemp(join(tmpdir(), 'efesto-hermes-cred-dst-'));
+    try {
+      await writeFile(join(source, 'auth.json'), '{"active_provider":"test"}\n', 'utf8');
+      await writeFile(join(source, '.env'), 'OPENROUTER_API_KEY=test-not-a-real-secret\n', 'utf8');
+      await writeFile(join(source, 'state.db'), 'founder-state-must-not-copy', 'utf8');
+      await writeFile(join(source, 'config.yaml'), 'founder-config-must-not-replace-isolated\n', 'utf8');
+      const copied = await seedIsolatedHermesCredentials(isolated, source);
+      expect(copied.sort()).toEqual(['.env', 'auth.json']);
+      expect(await readFile(join(isolated, 'auth.json'), 'utf8')).toContain('active_provider');
+      await expect(readFile(join(isolated, 'state.db'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+      await expect(readFile(join(isolated, 'config.yaml'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(await seedIsolatedHermesCredentials(isolated, isolated)).toEqual([]);
+      expect(await seedIsolatedHermesCredentials(isolated, '')).toEqual([]);
+    } finally {
+      await rm(source, { recursive: true, force: true });
+      await rm(isolated, { recursive: true, force: true });
+    }
   });
 
   it('writes one exclusive bounded-turn config into the isolated Hermes home', async () => {

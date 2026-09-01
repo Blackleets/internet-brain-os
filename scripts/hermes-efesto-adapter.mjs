@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -223,6 +223,38 @@ function configuredTimeout(value, fallback) {
   return parsed;
 }
 
+
+const HERMES_CREDENTIAL_FILES = Object.freeze(['auth.json', '.env', '.anthropic_oauth.json']);
+
+export function resolveSourceHermesHome(env = process.env) {
+  const explicit = typeof env.HERMES_HOME === 'string' ? env.HERMES_HOME.trim() : '';
+  if (explicit) return explicit;
+  if (typeof env.LOCALAPPDATA === 'string' && env.LOCALAPPDATA.trim()) return join(env.LOCALAPPDATA, 'hermes');
+  if (typeof env.HOME === 'string' && env.HOME.trim()) return join(env.HOME, '.hermes');
+  return '';
+}
+
+export async function seedIsolatedHermesCredentials(isolatedHome, sourceHome) {
+  if (typeof isolatedHome !== 'string' || !isolatedHome.trim() || typeof sourceHome !== 'string' || !sourceHome.trim()) {
+    return [];
+  }
+  if (resolve(isolatedHome) === resolve(sourceHome)) return [];
+  const copied = [];
+  for (const name of HERMES_CREDENTIAL_FILES) {
+    const from = join(sourceHome, name);
+    const to = join(isolatedHome, name);
+    try {
+      await copyFile(from, to);
+      try { await chmod(to, 0o600); } catch {}
+      copied.push(name);
+    } catch (error) {
+      if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) continue;
+      throw error;
+    }
+  }
+  return copied;
+}
+
 export async function runHermesOneShot(payload, options = {}) {
   const executable = normalizeHermesExecutable(options.executable ?? process.env.HEPHAESTUS_HERMES_EXECUTABLE ?? 'hermes');
   const prompt = buildHermesPrompt(payload);
@@ -234,6 +266,7 @@ export async function runHermesOneShot(payload, options = {}) {
   const args = buildHermesArgs(prompt, maxTurns, baseEnv.HERMES_INFERENCE_PROVIDER, baseEnv.HERMES_INFERENCE_MODEL);
   try {
     await prepareHermesHome(hermesHome, maxTurns, baseEnv.HERMES_INFERENCE_PROVIDER, baseEnv.HERMES_INFERENCE_MODEL);
+    await seedIsolatedHermesCredentials(hermesHome, resolveSourceHermesHome(baseEnv));
     return await runHermesProcess({
       executable,
       args,

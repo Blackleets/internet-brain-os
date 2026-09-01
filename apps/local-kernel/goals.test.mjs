@@ -55,6 +55,16 @@ describe('private Goals', () => {
     expect(goal.keywords).toEqual(expect.arrayContaining(['AI', '20']));
   });
 
+  it('creates a title-only unique-id Goal so Kernel SUPPORT can require that identifier on fetched pages', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'efesto-goals-unique-id-'));
+    const manager = new GoalManager(new LocalKnowledgeStore(join(dir, 'store.json')));
+    const goal = await manager.create({ title: 'Locate record xyz-nonexist-token-9f3a in public filings' });
+    expect(goal.keywords).toEqual(['xyz-nonexist-token-9f3a']);
+    expect(goal.categories).toEqual([]);
+    const snippetOnly = await manager.create({ title: 'Find uatd-c-sniponly-k7m2q9x4' });
+    expect(snippetOnly.keywords).toEqual(['uatd-c-sniponly-k7m2q9x4']);
+  });
+
   it('rejects goals without a discovery signal or with unsupported categories', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'efesto-goals-invalid-'));
     const manager = new GoalManager(new LocalKnowledgeStore(join(dir, 'store.json')));
