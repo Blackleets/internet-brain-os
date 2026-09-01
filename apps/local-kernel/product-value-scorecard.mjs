@@ -27,7 +27,7 @@ export function buildProductValueScorecard(data = {}, options = {}) {
     if (!previous || Date.parse(execution.decidedAt) < Date.parse(previous.decidedAt)) {
       executedGoals.set(execution.key, execution);
     }
-    if (mission?.status === 'completed') completedGoalKeys.add(execution.key);
+    if (isKernelForgedMission(mission)) completedGoalKeys.add(execution.key);
   }
 
   for (const opportunity of opportunities) {

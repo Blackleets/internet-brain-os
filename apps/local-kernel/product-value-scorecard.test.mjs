@@ -74,6 +74,8 @@ describe('local-first product value scorecard', () => {
     }, { now: '2026-08-10T12:00:00.000Z' });
 
     expect(scorecard.drivers.missionCompletionRate).toMatchObject({ status: 'measured', value: 0, numerator: 0, denominator: 2 });
+    expect(scorecard.drivers.findsPerCompletedGoal).toMatchObject({ status: 'not_measurable', value: null, reason: 'no_completed_goals' });
+    expect(scorecard.coverage.completedGoals).toBe(0);
   });
 
   it('reports a measurable zero Useful Find Rate while refusing to invent time-to-value without positive feedback', () => {
