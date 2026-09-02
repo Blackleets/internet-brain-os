@@ -11,3 +11,10 @@ describe('popup Watchtower Find copy contract', () => {
     expect(popup).not.toContain('opportunitiesPromoted ?? 0} opportunities found');
   });
 });
+
+describe('popup capture Find copy contract', () => {
+  it('fail-closes capture detected copy to isKernelSupportedFind', () => {
+    expect(popup).toContain('isKernelSupportedFind(result.opportunity)');
+    expect(popup).not.toContain('setStatus(result.opportunity');
+  });
+});

@@ -1,5 +1,5 @@
 import { createGoal, DEFAULT_KERNEL_BASE_URL, getCaseVerdict, getKernelStatus, inspectModelForge, listAgentMissions, listCases, listOpportunities, pairKernel, sendOpportunityFeedback, startGoalResearch } from './local-transport.js';
-import { kernelSupportedFinds, kernelSupportedFindsForMission, presentFind } from './find-presentation.js';
+import { isKernelSupportedFind, kernelSupportedFinds, kernelSupportedFindsForMission, presentFind } from './find-presentation.js';
 import { buildOpportunityCommandCenter } from './opportunity-command-center.js';
 import { buildOpportunityActionPlan, normalizeOpportunityReviewState, updateOpportunityReviewState } from './opportunity-action-workspace.js';
 import { normalizePublicOrigin } from './auto-capture-policy.js';
@@ -707,7 +707,7 @@ async function capture() {
     if (!captured?.ok) throw new Error('Unable to read this page');
     const result = await chrome.runtime.sendMessage({ type: 'HEPHAESTUS_SEND_PAGE_CONTEXT', context: captured.context, targetCaseId: select.value || undefined });
     if (!result?.ok) throw new Error(result?.error ?? 'Local Kernel rejected the page');
-    setStatus(result.opportunity
+    setStatus(isKernelSupportedFind(result.opportunity)
       ? `${result.opportunity.categoryLabel} detected — ${result.opportunity.relevance}% relevance. Saved privately.`
       : `Page analyzed. No strong opportunity detected${result.obsidianUpdated ? '; Evidence saved to Obsidian' : ''}.`);
     setForgeActivity(temporaryForgeActivity('capture-success'));

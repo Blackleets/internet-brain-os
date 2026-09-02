@@ -553,13 +553,11 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       const intelligence = projection && evidenceSummarizer
         ? await evidenceSummarizer.summarize(projection.evidenceId)
         : undefined;
-      const opportunity = projection && opportunities
-        ? await opportunities.project(body, projection)
-        : undefined;
+      // Fail-closed: capture mints Case+Evidence only. Regex classification is not Kernel SUPPORT; jwt.io/snippet-only stay Evidence. Finds persist from the mission verifier after evidenceSupportsGoal.
       const obsidianNotes = projection && obsidianProjector
         ? await obsidianProjector.syncCase(projection.caseId)
         : undefined;
-      return send(response, 202, { ok: true, ...receipt, ...projection, intelligence, opportunity, obsidianNotes });
+      return send(response, 202, { ok: true, ...receipt, ...projection, intelligence, obsidianNotes });
     } catch (error) {
       const known = error instanceof InboxError;
       return send(response, known ? error.status : 500, {
