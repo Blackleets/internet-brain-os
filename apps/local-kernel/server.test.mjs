@@ -376,7 +376,7 @@ describe('local Kernel HTTP receiver', () => {
   it('records authenticated feedback and exposes an erasable local preference profile', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'efesto-feedback-http-'));
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));
-    await store.write({ opportunities: [{ id: 'opportunity:abc', category: 'job', benefitType: 'income', sourceHost: 'jobs.example' }] });
+    await store.write({ opportunities: [{ id: 'opportunity:abc', category: 'job', benefitType: 'income', sourceHost: 'jobs.example', supported: true }] });
     const preferences = new PreferenceLearner(store);
     server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, { preferenceLearner: preferences });
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -389,6 +389,32 @@ describe('local Kernel HTTP receiver', () => {
     expect(await feedback.json()).toMatchObject({ ok: true, feedback: { signal: 'useful', category: 'job' } });
     expect(await (await fetch(`${endpoint}/api/preferences`, { headers: authHeaders })).json()).toMatchObject({ ok: true, profile: { eventCount: 1, categories: { job: 6 } } });
     expect(await (await fetch(`${endpoint}/api/preferences`, { method: 'DELETE', headers: authHeaders })).json()).toEqual({ ok: true, reset: true });
+  });
+
+  it('does not record useful Find feedback for unsupported regex opportunities', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'efesto-feedback-unsupported-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    await store.write({
+      opportunities: [
+        { id: 'opportunity:regex', category: 'job', benefitType: 'income', sourceHost: 'careers.example' },
+        { id: 'opportunity:jwt', category: 'tool', benefitType: 'capability', sourceHost: 'jwt.io', evidenceId: 'evidence:jwt' },
+      ],
+    });
+    const preferences = new PreferenceLearner(store);
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, { preferenceLearner: preferences });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const endpoint = `http://127.0.0.1:${server.address().port}`;
+    for (const id of ['opportunity:regex', 'opportunity:jwt']) {
+      const response = await fetch(`${endpoint}/api/opportunities/${encodeURIComponent(id)}/feedback`, {
+        method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' }, body: JSON.stringify({ signal: 'useful' }),
+      });
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({ ok: false, code: 'OPPORTUNITY_NOT_SUPPORTED' });
+    }
+    expect((await store.read()).preferenceFeedback ?? []).toEqual([]);
+    expect(await (await fetch(`${endpoint}/api/preferences`, { headers: authHeaders })).json()).toMatchObject({
+      ok: true, profile: { eventCount: 0, categories: {} },
+    });
   });
 
   it('lets an authenticated Hermes worker claim a mission but refuses snippet Completado', async () => {
