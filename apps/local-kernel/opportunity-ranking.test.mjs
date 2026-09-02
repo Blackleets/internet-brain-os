@@ -11,9 +11,16 @@ const base = {
   categoryLabel: 'Offer',
   title: 'Cordless drill deal',
   sourceHost: 'example.com',
+  sourceUrl: 'https://example.com/drill',
   relevance: 80,
   detectedAt: '2026-08-08T14:00:00.000Z',
+  supported: true,
 };
+
+function withoutSupport(overrides = {}) {
+  const { supported: _supported, ...rest } = { ...base, ...overrides };
+  return rest;
+}
 
 describe('rankOpportunity', () => {
   test('strong provenance ranks above an otherwise identical unprovenanced candidate', () => {
@@ -42,6 +49,47 @@ describe('rankOpportunity', () => {
     rankOpportunity(opportunity, { now, goalMatches: [{ score: 99 }] });
     expect(opportunity.relevance).toBe(80);
   });
+
+  test('evidenceId and caseId without Kernel SUPPORT do not get provenance credit', () => {
+    const unsupported = rankOpportunity(withoutSupport(), { now });
+    const none = rankOpportunity({ ...withoutSupport(), evidenceId: undefined, caseId: undefined }, { now });
+    expect(unsupported.components.evidenceStrength).toBe(25);
+    expect(unsupported.components.evidenceStrength).toBe(none.components.evidenceStrength);
+    expect(unsupported.reasons).not.toContain('Case and Evidence provenance available');
+  });
+
+  test('unsupported Evidence+URL must not outrank an otherwise identical supported Find', () => {
+    const unsupported = rankOpportunity(withoutSupport({ sourceUrl: 'https://jwt.io/' }), { now });
+    const supportedFind = rankOpportunity(base, { now });
+    expect(unsupported.score).toBeLessThan(supportedFind.score);
+    expect(unsupported.components.evidenceStrength).toBeLessThan(supportedFind.components.evidenceStrength);
+    expect(supportedFind.components.evidenceStrength).toBe(99);
+  });
+
+  test('mission verificationResults SUPPORT grants provenance credit without opportunity.supported', () => {
+    const item = withoutSupport();
+    const missions = [{
+      id: 'mission:1',
+      verificationResults: [{ evidenceId: 'evidence:1', supported: true }],
+    }];
+    const ranked = rankOpportunity(item, { now, missions });
+    expect(ranked.components.evidenceStrength).toBe(99);
+    expect(ranked.reasons).toContain('Case and Evidence provenance available');
+  });
+
+  test('verificationResults without supported === true or matching evidenceId do not grant provenance', () => {
+    const item = withoutSupport();
+    const rejected = rankOpportunity(item, {
+      now,
+      missions: [{ verificationResults: [{ evidenceId: 'evidence:1', supported: false }] }],
+    });
+    const otherId = rankOpportunity(item, {
+      now,
+      missions: [{ verificationResults: [{ evidenceId: 'evidence:other', supported: true }] }],
+    });
+    expect(rejected.components.evidenceStrength).toBe(25);
+    expect(otherId.components.evidenceStrength).toBe(25);
+  });
 });
 
 describe('OpportunityProjector ranking integration', () => {
@@ -59,5 +107,25 @@ describe('OpportunityProjector ranking integration', () => {
     expect(result.ranking.components.evidenceStrength).toBe(99);
     expect(result.personalizedRelevance).toBe(result.ranking.score);
     expect(result.ranking.reasons.length).toBeGreaterThan(0);
+  });
+
+  test('projector list does not credit unsupported Evidence+URL over a supported Find', async () => {
+    const unsupported = withoutSupport({
+      id: 'opportunity:jwt',
+      title: 'JWT debugger',
+      sourceHost: 'jwt.io',
+      sourceUrl: 'https://jwt.io/',
+    });
+    const data = {
+      opportunities: [unsupported, { ...base, id: 'opportunity:supported-find' }],
+      goals: [],
+      preferenceFeedback: [],
+      agentMissions: [],
+    };
+    const projector = new OpportunityProjector({ read: async () => structuredClone(data) });
+    const ranked = await projector.list({ now });
+    expect(ranked[0].id).toBe('opportunity:supported-find');
+    expect(ranked[0].ranking.components.evidenceStrength).toBe(99);
+    expect(ranked.find((item) => item.id === 'opportunity:jwt').ranking.components.evidenceStrength).toBe(25);
   });
 });

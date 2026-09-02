@@ -180,7 +180,7 @@ export class OpportunityProjector {
       .map((item) => {
         const goalMatches = matchOpportunityToGoals(item, data.goals ?? []);
         const learnedAdjustment = preferenceAdjustment(item, preferenceProfile);
-        const ranking = rankOpportunity(item, { goalMatches, learnedAdjustment, now });
+        const ranking = rankOpportunity(item, { goalMatches, learnedAdjustment, now, missions: data.agentMissions ?? [] });
         return { ...item, goalMatches, learnedAdjustment, ranking, personalizedRelevance: ranking.score };
       })
       .sort((left, right) => right.personalizedRelevance - left.personalizedRelevance || right.detectedAt.localeCompare(left.detectedAt))

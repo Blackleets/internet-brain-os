@@ -127,8 +127,8 @@ describe('Golden Goal: quality drill between 18 and 25 EUR', () => {
     expect(projected.status).toBe('opportunity');
     const [ranked] = await opportunities.list();
     expect(ranked.goalMatches[0].goalId).toBe(goal().id);
-    expect(ranked.ranking.components.evidenceStrength).toBe(99);
-    expect(ranked.ranking.reasons).toContain('Case and Evidence provenance available');
+    expect(ranked.ranking.components.evidenceStrength).toBe(25);
+    expect(ranked.ranking.reasons).not.toContain('Case and Evidence provenance available');
 
     const triggers = new TriggerEngine([{
       id: 'trigger:golden-drill', goalId: goal().id, planId: plan().id, revisionId: plan().revisionId,
