@@ -15,6 +15,18 @@ const base = {
   capturedAt: '2026-07-22T18:00:00.000Z',
 };
 
+async function markOpportunitySupported(store, evidenceId = 'evidence:1') {
+  await store.project(async (data) => ({
+    changed: true,
+    data: {
+      ...data,
+      opportunities: (data.opportunities ?? []).map((item) => (
+        item.evidenceId === evidenceId ? { ...item, supported: true } : item
+      )),
+    },
+  }));
+}
+
 describe('opportunity classifier', () => {
   it('classifies a strong job signal with explainable fields and raw deadline text', () => {
     expect(classifyOpportunity(base, { caseId: 'case:1', evidenceId: 'evidence:1' })).toEqual({
@@ -72,8 +84,11 @@ describe('opportunity classifier', () => {
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));
     const projector = new OpportunityProjector(store);
     await projector.project(base, { caseId: 'case:1', evidenceId: 'evidence:1' });
+    // Personalization boosts apply to Kernel-supported Finds, not bare evidenceId.
+    await markOpportunitySupported(store);
     await store.project(async (data) => ({ changed: true, data: { ...data, goals: [{ id: 'goal:1', title: 'Remote AI work', categories: ['job'], keywords: ['remote'], priority: 3, status: 'active', createdAt: base.capturedAt }] } }));
     const [result] = await projector.list();
+    expect(result.supported).toBe(true);
     expect(result.personalizedRelevance).toBeGreaterThan(result.relevance);
     expect(result.goalMatches[0]).toEqual(expect.objectContaining({ goalId: 'goal:1', title: 'Remote AI work' }));
   });
@@ -83,10 +98,24 @@ describe('opportunity classifier', () => {
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));
     const projector = new OpportunityProjector(store);
     const created = await projector.project(base, { caseId: 'case:1', evidenceId: 'evidence:1' });
+    await markOpportunitySupported(store);
     await new PreferenceLearner(store).record(created.opportunity.id, { signal: 'saved' });
     const [result] = await projector.list();
+    expect(result.supported).toBe(true);
     expect(result.learnedAdjustment).toBeGreaterThan(0);
     expect(result.personalizedRelevance).toBeGreaterThan(result.relevance);
     expect(result.relevance).toBe(created.opportunity.relevance);
+  });
+
+  it('does not credit evidenceId|caseId provenance without Kernel SUPPORT', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'efesto-unsupported-provenance-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    const projector = new OpportunityProjector(store);
+    await projector.project(base, { caseId: 'case:1', evidenceId: 'evidence:1' });
+    const [result] = await projector.list();
+    expect(result.supported).not.toBe(true);
+    expect(result.ranking.components.evidenceStrength).toBe(25);
+    expect(result.ranking.reasons).not.toContain('Case and Evidence provenance available');
+    expect(result.personalizedRelevance).toBeLessThanOrEqual(result.relevance);
   });
 });
