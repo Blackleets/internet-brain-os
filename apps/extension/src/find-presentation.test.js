@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isKernelSupportedFind, kernelSupportedFinds, presentFind } from './find-presentation.js';
+import { isKernelSupportedFind, kernelSupportedFinds, kernelSupportedFindsForMission, presentFind } from './find-presentation.js';
 
 const drill = {
   id: 'opp-drill',
@@ -80,5 +80,15 @@ describe('Find presentation', () => {
     expect(isKernelSupportedFind({ ...drill, status: 'dismissed' })).toBe(false);
     expect(isKernelSupportedFind({ ...drill, sourceUrl: 'javascript:alert(1)' })).toBe(false);
     expect(isKernelSupportedFind({ ...drill, sourceUrl: 'not-a-url' })).toBe(false);
+  });
+
+  it('counts only this mission Kernel-supported Finds for aviso', () => {
+    const item = { ...drill, supported: undefined };
+    const mission = missionWithSupport('ev-1', true);
+    expect(kernelSupportedFindsForMission([item], mission).map((row) => row.id)).toEqual(['opp-drill']);
+    expect(kernelSupportedFindsForMission([item], missionWithSupport('ev-1', false))).toEqual([]);
+    expect(kernelSupportedFindsForMission([item], { id: 'mission-empty' })).toEqual([]);
+    const other = { ...drill, id: 'opp-other', evidenceId: 'ev-other', supported: true };
+    expect(kernelSupportedFindsForMission([other], mission)).toEqual([]);
   });
 });

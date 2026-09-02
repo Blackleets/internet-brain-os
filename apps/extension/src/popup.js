@@ -1,5 +1,5 @@
 import { createGoal, DEFAULT_KERNEL_BASE_URL, getCaseVerdict, getKernelStatus, inspectModelForge, listAgentMissions, listCases, listOpportunities, pairKernel, sendOpportunityFeedback, startGoalResearch } from './local-transport.js';
-import { kernelSupportedFinds, presentFind } from './find-presentation.js';
+import { kernelSupportedFinds, kernelSupportedFindsForMission, presentFind } from './find-presentation.js';
 import { buildOpportunityCommandCenter } from './opportunity-command-center.js';
 import { buildOpportunityActionPlan, normalizeOpportunityReviewState, updateOpportunityReviewState } from './opportunity-action-workspace.js';
 import { normalizePublicOrigin } from './auto-capture-policy.js';
@@ -8,7 +8,7 @@ import { normalizeWorkspaceView, workspaceVisibility } from './workspace-navigat
 import { missionJourney, newestMission, onboardingJourney } from './product-journey.js';
 import { presentMission } from './mission-presentation.js';
 import { createAgentHubRefresher, missionRevision } from './agent-hub-refresh.js';
-import { markWatchtowerEventsRead, unreadWatchtowerCount } from './mission-watchtower.js';
+import { markWatchtowerEventsRead, presentWatchtowerBanner, unreadWatchtowerCount } from './mission-watchtower.js';
 import { listGoalSurfaces } from './goal-surface-transport.js';
 import { renderGoalSurfaceList } from './goal-surface-goal-list.js';
 
@@ -136,10 +136,7 @@ function renderWatchtower(watchtower) {
   $('#watchtower-result').hidden = unread === 0;
   if (unread === 0) return;
   const latest = watchtower.events.find((event) => event.unread);
-  const forged = latest?.status === 'completed' && (latest?.executionPhase === 'forged' || latest?.workState === 'forged');
-  $('#watchtower-copy').textContent = forged
-    ? `${unread} new forge result${unread === 1 ? '' : 's'} ready to inspect.`
-    : `${unread} mission update${unread === 1 ? '' : 's'} needs attention.`;
+  $('#watchtower-copy').textContent = presentWatchtowerBanner(unread, latest);
   $('#watchtower-open').onclick = async () => {
     setWorkspaceView('missions');
     const read = markWatchtowerEventsRead(watchtower);
@@ -191,17 +188,27 @@ async function loadModelForge(stored) {
 
 async function loadAgentHub(stored) {
   if (!stored.kernelApiToken) return [];
-  const missions = await listAgentMissions({ baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL, apiToken: stored.kernelApiToken });
+  const auth = { baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL, apiToken: stored.kernelApiToken };
+  const missions = await listAgentMissions(auth);
+  let opportunities = [];
+  try { opportunities = await listOpportunities(auth); } catch { opportunities = []; }
   const latest = newestMission(missions);
+  const forged = latest?.status === 'completed' && (latest.executionPhase === 'forged' || latest.workState === 'forged');
+  const findCount = kernelSupportedFindsForMission(opportunities, latest).length;
+  const completedCopy = findCount > 0
+    ? `${findCount} opportunities found`
+    : forged
+      ? 'Research completed'
+      : 'Research ended without Evidence';
   const copy = {
     waiting_for_agent: 'Waiting for Hermes', queued: 'Ready for Hermes', running: 'Hermes is researching',
-    completed: `${latest?.resultSummary?.opportunitiesPromoted ?? 0} opportunities found`, failed: 'Research needs attention',
+    completed: completedCopy, failed: 'Research needs attention',
   }[latest?.status] ?? 'No research mission yet';
   $('#mission-state').textContent = latest?.executionPhase === 'verifying' ? 'Efesto is verifying findings' : copy;
   $('#mission-state').dataset.status = latest?.status ?? 'idle';
   renderMissionProgress(latest);
   renderMissionHistory(missions);
-  setForgeActivity(forgeActivityForMission(latest));
+  setForgeActivity(forgeActivityForMission(latest, opportunities));
   return missions;
 }
 

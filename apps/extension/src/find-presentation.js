@@ -48,6 +48,21 @@ export function kernelSupportedFinds(items, missions = []) {
   return (Array.isArray(items) ? items : []).filter((item) => isKernelSupportedFind(item, missions));
 }
 
+/**
+ * Finds proved by this mission only. item.supported on an unrelated opportunity
+ * is not this mission's aviso. Fail-close when the mission has no evidenceIds.
+ */
+export function kernelSupportedFindsForMission(opportunities = [], mission) {
+  if (!mission) return [];
+  const evidenceIds = new Set();
+  for (const entry of Array.isArray(mission.verificationResults) ? mission.verificationResults : []) {
+    const id = text(entry?.evidenceId);
+    if (id) evidenceIds.add(id);
+  }
+  if (!evidenceIds.size) return [];
+  return kernelSupportedFinds(opportunities, [mission]).filter((item) => evidenceIds.has(text(item.evidenceId)));
+}
+
 export function presentFind(item = {}, missions = []) {
   const objectiveRelevance = boundedScore(item.relevance);
   const personalizedRelevance = boundedScore(item.personalizedRelevance ?? item.relevance);
