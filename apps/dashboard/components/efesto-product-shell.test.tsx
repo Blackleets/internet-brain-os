@@ -12,9 +12,9 @@ const base = {
   '/bootstrap/status': { schemaVersion: 'efesto.bootstrap-status.v1', ok: true, kernel: 'ready', hermes: 'ready', obsidian: 'ready', pairing: 'paired', overall: 'ready', message: 'ready', diagnostics: {}, actions: [] },
   '/api/cases': { ok: true, cases: [{ id: 'case-1', title: 'Supplier research', status: 'active' }] },
   '/api/goals': { ok: true, goals: [{ id: 'goal-1', title: 'Existing goal', priority: 2, status: 'active', createdAt: '2026-08-09T08:00:00.000Z' }] },
-  '/api/agent-missions': { ok: true, missions: [{ id: 'mission-1', goalId: 'goal-1', status: 'completed', executionPhase: 'forged', attempt: 1, createdAt: '2026-08-09T08:01:00.000Z' }] },
+  '/api/agent-missions': { ok: true, missions: [{ id: 'mission-1', goalId: 'goal-1', status: 'completed', executionPhase: 'forged', attempt: 1, createdAt: '2026-08-09T08:01:00.000Z', verificationResults: [{ candidateId: 'cand-1', status: 'verified', evidenceId: 'ev-1', supported: true, supportReason: 'supported' }] }] },
   '/api/goal-surfaces': { ok: true, surfaces: [{ schemaVersion: 'efesto.goal-surface.v1', sourceOfTruth: 'kernel', observedAt: '2026-08-09T08:04:00.000Z', goal: { id: 'goal-1', title: 'Existing goal', status: 'active', revision: 1, createdAt: '2026-08-09T08:00:00.000Z', updatedAt: '2026-08-09T08:00:00.000Z', compatibility: 'legacy_radar', policySummary: { autonomyLevel: 'assisted', approvalPolicy: 'none', source: 'legacy_compatibility' } }, mission: { id: 'mission-1', status: 'running', executionPhase: 'verifying', workState: 'verifying', createdAt: '2026-08-09T08:01:00.000Z', updatedAt: '2026-08-09T08:04:00.000Z', attempt: 1 } }] },
-  '/api/opportunities': { ok: true, opportunities: [{ id: 'opp-1', title: 'Taladro 21 €', category: 'shopping', categoryLabel: 'Compra', benefitType: 'saving', sourceHost: 'shop.example', relevance: 0.92, nextAction: 'Abrir la fuente y comparar', status: 'new', detectedAt: '2026-08-09T08:02:00.000Z' }] },
+  '/api/opportunities': { ok: true, opportunities: [{ id: 'opp-snippet', title: 'Hermes snippet drill', category: 'shopping', categoryLabel: 'Compra', benefitType: 'saving', sourceHost: 'search.example', relevance: 0.4, nextAction: 'Ignorar snippet', status: 'new', detectedAt: '2026-08-09T08:01:00.000Z' }, { id: 'opp-1', title: 'Taladro 21 €', category: 'shopping', categoryLabel: 'Compra', benefitType: 'saving', sourceHost: 'shop.example', relevance: 0.92, nextAction: 'Abrir la fuente y comparar', status: 'new', detectedAt: '2026-08-09T08:02:00.000Z', evidenceId: 'ev-1', caseId: 'case-1', sourceUrl: 'https://shop.example/drill', supported: true }] },
   '/api/chat/providers': { ok: true, providers: [{ id: 'fixture-local', type: 'ollama', label: 'Ollama local', models: ['qwen3:4b'], managedBy: 'environment' }] },
   '/api/model-forge': { ok: true, forge: { runtime: 'available', hardware: { ramGiB: 32, cpuCores: 12, tier: 'powerful' }, activeModel: 'qwen3:4b', recommended: 'qwen3:4b', models: [{ id: 'qwen3:4b', label: 'Qwen 3 4B', minRamGiB: 8, tier: 'light', uses: ['chat'], multilingual: true, compatible: true, installed: true, active: true }], setup: { action: 'configure', command: null, setting: null, restartRequired: false } } },
 } as const;
@@ -83,6 +83,11 @@ describe('Efesto goal-first product shell', () => {
     // 'verifying' while the legacy agent-mission record says 'forged'.
     const stateAction = await screen.findByText('Verificando Evidence');
     expect(stateAction).toBeTruthy();
+    expect(screen.getByText('Taladro 21 €')).toBeTruthy();
+    expect(screen.getByText('Kernel SUPPORT')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Abrir fuente/ }).getAttribute('href')).toBe('https://shop.example/drill');
+    expect(screen.queryByText('Hermes snippet drill')).toBeNull();
+    expect(screen.queryByText(/completado/i)).toBeNull();
     expect(requests.some((request) => request.method === 'GET' && new URL(request.url).pathname === '/api/goal-surfaces')).toBe(true);
     expect((base['/api/agent-missions'].missions[0] as { executionPhase: string }).executionPhase).toBe('forged');
   });
@@ -99,7 +104,8 @@ describe('Efesto goal-first product shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar y ejecutar' }));
     await waitFor(() => expect(requests.filter((request) => request.method === 'POST').map((request) => new URL(request.url).pathname)).toEqual(['/api/goals', '/api/goals/goal-created/missions']));
-    expect(await screen.findByRole('heading', { name: 'Objetivos' })).toBeTruthy();
+    expect(await screen.findByText('Goal persistido y misión confirmada para Hermes.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Goal', exact: true }).getAttribute('aria-pressed')).toBe('true');
   });
 
   it('wires Finds feedback and Evidence source inspection to real Kernel routes', async () => {
@@ -107,7 +113,9 @@ describe('Efesto goal-first product shell', () => {
     await connect();
     fireEvent.click(screen.getByRole('button', { name: /^Hallazgos/ }));
     expect(screen.getByText('Taladro 21 €')).toBeTruthy();
-    expect(screen.getByText('Lead no verificado')).toBeTruthy();
+    expect(screen.getByText('Kernel SUPPORT')).toBeTruthy();
+    expect(screen.queryByText('Hermes snippet drill')).toBeNull();
+    expect(screen.queryByText('Lead no verificado')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Útil' }));
     await waitFor(() => expect(requests.some((request) => request.method === 'POST' && new URL(request.url).pathname === '/api/opportunities/opp-1/feedback')).toBe(true));
 

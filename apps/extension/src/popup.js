@@ -1,5 +1,5 @@
 import { createGoal, DEFAULT_KERNEL_BASE_URL, getCaseVerdict, getKernelStatus, inspectModelForge, listAgentMissions, listCases, listOpportunities, pairKernel, sendOpportunityFeedback, startGoalResearch } from './local-transport.js';
-import { presentFind } from './find-presentation.js';
+import { isKernelSupportedFind, kernelSupportedFinds, kernelSupportedFindsForMission, presentFind } from './find-presentation.js';
 import { buildOpportunityCommandCenter } from './opportunity-command-center.js';
 import { buildOpportunityActionPlan, normalizeOpportunityReviewState, updateOpportunityReviewState } from './opportunity-action-workspace.js';
 import { normalizePublicOrigin } from './auto-capture-policy.js';
@@ -8,9 +8,10 @@ import { normalizeWorkspaceView, workspaceVisibility } from './workspace-navigat
 import { missionJourney, newestMission, onboardingJourney } from './product-journey.js';
 import { presentMission } from './mission-presentation.js';
 import { createAgentHubRefresher, missionRevision } from './agent-hub-refresh.js';
-import { markWatchtowerEventsRead, unreadWatchtowerCount } from './mission-watchtower.js';
+import { markWatchtowerEventsRead, presentWatchtowerBanner, unreadWatchtowerCount } from './mission-watchtower.js';
 import { listGoalSurfaces } from './goal-surface-transport.js';
 import { renderGoalSurfaceList } from './goal-surface-goal-list.js';
+import { autoRadarLastResultLabel, autoRadarStatusCopy } from './auto-radar.js';
 
 const $ = (selector) => document.querySelector(selector);
 const select = $('#case-target');
@@ -136,10 +137,7 @@ function renderWatchtower(watchtower) {
   $('#watchtower-result').hidden = unread === 0;
   if (unread === 0) return;
   const latest = watchtower.events.find((event) => event.unread);
-  const forged = latest?.status === 'completed' && (latest?.executionPhase === 'forged' || latest?.workState === 'forged');
-  $('#watchtower-copy').textContent = forged
-    ? `${unread} new forge result${unread === 1 ? '' : 's'} ready to inspect.`
-    : `${unread} mission update${unread === 1 ? '' : 's'} needs attention.`;
+  $('#watchtower-copy').textContent = presentWatchtowerBanner(unread, latest);
   $('#watchtower-open').onclick = async () => {
     setWorkspaceView('missions');
     const read = markWatchtowerEventsRead(watchtower);
@@ -191,17 +189,27 @@ async function loadModelForge(stored) {
 
 async function loadAgentHub(stored) {
   if (!stored.kernelApiToken) return [];
-  const missions = await listAgentMissions({ baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL, apiToken: stored.kernelApiToken });
+  const auth = { baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL, apiToken: stored.kernelApiToken };
+  const missions = await listAgentMissions(auth);
+  let opportunities = [];
+  try { opportunities = await listOpportunities(auth); } catch { opportunities = []; }
   const latest = newestMission(missions);
+  const forged = latest?.status === 'completed' && (latest.executionPhase === 'forged' || latest.workState === 'forged');
+  const findCount = kernelSupportedFindsForMission(opportunities, latest).length;
+  const completedCopy = findCount > 0
+    ? `${findCount} opportunities found`
+    : forged
+      ? 'Research completed'
+      : 'Research ended without Evidence';
   const copy = {
     waiting_for_agent: 'Waiting for Hermes', queued: 'Ready for Hermes', running: 'Hermes is researching',
-    completed: `${latest?.resultSummary?.opportunitiesPromoted ?? 0} opportunities found`, failed: 'Research needs attention',
+    completed: completedCopy, failed: 'Research needs attention',
   }[latest?.status] ?? 'No research mission yet';
   $('#mission-state').textContent = latest?.executionPhase === 'verifying' ? 'Efesto is verifying findings' : copy;
   $('#mission-state').dataset.status = latest?.status ?? 'idle';
   renderMissionProgress(latest);
   renderMissionHistory(missions);
-  setForgeActivity(forgeActivityForMission(latest));
+  setForgeActivity(forgeActivityForMission(latest, opportunities));
   return missions;
 }
 
@@ -309,27 +317,31 @@ async function addGoal() {
 async function loadOpportunities(stored) {
   const inbox = $('#opportunity-list');
   if (!stored.kernelApiToken) return;
-  const opportunities = await listOpportunities({ baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL, apiToken: stored.kernelApiToken });
+  const auth = { baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL, apiToken: stored.kernelApiToken };
+  const opportunities = await listOpportunities(auth);
+  let missions = [];
+  try { missions = await listAgentMissions(auth); } catch { missions = []; }
+  const finds = kernelSupportedFinds(opportunities, missions);
   const localReview = await chrome.storage.local.get('opportunityReviewState');
   const reviewState = normalizeOpportunityReviewState(localReview.opportunityReviewState);
-  $('#opportunity-count').textContent = String(opportunities.length);
-  $('#find-nav-count').textContent = String(opportunities.length);
-  productState.findCount = opportunities.length;
+  $('#opportunity-count').textContent = String(finds.length);
+  $('#find-nav-count').textContent = String(finds.length);
+  productState.findCount = finds.length;
   renderGuide();
-  renderCommandCenter(opportunities);
+  renderCommandCenter(finds, missions);
   inbox.replaceChildren();
-  if (!opportunities.length) {
+  if (!finds.length) {
     const empty = document.createElement('p');
     empty.className = 'empty';
     empty.textContent = 'No strong leads yet. Keep browsing authorized public sites.';
     inbox.append(empty);
     return;
   }
-  for (const item of opportunities.slice(0, 3)) inbox.append(renderOpportunity(item, stored, reviewState));
+  for (const item of finds.slice(0, 3)) inbox.append(renderOpportunity(item, stored, reviewState, missions));
 }
 
-function renderCommandCenter(opportunities) {
-  const center = buildOpportunityCommandCenter(opportunities);
+function renderCommandCenter(opportunities, missions = []) {
+  const center = buildOpportunityCommandCenter(opportunities, missions);
   const container = $('#command-center-content');
   container.replaceChildren();
   if (!center.lead) {
@@ -352,8 +364,8 @@ function renderCommandCenter(opportunities) {
   container.append(metrics);
 }
 
-function renderOpportunity(item, stored, reviewState) {
-  const presentation = presentFind(item);
+function renderOpportunity(item, stored, reviewState, missions = []) {
+  const presentation = presentFind(item, missions);
   const card = document.createElement('article');
   card.className = 'opportunity';
   card.dataset.category = item.category ?? 'lead';
@@ -507,76 +519,9 @@ function updateRadarCopy() {
 }
 
 function updateAutoRadarUI(state, lastEvent) {
-  // Update status indicator
-  let statusText = 'Desconocido';
-  let statusClass = 'unknown';
-  let icon = '❓';
-  
-  switch (state) {
-    case 'paused':
-      statusText = 'Pausado';
-      statusClass = 'paused';
-      icon = '⏸';
-      break;
-    case 'observing':
-      statusText = 'Observando';
-      statusClass = 'observing';
-      icon = '👁';
-      break;
-    case 'waiting':
-      statusText = 'Esperando estabilización';
-      statusClass = 'waiting';
-      icon = '⏳';
-      break;
-    case 'evaluating':
-      statusText = 'Evaluando';
-      statusClass = 'evaluating';
-      icon = '🔍';
-      break;
-    case 'irrelevant':
-      statusText = 'Irrelevante';
-      statusClass = 'irrelevant';
-      icon = '❌';
-      break;
-    case 'blocked':
-      statusText = 'Bloqueado';
-      statusClass = 'blocked';
-      icon = '🚫';
-      break;
-    case 'duplicate':
-      statusText = 'Duplicado';
-      statusClass = 'duplicate';
-      icon = '🔄';
-      break;
-    case 'submitting':
-      statusText = 'Enviando';
-      statusClass = 'submitting';
-      icon = '📤';
-      break;
-    case 'admitted':
-      statusText = 'Admitido';
-      statusClass = 'admitted';
-      icon = '✅';
-      break;
-    case 'rejected':
-      statusText = 'Rechazado';
-      statusClass = 'rejected';
-      icon = '❌';
-      break;
-    case 'needs_research':
-      statusText = 'Necesita investigación';
-      statusClass = 'needs-research';
-      icon = '🔬';
-      break;
-    case 'failed':
-      statusText = 'Falló';
-      statusClass = 'failed';
-      icon = '💥';
-      break;
-  }
-  
-  autoRadarStatusIndicator.textContent = `${icon} ${statusText}`;
-  autoRadarStatusIndicator.className = `status-indicator ${statusClass}`;
+  const copy = autoRadarStatusCopy(state);
+  autoRadarStatusIndicator.textContent = `${copy.icon} ${copy.text}`;
+  autoRadarStatusIndicator.className = `status-indicator ${copy.className}`;
   
   // Update toggle button
   if (state === 'paused') {
@@ -600,22 +545,13 @@ function updateAutoRadarUI(state, lastEvent) {
       }
       autoRadarLastDomain.textContent = `Último dominio: ${domainText}`;
   
-      let resultText = 'Desconocido';
-      switch (lastEvent.status) {
-        case 'admitted': resultText = 'Admitido ✅'; break;
-        case 'rejected': resultText = 'Rechazado ❌'; break;
-        case 'failed': resultText = 'Falló 💥'; break;
-        case 'duplicate': resultText = 'Duplicado 🔄'; break;
-        case 'blocked': resultText = 'Bloqueado 🚫'; break;
-        default: resultText = `${lastEvent.status} ${lastEvent.status === 'captured' ? '📡' : ''}`;
-      }
-      autoRadarLastResult.textContent = `Último resultado: ${resultText}`;
+      autoRadarLastResult.textContent = `Último resultado: ${autoRadarLastResultLabel(lastEvent.status)}`;
     } else {
       autoRadarLastDomain.textContent = 'Último dominio: — ';
       autoRadarLastResult.textContent = 'Último resultado: — ';
     }
 
-    // Fase 2: panel de veredicto de admisión (forensics visible para el usuario)
+    // Evidence Case panel (capture is not Kernel ADMITTED and not a Find).
     updateVerdictPanel(lastEvent);
 }
 
@@ -633,7 +569,7 @@ function updateVerdictPanel(lastEvent) {
     return;
   }
   verdictPanel.hidden = false;
-  verdictContent.textContent = 'Pulsa para ver por qué el Kernel admitió esta captura.';
+  verdictContent.textContent = 'Pulsa para ver el Case de esta captura. Evidence no es un Find.';
 }
 
 if (verdictOpenBtn) {
@@ -648,7 +584,7 @@ if (verdictOpenBtn) {
       });
       const evidenceCount = Array.isArray(verdict.evidence) ? verdict.evidence.length : 0;
       const status = verdict.case?.status ?? 'desconocido';
-      verdictContent.textContent = `Admitido y guardado como Case. ${evidenceCount} evidencia(s) respaldan esta decisión. Estado: ${status}.`;
+      verdictContent.textContent = `Evidence guardada como Case. ${evidenceCount} evidencia(s). Estado: ${status}. No es un Find.`;
     } catch (error) {
       verdictContent.textContent = error instanceof Error ? `No se pudo cargar el veredicto: ${error.message}` : 'No se pudo cargar el veredicto.';
     }
@@ -696,7 +632,7 @@ async function capture() {
     if (!captured?.ok) throw new Error('Unable to read this page');
     const result = await chrome.runtime.sendMessage({ type: 'HEPHAESTUS_SEND_PAGE_CONTEXT', context: captured.context, targetCaseId: select.value || undefined });
     if (!result?.ok) throw new Error(result?.error ?? 'Local Kernel rejected the page');
-    setStatus(result.opportunity
+    setStatus(isKernelSupportedFind(result.opportunity)
       ? `${result.opportunity.categoryLabel} detected — ${result.opportunity.relevance}% relevance. Saved privately.`
       : `Page analyzed. No strong opportunity detected${result.obsidianUpdated ? '; Evidence saved to Obsidian' : ''}.`);
     setForgeActivity(temporaryForgeActivity('capture-success'));

@@ -15,6 +15,18 @@ const base = {
   capturedAt: '2026-07-22T18:00:00.000Z',
 };
 
+async function markOpportunitySupported(store, evidenceId = 'evidence:1') {
+  await store.project(async (data) => ({
+    changed: true,
+    data: {
+      ...data,
+      opportunities: (data.opportunities ?? []).map((item) => (
+        item.evidenceId === evidenceId ? { ...item, supported: true } : item
+      )),
+    },
+  }));
+}
+
 describe('opportunity classifier', () => {
   it('classifies a strong job signal with explainable fields and raw deadline text', () => {
     expect(classifyOpportunity(base, { caseId: 'case:1', evidenceId: 'evidence:1' })).toEqual({
@@ -59,11 +71,14 @@ describe('opportunity classifier', () => {
 
   it('persists each opportunity once and lists highest relevance first', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'efesto-opportunities-'));
-    const projector = new OpportunityProjector(new LocalKnowledgeStore(join(dir, 'store.json')));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    const projector = new OpportunityProjector(store);
     const first = await projector.project(base, { caseId: 'case:1', evidenceId: 'evidence:1' });
     const retry = await projector.project(base, { caseId: 'case:1', evidenceId: 'evidence:1' });
     expect(first.status).toBe('opportunity');
     expect(retry.duplicate).toBe(true);
+    expect(await projector.list()).toEqual([]);
+    await markOpportunitySupported(store);
     expect(await projector.list()).toHaveLength(1);
   });
 
@@ -72,8 +87,11 @@ describe('opportunity classifier', () => {
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));
     const projector = new OpportunityProjector(store);
     await projector.project(base, { caseId: 'case:1', evidenceId: 'evidence:1' });
+    // Personalization boosts apply to Kernel-supported Finds, not bare evidenceId.
+    await markOpportunitySupported(store);
     await store.project(async (data) => ({ changed: true, data: { ...data, goals: [{ id: 'goal:1', title: 'Remote AI work', categories: ['job'], keywords: ['remote'], priority: 3, status: 'active', createdAt: base.capturedAt }] } }));
     const [result] = await projector.list();
+    expect(result.supported).toBe(true);
     expect(result.personalizedRelevance).toBeGreaterThan(result.relevance);
     expect(result.goalMatches[0]).toEqual(expect.objectContaining({ goalId: 'goal:1', title: 'Remote AI work' }));
   });
@@ -83,10 +101,68 @@ describe('opportunity classifier', () => {
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));
     const projector = new OpportunityProjector(store);
     const created = await projector.project(base, { caseId: 'case:1', evidenceId: 'evidence:1' });
+    await markOpportunitySupported(store);
     await new PreferenceLearner(store).record(created.opportunity.id, { signal: 'saved' });
     const [result] = await projector.list();
+    expect(result.supported).toBe(true);
     expect(result.learnedAdjustment).toBeGreaterThan(0);
     expect(result.personalizedRelevance).toBeGreaterThan(result.relevance);
     expect(result.relevance).toBe(created.opportunity.relevance);
+  });
+
+  it('does not list Evidence+URL as a Find without Kernel SUPPORT', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'efesto-unsupported-inbox-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    const projector = new OpportunityProjector(store);
+    await projector.project(base, { caseId: 'case:1', evidenceId: 'evidence:1' });
+    const jwt = await projector.project({
+      ...base,
+      url: 'https://jwt.io/',
+      canonicalUrl: 'https://jwt.io/',
+      title: 'We are hiring an AI Applications Engineer',
+      visibleText: 'Open role. Remote full-time position. Salary listed. Apply now. Deadline: August 14, 2026.',
+    }, { caseId: 'case:jwt', evidenceId: 'evidence:jwt' });
+    expect(jwt.status).toBe('opportunity');
+    const stored = await store.read();
+    expect(stored.opportunities.some((item) => item.sourceHost === 'jwt.io')).toBe(true);
+    expect(await projector.list()).toEqual([]);
+    await markOpportunitySupported(store, 'evidence:1');
+    const listed = await projector.list();
+    expect(listed).toHaveLength(1);
+    expect(listed[0].supported).toBe(true);
+    expect(listed[0].evidenceId).toBe('evidence:1');
+    expect(listed.map((item) => item.sourceHost)).not.toContain('jwt.io');
+  });
+
+  it('lists a Find proved only by mission verificationResults SUPPORT', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'efesto-mission-inbox-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    const projector = new OpportunityProjector(store);
+    await projector.project(base, { caseId: 'case:1', evidenceId: 'evidence:1' });
+    expect(await projector.list()).toEqual([]);
+    await store.project(async (data) => ({
+      changed: true,
+      data: {
+        ...data,
+        agentMissions: [{
+          id: 'mission:1',
+          goalId: 'goal:1',
+          status: 'completed',
+          executionPhase: 'forged',
+          createdAt: base.capturedAt,
+          verificationResults: [{
+            candidateId: 'cand-1',
+            status: 'verified',
+            evidenceId: 'evidence:1',
+            supported: true,
+            supportReason: 'supported',
+          }],
+        }],
+      },
+    }));
+    const listed = await projector.list();
+    expect(listed).toHaveLength(1);
+    expect(listed[0].evidenceId).toBe('evidence:1');
+    expect(listed[0].supported).not.toBe(true);
   });
 });

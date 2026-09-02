@@ -1,6 +1,6 @@
-import { DEFAULT_KERNEL_BASE_URL, listAgentMissions, sendPageContext } from './local-transport.js';
+import { DEFAULT_KERNEL_BASE_URL, listAgentMissions, listOpportunities, sendPageContext } from './local-transport.js';
 import { evaluateAutoCapture } from './auto-capture-policy.js';
-import { reconcileMissionWatchtower } from './mission-watchtower.js';
+import { presentWatchtowerAviso, reconcileMissionWatchtower } from './mission-watchtower.js';
 import { AutoRadar, AUTO_RADAR_STATES } from './auto-radar.js';
 
 const WATCHTOWER_ALARM = 'efesto-mission-watchtower';
@@ -152,27 +152,35 @@ async function inspectMissionTransitions() {
   const stored = await chrome.storage.local.get(['kernelBaseUrl', 'kernelApiToken', 'missionWatchtower']);
   if (!stored.kernelApiToken) return;
   try {
-    const missions = await listAgentMissions({
+    const options = {
       baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL,
       apiToken: stored.kernelApiToken,
-    });
+    };
+    const missions = await listAgentMissions(options);
+    let opportunities = [];
+    try {
+      opportunities = await listOpportunities(options);
+    } catch {
+      opportunities = [];
+    }
     const result = reconcileMissionWatchtower(missions, stored.missionWatchtower);
     await chrome.storage.local.set({ missionWatchtower: result.state });
-    for (const transition of result.transitions) await notifyMissionTransition(transition);
+    const byId = Object.fromEntries(missions.filter((mission) => typeof mission?.id === 'string').map((mission) => [mission.id, mission]));
+    for (const transition of result.transitions) {
+      const aviso = presentWatchtowerAviso(transition, opportunities, byId[transition.missionId]);
+      if (aviso.notify) await notifyMissionTransition(transition, aviso);
+    }
   } catch {
     // A sleeping or restarting local Kernel is expected; retain the last observation.
   }
 }
 
-async function notifyMissionTransition(transition) {
-  const forged = transition.status === 'completed' && (transition.executionPhase === 'forged' || transition.workState === 'forged');
+async function notifyMissionTransition(transition, aviso) {
   await chrome.notifications.create(`efesto-mission:${transition.id}`, {
     type: 'basic',
     iconUrl: 'icons/efesto-notification.svg',
-    title: forged ? 'Efesto finished forging' : 'Efesto needs your attention',
-    message: forged
-      ? 'A local mission finished. Open Efesto to inspect the Evidence.'
-      : 'A local mission stopped safely. Open Efesto to review the Forge Ledger.',
+    title: aviso.title,
+    message: aviso.message,
     priority: 1,
   });
 }

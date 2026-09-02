@@ -1,3 +1,5 @@
+import { kernelSupportedFindsForMission } from './find-presentation.js';
+
 const ACTIVITIES = Object.freeze({
   idle: { label: 'The forge is ready', detail: 'Create a Goal or analyze a public page.', tone: 'idle' },
   queued: { label: 'Preparing the tools', detail: 'A research mission is ready for Hermes.', tone: 'queued' },
@@ -7,14 +9,14 @@ const ACTIVITIES = Object.freeze({
   error: { label: 'Inspecting a broken piece', detail: 'Research stopped safely and needs attention.', tone: 'error' },
 });
 
-export function forgeActivityForMission(mission) {
+export function forgeActivityForMission(mission, opportunities = []) {
   if (!mission) return ACTIVITIES.idle;
   if (mission.executionPhase === 'verifying') return ACTIVITIES.verifying;
   if (mission.status === 'running') return ACTIVITIES.working;
   if (mission.status === 'waiting_for_agent') return { ...ACTIVITIES.error, label: 'Hermes not available', detail: 'The mission is authorized, but no Hermes worker is connected.' };
   if (mission.status === 'queued') return ACTIVITIES.queued;
   if (mission.status === 'completed' && (mission.executionPhase === 'forged' || mission.workState === 'forged')) {
-    const found = Number(mission.resultSummary?.opportunitiesPromoted) || 0;
+    const found = kernelSupportedFindsForMission(opportunities, mission).length;
     return found > 0
       ? { ...ACTIVITIES.success, detail: `${found} ${found === 1 ? 'opportunity' : 'opportunities'} passed local checks and saved.` }
       : { ...ACTIVITIES.success, label: 'Research completed', detail: 'No strong opportunity passed the local checks.' };

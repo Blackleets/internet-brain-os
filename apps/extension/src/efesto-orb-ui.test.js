@@ -95,4 +95,21 @@ describe('Efesto orb UI static contract', () => {
     expect(css).toContain('@media (max-width:380px)');
     expect(css).toContain('.forge-power-panel{padding:15px 10px}');
   });
+
+  it('applies Efesto landing visual tokens in the popup chrome', () => {
+    const popupCss = readFileSync(resolve('apps/extension/src/popup.css'), 'utf8');
+    const html = readFileSync(resolve('apps/extension/src/popup.html'), 'utf8');
+    expect(popupCss).toContain('--bg: #0d0b0a');
+    expect(popupCss).toContain('--panel: #1c1714');
+    expect(popupCss).toContain('--ember: #ff7a18');
+    expect(popupCss).toContain('--radius: 16px');
+    expect(popupCss).toContain('orb-core');
+    expect(popupCss).toContain('orb-ring');
+    expect(html).toContain('lang="es"');
+    expect(html).toContain('Efesto');
+    expect(html).toContain('Radar');
+    expect(html).toContain('class="ember-field"');
+    expect(html).toContain('data-view-target="forge"');
+    expect(html).toContain('id="living-forge"');
+  });
 });

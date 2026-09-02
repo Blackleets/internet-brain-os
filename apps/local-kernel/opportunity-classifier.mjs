@@ -174,18 +174,48 @@ export class OpportunityProjector {
 
   async list({ limit = 20, now = new Date().toISOString() } = {}) {
     const data = await this.store.read();
+    const missions = data.agentMissions ?? [];
     const preferenceProfile = buildPreferenceProfile(data.preferenceFeedback ?? []);
     return (data.opportunities ?? [])
-      .filter((item) => item?.status !== 'dismissed')
+      .filter((item) => isKernelSupportedInboxFind(item, missions))
       .map((item) => {
         const goalMatches = matchOpportunityToGoals(item, data.goals ?? []);
         const learnedAdjustment = preferenceAdjustment(item, preferenceProfile);
-        const ranking = rankOpportunity(item, { goalMatches, learnedAdjustment, now });
+        const ranking = rankOpportunity(item, { goalMatches, learnedAdjustment, now, missions });
         return { ...item, goalMatches, learnedAdjustment, ranking, personalizedRelevance: ranking.score };
       })
       .sort((left, right) => right.personalizedRelevance - left.personalizedRelevance || right.detectedAt.localeCompare(left.detectedAt))
       .slice(0, Math.max(1, Math.min(Number(limit) || 20, 100)));
   }
+}
+
+/**
+ * Fail-closed Kernel Find inbox (GET /api/opportunities).
+ * Mirrors dashboard isKernelSupportedFind: Evidence+URL and regex classification
+ * are not Finds. jwt.io/snippet-only stay out of the inbox.
+ */
+function isKernelSupportedInboxFind(item, missions) {
+  const title = typeof item?.title === 'string' ? item.title.trim() : '';
+  const evidenceId = typeof item?.evidenceId === 'string' ? item.evidenceId.trim() : '';
+  const sourceUrl = typeof item?.sourceUrl === 'string' ? item.sourceUrl.trim() : '';
+  if (!title || !evidenceId || !sourceUrl || item.status === 'dismissed') return false;
+  try {
+    const parsed = new URL(sourceUrl);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+  } catch {
+    return false;
+  }
+  if (item.supported === true) return true;
+  if (!Array.isArray(missions)) return false;
+  for (const mission of missions) {
+    const results = mission?.verificationResults;
+    if (!Array.isArray(results)) continue;
+    for (const entry of results) {
+      if (!entry || typeof entry !== 'object') continue;
+      if (entry.evidenceId === evidenceId && entry.supported === true) return true;
+    }
+  }
+  return false;
 }
 
 function scoreCategory(category, text) {

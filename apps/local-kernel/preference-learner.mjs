@@ -14,6 +14,10 @@ export class PreferenceLearner {
     return this.store.project(async (data) => {
       const opportunity = (data.opportunities ?? []).find((item) => item.id === opportunityId);
       if (!opportunity) throw new InboxError('OPPORTUNITY_NOT_FOUND', 'Opportunity was not found', 404);
+      // Fail-closed: regex/job-page classification is not a useful Find. Feedback trains ranking only after Kernel SUPPORT.
+      if (opportunity.supported !== true) {
+        throw new InboxError('OPPORTUNITY_NOT_SUPPORTED', 'Preference feedback applies only to Kernel-supported Finds', 409);
+      }
       const feedback = Array.isArray(data.preferenceFeedback) ? data.preferenceFeedback : [];
       const id = `${opportunityId}:${input.signal}`;
       const previous = feedback.find((item) => item.id === id);

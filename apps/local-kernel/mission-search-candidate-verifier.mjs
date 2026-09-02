@@ -83,10 +83,6 @@ export class MissionSearchCandidateVerifier {
           verificationResults.push({ candidateId: outcome.candidate.id, status: 'verification_failed', reason: outcome.reason });
           continue;
         }
-        const projected = projectVerifiedDocument(nextData, current, outcome.candidate, outcome.document, this.opportunityProjector);
-        nextData = projected.data;
-        evidenceResults.push(projected.result);
-        if (projected.result.opportunity?.status === 'opportunity') promoted += 1;
         const liveGoal = (nextData.goals ?? []).find((item) => item?.id === current.goalId) ?? goal;
         const support = kernel.evidenceSupportsGoal(
           {
@@ -99,6 +95,20 @@ export class MissionSearchCandidateVerifier {
             url: String(outcome.document.sourceUrl ?? ''),
           },
         );
+        const projected = projectVerifiedDocument(
+          nextData,
+          current,
+          outcome.candidate,
+          outcome.document,
+          this.opportunityProjector,
+          {
+            promoteOpportunity: support.supported === true,
+            supportReason: support.reason,
+          },
+        );
+        nextData = projected.data;
+        evidenceResults.push(projected.result);
+        if (projected.result.opportunity?.status === 'opportunity') promoted += 1;
         verificationResults.push({
           candidateId: outcome.candidate.id,
           status: 'verified',
@@ -245,7 +255,7 @@ function capabilityContext(goal) {
   return { revision: 1, approvalPolicy: 'legacy_none', allowedCapabilities: [READ_CAPABILITY], forbiddenCapabilities: [], allowedDataScopes: ['public_web'], forbiddenDataScopes: [] };
 }
 
-function projectVerifiedDocument(data, mission, candidate, document, opportunityProjector) {
+function projectVerifiedDocument(data, mission, candidate, document, opportunityProjector, options = {}) {
   const suffix = createHash('sha256').update(`${mission.id}\n${candidate.id}`).digest('hex');
   const caseId = `case:verified:${suffix}`;
   const evidenceId = `evidence:verified:${suffix}`;
@@ -302,12 +312,29 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
     nextData = { ...data, cases: [...(data.cases ?? []), caseRecord], evidence: [...(data.evidence ?? []), evidenceRecord] };
   }
   const references = { caseId, evidenceId };
-  const classified = classifyOpportunity(context, references);
   let opportunity;
-  if (!(classified.status === 'opportunity' && mission.scope?.categories?.length && !mission.scope.categories.includes(classified.opportunity.category))) {
-    const projected = opportunityProjector.projectInto(nextData, context, references);
-    nextData = projected.data;
-    opportunity = projected.result;
+  // Fail-closed: only classify/project Opportunity when evidenceSupportsGoal already passed.
+  if (options.promoteOpportunity === true) {
+    const classified = classifyOpportunity(context, references);
+    if (!(classified.status === 'opportunity' && mission.scope?.categories?.length && !mission.scope.categories.includes(classified.opportunity.category))) {
+      const projected = opportunityProjector.projectInto(nextData, context, references);
+      nextData = projected.data;
+      opportunity = projected.result;
+      if (opportunity?.status === 'opportunity' && opportunity.opportunity?.id) {
+        const stamped = {
+          ...opportunity.opportunity,
+          supported: true,
+          supportReason: options.supportReason ?? 'supported',
+        };
+        nextData = {
+          ...nextData,
+          opportunities: (nextData.opportunities ?? []).map((item) => (
+            item?.id === stamped.id ? stamped : item
+          )),
+        };
+        opportunity = { ...opportunity, opportunity: stamped };
+      }
+    }
   }
   return { data: nextData, result: { caseId, evidenceId, duplicate, sourceUrl, opportunity } };
 }

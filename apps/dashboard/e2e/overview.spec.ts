@@ -53,6 +53,10 @@ test('runs the Goal-first journey only after explicit confirmation', async ({ pa
   // the legacy agent-mission record says forged; the visible phase must
   // follow the goal surface, not the legacy record.
   await expect(page.getByText('Investigando', { exact: true })).toBeVisible();
+  await expect(page.getByText('AI automation project', { exact: true })).toBeVisible();
+  await expect(page.getByText('Kernel SUPPORT', { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Abrir fuente/ })).toHaveAttribute('href', 'https://clients.example/projects/ai-automation');
+  await expect(page.getByText('Hermes snippet drill')).toHaveCount(0);
   // The product scorecard lives on the Missions route (G5.2 contract).
   await page.locator('.efesto-sidebar nav').getByRole('button', { name: /^Objetivos/ }).click();
   await expectLocalScorecard(page);
@@ -65,7 +69,8 @@ test('runs the Goal-first journey only after explicit confirmation', async ({ pa
   expect(writes).toEqual([]);
 
   await page.getByRole('button', { name: 'Confirmar y ejecutar', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Objetivos', exact: true })).toBeVisible();
+  await expect(page.getByText('Goal persistido y misión confirmada para Hermes.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Goal', exact: true })).toHaveAttribute('aria-pressed', 'true');
   expect(writes).toEqual(['/api/goals', '/api/goals/goal-e2e/missions']);
 });
 
