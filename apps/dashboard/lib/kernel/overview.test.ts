@@ -225,6 +225,53 @@ describe('loadOverview', () => {
     ]);
   });
 
+  it('does not list unsupported Evidence+URL capture as Hallazgo activity', async () => {
+    const snapshot = await loadOverview(clientWith({
+      '/api/opportunities': Response.json({
+        ok: true,
+        opportunities: [
+          {
+            id: 'opportunity-jwt',
+            evidenceId: 'evidence-jwt',
+            caseId: 'case-jwt',
+            category: 'offer',
+            categoryLabel: 'Offer',
+            title: 'JWT debugger',
+            sourceUrl: 'https://jwt.io/',
+            sourceHost: 'jwt.io',
+            relevance: 80,
+            status: 'new',
+            detectedAt: '2026-07-26T10:05:00.000Z',
+          },
+          {
+            id: 'opportunity-supported',
+            evidenceId: 'evidence-drill',
+            caseId: 'case-drill',
+            category: 'offer',
+            categoryLabel: 'Offer',
+            title: 'Cordless drill deal',
+            sourceUrl: 'https://example.com/drill',
+            sourceHost: 'example.com',
+            relevance: 88,
+            status: 'new',
+            detectedAt: '2026-07-26T10:06:00.000Z',
+            supported: true,
+          },
+        ],
+      }),
+    }));
+
+    expect(snapshot.opportunities).toHaveLength(2);
+    expect(snapshot.activity.some((entry) => entry.recordId === 'opportunity-jwt')).toBe(false);
+    expect(snapshot.activity).toContainEqual({
+      id: 'opportunity:opportunity-supported',
+      recordId: 'opportunity-supported',
+      kind: 'opportunity',
+      timestamp: '2026-07-26T10:06:00.000Z',
+      state: 'new',
+    });
+  });
+
   it('uses code-unit ordering for equal activity timestamps', async () => {
     const snapshot = await loadOverview(clientWith({
       '/api/goals': Response.json({
