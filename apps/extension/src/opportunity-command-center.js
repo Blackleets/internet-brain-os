@@ -1,11 +1,14 @@
+import { isKernelSupportedFind, kernelSupportedFinds } from './find-presentation.js';
+
 const DEFAULT_ACTION = 'Open the public source and verify the details independently.';
 
-export function buildOpportunityCommandCenter(opportunities = []) {
-  if (!Array.isArray(opportunities) || opportunities.length === 0) {
+export function buildOpportunityCommandCenter(opportunities = [], missions = []) {
+  const finds = kernelSupportedFinds(opportunities, missions);
+  if (!finds.length) {
     return { lead: undefined, queue: [], objectiveCount: 0, goalLinkedCount: 0, deadlineCount: 0 };
   }
 
-  const queue = opportunities.slice(0, 5).map((item, index) => ({
+  const queue = finds.slice(0, 5).map((item, index) => ({
     id: typeof item.id === 'string' ? item.id : `find-${index}`,
     title: cleanText(item.title, 'Untitled opportunity'),
     category: cleanText(item.categoryLabel ?? item.category, 'Lead'),
@@ -16,16 +19,16 @@ export function buildOpportunityCommandCenter(opportunities = []) {
     deadlineText: cleanOptionalText(item.deadlineText),
     goalTitle: cleanOptionalText(item.goalMatches?.[0]?.title),
     nextAction: cleanText(item.nextAction, DEFAULT_ACTION),
-    verificationLabel: 'Unverified lead',
+    verificationLabel: isKernelSupportedFind(item, missions) ? 'Kernel SUPPORT' : 'Unverified lead',
     reasons: attentionReasons(item),
   }));
 
   return {
     lead: queue[0],
     queue,
-    objectiveCount: opportunities.filter((item) => boundedScore(item.relevance) > 0).length,
-    goalLinkedCount: opportunities.filter((item) => Boolean(cleanOptionalText(item.goalMatches?.[0]?.title))).length,
-    deadlineCount: opportunities.filter((item) => Boolean(cleanOptionalText(item.deadlineText))).length,
+    objectiveCount: finds.filter((item) => boundedScore(item.relevance) > 0).length,
+    goalLinkedCount: finds.filter((item) => Boolean(cleanOptionalText(item.goalMatches?.[0]?.title))).length,
+    deadlineCount: finds.filter((item) => Boolean(cleanOptionalText(item.deadlineText))).length,
   };
 }
 
