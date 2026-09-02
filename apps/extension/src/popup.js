@@ -11,6 +11,7 @@ import { createAgentHubRefresher, missionRevision } from './agent-hub-refresh.js
 import { markWatchtowerEventsRead, presentWatchtowerBanner, unreadWatchtowerCount } from './mission-watchtower.js';
 import { listGoalSurfaces } from './goal-surface-transport.js';
 import { renderGoalSurfaceList } from './goal-surface-goal-list.js';
+import { autoRadarLastResultLabel, autoRadarStatusCopy } from './auto-radar.js';
 
 const $ = (selector) => document.querySelector(selector);
 const select = $('#case-target');
@@ -518,76 +519,9 @@ function updateRadarCopy() {
 }
 
 function updateAutoRadarUI(state, lastEvent) {
-  // Update status indicator
-  let statusText = 'Desconocido';
-  let statusClass = 'unknown';
-  let icon = '❓';
-  
-  switch (state) {
-    case 'paused':
-      statusText = 'Pausado';
-      statusClass = 'paused';
-      icon = '⏸';
-      break;
-    case 'observing':
-      statusText = 'Observando';
-      statusClass = 'observing';
-      icon = '👁';
-      break;
-    case 'waiting':
-      statusText = 'Esperando estabilización';
-      statusClass = 'waiting';
-      icon = '⏳';
-      break;
-    case 'evaluating':
-      statusText = 'Evaluando';
-      statusClass = 'evaluating';
-      icon = '🔍';
-      break;
-    case 'irrelevant':
-      statusText = 'Irrelevante';
-      statusClass = 'irrelevant';
-      icon = '❌';
-      break;
-    case 'blocked':
-      statusText = 'Bloqueado';
-      statusClass = 'blocked';
-      icon = '🚫';
-      break;
-    case 'duplicate':
-      statusText = 'Duplicado';
-      statusClass = 'duplicate';
-      icon = '🔄';
-      break;
-    case 'submitting':
-      statusText = 'Enviando';
-      statusClass = 'submitting';
-      icon = '📤';
-      break;
-    case 'admitted':
-      statusText = 'Admitido';
-      statusClass = 'admitted';
-      icon = '✅';
-      break;
-    case 'rejected':
-      statusText = 'Rechazado';
-      statusClass = 'rejected';
-      icon = '❌';
-      break;
-    case 'needs_research':
-      statusText = 'Necesita investigación';
-      statusClass = 'needs-research';
-      icon = '🔬';
-      break;
-    case 'failed':
-      statusText = 'Falló';
-      statusClass = 'failed';
-      icon = '💥';
-      break;
-  }
-  
-  autoRadarStatusIndicator.textContent = `${icon} ${statusText}`;
-  autoRadarStatusIndicator.className = `status-indicator ${statusClass}`;
+  const copy = autoRadarStatusCopy(state);
+  autoRadarStatusIndicator.textContent = `${copy.icon} ${copy.text}`;
+  autoRadarStatusIndicator.className = `status-indicator ${copy.className}`;
   
   // Update toggle button
   if (state === 'paused') {
@@ -611,22 +545,13 @@ function updateAutoRadarUI(state, lastEvent) {
       }
       autoRadarLastDomain.textContent = `Último dominio: ${domainText}`;
   
-      let resultText = 'Desconocido';
-      switch (lastEvent.status) {
-        case 'admitted': resultText = 'Admitido ✅'; break;
-        case 'rejected': resultText = 'Rechazado ❌'; break;
-        case 'failed': resultText = 'Falló 💥'; break;
-        case 'duplicate': resultText = 'Duplicado 🔄'; break;
-        case 'blocked': resultText = 'Bloqueado 🚫'; break;
-        default: resultText = `${lastEvent.status} ${lastEvent.status === 'captured' ? '📡' : ''}`;
-      }
-      autoRadarLastResult.textContent = `Último resultado: ${resultText}`;
+      autoRadarLastResult.textContent = `Último resultado: ${autoRadarLastResultLabel(lastEvent.status)}`;
     } else {
       autoRadarLastDomain.textContent = 'Último dominio: — ';
       autoRadarLastResult.textContent = 'Último resultado: — ';
     }
 
-    // Fase 2: panel de veredicto de admisión (forensics visible para el usuario)
+    // Evidence Case panel (capture is not Kernel ADMITTED and not a Find).
     updateVerdictPanel(lastEvent);
 }
 
@@ -644,7 +569,7 @@ function updateVerdictPanel(lastEvent) {
     return;
   }
   verdictPanel.hidden = false;
-  verdictContent.textContent = 'Pulsa para ver por qué el Kernel admitió esta captura.';
+  verdictContent.textContent = 'Pulsa para ver el Case de esta captura. Evidence no es un Find.';
 }
 
 if (verdictOpenBtn) {
@@ -659,7 +584,7 @@ if (verdictOpenBtn) {
       });
       const evidenceCount = Array.isArray(verdict.evidence) ? verdict.evidence.length : 0;
       const status = verdict.case?.status ?? 'desconocido';
-      verdictContent.textContent = `Admitido y guardado como Case. ${evidenceCount} evidencia(s) respaldan esta decisión. Estado: ${status}.`;
+      verdictContent.textContent = `Evidence guardada como Case. ${evidenceCount} evidencia(s). Estado: ${status}. No es un Find.`;
     } catch (error) {
       verdictContent.textContent = error instanceof Error ? `No se pudo cargar el veredicto: ${error.message}` : 'No se pudo cargar el veredicto.';
     }
