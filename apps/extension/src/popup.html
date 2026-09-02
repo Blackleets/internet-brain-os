@@ -1,23 +1,24 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Efesto</title>
+    <title>Efesto Radar</title>
     <link rel="stylesheet" href="popup.css">
     <link rel="stylesheet" href="central-forge-power.css">
   </head>
   <body>
+    <div class="ember-field" aria-hidden="true"></div>
     <main>
       <header>
         <div class="brand-mark" aria-hidden="true">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L2 22h4l4-8 4 8h4L12 2z" fill="#FF7A31"/>
-                    <path d="M8 14h8v2H8v-2z" fill="#FFFFFF"/>
+                    <path d="M12 2L2 22h4l4-8 4 8h4L12 2z" fill="#ff7a18"/>
+                    <path d="M8 14h8v2H8v-2z" fill="#f3e9e0"/>
                   </svg>
                 </div>
-        <div><p class="eyebrow">EFESTO</p><h1>Opportunity Radar</h1></div>
-        <span id="kernel-state" class="state">Offline</span>
+        <div class="brand-copy"><h1>Efesto<strong>Radar</strong></h1></div>
+        <span id="kernel-state" class="state">Desconectado</span>
       </header>
 
       <section id="living-forge" class="living-forge" data-activity="idle" aria-live="polite">
@@ -32,19 +33,19 @@
           <div class="forge-floor"></div>
         </div>
         <div class="forge-copy">
-          <p class="section-title">THE LIVING FORGE</p>
-          <h2 id="forge-activity-label">The forge is ready</h2>
-          <p id="forge-activity-detail">Create a Goal or analyze a public page.</p>
+          <p class="section-title">ENFOQUE FORJA</p>
+          <h2 id="forge-activity-label">La forja está lista</h2>
+          <p id="forge-activity-detail">Crea un Goal o analiza una página pública.</p>
         </div>
-        <span class="live-badge"><i></i> LIVE</span>
+        <span class="live-badge"><i></i> EN VIVO</span>
       </section>
 
       <section class="forge-power-shell" data-simple="true" aria-live="polite">
         <button id="forge-power" class="forge-power-panel" type="button" data-enabled="false" aria-pressed="false" aria-label="Start Efesto">
           <span class="forge-power" aria-hidden="true"></span>
           <span class="forge-power-copy">
-            <strong id="forge-power-label">START EFESTO</strong>
-            <small id="forge-power-detail">Press once to start forging.</small>
+            <strong id="forge-power-label">INICIAR EFESTO</strong>
+            <small id="forge-power-detail">Pulsa una vez para empezar a forjar.</small>
           </span>
         </button>
         <div id="forge-orb-meta" class="forge-orb-meta" hidden>
@@ -58,41 +59,41 @@
           <div><dt>Obsidian</dt><dd id="forge-summary-obsidian">0</dd></div>
         </dl>
         <div id="forge-obsidian-receipt" class="forge-obsidian-receipt" hidden>
-          <strong id="forge-obsidian-state">Obsidian not confirmed</strong>
-          <small id="forge-obsidian-detail">The Kernel has not returned a sync receipt.</small>
+          <strong id="forge-obsidian-state">Obsidian no confirmado</strong>
+          <small id="forge-obsidian-detail">El Kernel aún no ha devuelto un recibo de sync.</small>
         </div>
       </section>
 
       <section id="forge-guide" class="forge-guide" aria-live="polite">
         <div class="guide-smith" aria-hidden="true">⚒</div>
-        <div><p class="section-title">SMITH'S GUIDE</p><strong id="guide-title">Connect the private Kernel</strong><p id="guide-progress">0 of 4 forge steps complete</p></div>
-        <button id="guide-action" type="button">Continue</button>
+        <div><p class="section-title">GUÍA DEL HERRERO</p><strong id="guide-title">Conecta el Kernel privado</strong><p id="guide-progress">0 de 4 pasos de la forja</p></div>
+        <button id="guide-action" type="button">Continuar</button>
       </section>
 
-      <nav class="forge-nav" aria-label="Efesto workspace">
-        <button type="button" data-view-target="forge" aria-current="page"><span>◆</span> Forge</button>
-        <button type="button" data-view-target="missions"><span>◇</span> Missions <i id="mission-nav-count">0</i></button>
+      <nav class="forge-nav" aria-label="Espacio de trabajo Efesto">
+        <button type="button" data-view-target="forge" aria-current="page"><span>◆</span> Forja</button>
+        <button type="button" data-view-target="missions"><span>◇</span> Misiones <i id="mission-nav-count">0</i></button>
         <button type="button" data-view-target="finds"><span>✦</span> Finds <i id="find-nav-count">0</i></button>
-        <button type="button" data-view-target="models"><span>▣</span> Models</button>
+        <button type="button" data-view-target="models"><span>▣</span> Modelos</button>
       </nav>
 
       <section id="watchtower-result" class="watchtower-result" aria-live="polite" hidden>
-        <div><p class="section-title">WATCHTOWER</p><strong id="watchtower-copy">A new mission result is ready.</strong></div>
+        <div><p class="section-title">TORRE DE VIGÍA</p><strong id="watchtower-copy">Hay un resultado de misión listo.</strong></div>
         <span id="watchtower-count">0</span>
-        <button id="watchtower-open" type="button">Open ledger</button>
+        <button id="watchtower-open" type="button">Abrir registro</button>
       </section>
 
       <div class="workspace-view active" data-workspace-view="forge">
-        <div class="view-intro"><p class="section-title">TODAY AT THE FORGE</p><h2>Turn the web into useful opportunities</h2><p>Choose where Efesto may work, then forge the current page into private Evidence.</p></div>
+        <div class="view-intro"><p class="section-title">HOY EN LA FORJA</p><h2>Convierte la web en oportunidades útiles</h2><p>Elige dónde puede trabajar Efesto y forja la página actual como Evidence privada.</p></div>
 
         <section class="hero">
-          <div class="orb"><span></span></div>
+          <div class="orb" aria-hidden="true"><span class="orb-core"></span><div class="orb-ring"></div></div>
           <div>
-            <p class="hero-label">RADAR FOR THIS SITE</p>
-            <h2 id="site-name">Current page</h2>
-            <p id="radar-copy">Authorize this public site to let Efesto work quietly while you browse.</p>
+            <p class="hero-label">RADAR EN ESTE SITIO</p>
+            <h2 id="site-name">Página actual</h2>
+            <p id="radar-copy">Autoriza este sitio público para que Efesto trabaje en silencio mientras navegas.</p>
           </div>
-          <label class="switch" aria-label="Enable radar for this site">
+          <label class="switch" aria-label="Activar el radar en este sitio">
             <input id="site-radar" type="checkbox"><span></span>
           </label>
         </section>
@@ -118,79 +119,79 @@
           </div>
         </section>
 
-        <section class="grid" aria-label="Efesto services">
-          <article><span class="service-dot" id="model-dot"></span><div><b>Model Forge</b><small id="model-state">Local model not detected</small></div></article>
-          <article><span class="service-dot" id="memory-dot"></span><div><b>Obsidian memory</b><small id="memory-state">Waiting for Kernel</small></div></article>
-          <article><span class="service-dot" id="agent-dot"></span><div><b>Agent bridge</b><small id="agent-state">Hermes not detected</small></div></article>
-          <article><span class="shield">◆</span><div><b>Private instance</b><small>Data stays on this device</small></div></article>
+        <section class="grid" aria-label="Servicios Efesto">
+          <article><span class="service-dot" id="model-dot"></span><div><b>Forja de modelos</b><small id="model-state">Modelo local no detectado</small></div></article>
+          <article><span class="service-dot" id="memory-dot"></span><div><b>Memoria Obsidian</b><small id="memory-state">Esperando al Kernel</small></div></article>
+          <article><span class="service-dot" id="agent-dot"></span><div><b>Puente de agente</b><small id="agent-state">Hermes no detectado</small></div></article>
+          <article><span class="shield">◆</span><div><b>Instancia privada</b><small>Los datos se quedan en este dispositivo</small></div></article>
         </section>
 
       <section id="setup" class="setup">
-        <p class="section-title">CONNECT YOUR PRIVATE KERNEL</p>
+        <p class="section-title">CONECTA TU KERNEL PRIVADO</p>
         <div class="pair-row">
-          <input id="pairing-code" type="text" inputmode="text" maxlength="12" autocomplete="one-time-code" placeholder="8-character code">
-          <button id="pair-kernel" type="button">Connect</button>
+          <input id="pairing-code" type="text" inputmode="text" maxlength="12" autocomplete="one-time-code" placeholder="código de 8 caracteres">
+          <button id="pair-kernel" type="button">Conectar</button>
         </div>
-        <details><summary>Manual recovery</summary>
-          <input id="kernel-token" type="password" autocomplete="off" placeholder="Local Kernel token">
-          <button id="save-token" class="secondary" type="button">Save local token</button>
+        <details><summary>Recuperación manual</summary>
+          <input id="kernel-token" type="password" autocomplete="off" placeholder="Token del Kernel local">
+          <button id="save-token" class="secondary" type="button">Guardar token local</button>
         </details>
       </section>
 
       <section class="actions">
-        <label for="case-target">Save this page to</label>
-        <select id="case-target"><option value="">New opportunity case</option></select>
-        <button id="capture" class="primary" type="button"><span>✦</span> Analyze this page now</button>
+        <label for="case-target">Guardar esta página en</label>
+        <select id="case-target"><option value="">Nuevo caso de oportunidad</option></select>
+        <button id="capture" class="primary" type="button"><span>✦</span> Analizar esta página ahora</button>
       </section>
       </div>
 
       <div class="workspace-view" data-workspace-view="missions" hidden>
-      <div class="view-intro"><p class="section-title">MISSION BOARD</p><h2>Tell Efesto what matters</h2><p>Goals guide the radar. Research starts only after your explicit approval.</p></div>
+      <div class="view-intro"><p class="section-title">TABLERO DE MISIONES</p><h2>Dile a Efesto qué te importa</h2><p>Los Goals guían el radar. La investigación empieza solo con tu autorización explícita.</p></div>
       <section class="goals">
         <div class="inbox-heading">
-          <div><p class="section-title">MY GOALS</p><h3>What should Efesto find?</h3></div>
+          <div><p class="section-title">MIS GOALS</p><h3>¿Qué debe encontrar Efesto?</h3></div>
           <span id="goal-count">0</span>
         </div>
-        <div id="goal-list"><p class="empty">Add a goal to personalize your radar.</p></div>
-        <details><summary>+ Add a Goal</summary>
-          <input id="goal-title" type="text" maxlength="120" placeholder="e.g. Find remote AI work">
+        <div id="goal-list"><p class="empty">Añade un Goal para personalizar tu radar.</p></div>
+        <details><summary>+ Añadir un Goal</summary>
+          <input id="goal-title" type="text" maxlength="120" placeholder="p. ej. Encontrar trabajo remoto en IA">
           <div class="goal-form-row">
-            <select id="goal-category"><option value="job">Work</option><option value="money">Extra income</option><option value="food">Food & dining</option><option value="aid">Public aid</option><option value="grant">Funding</option><option value="offer">Savings</option><option value="learning">Learning</option><option value="event">Events</option><option value="housing">Housing</option><option value="travel">Travel</option><option value="client">Clients</option></select>
-            <input id="goal-location" type="text" maxlength="80" placeholder="Location (optional)">
+            <select id="goal-category"><option value="job">Trabajo</option><option value="money">Ingresos extra</option><option value="food">Comida</option><option value="aid">Ayudas públicas</option><option value="grant">Financiación</option><option value="offer">Ahorros</option><option value="learning">Aprendizaje</option><option value="event">Eventos</option><option value="housing">Vivienda</option><option value="travel">Viajes</option><option value="client">Clientes</option></select>
+            <input id="goal-location" type="text" maxlength="80" placeholder="Ubicación (opcional)">
           </div>
-          <input id="goal-keywords" type="text" maxlength="160" placeholder="Keywords, separated by commas">
-          <button id="add-goal" class="secondary" type="button">Forge Goal</button>
+          <input id="goal-keywords" type="text" maxlength="160" placeholder="Palabras clave, separadas por comas">
+          <button id="add-goal" class="secondary" type="button">Forjar Goal</button>
         </details>
       </section>
       </div>
 
       <div class="workspace-view" data-workspace-view="models" hidden>
-      <div class="view-intro"><p class="section-title">MODEL WORKBENCH</p><h2>Power the forge locally</h2><p>Inspect compatible private models. Nothing is installed or activated silently.</p></div>
+      <div class="view-intro"><p class="section-title">BANCO DE MODELOS</p><h2>Alimenta la forja en local</h2><p>Inspecciona modelos privados compatibles. Nada se instala ni se activa en silencio.</p></div>
       <details class="model-forge">
-        <summary><span><span class="section-title">MODEL FORGE</span><strong id="forge-recommendation">Inspect local AI</strong></span><span>›</span></summary>
-        <p id="forge-hardware">Connect the Kernel to inspect this device safely.</p>
+        <summary><span><span class="section-title">FORJA DE MODELOS</span><strong id="forge-recommendation">Inspeccionar IA local</strong></span><span>›</span></summary>
+        <p id="forge-hardware">Conecta el Kernel para inspeccionar este dispositivo con seguridad.</p>
         <code id="forge-command" hidden></code>
-        <small id="forge-note">No model or executable is installed silently.</small>
+        <small id="forge-note">Ningún modelo ni ejecutable se instala en silencio.</small>
       </details>
       </div>
 
       <div class="workspace-view" data-workspace-view="finds" hidden>
-      <div class="view-intro"><p class="section-title">FORGED FINDS</p><h2>Decide with Evidence, not hype</h2><p>Inspect why a lead matters, what remains unverified, its related Goal, risks, provenance, and a cautious next step.</p></div>
+      <div class="view-intro"><p class="section-title">FINDS FORJADOS</p><h2>Decide con Evidence, no con ruido</h2><p>Revisa por qué importa un hallazgo, qué sigue sin verificar, su Goal, riesgos, procedencia y un siguiente paso prudente.</p></div>
       <section id="command-center" class="command-center" aria-labelledby="command-center-title">
-        <div class="command-heading"><div><p class="section-title">OPPORTUNITY COMMAND CENTER</p><h3 id="command-center-title">Your next move</h3></div><span>LOCAL</span></div>
-        <div id="command-center-content"><p class="empty">Connect your private Kernel to build an explainable action queue.</p></div>
+        <div class="command-heading"><div><p class="section-title">CENTRO DE MANDO</p><h3 id="command-center-title">Tu siguiente paso</h3></div><span>LOCAL</span></div>
+        <div id="command-center-content"><p class="empty">Conecta tu Kernel privado para armar una cola de acción explicable.</p></div>
       </section>
       <section class="inbox">
         <div class="inbox-heading">
-          <div><p class="section-title">OPPORTUNITY INBOX</p><h3>Strong leads found for you</h3></div><span id="opportunity-count">0</span>
+          <div><p class="section-title">BANDEJA DE OPORTUNIDADES</p><h3>Hallazgos fuertes encontrados para ti</h3></div><span id="opportunity-count">0</span>
         </div>
-        <div id="opportunity-list"><p class="empty">Connect your private Kernel to load opportunities.</p></div>
+        <div id="opportunity-list"><p class="empty">Conecta tu Kernel privado para cargar oportunidades.</p></div>
       </section>
       </div>
 
       <footer>
-        <span><i></i> Sensitive pages are blocked automatically</span>
-        <button id="advanced" type="button">Advanced</button>
+        <span><i></i> Las páginas sensibles se bloquean solas</span>
+        <button id="advanced" type="button">Avanzado</button>
       </footer>
       <p id="status" role="status" aria-live="polite"></p>
     </main>
