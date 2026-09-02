@@ -110,6 +110,7 @@ describe('HomeView Kernel-supported Find', () => {
     evidenceId: 'ev-1',
     caseId: 'case-1',
     sourceUrl: 'https://shop.example/drill',
+    supported: true,
   };
 
   it('renders persisted Kernel Find title, sourceUrl and SUPPORT provenance', () => {

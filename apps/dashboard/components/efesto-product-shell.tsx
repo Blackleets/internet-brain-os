@@ -371,7 +371,7 @@ export default function EfestoProductShell() {
     finally { setChatPending(false); if (chatAbortRef.current === controller) chatAbortRef.current = undefined; }
   }
 
-  const supportedFinds = kernelSupportedFinds(snapshot?.opportunities);
+  const supportedFinds = kernelSupportedFinds(snapshot?.opportunities, snapshot?.missions);
 
   return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''}`}>
     <aside className="efesto-sidebar" aria-label="Navegación principal">
