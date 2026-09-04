@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -111,6 +111,49 @@ describe('efesto mcp server (stdio)', () => {
     const payload = JSON.parse(response.result.content[0].text);
     assert.equal(payload.ok, true);
     assert.equal(typeof payload.tokenConfigured, 'boolean');
+  });
+
+  it('returns a Case with attached Evidence and provenance fields through get_case', async () => {
+    await writeFile(join(directory, 'store.json'), JSON.stringify({
+      cases: [{
+        id: 'case:golden-1',
+        title: 'Builder research case',
+        objective: 'Verify a public research claim',
+        status: 'draft',
+        createdAt: '2026-09-04T10:00:00.000Z',
+      }],
+      evidence: [{
+        id: 'evidence:golden-1',
+        caseId: 'case:golden-1',
+        sourceReceiptId: 'receipt:golden-1',
+        sourceUrl: 'https://example.com/source',
+        capturedAt: '2026-09-04T10:01:00.000Z',
+        contentHash: 'sha256-golden-fixture',
+        summary: 'Observed source material',
+      }],
+      goals: [],
+      agentMissions: [],
+      opportunities: [],
+      preferenceFeedback: [],
+    }, null, 2));
+
+    startServer();
+    await request('initialize', {
+      protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'golden-path-test', version: '1' },
+    });
+    const response = await request('tools/call', {
+      name: 'get_case',
+      arguments: { caseId: 'case:golden-1' },
+    });
+    assert.equal(response.result.isError, false);
+    const payload = JSON.parse(response.result.content[0].text);
+    assert.equal(payload.case.id, 'case:golden-1');
+    assert.equal(payload.evidence.length, 1);
+    assert.equal(payload.evidence[0].sourceReceiptId, 'receipt:golden-1');
+    assert.equal(payload.evidence[0].sourceUrl, 'https://example.com/source');
+    assert.equal(payload.evidence[0].capturedAt, '2026-09-04T10:01:00.000Z');
+    assert.equal(payload.evidence[0].contentHash, 'sha256-golden-fixture');
+    assert.equal(payload.evidence[0].summary, 'Observed source material');
   });
 
   it('returns structured tool errors without crashing the server', async () => {
