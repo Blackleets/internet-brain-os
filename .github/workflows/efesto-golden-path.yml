@@ -1,0 +1,28 @@
+name: Efesto Golden Path
+
+on:
+  push:
+    branches:
+      - feat/efesto-validation-sprint
+  pull_request:
+    branches:
+      - feat/efesto-validation-sprint
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  golden-path:
+    name: MCP Golden Path contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run Efesto MCP Golden Path
+        run: node --test apps/local-kernel/mcp-server.test.mjs
