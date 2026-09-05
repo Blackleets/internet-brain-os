@@ -10,12 +10,14 @@ const STATUS_COPY = Object.freeze({
 export function presentMission(mission) {
   const status = missionStatusCopy(mission);
   const summary = mission?.resultSummary ?? {};
+  // Fail-closed Finds: opportunitiesPromoted alone is not a Find. Count Kernel SUPPORT only.
+  const finds = countSupportedFinds(mission?.verificationResults);
   return {
     title: String(mission?.goalTitle ?? 'Untitled commission'), status: String(mission?.status ?? 'unknown'),
     statusLabel: status.label, statusDetail: status.detail,
     attemptLabel: `${Math.min(Math.max(Number(mission?.attempt ?? 0), 0), 3)} of 3 attempts`,
     received: boundedCount(summary.received), evidenceCreated: boundedCount(summary.evidenceCreated),
-    opportunitiesPromoted: boundedCount(summary.opportunitiesPromoted), timeline: missionTimeline(mission),
+    opportunitiesPromoted: finds, timeline: missionTimeline(mission),
     failureDetail: cleanProviderDetail(mission?.lastFailure?.reason),
   };
 }
@@ -37,7 +39,8 @@ export function missionTimeline(mission = {}) {
   addEvent(events, mission.claimedAt, `Hermes claimed attempt ${boundedCount(mission.attempt) || 1}`, 'A temporary execution lease was issued.');
   addEvent(events, mission.verifyingAt, 'Kernel verification started', 'Returned findings entered local validation; no opportunity is accepted yet.');
   addEvent(events, mission.lastFailure?.recordedAt, `Attempt ${boundedCount(mission.lastFailure?.attempt) || 1} failed safely`, 'The failure was recorded and the retry remained bounded.');
-  const counts = `${boundedCount(mission.resultSummary?.received)} received · ${boundedCount(mission.resultSummary?.evidenceCreated)} Evidence · ${boundedCount(mission.resultSummary?.opportunitiesPromoted)} promoted`;
+  const finds = countSupportedFinds(mission.verificationResults);
+  const counts = `${boundedCount(mission.resultSummary?.received)} received · ${boundedCount(mission.resultSummary?.evidenceCreated)} Evidence · ${finds} Finds`;
   const forged = typeof mission.forgedAt === 'string'
     || mission.executionPhase === 'forged'
     || mission.workState === 'forged';
@@ -47,6 +50,16 @@ export function missionTimeline(mission = {}) {
     addEvent(events, mission.completedAt, 'Research ended without Evidence', counts);
   }
   return events.sort((left, right) => left.at.localeCompare(right.at));
+}
+
+/** Count verificationResults with supported === true. opportunitiesPromoted is ignored. */
+function countSupportedFinds(results) {
+  if (!Array.isArray(results)) return 0;
+  let n = 0;
+  for (const entry of results) {
+    if (entry && typeof entry === 'object' && entry.supported === true) n += 1;
+  }
+  return boundedCount(n);
 }
 
 function addEvent(events, at, label, detail) { if (typeof at === 'string' && Number.isFinite(Date.parse(at))) events.push({ at, label, detail }); }
