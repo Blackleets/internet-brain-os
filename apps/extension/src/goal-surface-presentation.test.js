@@ -91,7 +91,10 @@ describe('extension Shared Goal Truth presentation', () => {
       label: 'The forge is ready', detail: 'Create a Goal or analyze a public page.', tone: 'idle',
     });
     expect(forgeActivityForGoalSurface(surface('forged', { mission: { findCount: 2 } }))).toEqual({
-      label: 'A useful lead was forged', detail: '2 opportunities passed local checks and were forged.', tone: 'success',
+      label: 'A useful lead was forged', detail: '2 Finds passed Kernel SUPPORT and were forged.', tone: 'success',
+    });
+    expect(forgeActivityForGoalSurface(surface('forged', { mission: { findCount: 0 } }))).toEqual({
+      label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.', tone: 'success',
     });
   });
 

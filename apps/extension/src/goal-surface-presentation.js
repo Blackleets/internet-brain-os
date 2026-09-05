@@ -67,8 +67,8 @@ export function forgeActivityForGoalSurface(surface) {
   if (workState === 'forged') {
     const found = Number.isSafeInteger(surface?.mission?.findCount) ? surface.mission.findCount : undefined;
     if (found === undefined) return FORGE_ACTIVITY.forged;
-    if (found === 0) return { ...FORGE_ACTIVITY.forged, label: 'Research completed', detail: 'No strong opportunity passed the local checks.' };
-    return { ...FORGE_ACTIVITY.forged, detail: `${found} ${found === 1 ? 'opportunity' : 'opportunities'} passed local checks and were forged.` };
+    if (found === 0) return { ...FORGE_ACTIVITY.forged, label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.' };
+    return { ...FORGE_ACTIVITY.forged, detail: `${found} ${found === 1 ? 'Find' : 'Finds'} passed Kernel SUPPORT and were forged.` };
   }
   if (workState === 'failed') return FORGE_ACTIVITY.failed;
   return FORGE_ACTIVITY.idle;

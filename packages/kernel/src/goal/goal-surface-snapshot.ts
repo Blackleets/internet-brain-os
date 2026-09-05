@@ -47,6 +47,14 @@ export interface GoalSurfaceMissionRecord {
     readonly recordedAt?: string;
     readonly attempt?: number;
   };
+  /**
+   * Optional Mission verification rows. findCount is derived only from entries with
+   * supported === true (Kernel SUPPORT). opportunitiesPromoted alone is not a Find.
+   */
+  readonly verificationResults?: readonly {
+    readonly evidenceId?: string;
+    readonly supported?: boolean;
+  }[];
   readonly resultSummary?: {
     readonly opportunitiesPromoted?: number;
   };
@@ -270,6 +278,8 @@ function normalizeMission(value: GoalSurfaceMissionRecord, index: number): Norma
   if (promoted !== undefined && (!Number.isSafeInteger(promoted) || Number(promoted) < 0)) {
     throw new GoalSurfaceSnapshotInputError(`missions[${index}].resultSummary.opportunitiesPromoted must be a non-negative safe integer.`);
   }
+  // Fail-closed Find count: opportunitiesPromoted is not a Find. Count only Kernel SUPPORT rows.
+  const findCount = countSupportedFinds(value.verificationResults, index);
 
   return {
     id,
@@ -281,8 +291,24 @@ function normalizeMission(value: GoalSurfaceMissionRecord, index: number): Norma
     ...(value.attempt !== undefined ? { attempt: Number(value.attempt) } : {}),
     ...(limitation ? { limitation } : {}),
     ...(blockedReason ? { blockedReason } : {}),
-    ...(promoted !== undefined ? { findCount: Number(promoted) } : {}),
+    ...(findCount !== undefined ? { findCount } : {}),
   };
+}
+
+function countSupportedFinds(value: unknown, index: number): number | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    throw new GoalSurfaceSnapshotInputError(`missions[${index}].verificationResults must be an array.`);
+  }
+  let count = 0;
+  for (let offset = 0; offset < value.length; offset += 1) {
+    const entry = value[offset];
+    if (!isRecord(entry)) {
+      throw new GoalSurfaceSnapshotInputError(`missions[${index}].verificationResults[${offset}] must be an object.`);
+    }
+    if (entry.supported === true) count += 1;
+  }
+  return count;
 }
 
 function normalizeAutomaticBlockReason(value: unknown, index: number): string {
