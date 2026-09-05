@@ -38,10 +38,69 @@ describe('Efesto orb deterministic UI state', () => {
   });
 
   it('shows completed summaries and only confirmed Obsidian receipts', () => {
-    const view = deriveEfestoOrbState({ enabled: true, kernel: 'ready', services, mission: { status: 'completed', executionPhase: 'forged', resultSummary: { received: 2, evidenceCreated: 1, opportunitiesPromoted: 1, obsidianNotesWritten: 4 }, obsidianReceipt: { status: 'synced', notesWritten: 4, vaultRelativePath: '.hephaestus/obsidian-vault', lastSyncedAt: '2026-07-22T18:11:00.000Z' } }, now });
+    const view = deriveEfestoOrbState({
+      enabled: true,
+      kernel: 'ready',
+      services,
+      mission: {
+        status: 'completed',
+        executionPhase: 'forged',
+        resultSummary: { received: 2, evidenceCreated: 1, opportunitiesPromoted: 1, obsidianNotesWritten: 4 },
+        verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: true }],
+        obsidianReceipt: { status: 'synced', notesWritten: 4, vaultRelativePath: '.hephaestus/obsidian-vault', lastSyncedAt: '2026-07-22T18:11:00.000Z' },
+      },
+      now,
+    });
     expect(view).toMatchObject({ state: 'completed', label: 'Forge complete' });
     expect(view.summary).toEqual({ findingsReceived: 2, evidenceCreated: 1, opportunitiesForged: 1, obsidianNotesWritten: 4 });
     expect(view.obsidianReceipt).toMatchObject({ status: 'synced', notesWritten: 4 });
+  });
+
+  it('does not treat opportunitiesPromoted as Finds without Kernel SUPPORT', () => {
+    const promotedOnly = deriveEfestoOrbState({
+      enabled: true,
+      kernel: 'ready',
+      services,
+      mission: {
+        status: 'completed',
+        executionPhase: 'forged',
+        resultSummary: { received: 3, evidenceCreated: 2, opportunitiesPromoted: 5, obsidianNotesWritten: 0 },
+      },
+      now,
+    });
+    expect(promotedOnly.summary).toEqual({ findingsReceived: 3, evidenceCreated: 2, opportunitiesForged: 0, obsidianNotesWritten: 0 });
+
+    const unsupported = deriveEfestoOrbState({
+      enabled: true,
+      kernel: 'ready',
+      services,
+      mission: {
+        status: 'completed',
+        executionPhase: 'forged',
+        resultSummary: { received: 2, evidenceCreated: 1, opportunitiesPromoted: 1, obsidianNotesWritten: 0 },
+        verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: false }],
+      },
+      now,
+    });
+    expect(unsupported.summary.opportunitiesForged).toBe(0);
+
+    const supported = deriveEfestoOrbState({
+      enabled: true,
+      kernel: 'ready',
+      services,
+      mission: {
+        status: 'completed',
+        executionPhase: 'forged',
+        resultSummary: { received: 2, evidenceCreated: 1, opportunitiesPromoted: 99, obsidianNotesWritten: 0 },
+        verificationResults: [
+          { candidateId: 'cand-1', evidenceId: 'ev-1', supported: true },
+          { candidateId: 'cand-2', evidenceId: 'ev-2', supported: true },
+          { candidateId: 'cand-3', evidenceId: 'ev-3', supported: false },
+        ],
+      },
+      now,
+    });
+    expect(supported.summary.opportunitiesForged).toBe(2);
   });
 
   it('shows Forge complete when Kernel workState is forged', () => {

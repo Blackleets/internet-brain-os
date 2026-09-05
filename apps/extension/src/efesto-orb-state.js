@@ -50,9 +50,19 @@ function missionSummary(mission = {}) {
   return {
     findingsReceived: count(summary.received),
     evidenceCreated: count(summary.evidenceCreated),
-    opportunitiesForged: count(summary.opportunitiesPromoted),
+    // Fail-closed Finds: opportunitiesPromoted alone is not a Find. Count Kernel SUPPORT only.
+    opportunitiesForged: countSupportedFinds(mission.verificationResults),
     obsidianNotesWritten: count(summary.obsidianNotesWritten),
   };
+}
+/** Count verificationResults with supported === true. opportunitiesPromoted is ignored. */
+function countSupportedFinds(results) {
+  if (!Array.isArray(results)) return 0;
+  let n = 0;
+  for (const entry of results) {
+    if (entry && typeof entry === 'object' && entry.supported === true) n += 1;
+  }
+  return count(n);
 }
 function obsidianReceipt(mission = {}, obsidian) {
   const receipt = mission.obsidianReceipt;
