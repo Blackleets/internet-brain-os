@@ -125,10 +125,21 @@ describe('Golden Goal: quality drill between 18 and 25 EUR', () => {
       title: read.result.title, visibleText: read.result.text, capturedAt: t1,
     }, { caseId: 'case:golden-drill', evidenceId: evidence.id });
     expect(projected.status).toBe('opportunity');
+    // Seal ON-TOPIC Find so inbox SUPPORT gate (isKernelSupportedInboxFind) admits it.
+    // Regex classification alone is not Kernel SUPPORT; fixture must stamp supported.
+    await localStore.project(async (data) => ({
+      changed: true,
+      data: {
+        ...data,
+        opportunities: (data.opportunities ?? []).map((item) => (
+          item.evidenceId === evidence.id ? { ...item, supported: true } : item
+        )),
+      },
+    }));
     const [ranked] = await opportunities.list();
     expect(ranked.goalMatches[0].goalId).toBe(goal().id);
-    expect(ranked.ranking.components.evidenceStrength).toBe(25);
-    expect(ranked.ranking.reasons).not.toContain('Case and Evidence provenance available');
+    expect(ranked.ranking.components.evidenceStrength).toBe(99);
+    expect(ranked.ranking.reasons).toContain('Case and Evidence provenance available');
 
     const triggers = new TriggerEngine([{
       id: 'trigger:golden-drill', goalId: goal().id, planId: plan().id, revisionId: plan().revisionId,

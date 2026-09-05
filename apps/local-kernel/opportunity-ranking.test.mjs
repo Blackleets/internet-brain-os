@@ -124,8 +124,10 @@ describe('OpportunityProjector ranking integration', () => {
     };
     const projector = new OpportunityProjector({ read: async () => structuredClone(data) });
     const ranked = await projector.list({ now });
+    expect(ranked).toHaveLength(1);
     expect(ranked[0].id).toBe('opportunity:supported-find');
     expect(ranked[0].ranking.components.evidenceStrength).toBe(99);
-    expect(ranked.find((item) => item.id === 'opportunity:jwt').ranking.components.evidenceStrength).toBe(25);
+    // Unsupported jwt.io Evidence+URL stays filtered by inbox SUPPORT gate (no ranking credit).
+    expect(ranked.find((item) => item.id === 'opportunity:jwt')).toBeUndefined();
   });
 });
