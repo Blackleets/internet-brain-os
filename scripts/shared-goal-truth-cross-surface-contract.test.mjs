@@ -47,7 +47,7 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     const extensionCss = await text('apps/extension/src/central-forge-power.css');
     const dashboardAcceptance = await text('apps/dashboard/e2e/overview.spec.ts');
     expect(binder).toContain("text = 'Shared Goal Truth unavailable'");
-    expect(binder).toContain("setDataset(doc.querySelector?.('#living-forge'), 'activity', 'error')");
+    expect(binder).toContain("applyLivingForgeActivity(doc.querySelector?.('#living-forge'), 'error')");
     expect(extensionCss).toContain('@media (prefers-reduced-motion:reduce)');
     expect(extensionCss).toContain('animation:none!important');
     expect(dashboardAcceptance).toContain("viewport: { width: 390, height: 844 }");
