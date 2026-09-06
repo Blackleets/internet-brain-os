@@ -38,7 +38,7 @@ const starterGoals = [
   'Ayúdame a tomar una decisión',
 ];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, supportedFinds = [], onFindFeedback, onOpenCase }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, supportedFinds = [], missions, onFindFeedback, onOpenCase }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
   input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
@@ -46,6 +46,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
   onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenNav: () => void;
   supportedFinds?: OpportunitySummary[];
+  missions?: readonly MissionSummary[];
   onFindFeedback?: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void;
   onOpenCase?: (caseId: string) => void;
 }) {
@@ -110,7 +111,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
           <h1>Hallazgo útil</h1>
           <p>Resultado persistido por el Kernel: título, fuente y procedencia SUPPORT. Un snippet de Hermes no aparece aquí.</p>
         </header>
-        <div className="find-grid">{supportedFinds.map((item) => <FindCard key={item.id} item={item} onFeedback={onFindFeedback ?? (() => undefined)} onOpenCase={onOpenCase} />)}</div>
+        <div className="find-grid">{supportedFinds.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFindFeedback ?? (() => undefined)} onOpenCase={onOpenCase} />)}</div>
       </section> : <section className="forge-empty forge-goal-empty" aria-label="Crear un Goal">
         <span className="forge-empty-mark"><Target /></span>
         <small>EFESTO · CONTROLLED MISSION</small>
@@ -327,18 +328,20 @@ export function GoalsView({ snapshot, onNew }: { snapshot?: OverviewSnapshot; on
   </Workspace>;
 }
 
-export function FindsView({ opportunities, connected, onFeedback, onOpenCase }: { opportunities: OpportunitySummary[]; connected: boolean; onFeedback: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void; onOpenCase?: (caseId: string) => void }) {
-  const supported = kernelSupportedFinds(opportunities);
+export function FindsView({ opportunities, connected, onFeedback, onOpenCase, missions }: { opportunities: OpportunitySummary[]; connected: boolean; onFeedback: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void; onOpenCase?: (caseId: string) => void; missions?: readonly MissionSummary[] }) {
+  // Fail-close: keep mission verificationResults SUPPORT in the gate (same as Home/shell).
+  const supported = kernelSupportedFinds(opportunities, missions);
   return <Workspace icon={Sparkles} eyebrow="Hallazgos priorizados por el Kernel" title="Hallazgos" copy="Cada Find es un lead no verificado. El feedback cambia preferencia, no Evidence objetiva.">
-    {!connected ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para cargar hallazgos reales." /> : supported.length === 0 ? <Empty icon={Search} title="Aún no hay hallazgos" copy="Ejecuta un Goal público y los resultados promovidos aparecerán aquí." /> : <div className="find-grid">{supported.map((item) => <FindCard key={item.id} item={item} onFeedback={onFeedback} onOpenCase={onOpenCase} />)}</div>}
+    {!connected ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para cargar hallazgos reales." /> : supported.length === 0 ? <Empty icon={Search} title="Aún no hay hallazgos" copy="Ejecuta un Goal público y los resultados promovidos aparecerán aquí." /> : <div className="find-grid">{supported.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFeedback} onOpenCase={onOpenCase} />)}</div>}
   </Workspace>;
 }
 
-function FindCard({ item, onFeedback, onOpenCase }: { item: OpportunitySummary; onFeedback: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void; onOpenCase?: (caseId: string) => void }) {
+function FindCard({ item, onFeedback, onOpenCase, missions }: { item: OpportunitySummary; onFeedback: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void; onOpenCase?: (caseId: string) => void; missions?: readonly MissionSummary[] }) {
   const evidenceId = optionalText(item.evidenceId);
   const caseId = optionalText(item.caseId);
   const sourceUrl = optionalText(item.sourceUrl);
-  const kernelSupported = isKernelSupportedFind(item);
+  // Fail-close label: mission verificationResults SUPPORT must not render as Lead no verificado.
+  const kernelSupported = isKernelSupportedFind(item, missions);
   const reasons = Array.isArray(item.reasons) ? item.reasons.filter((value): value is string => typeof value === 'string' && value.trim().length > 0) : [];
   const evidenceCount = evidenceId ? 1 : 0;
   return <article className="find-card">

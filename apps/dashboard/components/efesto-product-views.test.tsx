@@ -163,3 +163,100 @@ describe('FindsView fail-closes snippet-only opportunities', () => {
     expect(screen.getByText('Aún no hay hallazgos')).toBeTruthy();
   });
 });
+
+describe('FindCard / FindsView mission-proof SUPPORT honesty', () => {
+  const missionProof = {
+    id: 'opp-mission-proof',
+    title: 'Taladro mission-proof 19 EUR',
+    category: 'offer',
+    categoryLabel: 'Offer',
+    benefitType: 'savings',
+    sourceHost: 'shop.example',
+    relevance: 70,
+    nextAction: 'Verify terms',
+    status: 'new' as const,
+    detectedAt: '2026-09-02T00:00:00.000Z',
+    evidenceId: 'ev-mission-1',
+    caseId: 'case-mission-1',
+    sourceUrl: 'https://shop.example/mission-proof-drill',
+    // intentionally no item.supported — proof lives on verificationResults only
+  };
+
+  const missions = [{
+    id: 'mission-proof',
+    goalId: 'goal-1',
+    status: 'completed' as const,
+    executionPhase: 'forged',
+    attempt: 1,
+    createdAt: '2026-09-02T00:00:00.000Z',
+    verificationResults: [{
+      candidateId: 'cand-1',
+      status: 'verified',
+      evidenceId: 'ev-mission-1',
+      supported: true,
+      supportReason: 'supported',
+    }],
+  }];
+
+  it('labels mission verificationResults SUPPORT as Kernel SUPPORT on Home FindCard', () => {
+    render(<HomeView {...{
+      phase: 'ready' as const,
+      chatMode: false,
+      messages: [] as ChatMessage[],
+      preparedGoal: '',
+      connected: true,
+      goalPending: false,
+      input: '',
+      onInputChange: () => undefined,
+      onSubmit: (event: FormEvent<HTMLFormElement>) => event.preventDefault(),
+      onToggleChat: () => undefined,
+      chatPending: false,
+      onStopChat: () => undefined,
+      chatAvailable: false,
+      submitDisabled: true,
+      onConfirmGoal: () => undefined,
+      onEditGoal: () => undefined,
+      onStarterGoal: () => undefined,
+      onStarterChat: () => undefined,
+      onOpenModels: () => undefined,
+      modelLabel: 'Sin modelo',
+      providers: [] as Provider[],
+      selectedProviderId: '',
+      selectedModel: '',
+      onSelectModel: () => undefined,
+      onOpenSettings: () => undefined,
+      onOpenNav: () => undefined,
+    }} supportedFinds={[missionProof]} missions={missions} />);
+    expect(screen.getByText('Taladro mission-proof 19 EUR')).toBeTruthy();
+    expect(screen.getByText('Kernel SUPPORT')).toBeTruthy();
+    expect(screen.queryByText('Lead no verificado')).toBeNull();
+  });
+
+  it('keeps mission-proof Finds in Hallazgos and labels Kernel SUPPORT', () => {
+    render(
+      <FindsView
+        connected
+        missions={missions}
+        onFeedback={() => undefined}
+        opportunities={[missionProof]}
+      />,
+    );
+    expect(screen.getByText('Taladro mission-proof 19 EUR')).toBeTruthy();
+    expect(screen.getByText('Kernel SUPPORT')).toBeTruthy();
+    expect(screen.queryByText('Lead no verificado')).toBeNull();
+    expect(screen.queryByText('Aún no hay hallazgos')).toBeNull();
+  });
+
+  it('fail-closes Hallazgos when mission proof is absent', () => {
+    render(
+      <FindsView
+        connected
+        missions={[]}
+        onFeedback={() => undefined}
+        opportunities={[missionProof]}
+      />,
+    );
+    expect(screen.queryByText('Taladro mission-proof 19 EUR')).toBeNull();
+    expect(screen.getByText('Aún no hay hallazgos')).toBeTruthy();
+  });
+});
