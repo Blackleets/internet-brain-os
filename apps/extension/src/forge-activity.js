@@ -17,9 +17,10 @@ export function forgeActivityForMission(mission, opportunities = []) {
   if (mission.status === 'queued') return ACTIVITIES.queued;
   if (mission.status === 'completed' && (mission.executionPhase === 'forged' || mission.workState === 'forged')) {
     const found = kernelSupportedFindsForMission(opportunities, mission).length;
+    // Fail-close Living Forge copy to Kernel SUPPORT (same honesty as goal-surface-presentation).
     return found > 0
-      ? { ...ACTIVITIES.success, detail: `${found} ${found === 1 ? 'opportunity' : 'opportunities'} passed local checks and saved.` }
-      : { ...ACTIVITIES.success, label: 'Research completed', detail: 'No strong opportunity passed the local checks.' };
+      ? { ...ACTIVITIES.success, detail: `${found} ${found === 1 ? 'Find' : 'Finds'} passed Kernel SUPPORT and were forged.` }
+      : { ...ACTIVITIES.success, label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.' };
   }
   if (mission.status === 'completed') return ACTIVITIES.idle;
   if (mission.status === 'failed') return ACTIVITIES.error;

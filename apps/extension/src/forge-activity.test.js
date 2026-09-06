@@ -27,10 +27,10 @@ describe('pixel forge activity contract', () => {
 
   it('reports Kernel-supported Find counts without inventing findings', () => {
     expect(forgeActivityForMission(forgedMission, [supported])).toMatchObject({
-      tone: 'success', detail: '1 opportunity passed local checks and saved.',
+      tone: 'success', detail: '1 Find passed Kernel SUPPORT and were forged.',
     });
     expect(forgeActivityForMission({ status: 'completed', workState: 'forged', resultSummary: { opportunitiesPromoted: 0 } })).toMatchObject({
-      tone: 'success', label: 'Research completed', detail: 'No strong opportunity passed the local checks.',
+      tone: 'success', label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.',
     });
   });
 
@@ -38,10 +38,10 @@ describe('pixel forge activity contract', () => {
     const unverified = { ...supported, supported: undefined };
     const mission = { ...forgedMission, verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: false }] };
     expect(forgeActivityForMission(mission, [unverified])).toMatchObject({
-      tone: 'success', label: 'Research completed', detail: 'No strong opportunity passed the local checks.',
+      tone: 'success', label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.',
     });
     expect(forgeActivityForMission({ status: 'completed', executionPhase: 'forged', resultSummary: { opportunitiesPromoted: 3 } })).toMatchObject({
-      tone: 'success', label: 'Research completed', detail: 'No strong opportunity passed the local checks.',
+      tone: 'success', label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.',
     });
   });
 
