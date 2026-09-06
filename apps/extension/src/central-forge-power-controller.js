@@ -117,7 +117,7 @@ export function createForgePowerController({
       if (!shouldCreateMission({ enabled, kernel, goals, completedGoalIds: [...completed], mission: latest })) {
         if (!selectNextGoal(goals, [...completed])) {
           await storage.set({ efestoForgeEnabled: false, efestoForgeCompletedGoals: [] });
-          renderForgePowerView(elements, deriveEfestoOrbState({ enabled: false, kernel, services, mission: latest }), goals.length ? 'Forge cycle complete. Results are in Finds and Obsidian receipts when confirmed.' : 'Create a Goal, then start the forge.');
+          renderForgePowerView(elements, deriveEfestoOrbState({ enabled: false, kernel, services, mission: latest }), goals.length ? forgeCycleCompleteDetail(latest) : 'Create a Goal, then start the forge.');
           state.currentOrbState = elements.powerButton?.dataset.state ?? 'idle';
         }
         return;
@@ -188,6 +188,35 @@ function renderObsidianReceipt(obsidianReceipt, receipt) {
   }[status] ?? status;
   setText('#forge-obsidian-state', `Obsidian ${copy}`);
   setText('#forge-obsidian-detail', receipt.lastSyncedAt ? `${receipt.vaultRelativePath ?? 'vault path unavailable'} · ${new Date(receipt.lastSyncedAt).toLocaleString()}` : 'The Kernel has not returned a sync receipt.');
+}
+
+
+/** Fail-close cycle-complete copy: never claim Finds without Kernel SUPPORT. */
+export function forgeCycleCompleteDetail(mission) {
+  const supported = countSupportedFinds(mission?.verificationResults);
+  const summary = mission?.resultSummary ?? {};
+  const received = Number(summary.received);
+  const evidence = Number(summary.evidenceCreated);
+  const hasReceivedOrEvidence =
+    (Number.isInteger(received) && received > 0) || (Number.isInteger(evidence) && evidence > 0);
+  if (supported > 0) {
+    const noun = supported === 1 ? 'Find' : 'Finds';
+    return `Forge cycle complete. ${supported} ${noun} passed Kernel SUPPORT. Obsidian receipts when confirmed.`;
+  }
+  if (hasReceivedOrEvidence) {
+    return 'Forge cycle complete. Evidence/Received saved; no Find passed Kernel SUPPORT. Obsidian receipts when confirmed.';
+  }
+  return 'Forge cycle complete. No Find passed Kernel SUPPORT.';
+}
+
+/** Count verificationResults with supported === true. opportunitiesPromoted is ignored. */
+function countSupportedFinds(results) {
+  if (!Array.isArray(results)) return 0;
+  let n = 0;
+  for (const entry of results) {
+    if (entry && typeof entry === 'object' && entry.supported === true) n += 1;
+  }
+  return n;
 }
 
 function newest(missions = []) { return [...missions].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))[0]; }

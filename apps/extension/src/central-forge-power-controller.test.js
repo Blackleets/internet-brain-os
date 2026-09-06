@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createForgePowerController, renderForgePowerView } from './central-forge-power-controller.js';
+import { createForgePowerController, forgeCycleCompleteDetail, renderForgePowerView } from './central-forge-power-controller.js';
 
 const flushAsync = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -96,4 +96,65 @@ describe('central forge power controller', () => {
     await flushAsync();
     expect(calls.start).toEqual(['goal-1']);
   });
+
+  it('cycle complete fail-closes Finds when mission has Evidence but zero SUPPORT', async () => {
+    const { detail, controller } = harness({
+      stored: { efestoForgeEnabled: true, efestoForgeCompletedGoals: ['goal-1'] },
+      missions: [{
+        id: 'm1',
+        goalId: 'goal-1',
+        status: 'completed',
+        executionPhase: 'forged',
+        workState: 'forged',
+        createdAt: '2026-07-22T19:00:00Z',
+        resultSummary: { received: 2, evidenceCreated: 2, opportunitiesPromoted: 1 },
+        verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: false }],
+      }],
+      goals: [{ id: 'goal-1', title: 'Find work', priority: 2 }],
+    });
+    await controller.initialize();
+    await flushAsync();
+    expect(detail.textContent).not.toMatch(/Results are in Finds/i);
+    expect(detail.textContent).toMatch(/no Find passed Kernel SUPPORT/i);
+    expect(detail.textContent).toMatch(/Evidence\/Received/i);
+  });
 });
+
+
+describe('forgeCycleCompleteDetail honesty', () => {
+  it('does not claim Results are in Finds when only Evidence/received exist', () => {
+    const detail = forgeCycleCompleteDetail({
+      resultSummary: { received: 3, evidenceCreated: 2, opportunitiesPromoted: 1 },
+      verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: false }],
+    });
+    expect(detail).not.toMatch(/Results are in Finds/i);
+    expect(detail).toMatch(/Evidence\/Received saved/i);
+    expect(detail).toMatch(/no Find passed Kernel SUPPORT/i);
+  });
+
+  it('does not treat opportunitiesPromoted alone as Finds', () => {
+    const detail = forgeCycleCompleteDetail({
+      resultSummary: { received: 0, evidenceCreated: 0, opportunitiesPromoted: 4 },
+      verificationResults: [],
+    });
+    expect(detail).not.toMatch(/Results are in Finds|\d+ Finds? passed/i);
+    expect(detail).toBe('Forge cycle complete. No Find passed Kernel SUPPORT.');
+  });
+
+  it('names Kernel SUPPORT Finds only when verificationResults.supported is true', () => {
+    expect(forgeCycleCompleteDetail({
+      resultSummary: { received: 2, evidenceCreated: 2, opportunitiesPromoted: 2 },
+      verificationResults: [
+        { candidateId: 'cand-1', evidenceId: 'ev-1', supported: true },
+        { candidateId: 'cand-2', evidenceId: 'ev-2', supported: false },
+      ],
+    })).toBe('Forge cycle complete. 1 Find passed Kernel SUPPORT. Obsidian receipts when confirmed.');
+    expect(forgeCycleCompleteDetail({
+      verificationResults: [
+        { candidateId: 'cand-1', evidenceId: 'ev-1', supported: true },
+        { candidateId: 'cand-2', evidenceId: 'ev-2', supported: true },
+      ],
+    })).toBe('Forge cycle complete. 2 Finds passed Kernel SUPPORT. Obsidian receipts when confirmed.');
+  });
+});
+
