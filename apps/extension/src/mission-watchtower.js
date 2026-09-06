@@ -72,11 +72,14 @@ export function presentWatchtowerAviso(transition = {}, opportunities = [], miss
   }
   const finds = kernelSupportedFindsForMission(opportunities, mission);
   if (finds.length > 0) {
+    // Fail-close Find aviso copy: SUPPORT-gated finds must name Kernel SUPPORT (same honesty as
+    // Living Forge / mission-state / Kernel NotificationGateway body) — not bare "useful lead".
+    const n = finds.length;
     return {
       notify: true,
       kind: 'find',
       title: 'Efesto finished forging',
-      message: 'A useful lead was forged. Open Efesto to inspect the Evidence.',
+      message: `${n} ${n === 1 ? 'Find' : 'Finds'} passed Kernel SUPPORT. Open Efesto to inspect the Evidence.`,
     };
   }
   return {

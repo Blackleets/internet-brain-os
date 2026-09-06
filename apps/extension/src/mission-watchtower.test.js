@@ -77,10 +77,11 @@ describe('Watchtower Find aviso', () => {
     expect(aviso.message).not.toMatch(/useful lead|opportunit/i);
   });
 
-  it('fires Find aviso only when isKernelSupportedFind for this mission', () => {
+  it('fires Find aviso only when isKernelSupportedFind for this mission and names Kernel SUPPORT', () => {
     const aviso = presentWatchtowerAviso(forgedTransition, [supportedFind], missionWithSupport);
     expect(aviso).toMatchObject({ notify: true, kind: 'find', title: 'Efesto finished forging' });
-    expect(aviso.message).toContain('A useful lead was forged');
+    expect(aviso.message).toContain('1 Find passed Kernel SUPPORT');
+    expect(aviso.message).not.toMatch(/useful lead|opportunit/i);
   });
 
   it('keeps failed missions as attention, not Find', () => {
