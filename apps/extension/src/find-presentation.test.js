@@ -91,4 +91,12 @@ describe('Find presentation', () => {
     const other = { ...drill, id: 'opp-other', evidenceId: 'ev-other', supported: true };
     expect(kernelSupportedFindsForMission([other], mission)).toEqual([]);
   });
+
+  it('does not credit stamped supported=true when this mission verificationResults rejected the evidence', () => {
+    // Living Forge / Watchtower / mission-state use this helper; a global supported stamp
+    // must not override this mission's unsupported verification row.
+    const stamped = { ...drill, supported: true };
+    expect(kernelSupportedFindsForMission([stamped], missionWithSupport('ev-1', false))).toEqual([]);
+    expect(kernelSupportedFindsForMission([stamped], missionWithSupport('ev-1', true)).map((row) => row.id)).toEqual(['opp-drill']);
+  });
 });

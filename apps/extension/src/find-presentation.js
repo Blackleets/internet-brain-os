@@ -49,14 +49,17 @@ export function kernelSupportedFinds(items, missions = []) {
 }
 
 /**
- * Finds proved by this mission only. item.supported on an unrelated opportunity
- * is not this mission's aviso. Fail-close when the mission has no evidenceIds.
+ * Finds proved by this mission only. item.supported on an opportunity is not this
+ * mission's aviso unless verificationResults also marks that evidenceId supported.
+ * Fail-close: unsupported / missing verification rows never mint mission Finds
+ * (same gate as supported-find-notifier / countSupportedFinds).
  */
 export function kernelSupportedFindsForMission(opportunities = [], mission) {
   if (!mission) return [];
   const evidenceIds = new Set();
   for (const entry of Array.isArray(mission.verificationResults) ? mission.verificationResults : []) {
-    const id = text(entry?.evidenceId);
+    if (!entry || typeof entry !== 'object' || entry.supported !== true) continue;
+    const id = text(entry.evidenceId);
     if (id) evidenceIds.add(id);
   }
   if (!evidenceIds.size) return [];
