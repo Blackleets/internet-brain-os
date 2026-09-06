@@ -133,6 +133,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const chat = options.chatService;
   const conversations = options.chatConversationStore;
   const bootstrapStatus = options.bootstrapStatus;
+  const notificationGateway = options.notificationGateway;
   const allowedDashboardOrigins = new Set(options.allowedDashboardOrigins ?? []);
   const hermesMaxBodyBytes = Number(options.hermesMaxBodyBytes ?? 256 * 1024);
   const server = createServer(async (request, response) => {
@@ -371,6 +372,35 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         return send(response, 500, { ok: false, code: 'OPPORTUNITY_INBOX_FAILED' });
       }
     }
+    if (request.method === 'GET' && isNotificationsListPath(request.url)) {
+      if (!notificationGateway) return send(response, 404, { ok: false, code: 'NOTIFICATION_GATEWAY_UNAVAILABLE' });
+      try {
+        const options = parseNotificationsListQuery(request.url);
+        return send(response, 200, { ok: true, notifications: await notificationGateway.list(options) });
+      } catch (error) {
+        const mapped = mapNotificationError(error);
+        if (mapped) return send(response, mapped.status, { ok: false, code: mapped.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'NOTIFICATION_LIST_FAILED' });
+      }
+    }
+    if (request.method === 'POST') {
+      const readId = matchNotificationActionPath(request.url, 'read');
+      const dismissId = matchNotificationActionPath(request.url, 'dismiss');
+      if (readId || dismissId) {
+        if (!notificationGateway) return send(response, 404, { ok: false, code: 'NOTIFICATION_GATEWAY_UNAVAILABLE' });
+        try {
+          const at = new Date().toISOString();
+          const notification = readId
+            ? await notificationGateway.markRead(readId, 'user:local', at)
+            : await notificationGateway.dismiss(dismissId, 'user:local', at);
+          return send(response, 200, { ok: true, notification });
+        } catch (error) {
+          const mapped = mapNotificationError(error);
+          if (mapped) return send(response, mapped.status, { ok: false, code: mapped.code, error: error.message });
+          return send(response, 500, { ok: false, code: 'NOTIFICATION_MUTATION_FAILED' });
+        }
+      }
+    }
     if (request.method === 'POST' && request.url?.startsWith('/api/opportunities/') && request.url.endsWith('/feedback')) {
       if (!preferences) return send(response, 404, { ok: false, code: 'PREFERENCE_LEARNING_UNAVAILABLE' });
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
@@ -594,6 +624,7 @@ export const server = createLocalKernelServer(inbox, projector, obsidian, summar
   modelProviderRegistry: modelProviders,
   chatService,
   chatConversationStore: chatConversations,
+  notificationGateway,
   allowedDashboardOrigins: dashboardOrigins,
 });
 
@@ -695,6 +726,48 @@ function dashboardOriginsFrom(value) {
   return configured.length
     ? configured
     : ['https://internet-brain-os.leerenmos.chatgpt.site'];
+}
+
+
+function isNotificationsListPath(url) {
+  return typeof url === 'string' && (url === '/api/notifications' || url.startsWith('/api/notifications?'));
+}
+
+function parseNotificationsListQuery(url) {
+  const parsed = new URL(url, 'http://127.0.0.1');
+  const options = {};
+  const state = parsed.searchParams.get('state');
+  if (state !== null) options.state = state;
+  const limitRaw = parsed.searchParams.get('limit');
+  if (limitRaw !== null) {
+    const limit = Number(limitRaw);
+    if (!Number.isInteger(limit)) throw Object.assign(new Error('limit must be an integer between 1 and 500'), { code: 'INVALID_NOTIFICATION' });
+    options.limit = limit;
+  }
+  return options;
+}
+
+function matchNotificationActionPath(url, action) {
+  if (typeof url !== 'string' || typeof action !== 'string') return null;
+  const prefix = '/api/notifications/';
+  const suffix = `/${action}`;
+  if (!url.startsWith(prefix) || !url.endsWith(suffix)) return null;
+  const encoded = url.slice(prefix.length, -suffix.length);
+  if (!encoded || encoded.includes('/')) return null;
+  try {
+    const id = decodeURIComponent(encoded).trim();
+    return id || null;
+  } catch {
+    return null;
+  }
+}
+
+function mapNotificationError(error) {
+  const code = error?.code;
+  if (code === 'NOTIFICATION_NOT_FOUND') return { status: 404, code };
+  if (code === 'INVALID_NOTIFICATION') return { status: 400, code };
+  if (code === 'NOTIFICATION_IDEMPOTENCY_CONFLICT') return { status: 409, code };
+  return null;
 }
 
 function send(response, status, body) {
