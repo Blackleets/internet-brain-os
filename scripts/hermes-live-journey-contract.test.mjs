@@ -43,6 +43,13 @@ describe('G5.3 authentic public-web acceptance contract', () => {
     expect(assessment).not.toContain('record.rawText !==');
   });
 
+  it('fail-closes live L5/L6 Finds on Kernel SUPPORT rather than opportunitiesPromoted', () => {
+    expect(assessment).toContain('isKernelSupportedFind(find, verificationResults)');
+    expect(assessment).toContain('supportedLinkedFinds.length > 0');
+    expect(assessment).toContain('opportunitiesPromoted alone is not a Find');
+    expect(assessment).not.toContain('opportunitiesPromoted > 0 && linkedFinds.length > 0');
+  });
+
   it('keeps the adapter, worker and acceptance deadlines strictly nested', () => {
     expect(resolveLiveTimeoutBudget({})).toEqual({
       adapterMs: 12 * 60_000,

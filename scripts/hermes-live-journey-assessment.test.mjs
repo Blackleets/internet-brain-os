@@ -15,12 +15,13 @@ function fixture(overrides = {}) {
       { id: 'search-candidate:b', url: 'https://tool.example/b', title: 'Tool B', snippet: 'other snippet', status: 'verification_failed' },
     ],
     verificationResults: [
-      { candidateId: 'search-candidate:a', status: 'verified', sourceUrl: 'https://tool.example/a', evidenceId: 'evidence:a' },
-      { candidateId: 'search-candidate:b', status: 'verification_failed', reason: 'blocked upstream' },
+      { candidateId: 'search-candidate:a', status: 'verified', sourceUrl: 'https://tool.example/a', evidenceId: 'evidence:a', supported: true },
+      { candidateId: 'search-candidate:b', status: 'verification_failed', reason: 'blocked upstream', supported: false },
     ],
   };
   const opportunities = [{
     id: 'opportunity:a', caseId: 'case:a', evidenceId: 'evidence:a', sourceUrl: 'https://tool.example/a',
+    supported: true,
     goalMatches: [{ goalId, title: 'Live Goal', score: 90, reasons: ['tool'] }],
   }];
   const caseDetails = [{
@@ -58,13 +59,54 @@ describe('authentic live public-web journey assessment', () => {
           item.status === 'verified' ? { ...item, supported: false } : item
         )),
       },
+      opportunities: data.opportunities.map((item) => ({ ...item, supported: false })),
       surface: {
         ...data.surface,
         mission: { id: 'mission:live', workState: 'verifying' },
       },
     });
     expect(checks.map(({ id }) => id)).toEqual(LIVE_PUBLIC_WEB_CHECK_IDS);
-    expect(checks.every(({ passed }) => passed)).toBe(true);
+    // Evidence path stays honest (L3/L4/L7); L5/L6 must not invent Finds without SUPPORT.
+    expect(checks.filter(({ id }) => ['L3', 'L4', 'L7'].includes(id)).every(({ passed }) => passed)).toBe(true);
+    expect(checks.find(({ id }) => id === 'L5')).toMatchObject({ passed: false });
+    expect(checks.find(({ id }) => id === 'L6')).toMatchObject({ passed: false });
+  });
+
+  it('does not invent L5 Finds from opportunitiesPromoted without Kernel SUPPORT', () => {
+    const data = fixture();
+    const checks = assessLivePublicWebJourney({
+      ...data,
+      mission: {
+        ...data.mission,
+        resultSummary: { received: 2, evidenceCreated: 1, opportunitiesPromoted: 9 },
+        verificationResults: data.mission.verificationResults.map((item) => (
+          item.status === 'verified' ? { ...item, supported: false } : item
+        )),
+      },
+      opportunities: data.opportunities.map((item) => ({ ...item, supported: false })),
+    });
+    expect(checks.find(({ id }) => id === 'L5')).toMatchObject({ passed: false });
+    expect(checks.find(({ id }) => id === 'L6')).toMatchObject({ passed: false });
+    expect(checks.find(({ id }) => id === 'L5')?.detail).not.toMatch(/opportunitiesPromoted=/);
+  });
+
+  it('does not treat goal-linked Evidence+URL alone as a SUPPORT Find for L5', () => {
+    const data = fixture();
+    const checks = assessLivePublicWebJourney({
+      ...data,
+      mission: {
+        ...data.mission,
+        verificationResults: [
+          { candidateId: 'search-candidate:a', status: 'verified', sourceUrl: 'https://tool.example/a', evidenceId: 'evidence:a' },
+        ],
+      },
+      opportunities: [{
+        id: 'opportunity:a', caseId: 'case:a', evidenceId: 'evidence:a', sourceUrl: 'https://tool.example/a',
+        goalMatches: [{ goalId: data.goalId, title: 'Live Goal', score: 90, reasons: ['tool'] }],
+      }],
+    });
+    expect(checks.find(({ id }) => id === 'L5')).toMatchObject({ passed: false });
+    expect(checks.find(({ id }) => id === 'L6')).toMatchObject({ passed: false });
   });
 
   it('does not mistake a terminal mission with no useful provenance for live product value', () => {

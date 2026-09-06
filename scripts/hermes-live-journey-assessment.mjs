@@ -5,10 +5,11 @@ export function assessLivePublicWebJourney({ goalId, mission, opportunities = []
   const verificationResults = Array.isArray(mission?.verificationResults) ? mission.verificationResults : [];
   const received = numberOrZero(mission?.resultSummary?.received);
   const evidenceCreated = numberOrZero(mission?.resultSummary?.evidenceCreated);
-  const opportunitiesPromoted = numberOrZero(mission?.resultSummary?.opportunitiesPromoted);
+  // opportunitiesPromoted alone is not a Find — L5/L6 require Kernel SUPPORT.
   const verifiedResults = verificationResults.filter((item) => item?.status === 'verified' && validId(item?.evidenceId));
   const candidateIds = new Set(candidates.filter((item) => validId(item?.id)).map((item) => item.id));
   const linkedFinds = opportunities.filter((item) => findMatchesGoal(item, goalId));
+  const supportedLinkedFinds = linkedFinds.filter((find) => isKernelSupportedFind(find, verificationResults));
   const evidence = caseDetails.flatMap((detail) => Array.isArray(detail?.evidence) ? detail.evidence : []);
   const evidenceById = new Map(evidence.filter((item) => validId(item?.id)).map((item) => [item.id, item]));
   const provenancePairs = linkedFinds.flatMap((find) => {
@@ -26,7 +27,8 @@ export function assessLivePublicWebJourney({ goalId, mission, opportunities = []
     && typeof record.rawText === 'string'
     && record.rawText.trim().length > 0
     && /^[a-f0-9]{64}$/i.test(String(record.contentHash ?? ''))
-    && samePublicUrl(record.sourceUrl, find.sourceUrl));
+    && samePublicUrl(record.sourceUrl, find.sourceUrl)
+    && isKernelSupportedFind(find, verificationResults));
 
   return [
     check(
@@ -44,8 +46,8 @@ export function assessLivePublicWebJourney({ goalId, mission, opportunities = []
     check(
       'L5',
       'At least one Evidence-backed Find was promoted for the tested Goal',
-      opportunitiesPromoted > 0 && linkedFinds.length > 0,
-      `opportunitiesPromoted=${opportunitiesPromoted} goalLinkedFinds=${linkedFinds.length}`,
+      supportedLinkedFinds.length > 0,
+      `supportedGoalLinkedFinds=${supportedLinkedFinds.length}`,
     ),
     check(
       'L6',
@@ -67,6 +69,18 @@ function validCandidate(candidate) {
   if (!candidate.id.startsWith('search-candidate:')) return false;
   if (!['verified', 'verification_failed'].includes(candidate.status)) return false;
   return isPublicHttpUrl(candidate.url);
+}
+
+/**
+ * Fail-close Find gate for live L5/L6: opportunitiesPromoted / Evidence+URL alone
+ * are not Finds. Require opportunity.supported === true or a matching
+ * verificationResults row with supported === true (same gate as product surfaces).
+ */
+function isKernelSupportedFind(find, verificationResults) {
+  if (find?.supported === true && validId(find?.evidenceId)) return true;
+  const evidenceId = find?.evidenceId;
+  if (!validId(evidenceId) || !Array.isArray(verificationResults)) return false;
+  return verificationResults.some((item) => item?.evidenceId === evidenceId && item?.supported === true);
 }
 
 function findMatchesGoal(find, goalId) {
