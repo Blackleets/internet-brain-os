@@ -112,4 +112,14 @@ describe('Efesto orb UI static contract', () => {
     expect(html).toContain('data-view-target="forge"');
     expect(html).toContain('id="living-forge"');
   });
+
+  it('labels Hermes candidate count as Received, not Constitution Findings', () => {
+    const html = readFileSync(resolve('apps/extension/src/popup.html'), 'utf8');
+    expect(html).toContain('<dt>Received</dt><dd id="forge-summary-received">');
+    expect(html).toContain('<dt>Evidence</dt><dd id="forge-summary-evidence">');
+    expect(html).toContain('<dt>Finds</dt><dd id="forge-summary-opportunities">');
+    expect(html).not.toMatch(/<dt>Findings<\/dt>/);
+    expect(html).not.toContain('forge-summary-findings');
+  });
+
 });

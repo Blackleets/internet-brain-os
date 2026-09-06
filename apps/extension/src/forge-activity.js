@@ -28,7 +28,7 @@ export function forgeActivityForMission(mission, opportunities = []) {
 
 export function temporaryForgeActivity(kind) {
   if (kind === 'capture') return { ...ACTIVITIES.working, detail: 'Efesto is analyzing this public page.' };
-  if (kind === 'capture-success') return { ...ACTIVITIES.success, detail: 'The page was preserved as private Evidence.' };
+  if (kind === 'capture-success') return { label: 'Evidence preserved', detail: 'The page was preserved as private Evidence.', tone: 'success' };
   if (kind === 'capture-error') return { ...ACTIVITIES.error, detail: 'The page was rejected or could not be analyzed.' };
   return ACTIVITIES.idle;
 }

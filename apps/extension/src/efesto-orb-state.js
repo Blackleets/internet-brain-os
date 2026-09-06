@@ -48,7 +48,8 @@ function base(state, label, detail, extra = {}) {
 function missionSummary(mission = {}) {
   const summary = mission.resultSummary ?? {};
   return {
-    findingsReceived: count(summary.received),
+    // Hermes candidates received — not Constitution Findings (Claim linked to Evidence).
+    received: count(summary.received),
     evidenceCreated: count(summary.evidenceCreated),
     // Fail-closed Finds: opportunitiesPromoted alone is not a Find. Count Kernel SUPPORT only.
     opportunitiesForged: countSupportedFinds(mission.verificationResults),

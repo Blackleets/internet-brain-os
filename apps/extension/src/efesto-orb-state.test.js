@@ -52,7 +52,7 @@ describe('Efesto orb deterministic UI state', () => {
       now,
     });
     expect(view).toMatchObject({ state: 'completed', label: 'Forge complete' });
-    expect(view.summary).toEqual({ findingsReceived: 2, evidenceCreated: 1, opportunitiesForged: 1, obsidianNotesWritten: 4 });
+    expect(view.summary).toEqual({ received: 2, evidenceCreated: 1, opportunitiesForged: 1, obsidianNotesWritten: 4 });
     expect(view.obsidianReceipt).toMatchObject({ status: 'synced', notesWritten: 4 });
   });
 
@@ -68,7 +68,7 @@ describe('Efesto orb deterministic UI state', () => {
       },
       now,
     });
-    expect(promotedOnly.summary).toEqual({ findingsReceived: 3, evidenceCreated: 2, opportunitiesForged: 0, obsidianNotesWritten: 0 });
+    expect(promotedOnly.summary).toEqual({ received: 3, evidenceCreated: 2, opportunitiesForged: 0, obsidianNotesWritten: 0 });
 
     const unsupported = deriveEfestoOrbState({
       enabled: true,
@@ -101,6 +101,24 @@ describe('Efesto orb deterministic UI state', () => {
       now,
     });
     expect(supported.summary.opportunitiesForged).toBe(2);
+  });
+
+
+  it('does not treat Hermes received candidates as Constitution Findings', () => {
+    const view = deriveEfestoOrbState({
+      enabled: true,
+      kernel: 'ready',
+      services,
+      mission: {
+        status: 'completed',
+        executionPhase: 'forged',
+        resultSummary: { received: 7, evidenceCreated: 2, opportunitiesPromoted: 0, obsidianNotesWritten: 0 },
+        verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: false }],
+      },
+      now,
+    });
+    expect(view.summary).toEqual({ received: 7, evidenceCreated: 2, opportunitiesForged: 0, obsidianNotesWritten: 0 });
+    expect(view.summary).not.toHaveProperty('findingsReceived');
   });
 
   it('shows Forge complete when Kernel workState is forged', () => {

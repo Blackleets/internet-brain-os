@@ -54,7 +54,12 @@ describe('pixel forge activity contract', () => {
 
   it('uses explicit temporary states for manual capture', () => {
     expect(temporaryForgeActivity('capture').tone).toBe('working');
-    expect(temporaryForgeActivity('capture-success').tone).toBe('success');
+    expect(temporaryForgeActivity('capture-success')).toMatchObject({
+      tone: 'success',
+      label: 'Evidence preserved',
+      detail: 'The page was preserved as private Evidence.',
+    });
+    expect(temporaryForgeActivity('capture-success').label).not.toMatch(/lead|Find|forged/i);
     expect(temporaryForgeActivity('capture-error').tone).toBe('error');
   });
 });

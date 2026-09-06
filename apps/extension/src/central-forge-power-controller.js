@@ -165,7 +165,7 @@ export function renderForgePowerView(elements = {}, view, overrideDetail) {
   if (orbMeta) orbMeta.hidden = !view.active;
   if (orbSummary) orbSummary.hidden = view.state !== 'completed';
   if (view.summary) {
-    setText('#forge-summary-findings', String(view.summary.findingsReceived));
+    setText('#forge-summary-received', String(view.summary.received));
     setText('#forge-summary-evidence', String(view.summary.evidenceCreated));
     setText('#forge-summary-opportunities', String(view.summary.opportunitiesForged));
     setText('#forge-summary-obsidian', String(view.summary.obsidianNotesWritten));
