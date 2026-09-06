@@ -331,7 +331,7 @@ export function GoalsView({ snapshot, onNew }: { snapshot?: OverviewSnapshot; on
 export function FindsView({ opportunities, connected, onFeedback, onOpenCase, missions }: { opportunities: OpportunitySummary[]; connected: boolean; onFeedback: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void; onOpenCase?: (caseId: string) => void; missions?: readonly MissionSummary[] }) {
   // Fail-close: keep mission verificationResults SUPPORT in the gate (same as Home/shell).
   const supported = kernelSupportedFinds(opportunities, missions);
-  return <Workspace icon={Sparkles} eyebrow="Hallazgos priorizados por el Kernel" title="Hallazgos" copy="Cada Find es un lead no verificado. El feedback cambia preferencia, no Evidence objetiva.">
+  return <Workspace icon={Sparkles} eyebrow="Hallazgos priorizados por el Kernel" title="Hallazgos" copy="Solo Finds con Kernel SUPPORT. El feedback cambia preferencia, no Evidence objetiva.">
     {!connected ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para cargar hallazgos reales." /> : supported.length === 0 ? <Empty icon={Search} title="Aún no hay hallazgos" copy="Ejecuta un Goal público y los resultados promovidos aparecerán aquí." /> : <div className="find-grid">{supported.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFeedback} onOpenCase={onOpenCase} />)}</div>}
   </Workspace>;
 }

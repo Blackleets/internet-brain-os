@@ -245,6 +245,9 @@ describe('FindCard / FindsView mission-proof SUPPORT honesty', () => {
     expect(screen.getByText('Kernel SUPPORT')).toBeTruthy();
     expect(screen.queryByText('Lead no verificado')).toBeNull();
     expect(screen.queryByText('Aún no hay hallazgos')).toBeNull();
+    // Workspace copy must not brand SUPPORT Finds as lead no verificado.
+    expect(screen.getByText(/Solo Finds con Kernel SUPPORT/i)).toBeTruthy();
+    expect(screen.queryByText(/lead no verificado/i)).toBeNull();
   });
 
   it('fail-closes Hallazgos when mission proof is absent', () => {
