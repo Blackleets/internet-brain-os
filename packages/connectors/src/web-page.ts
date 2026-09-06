@@ -145,9 +145,20 @@ function pinnedRequest(url: URL, address: string, signal: AbortSignal, headers: 
  * Fail-close public-address gate for Kernel web.read.
  * WHATWG URL serializes IPv4-mapped hosts as ::ffff:7f00:1 (not ::ffff:127.0.0.1)
  * and IPv4-translated (SIIT) hosts as ::ffff:0:7f00:1 (not ::ffff:0:127.0.0.1).
- * Treat mapped and translated embeddings as the embedded IPv4 before private-range checks.
+ * NAT64 well-known prefix 64:ff9b::/96 (RFC 6052) embeds IPv4 the same way —
+ * WHATWG serializes 64:ff9b::127.0.0.1 as 64:ff9b::7f00:1.
+ * Treat mapped, translated, and NAT64 embeddings as the embedded IPv4 before private-range checks.
  */
 function ipv4MappedFromAddress(address: string): string | undefined {
+  // NAT64 well-known prefix 64:ff9b::/96 — last 32 bits are the embedded IPv4.
+  const nat64Dotted = address.match(/^64:ff9b::(\d+\.\d+\.\d+\.\d+)$/);
+  if (nat64Dotted) return nat64Dotted[1];
+  const nat64Hex = address.match(/^64:ff9b::([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (nat64Hex) {
+    const hi = Number.parseInt(nat64Hex[1], 16);
+    const lo = Number.parseInt(nat64Hex[2], 16);
+    return `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
+  }
   const dotted = address.match(/^::ffff:(?:0:)?(\d+\.\d+\.\d+\.\d+)$/);
   if (dotted) return dotted[1];
   // IPv4-mapped ::ffff:XXXX:YYYY and IPv4-translated ::ffff:0:XXXX:YYYY

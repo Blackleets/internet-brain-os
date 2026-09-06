@@ -79,6 +79,10 @@ describe('agent mission executor SSRF hardening', () => {
     'http://[::ffff:0:7f00:1]/hex-translated-loopback',
     'http://[::ffff:0:10.0.0.1]/translated-private',
     'http://[::ffff:0:a00:1]/hex-translated-rfc1918',
+    'http://[64:ff9b::127.0.0.1]/nat64-loopback',
+    'http://[64:ff9b::7f00:1]/hex-nat64-loopback',
+    'http://[64:ff9b::10.0.0.1]/nat64-private',
+    'http://[64:ff9b::a00:1]/hex-nat64-rfc1918',
   ];
 
   for (const url of PRIVATE_SEARCH_CANDIDATE_URLS) {

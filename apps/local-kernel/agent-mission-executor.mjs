@@ -136,12 +136,22 @@ function isPrivateLiteralHost(hostname) {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
   if (host === 'localhost' || host === '::1' || host === '::' || host.endsWith('.local')) return true;
   // Reuse Kernel/connector intent from packages/connectors/src/web-page.ts isPublicAddress:
-  // loopback, unique-local fc00::/7, link-local fe80::/10, IPv4-mapped/translated ::ffff:[0:]x.x.x.x.
+  // loopback, unique-local fc00::/7, link-local fe80::/10, IPv4-mapped/translated ::ffff:[0:]x.x.x.x,
+  // NAT64 well-known prefix 64:ff9b::/96.
   if (host.includes(':') && (host.startsWith('fe80:') || host.startsWith('fc') || host.startsWith('fd'))) return true;
   return isPrivateIpv4Literal(ipv4MappedFromLiteral(host) ?? host);
 }
 
 function ipv4MappedFromLiteral(host) {
+  // NAT64 well-known prefix 64:ff9b::/96 (RFC 6052) — WHATWG: 64:ff9b::127.0.0.1 → 64:ff9b::7f00:1.
+  const nat64Dotted = host.match(/^64:ff9b::(\d+\.\d+\.\d+\.\d+)$/);
+  if (nat64Dotted) return nat64Dotted[1];
+  const nat64Hex = host.match(/^64:ff9b::([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (nat64Hex) {
+    const hi = Number.parseInt(nat64Hex[1], 16);
+    const lo = Number.parseInt(nat64Hex[2], 16);
+    return `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
+  }
   const dotted = host.match(/^::ffff:(?:0:)?(\d+\.\d+\.\d+\.\d+)$/);
   if (dotted) return dotted[1];
   // WHATWG: mapped ::ffff:7f00:1; translated/SIIT ::ffff:0:7f00:1 — both embed private IPv4.
