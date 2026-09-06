@@ -136,16 +136,16 @@ function isPrivateLiteralHost(hostname) {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
   if (host === 'localhost' || host === '::1' || host === '::' || host.endsWith('.local')) return true;
   // Reuse Kernel/connector intent from packages/connectors/src/web-page.ts isPublicAddress:
-  // loopback, unique-local fc00::/7, link-local fe80::/10, IPv4-mapped ::ffff:x.x.x.x.
+  // loopback, unique-local fc00::/7, link-local fe80::/10, IPv4-mapped/translated ::ffff:[0:]x.x.x.x.
   if (host.includes(':') && (host.startsWith('fe80:') || host.startsWith('fc') || host.startsWith('fd'))) return true;
   return isPrivateIpv4Literal(ipv4MappedFromLiteral(host) ?? host);
 }
 
 function ipv4MappedFromLiteral(host) {
-  const dotted = host.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  const dotted = host.match(/^::ffff:(?:0:)?(\d+\.\d+\.\d+\.\d+)$/);
   if (dotted) return dotted[1];
-  // WHATWG URL serializes mapped IPv4 as ::ffff:7f00:1, not ::ffff:127.0.0.1.
-  const hex = host.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  // WHATWG: mapped ::ffff:7f00:1; translated/SIIT ::ffff:0:7f00:1 — both embed private IPv4.
+  const hex = host.match(/^::ffff:(?:0:)?([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
   if (!hex) return undefined;
   const hi = Number.parseInt(hex[1], 16);
   const lo = Number.parseInt(hex[2], 16);

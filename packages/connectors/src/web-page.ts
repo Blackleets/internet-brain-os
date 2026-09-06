@@ -143,13 +143,15 @@ function pinnedRequest(url: URL, address: string, signal: AbortSignal, headers: 
 
 /**
  * Fail-close public-address gate for Kernel web.read.
- * WHATWG URL serializes IPv4-mapped hosts as ::ffff:7f00:1 (not ::ffff:127.0.0.1);
- * treat both forms as the embedded IPv4 before applying private-range checks.
+ * WHATWG URL serializes IPv4-mapped hosts as ::ffff:7f00:1 (not ::ffff:127.0.0.1)
+ * and IPv4-translated (SIIT) hosts as ::ffff:0:7f00:1 (not ::ffff:0:127.0.0.1).
+ * Treat mapped and translated embeddings as the embedded IPv4 before private-range checks.
  */
 function ipv4MappedFromAddress(address: string): string | undefined {
-  const dotted = address.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  const dotted = address.match(/^::ffff:(?:0:)?(\d+\.\d+\.\d+\.\d+)$/);
   if (dotted) return dotted[1];
-  const hex = address.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  // IPv4-mapped ::ffff:XXXX:YYYY and IPv4-translated ::ffff:0:XXXX:YYYY
+  const hex = address.match(/^::ffff:(?:0:)?([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
   if (!hex) return undefined;
   const hi = Number.parseInt(hex[1], 16);
   const lo = Number.parseInt(hex[2], 16);

@@ -75,6 +75,10 @@ describe('agent mission executor SSRF hardening', () => {
     'http://[::ffff:127.0.0.1]/mapped-loopback',
     'http://[::ffff:10.0.0.1]/mapped-private',
     'http://[::ffff:192.168.1.2]/mapped-rfc1918',
+    'http://[::ffff:0:127.0.0.1]/translated-loopback',
+    'http://[::ffff:0:7f00:1]/hex-translated-loopback',
+    'http://[::ffff:0:10.0.0.1]/translated-private',
+    'http://[::ffff:0:a00:1]/hex-translated-rfc1918',
   ];
 
   for (const url of PRIVATE_SEARCH_CANDIDATE_URLS) {
