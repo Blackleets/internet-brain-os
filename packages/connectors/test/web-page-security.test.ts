@@ -27,6 +27,14 @@ describe('WebPageFetcher public-network boundary', () => {
     'http://[64:ff9b::a9fe:a9fe]/hex-nat64-metadata',
     'http://[64:ff9b::10.0.0.1]/nat64-rfc1918',
     'http://[64:ff9b::a00:1]/hex-nat64-rfc1918',
+    // Deprecated IPv4-compatible (::/96, RFC 4291) — NOT mapped/NAT64/SIIT.
+    // WHATWG serializes ::127.0.0.1 as ::7f00:1. Must not bypass private gate.
+    'http://[::127.0.0.1]/compat-loopback',
+    'http://[::7f00:1]/hex-compat-loopback',
+    'http://[::169.254.169.254]/compat-metadata',
+    'http://[::a9fe:a9fe]/hex-compat-metadata',
+    'http://[::10.0.0.1]/compat-rfc1918',
+    'http://[::a00:1]/hex-compat-rfc1918',
   ])('blocks private target %s', async (url) => {
     const fetchImpl = vi.fn();
     await expect(new WebPageFetcher({ fetchImpl }).fetch(url)).rejects.toThrow('Private network URLs');
@@ -68,6 +76,22 @@ describe('WebPageFetcher public-network boundary', () => {
 
   test('blocks DNS answers that resolve to hex-form NAT64 loopback', async () => {
     const lookupImpl = vi.fn(async () => [{ address: '64:ff9b::7f00:1', family: 6 }]);
+    const fetchImpl = vi.fn();
+    await expect(new WebPageFetcher({ fetchImpl, lookupImpl: lookupImpl as never }).fetch('https://evil.example'))
+      .rejects.toThrow('Private network URLs');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test('blocks DNS answers that resolve to hex-form IPv4-compatible loopback', async () => {
+    const lookupImpl = vi.fn(async () => [{ address: '::7f00:1', family: 6 }]);
+    const fetchImpl = vi.fn();
+    await expect(new WebPageFetcher({ fetchImpl, lookupImpl: lookupImpl as never }).fetch('https://evil.example'))
+      .rejects.toThrow('Private network URLs');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test('blocks DNS answers that resolve to expanded IPv4-compatible loopback', async () => {
+    const lookupImpl = vi.fn(async () => [{ address: '0:0:0:0:0:0:7f00:1', family: 6 }]);
     const fetchImpl = vi.fn();
     await expect(new WebPageFetcher({ fetchImpl, lookupImpl: lookupImpl as never }).fetch('https://evil.example'))
       .rejects.toThrow('Private network URLs');

@@ -147,7 +147,9 @@ function pinnedRequest(url: URL, address: string, signal: AbortSignal, headers: 
  * and IPv4-translated (SIIT) hosts as ::ffff:0:7f00:1 (not ::ffff:0:127.0.0.1).
  * NAT64 well-known prefix 64:ff9b::/96 (RFC 6052) embeds IPv4 the same way —
  * WHATWG serializes 64:ff9b::127.0.0.1 as 64:ff9b::7f00:1.
- * Treat mapped, translated, and NAT64 embeddings as the embedded IPv4 before private-range checks.
+ * Deprecated IPv4-compatible (::/96, RFC 4291) embeds IPv4 without ::ffff: —
+ * WHATWG serializes ::127.0.0.1 as ::7f00:1; DNS may also return 0:0:0:0:0:0:7f00:1.
+ * Treat mapped, translated, NAT64, and compatible embeddings as the embedded IPv4 before private-range checks.
  */
 function ipv4MappedFromAddress(address: string): string | undefined {
   // NAT64 well-known prefix 64:ff9b::/96 — last 32 bits are the embedded IPv4.
@@ -163,9 +165,18 @@ function ipv4MappedFromAddress(address: string): string | undefined {
   if (dotted) return dotted[1];
   // IPv4-mapped ::ffff:XXXX:YYYY and IPv4-translated ::ffff:0:XXXX:YYYY
   const hex = address.match(/^::ffff:(?:0:)?([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
-  if (!hex) return undefined;
-  const hi = Number.parseInt(hex[1], 16);
-  const lo = Number.parseInt(hex[2], 16);
+  if (hex) {
+    const hi = Number.parseInt(hex[1], 16);
+    const lo = Number.parseInt(hex[2], 16);
+    return `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
+  }
+  // Deprecated IPv4-compatible ::/96 (RFC 4291) — last 32 bits embed IPv4 without ::ffff:.
+  const compatDotted = address.match(/^(?:0:0:0:0:0:0|:)?:(\d+\.\d+\.\d+\.\d+)$/);
+  if (compatDotted) return compatDotted[1];
+  const compatHex = address.match(/^(?:0:0:0:0:0:0|:)?:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (!compatHex) return undefined;
+  const hi = Number.parseInt(compatHex[1], 16);
+  const lo = Number.parseInt(compatHex[2], 16);
   return `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
 }
 
