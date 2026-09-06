@@ -134,6 +134,48 @@ describe('OverviewScreen', () => {
     expect(screen.getByText('Lead no verificado')).toBeTruthy();
   });
 
+  it('labels Kernel SUPPORT Finds instead of Lead no verificado on OpportunityPanel', () => {
+    const supportedOpportunity = {
+      ...snapshot.opportunities[0],
+      id: 'opportunity-supported',
+      title: 'Quality drill 24.99 EUR',
+      evidenceId: 'ev-supported-1',
+      sourceUrl: 'https://shop.example/quality-drill',
+      supported: true,
+    };
+    const missionProofOpportunity = {
+      ...snapshot.opportunities[0],
+      id: 'opportunity-mission-proof',
+      title: 'Mission-proof drill',
+      evidenceId: 'ev-mission-1',
+      sourceUrl: 'https://shop.example/mission-proof-drill',
+    };
+    const missions = [{
+      ...snapshot.missions[0],
+      id: 'mission-support',
+      status: 'completed' as const,
+      executionPhase: 'forged' as const,
+      verificationResults: [{ evidenceId: 'ev-mission-1', supported: true }],
+    }];
+    render(
+      <OverviewScreen
+        snapshot={{
+          ...snapshot,
+          missions,
+          opportunities: [supportedOpportunity, missionProofOpportunity, snapshot.opportunities[0]],
+        }}
+        reload={vi.fn()}
+        disconnect={vi.fn()}
+      />,
+    );
+
+    const panel = screen.getByRole('region', { name: 'Prioridad de oportunidades' });
+    expect(within(panel).getAllByText('Kernel SUPPORT')).toHaveLength(2);
+    expect(within(panel).getByText('Lead no verificado')).toBeTruthy();
+    expect(within(panel).getByText('Quality drill 24.99 EUR')).toBeTruthy();
+    expect(within(panel).getByText('Mission-proof drill')).toBeTruthy();
+  });
+
   it('keeps successful panels visible while explaining a partial endpoint failure', () => {
     render(
       <OverviewScreen
