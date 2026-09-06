@@ -403,3 +403,10 @@ footer i { display: inline-block; width: 5px; height: 5px; margin-right: 4px; bo
     animation: none !important;
   }
 }
+
+/* Living Forge idle: do not claim live forge without mission */
+.living-forge[data-activity="idle"] .pixel-fire,
+.living-forge[data-activity="idle"] .ember{opacity:.22;filter:saturate(.35)}
+.living-forge[data-activity="error"] .pixel-fire,
+.living-forge[data-activity="error"] .ember{opacity:.28;filter:saturate(.45)}
+.living-forge[data-activity="success"] .pixel-fire{opacity:.55}

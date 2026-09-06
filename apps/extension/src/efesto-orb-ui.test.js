@@ -122,4 +122,12 @@ describe('Efesto orb UI static contract', () => {
     expect(html).not.toContain('forge-summary-findings');
   });
 
+  it('does not claim EN VIVO on idle Living Forge markup', () => {
+    const html = readFileSync(resolve('apps/extension/src/popup.html'), 'utf8');
+    const css = readFileSync(resolve('apps/extension/src/popup.css'), 'utf8');
+    expect(html).toContain('class="live-badge-label">LISTA</span>');
+    expect(html).not.toMatch(/live-badge">\s*<i><\/i>\s*EN VIVO/);
+    expect(css).toContain('.living-forge[data-activity="idle"] .pixel-fire');
+  });
+
 });

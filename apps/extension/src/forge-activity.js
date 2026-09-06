@@ -32,3 +32,23 @@ export function temporaryForgeActivity(kind) {
   if (kind === 'capture-error') return { ...ACTIVITIES.error, detail: 'The page was rejected or could not be analyzed.' };
   return ACTIVITIES.idle;
 }
+
+const LIVE_FORGE_TONES = new Set(['working', 'verifying', 'queued']);
+
+/**
+ * Fail-close Living Forge badge: EN VIVO only while a mission is actively forging.
+ * Idle / success / error must not claim a live forge without mission work.
+ */
+export function livingForgeLiveLabel(tone) {
+  if (LIVE_FORGE_TONES.has(tone)) return 'EN VIVO';
+  if (tone === 'error') return 'ATENTA';
+  return 'LISTA';
+}
+
+export function applyLivingForgeActivity(el, tone) {
+  if (!el) return;
+  const activity = typeof tone === 'string' && tone ? tone : 'idle';
+  if (el.dataset) el.dataset.activity = activity;
+  const label = el.querySelector?.('.live-badge-label');
+  if (label) label.textContent = livingForgeLiveLabel(activity);
+}

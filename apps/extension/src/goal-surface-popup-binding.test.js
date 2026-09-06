@@ -5,7 +5,7 @@ import { applyGoalTruthPresentation, syncGoalSurfacePopup } from './goal-surface
 function mount() {
   document.body.innerHTML = `
     <span id="mission-state" data-status="idle"></span>
-    <section id="living-forge" data-activity="idle"></section>
+    <section id="living-forge" data-activity="idle"><span class="live-badge"><i></i><span class="live-badge-label">EN VIVO</span></span></section>
     <h2 id="forge-activity-label"></h2>
     <p id="forge-activity-detail"></p>`;
 }
@@ -34,6 +34,7 @@ describe('Shared Goal Truth popup binding', () => {
     expect(document.querySelector('#mission-state')?.textContent).toBe('Efesto is verifying findings');
     expect(document.querySelector('#mission-state')?.dataset.status).toBe('verifying');
     expect(document.querySelector('#living-forge')?.dataset.activity).toBe('verifying');
+    expect(document.querySelector('.live-badge-label')?.textContent).toBe('EN VIVO');
     expect(document.querySelector('#forge-activity-label')?.textContent).toBe('Inspecting the piece');
   });
 
@@ -44,6 +45,8 @@ describe('Shared Goal Truth popup binding', () => {
       forgeActivity: { label: 'The forge is ready', detail: 'Create a Goal or analyze a public page.', tone: 'idle' },
     });
     expect(document.querySelector('#living-forge')?.dataset.activity).toBe('idle');
+    expect(document.querySelector('.live-badge-label')?.textContent).toBe('LISTA');
+    expect(document.querySelector('.live-badge-label')?.textContent).not.toMatch(/EN VIVO/i);
     expect(document.querySelector('#forge-activity-label')?.textContent).toBe('The forge is ready');
   });
 

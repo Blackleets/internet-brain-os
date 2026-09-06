@@ -3,7 +3,7 @@ import { isKernelSupportedFind, kernelSupportedFinds, kernelSupportedFindsForMis
 import { buildOpportunityCommandCenter } from './opportunity-command-center.js';
 import { buildOpportunityActionPlan, normalizeOpportunityReviewState, updateOpportunityReviewState } from './opportunity-action-workspace.js';
 import { normalizePublicOrigin } from './auto-capture-policy.js';
-import { forgeActivityForMission, temporaryForgeActivity } from './forge-activity.js';
+import { applyLivingForgeActivity, forgeActivityForMission, temporaryForgeActivity } from './forge-activity.js';
 import { normalizeWorkspaceView, workspaceVisibility } from './workspace-navigation.js';
 import { missionJourney, newestMission, onboardingJourney } from './product-journey.js';
 import { presentMission } from './mission-presentation.js';
@@ -647,7 +647,7 @@ function setService(id, ready, copy) {
   $(`#${id}-state`).textContent = copy;
 }
 function setForgeActivity(activity) {
-  $('#living-forge').dataset.activity = activity.tone;
+  applyLivingForgeActivity($('#living-forge'), activity.tone);
   $('#forge-activity-label').textContent = activity.label;
   $('#forge-activity-detail').textContent = activity.detail;
 }

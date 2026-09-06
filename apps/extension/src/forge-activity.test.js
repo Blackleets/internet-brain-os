@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { forgeActivityForMission, temporaryForgeActivity } from './forge-activity.js';
+import { applyLivingForgeActivity, forgeActivityForMission, livingForgeLiveLabel, temporaryForgeActivity } from './forge-activity.js';
 
 const supported = {
   id: 'opp-drill',
@@ -61,5 +61,28 @@ describe('pixel forge activity contract', () => {
     });
     expect(temporaryForgeActivity('capture-success').label).not.toMatch(/lead|Find|forged/i);
     expect(temporaryForgeActivity('capture-error').tone).toBe('error');
+  });
+
+  it('does not claim EN VIVO when Living Forge is idle without mission', () => {
+    expect(livingForgeLiveLabel('idle')).toBe('LISTA');
+    expect(livingForgeLiveLabel('success')).toBe('LISTA');
+    expect(livingForgeLiveLabel('error')).toBe('ATENTA');
+    expect(livingForgeLiveLabel('working')).toBe('EN VIVO');
+    expect(livingForgeLiveLabel('verifying')).toBe('EN VIVO');
+    expect(livingForgeLiveLabel('queued')).toBe('EN VIVO');
+    expect(livingForgeLiveLabel('idle')).not.toMatch(/EN VIVO|LIVE/i);
+
+    const el = {
+      dataset: {},
+      querySelector(selector) {
+        return selector === '.live-badge-label' ? this.label : null;
+      },
+      label: { textContent: 'EN VIVO' },
+    };
+    applyLivingForgeActivity(el, 'idle');
+    expect(el.dataset.activity).toBe('idle');
+    expect(el.label.textContent).toBe('LISTA');
+    applyLivingForgeActivity(el, 'working');
+    expect(el.label.textContent).toBe('EN VIVO');
   });
 });

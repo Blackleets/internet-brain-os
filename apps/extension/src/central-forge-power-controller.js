@@ -1,4 +1,5 @@
 import { DEFAULT_KERNEL_BASE_URL, getEfestoBootstrapStatus, listAgentMissions, listGoals, startGoalResearch } from './local-transport.js';
+import { applyLivingForgeActivity } from './forge-activity.js';
 import { deriveEfestoOrbState, resolveForgePowerIntent, selectNextGoal, shouldCreateMission } from './efesto-orb-state.js';
 
 const ACTIVE_STATUSES = new Set(['queued', 'running']);
@@ -159,7 +160,7 @@ export function renderForgePowerView(elements = {}, view, overrideDetail) {
   powerButton.setAttribute('aria-label', enabled ? 'Pause Efesto after current work' : view.action ?? 'Start Efesto');
   powerLabel.textContent = view.action && view.state === 'failed' ? view.action : view.label;
   powerDetail.textContent = overrideDetail ?? view.detail;
-  livingForge?.setAttribute?.('data-activity', view.smithActive ? (view.state === 'verifying' ? 'verifying' : 'working') : view.state === 'completed' ? 'success' : view.state === 'failed' ? 'error' : 'idle');
+  applyLivingForgeActivity(livingForge, view.smithActive ? (view.state === 'verifying' ? 'verifying' : 'working') : view.state === 'completed' ? 'success' : view.state === 'failed' ? 'error' : 'idle');
   setText('#forge-orb-elapsed', view.elapsedLabel ?? 'No active mission');
   setText('#forge-orb-heartbeat', view.heartbeatLabel ?? 'No heartbeat yet');
   if (orbMeta) orbMeta.hidden = !view.active;
