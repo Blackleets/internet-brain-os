@@ -98,6 +98,17 @@ describe('extension Shared Goal Truth presentation', () => {
     });
   });
 
+  it('forged workLabel and forgeActivity claim findings only with Kernel SUPPORT findCount', () => {
+    expect(presentGoalSurface(surface('forged', { mission: { findCount: 2 } })).workLabel).toBe('Evidence-backed findings forged');
+    expect(presentGoalSurface(surface('forged', { mission: { findCount: 0 } })).workLabel).toBe('Research completed');
+    expect(presentGoalSurface(surface('forged', { mission: { findCount: 0 } })).workLabel).not.toMatch(/findings forged|useful lead/i);
+    // Missing findCount is not proof of a Find — fail-close like findCount 0.
+    expect(presentGoalSurface(surface('forged')).workLabel).toBe('Research completed');
+    expect(forgeActivityForGoalSurface(surface('forged'))).toEqual({
+      label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.', tone: 'success',
+    });
+  });
+
   it.each([
     ['waiting_for_agent', 'Hermes not available', 'error'],
     ['queued', 'Preparing the tools', 'queued'],

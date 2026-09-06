@@ -15,7 +15,7 @@ const WORK_COPY = Object.freeze({
   running: 'Hermes is researching',
   investigating: 'Hermes is researching',
   verifying: 'Efesto is verifying findings',
-  forged: 'Evidence-backed findings forged',
+  // forged workLabel is SUPPORT-aware via workLabelForMission — do not claim findings here.
   completed: 'No research mission yet',
   failed: 'Research needs attention',
 });
@@ -45,7 +45,7 @@ export function presentGoalSurface(surface) {
     workState: mission?.workState ?? 'idle',
     workLabel: mission?.blockedReason
       ? 'Automatic research blocked safely'
-      : WORK_COPY[mission?.workState ?? 'idle'] ?? 'Kernel state unavailable',
+      : workLabelForMission(mission),
     missionId: mission?.id,
     findCount: mission?.findCount,
     blockedReason: mission?.blockedReason,
@@ -66,12 +66,29 @@ export function forgeActivityForGoalSurface(surface) {
   if (workState === 'verifying') return FORGE_ACTIVITY.verifying;
   if (workState === 'forged') {
     const found = Number.isSafeInteger(surface?.mission?.findCount) ? surface.mission.findCount : undefined;
-    if (found === undefined) return FORGE_ACTIVITY.forged;
-    if (found === 0) return { ...FORGE_ACTIVITY.forged, label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.' };
+    // Fail-close: missing findCount is not proof of a Find (verificationResults may be absent).
+    if (found === undefined || found === 0) {
+      return { ...FORGE_ACTIVITY.forged, label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.' };
+    }
     return { ...FORGE_ACTIVITY.forged, detail: `${found} ${found === 1 ? 'Find' : 'Finds'} passed Kernel SUPPORT and were forged.` };
   }
   if (workState === 'failed') return FORGE_ACTIVITY.failed;
   return FORGE_ACTIVITY.idle;
+}
+
+
+/**
+ * Fail-close Goal Surface mission workLabel.
+ * forged + Kernel SUPPORT Finds → findings copy; forged without proven Finds → Research completed.
+ */
+function workLabelForMission(mission) {
+  const workState = mission?.workState ?? 'idle';
+  if (workState === 'forged') {
+    const found = Number.isSafeInteger(mission?.findCount) ? mission.findCount : undefined;
+    if (found !== undefined && found > 0) return 'Evidence-backed findings forged';
+    return 'Research completed';
+  }
+  return WORK_COPY[workState] ?? 'Kernel state unavailable';
 }
 
 function blockedActivity(reason) {
