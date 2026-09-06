@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { InboxError, MAX_PAGE_CONTEXT_VISIBLE_TEXT } from './page-context-inbox.mjs';
 import { classifyOpportunity } from './opportunity-classifier.mjs';
+import { queueSupportedFindNotifications } from './supported-find-notifier.mjs';
 
 const READ_CAPABILITY = 'web.read';
 
@@ -14,12 +15,14 @@ export class MissionSearchCandidateVerifier {
     this.reader = options.reader;
     this.loadKernel = options.loadKernel ?? loadBuiltKernel;
     this.loadConnectors = options.loadConnectors ?? loadBuiltConnectors;
+    this.notificationGateway = options.notificationGateway ?? null;
   }
 
   async verify(missionId) {
     const initial = await this.store.read();
     const initialMission = findMission(initial, missionId);
     if (initialMission.status === 'completed' && initialMission.verificationDigest) {
+      await this.#notifySupportedFinds(initialMission);
       return { mission: initialMission, evidence: [], idempotent: true };
     }
     requireVerifying(initialMission);
@@ -50,6 +53,7 @@ export class MissionSearchCandidateVerifier {
     const fresh = await this.store.read();
     const freshMission = findMission(fresh, missionId);
     if (freshMission.status === 'completed' && freshMission.verificationDigest) {
+      await this.#notifySupportedFinds(freshMission);
       return { mission: freshMission, evidence: [], idempotent: true };
     }
     requireSameCandidateBatch(initialMission, freshMission);
@@ -59,7 +63,9 @@ export class MissionSearchCandidateVerifier {
 
     const verified = outcomes.filter((item) => item.ok);
     if (!verified.length) return this.#recordFailures(missionId, freshMission, outcomes);
-    return this.#projectVerified(missionId, freshMission, outcomes, freshGoal);
+    const projected = await this.#projectVerified(missionId, freshMission, outcomes, freshGoal);
+    await this.#notifySupportedFinds(projected.mission);
+    return projected;
   }
 
   async #projectVerified(missionId, expectedMission, outcomes, goal) {
@@ -194,6 +200,18 @@ export class MissionSearchCandidateVerifier {
       const updated = [...missions];
       updated[index] = next;
       return { changed: true, data: { ...data, agentMissions: updated }, result: { mission: next, evidence: [], blocked: true } };
+    });
+  }
+
+  async #notifySupportedFinds(mission) {
+    if (!this.notificationGateway || !mission) return;
+    const data = await this.store.read();
+    await queueSupportedFindNotifications({
+      gateway: this.notificationGateway,
+      mission,
+      opportunities: data.opportunities ?? [],
+      createdAt: this.now().toISOString(),
+      actor: 'system',
     });
   }
 

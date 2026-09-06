@@ -194,7 +194,7 @@ export class OpportunityProjector {
  * Mirrors dashboard isKernelSupportedFind: Evidence+URL and regex classification
  * are not Finds. jwt.io/snippet-only stay out of the inbox.
  */
-function isKernelSupportedInboxFind(item, missions) {
+export function isKernelSupportedInboxFind(item, missions) {
   const title = typeof item?.title === 'string' ? item.title.trim() : '';
   const evidenceId = typeof item?.evidenceId === 'string' ? item.evidenceId.trim() : '';
   const sourceUrl = typeof item?.sourceUrl === 'string' ? item.sourceUrl.trim() : '';

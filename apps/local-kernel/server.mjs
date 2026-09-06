@@ -20,6 +20,7 @@ import { interactiveMissionConfirmationActor } from './mission-confirmation-boun
 import { GoalSurfaceReaderError, createGoalSurfaceReader } from './goal-surface-reader.mjs';
 import { PreferenceLearner } from './preference-learner.mjs';
 import { AgentMissionExecutor } from './agent-mission-executor.mjs';
+import { FileNotificationReceiptStore } from './notification-receipt-store.mjs';
 import { ModelForge } from './model-forge.mjs';
 import { ModelProviderError, ModelProviderRegistry } from './model-provider-registry.mjs';
 import { ChatServiceError, KernelChatService } from './chat-service.mjs';
@@ -72,7 +73,11 @@ const hermesWorkerReady = process.env.HEPHAESTUS_HERMES_READY === '1';
 const agentMissionManager = new AgentMissionManager(knowledgeStore, { isAgentReady: (agent) => agent === 'hermes' && (hermesWorkerReady || Boolean(hermes)) });
 const goalSurfaceReader = isMain ? await createGoalSurfaceReader(knowledgeStore) : undefined;
 const preferenceLearner = new PreferenceLearner(knowledgeStore);
-const agentMissionExecutor = new AgentMissionExecutor(knowledgeStore, opportunityProjector);
+const notificationReceiptStore = new FileNotificationReceiptStore(resolve(dataDir, 'notification-receipts.json'));
+const notificationGateway = await loadNotificationGateway(notificationReceiptStore);
+const agentMissionExecutor = new AgentMissionExecutor(knowledgeStore, opportunityProjector, {
+  verifierOptions: notificationGateway ? { notificationGateway } : {},
+});
 const modelForge = new ModelForge({
   baseUrl: process.env.HEPHAESTUS_OLLAMA_URL,
   activeModel: process.env.HEPHAESTUS_OLLAMA_MODEL,
@@ -610,6 +615,18 @@ if (isMain) {
       console.log(`Extension pairing code: ${pairing.code} (expires ${pairing.expiresAt}, one use, five attempts)`);
     }
   });
+}
+
+
+async function loadNotificationGateway(store) {
+  try {
+    const mod = await import('../../packages/kernel/dist/index.js');
+    const kernel = mod?.default && typeof mod.default === 'object' ? { ...mod.default, ...mod } : mod;
+    if (typeof kernel.NotificationGateway !== 'function') return undefined;
+    return new kernel.NotificationGateway(store);
+  } catch {
+    return undefined;
+  }
 }
 
 async function readJson(request, maxBodyBytes = MAX_BODY_BYTES) {
