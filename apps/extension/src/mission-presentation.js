@@ -22,12 +22,21 @@ export function presentMission(mission) {
   };
 }
 
+/**
+ * Fail-close forged status copy: findings-passed language only when
+ * verificationResults prove Kernel SUPPORT Finds (same gate as countSupportedFinds).
+ */
 function missionStatusCopy(mission) {
   if (mission?.executionPhase === 'verifying') {
     return { label: 'Verifying returned findings', detail: 'Efesto is validating and preserving the returned material inside the local Kernel.' };
   }
   if (mission?.status === 'completed' && (mission.executionPhase === 'forged' || mission.workState === 'forged')) {
-    return STATUS_COPY.completed;
+    const finds = countSupportedFinds(mission?.verificationResults);
+    if (finds > 0) return STATUS_COPY.completed;
+    return {
+      label: 'Research completed',
+      detail: 'The bounded attempt finished. No Find passed Kernel SUPPORT.',
+    };
   }
   if (mission?.status === 'completed') return STATUS_COPY.completedWithoutForge;
   return STATUS_COPY[mission?.status] ?? { label: 'Unknown mission state', detail: 'Inspect the persisted mission before taking action.' };

@@ -58,8 +58,34 @@ describe('mission presentation', () => {
     expect(bare.statusLabel).toBe('Research ended without Evidence');
     expect(bare.statusLabel).not.toMatch(/Commission forged|Completado/i);
     expect(bare.statusDetail).not.toMatch(/passed through the local Kernel/i);
-    expect(presentMission({ status: 'completed', executionPhase: 'forged' }).statusLabel).toBe('Commission forged');
-    expect(presentMission({ status: 'completed', workState: 'forged' }).statusLabel).toBe('Commission forged');
+  });
+
+  it('does not claim findings passed Kernel when forged without SUPPORT Finds', () => {
+    const forgedNoResults = presentMission({ status: 'completed', executionPhase: 'forged' });
+    expect(forgedNoResults.statusLabel).toBe('Research completed');
+    expect(forgedNoResults.statusLabel).not.toMatch(/Commission forged|Completado/i);
+    expect(forgedNoResults.statusDetail).toMatch(/No Find passed Kernel SUPPORT/i);
+    expect(forgedNoResults.statusDetail).not.toMatch(/findings passed through the local Kernel/i);
+
+    const forgedWorkState = presentMission({ status: 'completed', workState: 'forged', resultSummary: { opportunitiesPromoted: 3 } });
+    expect(forgedWorkState.statusLabel).toBe('Research completed');
+    expect(forgedWorkState.statusDetail).not.toMatch(/findings passed/i);
+
+    const unsupported = presentMission({
+      status: 'completed',
+      executionPhase: 'forged',
+      verificationResults: [{ evidenceId: 'ev-1', supported: false }, { evidenceId: 'ev-2' }],
+    });
+    expect(unsupported.statusLabel).toBe('Research completed');
+    expect(unsupported.statusDetail).not.toMatch(/findings passed through the local Kernel/i);
+
+    const supported = presentMission({
+      status: 'completed',
+      executionPhase: 'forged',
+      verificationResults: [{ evidenceId: 'ev-1', supported: true }],
+    });
+    expect(supported.statusLabel).toBe('Commission forged');
+    expect(supported.statusDetail).toMatch(/findings passed through the local Kernel/i);
   });
 
   it('does not treat opportunitiesPromoted as Finds without Kernel SUPPORT', () => {
