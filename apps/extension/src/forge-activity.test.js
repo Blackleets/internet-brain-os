@@ -26,9 +26,13 @@ describe('pixel forge activity contract', () => {
   });
 
   it('reports Kernel-supported Find counts without inventing findings', () => {
-    expect(forgeActivityForMission(forgedMission, [supported])).toMatchObject({
-      tone: 'success', detail: '1 Find passed Kernel SUPPORT and were forged.',
+    const supportedAviso = forgeActivityForMission(forgedMission, [supported]);
+    expect(supportedAviso).toMatchObject({
+      tone: 'success',
+      label: 'A Kernel SUPPORT Find was forged',
+      detail: '1 Find passed Kernel SUPPORT and were forged.',
     });
+    expect(supportedAviso.label).not.toMatch(/useful lead|opportunit/i);
     expect(forgeActivityForMission({ status: 'completed', workState: 'forged', resultSummary: { opportunitiesPromoted: 0 } })).toMatchObject({
       tone: 'success', label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.',
     });

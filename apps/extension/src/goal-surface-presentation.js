@@ -70,7 +70,12 @@ export function forgeActivityForGoalSurface(surface) {
     if (found === undefined || found === 0) {
       return { ...FORGE_ACTIVITY.forged, label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.' };
     }
-    return { ...FORGE_ACTIVITY.forged, detail: `${found} ${found === 1 ? 'Find' : 'Finds'} passed Kernel SUPPORT and were forged.` };
+    // Fail-close Living Forge label: SUPPORT findCount must not keep "useful lead" on #forge-activity-label.
+    return {
+      ...FORGE_ACTIVITY.forged,
+      label: found === 1 ? 'A Kernel SUPPORT Find was forged' : 'Kernel SUPPORT Finds were forged',
+      detail: `${found} ${found === 1 ? 'Find' : 'Finds'} passed Kernel SUPPORT and were forged.`,
+    };
   }
   if (workState === 'failed') return FORGE_ACTIVITY.failed;
   return FORGE_ACTIVITY.idle;
