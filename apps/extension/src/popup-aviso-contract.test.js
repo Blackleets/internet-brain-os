@@ -5,10 +5,12 @@ const popup = readFileSync(new URL('./popup.js', import.meta.url), 'utf8');
 const popupHtml = readFileSync(new URL('./popup.html', import.meta.url), 'utf8');
 
 describe('popup Watchtower Find copy contract', () => {
-  it('fail-closes opportunities-found copy to kernelSupportedFindsForMission', () => {
+  it('fail-closes mission-state Find copy to Kernel SUPPORT, not bare opportunities', () => {
     expect(popup).toContain('kernelSupportedFindsForMission(opportunities, latest)');
     expect(popup).toContain('presentWatchtowerBanner(unread, latest)');
     expect(popup).toContain('forgeActivityForMission(latest, opportunities)');
+    expect(popup).toContain("Find' : 'Finds'} passed Kernel SUPPORT");
+    expect(popup).not.toContain('opportunities found');
     expect(popup).not.toContain('opportunitiesPromoted ?? 0} opportunities found');
   });
 });

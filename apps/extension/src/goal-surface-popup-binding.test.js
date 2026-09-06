@@ -61,7 +61,7 @@ describe('Shared Goal Truth popup binding', () => {
 
   it('fails visually closed when Goal truth cannot be read instead of retaining legacy activity', async () => {
     mount();
-    document.querySelector('#mission-state').textContent = '3 opportunities found';
+    document.querySelector('#mission-state').textContent = 'stale mission-state';
     document.querySelector('#mission-state').dataset.status = 'completed';
     document.querySelector('#living-forge').dataset.activity = 'success';
     const storage = { get: vi.fn(async () => ({ kernelApiToken: 'x'.repeat(40) })) };

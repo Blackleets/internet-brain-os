@@ -196,8 +196,9 @@ async function loadAgentHub(stored) {
   const latest = newestMission(missions);
   const forged = latest?.status === 'completed' && (latest.executionPhase === 'forged' || latest.workState === 'forged');
   const findCount = kernelSupportedFindsForMission(opportunities, latest).length;
+  // Fail-close mission-state: SUPPORT-gated findCount must name Kernel SUPPORT Finds, not bare opportunities.
   const completedCopy = findCount > 0
-    ? `${findCount} opportunities found`
+    ? `${findCount} ${findCount === 1 ? 'Find' : 'Finds'} passed Kernel SUPPORT`
     : forged
       ? 'Research completed'
       : 'Research ended without Evidence';
