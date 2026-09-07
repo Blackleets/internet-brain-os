@@ -137,6 +137,15 @@ describe('HomeView Kernel-supported Find', () => {
     expect(screen.getByText('Verificando Evidence')).toBeTruthy();
     expect(screen.queryByText(/completado/i)).toBeNull();
   });
+
+  it('Goal plan must not equate forging Evidence with a Find', () => {
+    render(<HomeView {...homeProps} preparedGoal="Buscar taladro Bosch" supportedFinds={[]} />);
+    const plan = screen.getByLabelText('Plan propuesto');
+    expect(plan.textContent).toMatch(/Forjar Evidence · Finds SUPPORT/i);
+    expect(plan.textContent).toMatch(/Forjar Evidence no es un Find/i);
+    expect(plan.textContent).toMatch(/Kernel SUPPORT/i);
+    expect(plan.textContent).not.toMatch(/Forjar Evidence y Finds/i);
+  });
 });
 
 describe('FindsView fail-closes snippet-only opportunities', () => {

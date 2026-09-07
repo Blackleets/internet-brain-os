@@ -98,7 +98,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
         <ol>
           <li><b>1</b><span><strong>Crear Goal privado</strong><small>El Kernel conserva el objetivo y sus palabras clave.</small></span></li>
           <li><b>2</b><span><strong>Confirmar la misión</strong><small>La ejecución comienza solo después de tu autorización explícita.</small></span></li>
-          <li><b>3</b><span><strong>Forjar Evidence y Finds</strong><small>Solo se muestran resultados respaldados por contratos verificables.</small></span></li>
+          <li><b>3</b><span><strong>Forjar Evidence · Finds SUPPORT</strong><small>Forjar Evidence no es un Find. Solo aparecen hallazgos con Kernel SUPPORT.</small></span></li>
         </ol>
         <div className="forge-plan-actions">
           <button type="button" className="primary-action" disabled={!connected || goalPending} onClick={onConfirmGoal}>{goalPending ? 'Confirmando…' : connected ? 'Confirmar y ejecutar' : 'Conecta el Kernel para ejecutar'}</button>
