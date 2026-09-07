@@ -29,7 +29,7 @@ export function onboardingJourney({ connected = false, goalCount = 0, radarEnabl
     { id: 'connect', label: 'Connect the private Kernel', view: 'forge', complete: connected },
     { id: 'goal', label: 'Forge your first Goal', view: 'missions', complete: goalCount > 0 },
     { id: 'radar', label: 'Authorize a public site', view: 'forge', complete: radarEnabled },
-    { id: 'find', label: 'Forge your first useful find', view: 'finds', complete: findCount > 0 },
+    { id: 'find', label: 'Forge your first Kernel SUPPORT Find', view: 'finds', complete: findCount > 0 },
   ];
   return { complete: steps.every((step) => step.complete), steps, next: steps.find((step) => !step.complete) };
 }
