@@ -72,3 +72,19 @@ describe('popup Goal Surface workLabel SUPPORT honesty', () => {
     expect(presentation).not.toContain('Evidence-backed findings forged');
   });
 });
+
+describe('popup mission-live-progress verifying honesty', () => {
+  it('does not keep branding Kernel verifying as live Hermes research on #mission-state', () => {
+    const live = readFileSync(new URL('./mission-live-progress.js', import.meta.url), 'utf8');
+    expect(popupHtml).toContain('mission-live-progress.js');
+    expect(live).toContain('presentMissionLiveProgress');
+    expect(live).toContain("executionPhase === 'verifying'");
+    expect(live).toContain("workState === 'verifying'");
+    expect(live).toContain("text: 'Efesto is verifying findings'");
+    expect(live).toContain("status: 'verifying'");
+    const verifyingReturn = live.indexOf("text: 'Efesto is verifying findings'");
+    const hermesLive = live.indexOf("'Hermes is researching'");
+    expect(verifyingReturn).toBeGreaterThan(-1);
+    expect(hermesLive).toBeGreaterThan(verifyingReturn);
+  });
+});
