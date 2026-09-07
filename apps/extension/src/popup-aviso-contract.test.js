@@ -39,3 +39,18 @@ describe('popup mission-history Find metric label', () => {
     expect(popup).not.toContain("view.opportunitiesPromoted, 'forged'");
   });
 });
+
+describe('popup Finds workspace chrome contract', () => {
+  it('does not brand Kernel SUPPORT Finds as forged or claim Finds when empty', () => {
+    expect(popupHtml).not.toContain('FINDS FORJADOS');
+    expect(popupHtml).not.toContain('Hallazgos fuertes encontrados para ti');
+    expect(popupHtml).not.toContain('BANDEJA DE OPORTUNIDADES');
+    expect(popupHtml).toContain('HALLAZGOS · KERNEL SUPPORT');
+    expect(popupHtml).toContain('BANDEJA DE HALLAZGOS');
+    expect(popupHtml).toContain('Hallazgos con Kernel SUPPORT');
+    expect(popupHtml).toContain('cargar hallazgos con Kernel SUPPORT');
+    expect(popupHtml).not.toContain('cargar oportunidades.');
+    expect(popup).toContain('No Kernel SUPPORT Finds yet');
+    expect(popup).not.toContain('No strong leads yet');
+  });
+});

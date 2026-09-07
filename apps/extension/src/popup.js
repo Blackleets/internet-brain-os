@@ -335,7 +335,7 @@ async function loadOpportunities(stored) {
   if (!finds.length) {
     const empty = document.createElement('p');
     empty.className = 'empty';
-    empty.textContent = 'No strong leads yet. Keep browsing authorized public sites.';
+    empty.textContent = 'No Kernel SUPPORT Finds yet. Keep browsing authorized public sites.';
     inbox.append(empty);
     return;
   }
