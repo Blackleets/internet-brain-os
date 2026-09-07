@@ -32,3 +32,10 @@ describe('popup AutoRadar Evidence-only capture copy', () => {
     expect(popupHtml).toContain('Ver Evidence del Case');
   });
 });
+
+describe('popup mission-history Find metric label', () => {
+  it('labels SUPPORT Find count as Finds, not forged', () => {
+    expect(popup).toContain("view.opportunitiesPromoted, 'Finds'");
+    expect(popup).not.toContain("view.opportunitiesPromoted, 'forged'");
+  });
+});

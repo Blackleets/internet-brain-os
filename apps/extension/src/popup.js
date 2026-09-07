@@ -231,7 +231,8 @@ function renderMissionCard(view) {
   const detail = document.createElement('p'); detail.textContent = view.statusDetail; card.append(detail);
   if (view.status === 'completed') {
     const results = document.createElement('div'); results.className = 'mission-results';
-    for (const [value, label] of [[view.received, 'received'], [view.evidenceCreated, 'Evidence'], [view.opportunitiesPromoted, 'forged']]) {
+    // Fail-close: presentMission.opportunitiesPromoted is SUPPORT Find count — label Finds, never forged/Completado.
+    for (const [value, label] of [[view.received, 'received'], [view.evidenceCreated, 'Evidence'], [view.opportunitiesPromoted, 'Finds']]) {
       const metric = document.createElement('span'); const strong = document.createElement('strong'); strong.textContent = String(value);
       const small = document.createElement('small'); small.textContent = label; metric.append(strong, small); results.append(metric);
     }
