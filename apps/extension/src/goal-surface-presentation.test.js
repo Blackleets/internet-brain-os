@@ -101,9 +101,11 @@ describe('extension Shared Goal Truth presentation', () => {
   });
 
   it('forged workLabel and forgeActivity claim findings only with Kernel SUPPORT findCount', () => {
-    expect(presentGoalSurface(surface('forged', { mission: { findCount: 2 } })).workLabel).toBe('Evidence-backed findings forged');
+    expect(presentGoalSurface(surface('forged', { mission: { findCount: 2 } })).workLabel).toBe('2 Finds passed Kernel SUPPORT');
+    expect(presentGoalSurface(surface('forged', { mission: { findCount: 1 } })).workLabel).toBe('1 Find passed Kernel SUPPORT');
+    expect(presentGoalSurface(surface('forged', { mission: { findCount: 2 } })).workLabel).not.toMatch(/Evidence-backed findings|useful lead/i);
     expect(presentGoalSurface(surface('forged', { mission: { findCount: 0 } })).workLabel).toBe('Research completed');
-    expect(presentGoalSurface(surface('forged', { mission: { findCount: 0 } })).workLabel).not.toMatch(/findings forged|useful lead/i);
+    expect(presentGoalSurface(surface('forged', { mission: { findCount: 0 } })).workLabel).not.toMatch(/findings forged|useful lead|Kernel SUPPORT/i);
     // Missing findCount is not proof of a Find — fail-close like findCount 0.
     expect(presentGoalSurface(surface('forged')).workLabel).toBe('Research completed');
     expect(forgeActivityForGoalSurface(surface('forged'))).toEqual({

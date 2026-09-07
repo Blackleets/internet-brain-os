@@ -83,14 +83,22 @@ export function forgeActivityForGoalSurface(surface) {
 
 
 /**
- * Fail-close Goal Surface mission workLabel.
- * forged + Kernel SUPPORT Finds → findings copy; forged without proven Finds → Research completed.
+ * Fail-close Goal Surface mission workLabel → mounted #mission-state.
+ * forged + Kernel SUPPORT findCount → name Kernel SUPPORT Finds (same honesty as
+ * Living Forge / popup.js loadAgentHub mission-state); never bare evidence-backed wording.
+ * forged without proven Finds → Research completed.
  */
 function workLabelForMission(mission) {
   const workState = mission?.workState ?? 'idle';
   if (workState === 'forged') {
     const found = Number.isSafeInteger(mission?.findCount) ? mission.findCount : undefined;
-    if (found !== undefined && found > 0) return 'Evidence-backed findings forged';
+    // Fail-close positive path: SUPPORT findCount must name Kernel SUPPORT on #mission-state
+    // (syncGoalSurfacePopup → applyGoalTruthPresentation), not bare evidence-backed findings copy.
+    if (found !== undefined && found > 0) {
+      return found === 1
+        ? '1 Find passed Kernel SUPPORT'
+        : `${found} Finds passed Kernel SUPPORT`;
+    }
     return 'Research completed';
   }
   return WORK_COPY[workState] ?? 'Kernel state unavailable';

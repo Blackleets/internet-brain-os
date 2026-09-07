@@ -63,3 +63,12 @@ describe('popup mission-card statusDetail SUPPORT honesty', () => {
     expect(presentation).not.toContain('its findings passed through the local Kernel');
   });
 });
+
+describe('popup Goal Surface workLabel SUPPORT honesty', () => {
+  it('names Kernel SUPPORT Finds on #mission-state via Goal Surface workLabel — never bare Evidence-backed findings', () => {
+    const presentation = readFileSync(new URL('./goal-surface-presentation.js', import.meta.url), 'utf8');
+    expect(presentation).toContain('Find passed Kernel SUPPORT');
+    expect(presentation).toContain('Finds passed Kernel SUPPORT');
+    expect(presentation).not.toContain('Evidence-backed findings forged');
+  });
+});
