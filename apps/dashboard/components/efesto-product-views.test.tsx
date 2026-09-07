@@ -262,4 +262,19 @@ describe('FindCard / FindsView mission-proof SUPPORT honesty', () => {
     expect(screen.queryByText('Taladro mission-proof 19 EUR')).toBeNull();
     expect(screen.getByText('Aún no hay hallazgos')).toBeTruthy();
   });
+
+  it('empty Hallazgos copy requires Kernel SUPPORT and never equates promotion with a Find', () => {
+    render(
+      <FindsView
+        connected
+        missions={[]}
+        onFeedback={() => undefined}
+        opportunities={[]}
+      />,
+    );
+    expect(screen.getByText('Aún no hay hallazgos')).toBeTruthy();
+    expect(screen.getByText(/Solo aparecen Finds con Kernel SUPPORT/i)).toBeTruthy();
+    expect(screen.queryByText(/resultados promovidos/i)).toBeNull();
+    expect(screen.getByText(/promover o completar no es un Find/i)).toBeTruthy();
+  });
 });
