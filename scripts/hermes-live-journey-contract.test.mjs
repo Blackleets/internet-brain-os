@@ -51,6 +51,9 @@ describe('G5.3 authentic public-web acceptance contract', () => {
     // L5 check name must name Kernel SUPPORT — never equate promotion with a Find.
     expect(assessment).toContain('At least one Kernel SUPPORT Find matches the tested Goal');
     expect(assessment).not.toContain('Find was promoted');
+    // L6 check name must name Kernel SUPPORT — provenance gate already requires SUPPORT.
+    expect(assessment).toContain('Kernel SUPPORT Find provenance resolves to Kernel-fetched Evidence rather than agent text');
+    expect(assessment).not.toContain("'Find provenance resolves to Kernel-fetched Evidence rather than agent text'");
   });
 
   it('keeps the adapter, worker and acceptance deadlines strictly nested', () => {

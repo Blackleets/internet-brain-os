@@ -53,6 +53,12 @@ describe('authentic live public-web journey assessment', () => {
     expect(l5?.name).not.toMatch(/promot/i);
   });
 
+  it('L6 check name requires Kernel SUPPORT Find provenance (Evidence alone is not a Find)', () => {
+    const l6 = assessLivePublicWebJourney(fixture()).find(({ id }) => id === 'L6');
+    expect(l6?.name).toMatch(/Kernel SUPPORT/i);
+    expect(l6?.name).not.toMatch(/^Find provenance/i);
+  });
+
   it('admits an honest blocked investigation that kept Evidence without Completado', () => {
     const data = fixture();
     const checks = assessLivePublicWebJourney({

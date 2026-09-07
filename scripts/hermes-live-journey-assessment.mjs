@@ -51,7 +51,7 @@ export function assessLivePublicWebJourney({ goalId, mission, opportunities = []
     ),
     check(
       'L6',
-      'Find provenance resolves to Kernel-fetched Evidence rather than agent text',
+      'Kernel SUPPORT Find provenance resolves to Kernel-fetched Evidence rather than agent text',
       fullyVerifiedPairs.length > 0,
       `resolvedEvidenceBackedFinds=${fullyVerifiedPairs.length}`,
     ),
