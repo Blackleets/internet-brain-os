@@ -18,4 +18,12 @@ describe('extension background runtime contract', () => {
     expect(autoCaptureSource).not.toContain('message?.targetCaseId');
     expect(autoCaptureSource).toContain('sendPageContext');
   });
+
+  it('fail-closes OS notify Find/Completado aviso through presentWatchtowerAviso', () => {
+    expect(source).toContain("import { presentWatchtowerAviso, reconcileMissionWatchtower } from './mission-watchtower.js'");
+    expect(source).toContain('listOpportunities');
+    expect(source).toContain('presentWatchtowerAviso(transition, opportunities, byId[transition.missionId])');
+    expect(source).toContain('if (aviso.notify) await notifyMissionTransition(transition, aviso)');
+    expect(source).not.toContain("title: forged ? 'Efesto finished forging'");
+  });
 });

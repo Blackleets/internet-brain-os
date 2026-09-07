@@ -31,4 +31,13 @@ describe('G5.2 active dashboard product-scorecard contract', () => {
     expect(panelSource).toContain('sin telemetría externa');
     expect(panelSource).toContain('No mostramos ceros inventados');
   });
+
+  it('missionCompletionRate label is forged-only and never bare completadas', () => {
+    // missionCompletionRate is isKernelForgedMission-only; bare completed ≠ Completado/forged.
+    expect(panelSource).toContain('Misiones forjadas');
+    expect(panelSource).toContain('missionCompletionRate');
+    expect(panelSource).not.toMatch(/Misiones completadas/i);
+    expect(panelSource).not.toMatch(/no_completed_goals:\s*'Aún no hay Goals completados\.'/);
+    expect(panelSource).toMatch(/no_completed_goals:\s*'Aún no hay Goals con misión forjada por el Kernel\.'/);
+  });
 });

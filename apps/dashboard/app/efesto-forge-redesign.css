@@ -817,6 +817,50 @@
   background: #75757b;
 }
 
+.forge-home-finds {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: 28px 24px 24px;
+}
+
+.forge-home-finds > header {
+  margin-bottom: 16px;
+}
+
+.forge-home-finds > header small {
+  color: #9d6e51;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .17em;
+}
+
+.forge-home-finds > header h1 {
+  margin: 9px 0 8px;
+  color: #f2efea;
+  font-size: clamp(26px, 3vw, 36px);
+  font-weight: 620;
+  letter-spacing: -.04em;
+  line-height: 1.08;
+}
+
+.forge-home-finds > header p {
+  max-width: 540px;
+  margin: 0;
+  color: #88847f;
+  font-size: 12px;
+  line-height: 1.58;
+}
+
+.forge-home-finds .find-grid {
+  margin-top: 12px;
+}
+
+.lead-label.kernel-support {
+  border-color: #31432c;
+  background: #141a12;
+  color: #c8ddc1;
+}
+
 .forge-thread {
   width: min(var(--forge-content), calc(100% - 40px));
   margin: 0 auto;

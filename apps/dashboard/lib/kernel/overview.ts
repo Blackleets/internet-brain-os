@@ -20,6 +20,7 @@ import {
   parseOpportunities,
   parseStatus,
 } from './parse';
+import { isKernelSupportedFind } from './supported-find';
 
 type OverviewEndpoint = 'health' | 'status' | 'bootstrap' | 'cases' | 'goals' | 'missions' | 'opportunities' | 'activity' | 'modelForge' | 'scorecard';
 type OverviewIssueCode = KernelClientErrorCode | 'UNAVAILABLE' | 'UNKNOWN';
@@ -184,10 +185,13 @@ function missionActivityState(mission: MissionSummary): string {
 }
 
 function activityFrom(goals: GoalSummary[], missions: MissionSummary[], opportunities: OpportunitySummary[]): OverviewActivity[] {
+  // Fail-closed: Actividad Hallazgo only for Kernel-supported Finds (mirrors Home/Hallazgos).
+  // Capture Evidence+URL without SUPPORT must not appear as opportunity activity.
+  const supportedFinds = opportunities.filter((opportunity) => isKernelSupportedFind(opportunity, missions));
   const entries = [
     ...goals.map((goal) => activity('goal', goal.id, goal.createdAt, goal.status)),
     ...missions.map((mission) => activity('mission', mission.id, mission.createdAt, missionActivityState(mission))),
-    ...opportunities.map((opportunity) => activity('opportunity', opportunity.id, opportunity.detectedAt, opportunity.status)),
+    ...supportedFinds.map((opportunity) => activity('opportunity', opportunity.id, opportunity.detectedAt, opportunity.status)),
   ].filter((entry): entry is OverviewActivity => entry !== undefined);
 
   return entries.sort((left, right) => timestamp(right.timestamp) - timestamp(left.timestamp) || compareCodeUnits(left.id, right.id));

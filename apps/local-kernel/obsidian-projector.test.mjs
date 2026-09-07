@@ -94,4 +94,69 @@ describe('Obsidian knowledge projector', () => {
     expect(caseNote).not.toContain('# Bad ![[embed]]');
     expect(caseNote).toContain('# Bad \\!\\[\\[embed\\]\\]');
   });
+
+  it('does not write a Find note from unsupported capture Evidence', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-obsidian-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    await store.write({
+      cases: [{ id: 'case:test', title: 'Captured page', objective: 'Understand page', status: 'draft' }],
+      evidence: [{
+        id: 'evidence:test', caseId: 'case:test', sourceUrl: 'https://jwt.io/',
+        summary: 'Snippet', capturedAt: '2026-09-02T10:00:00.000Z', confidence: 0.5,
+      }],
+      opportunities: [{
+        id: 'opportunity:regex', caseId: 'case:test', evidenceId: 'evidence:test',
+        category: 'tool', categoryLabel: 'Useful tool', title: 'JSON Web Tokens',
+        sourceUrl: 'https://jwt.io/', status: 'new', relevance: 80,
+        reasons: ['github'], nextAction: 'Review',
+      }],
+    });
+    const vault = join(dir, 'vault');
+    const result = await new ObsidianKnowledgeProjector(store, vault).syncCase('case:test');
+    expect(result.opportunityNotes).toEqual([]);
+    await expect(readFile(join(vault, 'Opportunities', 'opportunity-regex.md'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await readFile(join(vault, 'Evidence', 'evidence-test.md'), 'utf8')).toContain('# Evidence');
+  });
+
+  it('writes an opportunity note only after Kernel SUPPORT', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-obsidian-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    await store.write({
+      cases: [{ id: 'case:test', title: 'Verified case', objective: 'Verify goal', status: 'active' }],
+      evidence: [{
+        id: 'evidence:test', caseId: 'case:test', sourceUrl: 'https://jobs.example/role',
+        summary: 'Public job', capturedAt: '2026-09-02T10:00:00.000Z', confidence: 0.9,
+      }],
+      opportunities: [{
+        id: 'opportunity:supported', caseId: 'case:test', evidenceId: 'evidence:test',
+        category: 'job', categoryLabel: 'Job', title: 'Public role',
+        sourceUrl: 'https://jobs.example/role', status: 'new', relevance: 88,
+        reasons: ['hiring'], nextAction: 'Review fit', supported: true,
+      }],
+    });
+    const vault = join(dir, 'vault');
+    const result = await new ObsidianKnowledgeProjector(store, vault).syncCase('case:test');
+    expect(result.opportunityNotes).toEqual(['Opportunities/opportunity-supported.md']);
+    const note = await readFile(join(vault, result.opportunityNotes[0]), 'utf8');
+    expect(note).toContain('type: opportunity');
+    expect(note).toContain('# Public role');
+  });
+
+  it('does not write a Find note for a dismissed supported opportunity', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hephaestus-obsidian-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    await store.write({
+      cases: [{ id: 'case:test', title: 'Verified case', objective: 'Verify goal', status: 'active' }],
+      evidence: [{ id: 'evidence:test', caseId: 'case:test', sourceUrl: 'https://jobs.example/role', confidence: 0.9 }],
+      opportunities: [{
+        id: 'opportunity:dismissed', caseId: 'case:test', evidenceId: 'evidence:test',
+        category: 'job', title: 'Public role', sourceUrl: 'https://jobs.example/role',
+        status: 'dismissed', supported: true,
+      }],
+    });
+    const vault = join(dir, 'vault');
+    const result = await new ObsidianKnowledgeProjector(store, vault).syncCase('case:test');
+    expect(result.opportunityNotes).toEqual([]);
+    await expect(readFile(join(vault, 'Opportunities', 'opportunity-dismissed.md'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+  });
 });

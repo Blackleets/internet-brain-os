@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { InboxError, MAX_PAGE_CONTEXT_VISIBLE_TEXT } from './page-context-inbox.mjs';
 import { classifyOpportunity } from './opportunity-classifier.mjs';
+import { queueSupportedFindNotifications } from './supported-find-notifier.mjs';
 
 const READ_CAPABILITY = 'web.read';
 
@@ -14,12 +15,14 @@ export class MissionSearchCandidateVerifier {
     this.reader = options.reader;
     this.loadKernel = options.loadKernel ?? loadBuiltKernel;
     this.loadConnectors = options.loadConnectors ?? loadBuiltConnectors;
+    this.notificationGateway = options.notificationGateway ?? null;
   }
 
   async verify(missionId) {
     const initial = await this.store.read();
     const initialMission = findMission(initial, missionId);
     if (initialMission.status === 'completed' && initialMission.verificationDigest) {
+      await this.#notifySupportedFinds(initialMission);
       return { mission: initialMission, evidence: [], idempotent: true };
     }
     requireVerifying(initialMission);
@@ -50,6 +53,7 @@ export class MissionSearchCandidateVerifier {
     const fresh = await this.store.read();
     const freshMission = findMission(fresh, missionId);
     if (freshMission.status === 'completed' && freshMission.verificationDigest) {
+      await this.#notifySupportedFinds(freshMission);
       return { mission: freshMission, evidence: [], idempotent: true };
     }
     requireSameCandidateBatch(initialMission, freshMission);
@@ -59,7 +63,9 @@ export class MissionSearchCandidateVerifier {
 
     const verified = outcomes.filter((item) => item.ok);
     if (!verified.length) return this.#recordFailures(missionId, freshMission, outcomes);
-    return this.#projectVerified(missionId, freshMission, outcomes, freshGoal);
+    const projected = await this.#projectVerified(missionId, freshMission, outcomes, freshGoal);
+    await this.#notifySupportedFinds(projected.mission);
+    return projected;
   }
 
   async #projectVerified(missionId, expectedMission, outcomes, goal) {
@@ -83,10 +89,6 @@ export class MissionSearchCandidateVerifier {
           verificationResults.push({ candidateId: outcome.candidate.id, status: 'verification_failed', reason: outcome.reason });
           continue;
         }
-        const projected = projectVerifiedDocument(nextData, current, outcome.candidate, outcome.document, this.opportunityProjector);
-        nextData = projected.data;
-        evidenceResults.push(projected.result);
-        if (projected.result.opportunity?.status === 'opportunity') promoted += 1;
         const liveGoal = (nextData.goals ?? []).find((item) => item?.id === current.goalId) ?? goal;
         const support = kernel.evidenceSupportsGoal(
           {
@@ -99,6 +101,20 @@ export class MissionSearchCandidateVerifier {
             url: String(outcome.document.sourceUrl ?? ''),
           },
         );
+        const projected = projectVerifiedDocument(
+          nextData,
+          current,
+          outcome.candidate,
+          outcome.document,
+          this.opportunityProjector,
+          {
+            promoteOpportunity: support.supported === true,
+            supportReason: support.reason,
+          },
+        );
+        nextData = projected.data;
+        evidenceResults.push(projected.result);
+        if (projected.result.opportunity?.status === 'opportunity') promoted += 1;
         verificationResults.push({
           candidateId: outcome.candidate.id,
           status: 'verified',
@@ -187,6 +203,18 @@ export class MissionSearchCandidateVerifier {
     });
   }
 
+  async #notifySupportedFinds(mission) {
+    if (!this.notificationGateway || !mission) return;
+    const data = await this.store.read();
+    await queueSupportedFindNotifications({
+      gateway: this.notificationGateway,
+      mission,
+      opportunities: data.opportunities ?? [],
+      createdAt: this.now().toISOString(),
+      actor: 'system',
+    });
+  }
+
   async #kernel() {
     if (!this.kernel) this.kernel = unwrapModule(await this.loadKernel());
     requireKernel(this.kernel);
@@ -245,7 +273,7 @@ function capabilityContext(goal) {
   return { revision: 1, approvalPolicy: 'legacy_none', allowedCapabilities: [READ_CAPABILITY], forbiddenCapabilities: [], allowedDataScopes: ['public_web'], forbiddenDataScopes: [] };
 }
 
-function projectVerifiedDocument(data, mission, candidate, document, opportunityProjector) {
+function projectVerifiedDocument(data, mission, candidate, document, opportunityProjector, options = {}) {
   const suffix = createHash('sha256').update(`${mission.id}\n${candidate.id}`).digest('hex');
   const caseId = `case:verified:${suffix}`;
   const evidenceId = `evidence:verified:${suffix}`;
@@ -302,12 +330,29 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
     nextData = { ...data, cases: [...(data.cases ?? []), caseRecord], evidence: [...(data.evidence ?? []), evidenceRecord] };
   }
   const references = { caseId, evidenceId };
-  const classified = classifyOpportunity(context, references);
   let opportunity;
-  if (!(classified.status === 'opportunity' && mission.scope?.categories?.length && !mission.scope.categories.includes(classified.opportunity.category))) {
-    const projected = opportunityProjector.projectInto(nextData, context, references);
-    nextData = projected.data;
-    opportunity = projected.result;
+  // Fail-closed: only classify/project Opportunity when evidenceSupportsGoal already passed.
+  if (options.promoteOpportunity === true) {
+    const classified = classifyOpportunity(context, references);
+    if (!(classified.status === 'opportunity' && mission.scope?.categories?.length && !mission.scope.categories.includes(classified.opportunity.category))) {
+      const projected = opportunityProjector.projectInto(nextData, context, references);
+      nextData = projected.data;
+      opportunity = projected.result;
+      if (opportunity?.status === 'opportunity' && opportunity.opportunity?.id) {
+        const stamped = {
+          ...opportunity.opportunity,
+          supported: true,
+          supportReason: options.supportReason ?? 'supported',
+        };
+        nextData = {
+          ...nextData,
+          opportunities: (nextData.opportunities ?? []).map((item) => (
+            item?.id === stamped.id ? stamped : item
+          )),
+        };
+        opportunity = { ...opportunity, opportunity: stamped };
+      }
+    }
   }
   return { data: nextData, result: { caseId, evidenceId, duplicate, sourceUrl, opportunity } };
 }

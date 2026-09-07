@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { forgeActivityForMission, temporaryForgeActivity } from './forge-activity.js';
+import { applyLivingForgeActivity, forgeActivityForMission, livingForgeLiveLabel, temporaryForgeActivity } from './forge-activity.js';
+
+const supported = {
+  id: 'opp-drill',
+  title: 'Taladro Bosch 21 EUR',
+  evidenceId: 'ev-1',
+  sourceUrl: 'https://shop.example/drill',
+  supported: true,
+};
+const forgedMission = {
+  status: 'completed',
+  executionPhase: 'forged',
+  resultSummary: { opportunitiesPromoted: 1 },
+  verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: true }],
+};
 
 describe('pixel forge activity contract', () => {
   it('maps observable mission states to honest animation tones', () => {
@@ -11,12 +25,27 @@ describe('pixel forge activity contract', () => {
     expect(forgeActivityForMission({ status: 'failed' }).tone).toBe('error');
   });
 
-  it('reports Kernel-forged result counts without inventing findings', () => {
-    expect(forgeActivityForMission({ status: 'completed', executionPhase: 'forged', resultSummary: { opportunitiesPromoted: 1 } })).toMatchObject({
-      tone: 'success', detail: '1 opportunity passed local checks and saved.',
+  it('reports Kernel-supported Find counts without inventing findings', () => {
+    const supportedAviso = forgeActivityForMission(forgedMission, [supported]);
+    expect(supportedAviso).toMatchObject({
+      tone: 'success',
+      label: 'A Kernel SUPPORT Find was forged',
+      detail: '1 Find passed Kernel SUPPORT and were forged.',
     });
+    expect(supportedAviso.label).not.toMatch(/useful lead|opportunit/i);
     expect(forgeActivityForMission({ status: 'completed', workState: 'forged', resultSummary: { opportunitiesPromoted: 0 } })).toMatchObject({
-      tone: 'success', label: 'Research completed', detail: 'No strong opportunity passed the local checks.',
+      tone: 'success', label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.',
+    });
+  });
+
+  it('does not treat opportunitiesPromoted or Evidence+URL as a Find without SUPPORT', () => {
+    const unverified = { ...supported, supported: undefined };
+    const mission = { ...forgedMission, verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: false }] };
+    expect(forgeActivityForMission(mission, [unverified])).toMatchObject({
+      tone: 'success', label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.',
+    });
+    expect(forgeActivityForMission({ status: 'completed', executionPhase: 'forged', resultSummary: { opportunitiesPromoted: 3 } })).toMatchObject({
+      tone: 'success', label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.',
     });
   });
 
@@ -29,7 +58,35 @@ describe('pixel forge activity contract', () => {
 
   it('uses explicit temporary states for manual capture', () => {
     expect(temporaryForgeActivity('capture').tone).toBe('working');
-    expect(temporaryForgeActivity('capture-success').tone).toBe('success');
+    expect(temporaryForgeActivity('capture-success')).toMatchObject({
+      tone: 'success',
+      label: 'Evidence preserved',
+      detail: 'The page was preserved as private Evidence.',
+    });
+    expect(temporaryForgeActivity('capture-success').label).not.toMatch(/lead|Find|forged/i);
     expect(temporaryForgeActivity('capture-error').tone).toBe('error');
+  });
+
+  it('does not claim EN VIVO when Living Forge is idle without mission', () => {
+    expect(livingForgeLiveLabel('idle')).toBe('LISTA');
+    expect(livingForgeLiveLabel('success')).toBe('LISTA');
+    expect(livingForgeLiveLabel('error')).toBe('ATENTA');
+    expect(livingForgeLiveLabel('working')).toBe('EN VIVO');
+    expect(livingForgeLiveLabel('verifying')).toBe('EN VIVO');
+    expect(livingForgeLiveLabel('queued')).toBe('EN VIVO');
+    expect(livingForgeLiveLabel('idle')).not.toMatch(/EN VIVO|LIVE/i);
+
+    const el = {
+      dataset: {},
+      querySelector(selector) {
+        return selector === '.live-badge-label' ? this.label : null;
+      },
+      label: { textContent: 'EN VIVO' },
+    };
+    applyLivingForgeActivity(el, 'idle');
+    expect(el.dataset.activity).toBe('idle');
+    expect(el.label.textContent).toBe('LISTA');
+    applyLivingForgeActivity(el, 'working');
+    expect(el.label.textContent).toBe('EN VIVO');
   });
 });

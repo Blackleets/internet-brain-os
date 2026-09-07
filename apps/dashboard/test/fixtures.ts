@@ -79,6 +79,7 @@ export const opportunitiesResponse = {
     goalMatches: [{ goalId: 'goal-1', title: 'Find AI clients', score: 80, reasons: ['Keywords: AI'] }],
     learnedAdjustment: 0,
     personalizedRelevance: 92,
+    supported: true,
   }],
 };
 

@@ -330,7 +330,7 @@ describe('local Kernel HTTP receiver', () => {
     });
   });
 
-  it('classifies captured pages and serves the private Opportunity inbox', async () => {
+  it('persists capture as Evidence and does not mint a Find without Kernel SUPPORT', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'efesto-inbox-'));
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));
     const projector = new CaptureCaseEvidenceProjector(store);
@@ -340,35 +340,43 @@ describe('local Kernel HTTP receiver', () => {
     });
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     const { port } = server.address();
-    const capture = await fetch(`http://127.0.0.1:${port}/api/browser/page-context`, {
-      method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' },
-      body: JSON.stringify({
+    const pages = [
+      {
         schemaVersion: 'hephaestus.page-context.v1', url: 'https://careers.example.com/role',
         title: 'We are hiring a remote AI engineer',
         visibleText: 'Open role with salary. Full-time remote position. Apply now. Deadline: August 14, 2026.',
         capturedAt: '2026-07-22T18:00:00.000Z',
-      }),
-    });
-    const captured = await capture.json();
-    expect(captured).toMatchObject({
-      ok: true, opportunity: { status: 'opportunity', opportunity: { category: 'job' } },
-    });
-    const opportunityId = captured.opportunity.opportunity.id.replace(/[^A-Za-z0-9._-]/g, '-');
-    const note = await readFile(join(dir, 'vault', 'Opportunities', `${opportunityId}.md`), 'utf8');
-    expect(note).toContain('type: opportunity');
-    expect(note).toContain('This is a deterministic lead, not a verified recommendation.');
-
+      },
+      {
+        schemaVersion: 'hephaestus.page-context.v1', url: 'https://jwt.io/',
+        title: 'JSON Web Token (JWT) Debugger',
+        visibleText: 'Debugger and snippet for JWT. Paste a token. API documentation.',
+        capturedAt: '2026-09-02T10:00:00.000Z',
+      },
+    ];
+    for (const page of pages) {
+      const capture = await fetch(`http://127.0.0.1:${port}/api/browser/page-context`, {
+        method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' },
+        body: JSON.stringify(page),
+      });
+      const captured = await capture.json();
+      expect(capture.status).toBe(202);
+      expect(captured.ok).toBe(true);
+      expect(captured.evidenceId).toMatch(/^evidence:[a-f0-9]{64}$/);
+      expect(captured.opportunity).toBeUndefined();
+    }
+    const stored = JSON.parse(await readFile(join(dir, 'store.json'), 'utf8'));
+    expect(stored.evidence).toHaveLength(2);
+    expect(stored.opportunities ?? []).toEqual([]);
     const inbox = await fetch(`http://127.0.0.1:${port}/api/opportunities`, { headers: authHeaders });
     expect(inbox.status).toBe(200);
-    expect(await inbox.json()).toMatchObject({
-      ok: true, opportunities: [{ category: 'job', sourceHost: 'careers.example.com' }],
-    });
+    expect(await inbox.json()).toEqual({ ok: true, opportunities: [] });
   });
 
   it('records authenticated feedback and exposes an erasable local preference profile', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'efesto-feedback-http-'));
     const store = new LocalKnowledgeStore(join(dir, 'store.json'));
-    await store.write({ opportunities: [{ id: 'opportunity:abc', category: 'job', benefitType: 'income', sourceHost: 'jobs.example' }] });
+    await store.write({ opportunities: [{ id: 'opportunity:abc', category: 'job', benefitType: 'income', sourceHost: 'jobs.example', supported: true }] });
     const preferences = new PreferenceLearner(store);
     server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, { preferenceLearner: preferences });
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -381,6 +389,32 @@ describe('local Kernel HTTP receiver', () => {
     expect(await feedback.json()).toMatchObject({ ok: true, feedback: { signal: 'useful', category: 'job' } });
     expect(await (await fetch(`${endpoint}/api/preferences`, { headers: authHeaders })).json()).toMatchObject({ ok: true, profile: { eventCount: 1, categories: { job: 6 } } });
     expect(await (await fetch(`${endpoint}/api/preferences`, { method: 'DELETE', headers: authHeaders })).json()).toEqual({ ok: true, reset: true });
+  });
+
+  it('does not record useful Find feedback for unsupported regex opportunities', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'efesto-feedback-unsupported-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    await store.write({
+      opportunities: [
+        { id: 'opportunity:regex', category: 'job', benefitType: 'income', sourceHost: 'careers.example' },
+        { id: 'opportunity:jwt', category: 'tool', benefitType: 'capability', sourceHost: 'jwt.io', evidenceId: 'evidence:jwt' },
+      ],
+    });
+    const preferences = new PreferenceLearner(store);
+    server = testServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, { preferenceLearner: preferences });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const endpoint = `http://127.0.0.1:${server.address().port}`;
+    for (const id of ['opportunity:regex', 'opportunity:jwt']) {
+      const response = await fetch(`${endpoint}/api/opportunities/${encodeURIComponent(id)}/feedback`, {
+        method: 'POST', headers: { ...authHeaders, 'content-type': 'application/json' }, body: JSON.stringify({ signal: 'useful' }),
+      });
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({ ok: false, code: 'OPPORTUNITY_NOT_SUPPORTED' });
+    }
+    expect((await store.read()).preferenceFeedback ?? []).toEqual([]);
+    expect(await (await fetch(`${endpoint}/api/preferences`, { headers: authHeaders })).json()).toMatchObject({
+      ok: true, profile: { eventCount: 0, categories: {} },
+    });
   });
 
   it('lets an authenticated Hermes worker claim a mission but refuses snippet Completado', async () => {

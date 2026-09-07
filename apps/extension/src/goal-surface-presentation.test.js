@@ -91,7 +91,25 @@ describe('extension Shared Goal Truth presentation', () => {
       label: 'The forge is ready', detail: 'Create a Goal or analyze a public page.', tone: 'idle',
     });
     expect(forgeActivityForGoalSurface(surface('forged', { mission: { findCount: 2 } }))).toEqual({
-      label: 'A useful lead was forged', detail: '2 opportunities passed local checks and were forged.', tone: 'success',
+      label: 'Kernel SUPPORT Finds were forged', detail: '2 Finds passed Kernel SUPPORT and were forged.', tone: 'success',
+    });
+    expect(forgeActivityForGoalSurface(surface('forged', { mission: { findCount: 1 } })).label).toBe('A Kernel SUPPORT Find was forged');
+    expect(forgeActivityForGoalSurface(surface('forged', { mission: { findCount: 2 } })).label).not.toMatch(/useful lead|opportunit/i);
+    expect(forgeActivityForGoalSurface(surface('forged', { mission: { findCount: 0 } }))).toEqual({
+      label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.', tone: 'success',
+    });
+  });
+
+  it('forged workLabel and forgeActivity claim findings only with Kernel SUPPORT findCount', () => {
+    expect(presentGoalSurface(surface('forged', { mission: { findCount: 2 } })).workLabel).toBe('2 Finds passed Kernel SUPPORT');
+    expect(presentGoalSurface(surface('forged', { mission: { findCount: 1 } })).workLabel).toBe('1 Find passed Kernel SUPPORT');
+    expect(presentGoalSurface(surface('forged', { mission: { findCount: 2 } })).workLabel).not.toMatch(/Evidence-backed findings|useful lead/i);
+    expect(presentGoalSurface(surface('forged', { mission: { findCount: 0 } })).workLabel).toBe('Research completed');
+    expect(presentGoalSurface(surface('forged', { mission: { findCount: 0 } })).workLabel).not.toMatch(/findings forged|useful lead|Kernel SUPPORT/i);
+    // Missing findCount is not proof of a Find — fail-close like findCount 0.
+    expect(presentGoalSurface(surface('forged')).workLabel).toBe('Research completed');
+    expect(forgeActivityForGoalSurface(surface('forged'))).toEqual({
+      label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.', tone: 'success',
     });
   });
 

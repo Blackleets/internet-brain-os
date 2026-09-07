@@ -1,11 +1,11 @@
-export function rankOpportunity(opportunity, { goalMatches = [], learnedAdjustment = 0, now = new Date().toISOString() } = {}) {
+export function rankOpportunity(opportunity, { goalMatches = [], learnedAdjustment = 0, now = new Date().toISOString(), missions = [] } = {}) {
   const relevance = clamp(Number(opportunity?.relevance) || 0);
   const goalFit = clamp(Number(goalMatches?.[0]?.score) || 0);
-  const evidenceStrength = provenanceScore(opportunity);
+  const evidenceStrength = provenanceScore(opportunity, missions);
   const freshness = freshnessScore(opportunity?.detectedAt, now);
   const explicitPreferenceAdjustment = boundedAdjustment(learnedAdjustment);
   const preference = clamp(50 + explicitPreferenceAdjustment);
-  const riskPenalty = provenanceRiskPenalty(opportunity);
+  const riskPenalty = provenanceRiskPenalty(opportunity, missions);
   const provenanceAdjustment = evidenceStrength >= 90 ? 8 : evidenceStrength >= 70 ? 0 : -10;
   const freshnessAdjustment = freshness >= 85 ? 5 : freshness >= 70 ? 0 : freshness >= 50 ? -5 : -10;
   const goalAdjustment = Math.round(goalFit * 0.20);
@@ -44,16 +44,39 @@ export function rankOpportunity(opportunity, { goalMatches = [], learnedAdjustme
   };
 }
 
-function provenanceScore(opportunity) {
+/**
+ * Fail-closed Kernel SUPPORT gate for ranking provenance.
+ * Mirrors dashboard isKernelSupportedFind / scorecard isKernelSupportedOpportunity:
+ * evidenceId|caseId presence is not enough — require opportunity.supported === true
+ * or a mission verificationResults entry with matching evidenceId and supported === true.
+ */
+function hasKernelSupport(opportunity, missions) {
+  if (opportunity?.supported === true) return true;
+  const evidenceId = typeof opportunity?.evidenceId === 'string' ? opportunity.evidenceId : '';
+  if (!evidenceId || !Array.isArray(missions)) return false;
+  for (const mission of missions) {
+    const results = mission?.verificationResults;
+    if (!Array.isArray(results)) continue;
+    for (const entry of results) {
+      if (!entry || typeof entry !== 'object') continue;
+      if (entry.evidenceId === evidenceId && entry.supported === true) return true;
+    }
+  }
+  return false;
+}
+
+function provenanceScore(opportunity, missions) {
+  if (!hasKernelSupport(opportunity, missions)) return 25;
   if (opportunity?.evidenceId && opportunity?.caseId) return 99;
   if (opportunity?.evidenceId || opportunity?.caseId) return 70;
   return 25;
 }
 
-function provenanceRiskPenalty(opportunity) {
+function provenanceRiskPenalty(opportunity, missions) {
+  const supported = hasKernelSupport(opportunity, missions);
   let penalty = 0;
-  if (!opportunity?.evidenceId) penalty += 12;
-  if (!opportunity?.caseId) penalty += 8;
+  if (!supported || !opportunity?.evidenceId) penalty += 12;
+  if (!supported || !opportunity?.caseId) penalty += 8;
   if (!opportunity?.sourceHost) penalty += 8;
   return Math.min(28, penalty);
 }

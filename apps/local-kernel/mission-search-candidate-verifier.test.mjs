@@ -74,6 +74,8 @@ describe('Kernel-owned search candidate verification', () => {
     expect(data.cases[0].description).toContain('24.99 EUR');
     expect(data.opportunities[0].title).toBe('Quality drill 24.99 EUR');
     expect(data.opportunities).toHaveLength(1);
+    expect(data.opportunities[0].supported).toBe(true);
+    expect(data.opportunities[0].supportReason).toBeTruthy();
     expect(data.agentMissions[0].searchCandidates[0]).toMatchObject({ status: 'verified', evidenceId: data.evidence[0].id });
   });
 
@@ -91,6 +93,8 @@ describe('Kernel-owned search candidate verification', () => {
     expect(data.evidence[0].rawText).toBe(text);
     expect(data.evidence[0].contentHash).toBe(createHash('sha256').update(text).digest('hex'));
     expect(data.opportunities).toHaveLength(1);
+    expect(data.opportunities[0].supported).toBe(true);
+    expect(data.opportunities[0].supportReason).toBeTruthy();
   });
 
   it('replays completed verification idempotently without duplicate Evidence or Finds', async () => {
@@ -163,6 +167,7 @@ describe('Kernel-owned search candidate verification', () => {
     expect(data.evidence).toHaveLength(1);
     expect(data.cases).toHaveLength(1);
     expect(data.evidence[0].rawText).toContain('JSON Web Tokens');
+    expect(data.opportunities ?? []).toHaveLength(0);
     expect(data.agentMissions[0].searchCandidates[0].supported).toBe(false);
     expect(result.mission.verificationDigest).toBeUndefined();
   });
@@ -203,6 +208,7 @@ describe('Kernel-owned search candidate verification', () => {
     expect(data.evidence.length).toBeGreaterThanOrEqual(0);
     expect(data.evidence[0].summary).not.toContain(unique);
     expect(data.cases[0].description).not.toContain(unique);
+    expect(data.opportunities ?? []).toHaveLength(0);
     expect(data.agentMissions[0].searchCandidates[0].supported).toBe(false);
     expect(result.mission.verificationDigest).toBeUndefined();
   });
