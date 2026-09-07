@@ -45,7 +45,7 @@ export function assessLivePublicWebJourney({ goalId, mission, opportunities = []
     ),
     check(
       'L5',
-      'At least one Evidence-backed Find was promoted for the tested Goal',
+      'At least one Kernel SUPPORT Find matches the tested Goal',
       supportedLinkedFinds.length > 0,
       `supportedGoalLinkedFinds=${supportedLinkedFinds.length}`,
     ),

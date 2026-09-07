@@ -47,6 +47,12 @@ describe('authentic live public-web journey assessment', () => {
     expect(checks.every(({ passed }) => passed)).toBe(true);
   });
 
+  it('L5 check name requires Kernel SUPPORT and never equates promotion with a Find', () => {
+    const l5 = assessLivePublicWebJourney(fixture()).find(({ id }) => id === 'L5');
+    expect(l5?.name).toMatch(/Kernel SUPPORT/i);
+    expect(l5?.name).not.toMatch(/promot/i);
+  });
+
   it('admits an honest blocked investigation that kept Evidence without Completado', () => {
     const data = fixture();
     const checks = assessLivePublicWebJourney({
