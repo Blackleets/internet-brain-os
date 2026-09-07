@@ -54,3 +54,12 @@ describe('popup Finds workspace chrome contract', () => {
     expect(popup).not.toContain('No strong leads yet');
   });
 });
+
+describe('popup mission-card statusDetail SUPPORT honesty', () => {
+  it('names Kernel SUPPORT Finds on forged mission cards — never bare findings passed through', () => {
+    const presentation = readFileSync(new URL('./mission-presentation.js', import.meta.url), 'utf8');
+    expect(presentation).toContain('Find passed Kernel SUPPORT');
+    expect(presentation).toContain('Finds passed Kernel SUPPORT');
+    expect(presentation).not.toContain('its findings passed through the local Kernel');
+  });
+});

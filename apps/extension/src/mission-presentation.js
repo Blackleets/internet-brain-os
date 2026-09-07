@@ -2,7 +2,7 @@ const STATUS_COPY = Object.freeze({
   waiting_for_agent: { label: 'Waiting for Hermes', detail: 'The commission is authorized, but no Hermes adapter is connected.' },
   queued: { label: 'Ready for Hermes', detail: 'The commission is queued for a bounded public-source attempt.' },
   running: { label: 'Researching public sources', detail: 'Hermes holds a temporary lease. Efesto will verify every returned finding locally.' },
-  completed: { label: 'Commission forged', detail: 'The bounded attempt finished and its findings passed through the local Kernel.' },
+  completed: { label: 'Commission forged', detail: 'The bounded attempt finished. Kernel SUPPORT Finds were sealed by the local Kernel.' },
   completedWithoutForge: { label: 'Research ended without Evidence', detail: 'The bounded attempt finished. No Kernel-sealed lead was saved.' },
   failed: { label: 'Research stopped safely', detail: 'Three bounded attempts were exhausted. The Goal and existing Evidence remain intact.' },
 });
@@ -23,8 +23,9 @@ export function presentMission(mission) {
 }
 
 /**
- * Fail-close forged status copy: findings-passed language only when
+ * Fail-close forged status copy: findings-passed / SUPPORT language only when
  * verificationResults prove Kernel SUPPORT Finds (same gate as countSupportedFinds).
+ * Positive path must name Kernel SUPPORT — never bare "findings passed through".
  */
 function missionStatusCopy(mission) {
   if (mission?.executionPhase === 'verifying') {
@@ -32,7 +33,16 @@ function missionStatusCopy(mission) {
   }
   if (mission?.status === 'completed' && (mission.executionPhase === 'forged' || mission.workState === 'forged')) {
     const finds = countSupportedFinds(mission?.verificationResults);
-    if (finds > 0) return STATUS_COPY.completed;
+    // Fail-close positive path: name Kernel SUPPORT Finds (same honesty as #mission-state / Living Forge).
+    // Never claim bare "findings passed through" — unsupported verification rows may coexist.
+    if (finds > 0) {
+      return {
+        label: STATUS_COPY.completed.label,
+        detail: finds === 1
+          ? 'The bounded attempt finished. 1 Find passed Kernel SUPPORT.'
+          : `The bounded attempt finished. ${finds} Finds passed Kernel SUPPORT.`,
+      };
+    }
     return {
       label: 'Research completed',
       detail: 'The bounded attempt finished. No Find passed Kernel SUPPORT.',

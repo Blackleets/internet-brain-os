@@ -85,7 +85,21 @@ describe('mission presentation', () => {
       verificationResults: [{ evidenceId: 'ev-1', supported: true }],
     });
     expect(supported.statusLabel).toBe('Commission forged');
-    expect(supported.statusDetail).toMatch(/findings passed through the local Kernel/i);
+    expect(supported.statusDetail).toMatch(/1 Find passed Kernel SUPPORT/i);
+    expect(supported.statusDetail).not.toMatch(/findings passed through the local Kernel/i);
+
+    const supportedMany = presentMission({
+      status: 'completed',
+      executionPhase: 'forged',
+      verificationResults: [
+        { evidenceId: 'ev-1', supported: true },
+        { evidenceId: 'ev-2', supported: true },
+        { evidenceId: 'ev-3', supported: false },
+      ],
+    });
+    expect(supportedMany.statusLabel).toBe('Commission forged');
+    expect(supportedMany.statusDetail).toMatch(/2 Finds passed Kernel SUPPORT/i);
+    expect(supportedMany.statusDetail).not.toMatch(/findings passed through/i);
   });
 
   it('does not treat opportunitiesPromoted as Finds without Kernel SUPPORT', () => {
