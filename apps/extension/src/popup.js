@@ -1,5 +1,5 @@
 import { createGoal, DEFAULT_KERNEL_BASE_URL, getCaseVerdict, getKernelStatus, inspectModelForge, listAgentMissions, listCases, listOpportunities, pairKernel, sendOpportunityFeedback, startGoalResearch } from './local-transport.js';
-import { isKernelSupportedFind, kernelSupportedFinds, kernelSupportedFindsForMission, presentFind } from './find-presentation.js';
+import { kernelSupportedFinds, kernelSupportedFindsForMission, presentFind } from './find-presentation.js';
 import { buildOpportunityCommandCenter } from './opportunity-command-center.js';
 import { buildOpportunityActionPlan, normalizeOpportunityReviewState, updateOpportunityReviewState } from './opportunity-action-workspace.js';
 import { normalizePublicOrigin } from './auto-capture-policy.js';
@@ -467,7 +467,7 @@ async function loadReadiness(stored) {
 async function loadCases(stored) {
   if (!stored.kernelApiToken) return;
   const cases = await listCases({ baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL, apiToken: stored.kernelApiToken });
-  select.replaceChildren(new Option('New opportunity case', ''));
+  select.replaceChildren(new Option('New Evidence Case', ''));
   for (const item of cases) select.append(new Option(item.title, item.id));
 }
 
@@ -634,9 +634,10 @@ async function capture() {
     if (!captured?.ok) throw new Error('Unable to read this page');
     const result = await chrome.runtime.sendMessage({ type: 'HEPHAESTUS_SEND_PAGE_CONTEXT', context: captured.context, targetCaseId: select.value || undefined });
     if (!result?.ok) throw new Error(result?.error ?? 'Local Kernel rejected the page');
-    setStatus(isKernelSupportedFind(result.opportunity)
-      ? `${result.opportunity.categoryLabel} detected — ${result.opportunity.relevance}% relevance. Saved privately.`
-      : `Page analyzed. No strong opportunity detected${result.obsidianUpdated ? '; Evidence saved to Obsidian' : ''}.`);
+    // Fail-close: page capture mints Evidence only — never brand it as opportunity/Find.
+    setStatus(result.obsidianUpdated
+      ? 'Page preserved as private Evidence in Obsidian. Capture is not a Kernel SUPPORT Find.'
+      : 'Page preserved as private Evidence. Capture is not a Kernel SUPPORT Find.');
     setForgeActivity(temporaryForgeActivity('capture-success'));
     const stored = await chrome.storage.local.get(['kernelBaseUrl', 'kernelApiToken']);
     await loadOpportunities(stored);

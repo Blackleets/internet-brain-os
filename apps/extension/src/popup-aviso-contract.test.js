@@ -15,10 +15,23 @@ describe('popup Watchtower Find copy contract', () => {
   });
 });
 
-describe('popup capture Find copy contract', () => {
-  it('fail-closes capture detected copy to isKernelSupportedFind', () => {
-    expect(popup).toContain('isKernelSupportedFind(result.opportunity)');
+describe('popup capture Evidence-only copy contract', () => {
+  it('does not brand page capture as opportunity or Find', () => {
+    expect(popup).toContain('Page preserved as private Evidence');
+    expect(popup).toContain('Capture is not a Kernel SUPPORT Find');
+    expect(popup).not.toContain('isKernelSupportedFind(result.opportunity)');
+    expect(popup).not.toContain('No strong opportunity detected');
     expect(popup).not.toContain('setStatus(result.opportunity');
+  });
+
+  it('forge workspace chrome does not brand Evidence capture as useful opportunities', () => {
+    expect(popupHtml).toContain('Forja Evidence privada desde la web pública');
+    expect(popupHtml).toContain('Un Find solo aparece con Kernel SUPPORT');
+    expect(popupHtml).not.toContain('Convierte la web en oportunidades útiles');
+    expect(popupHtml).toContain('Nuevo Case de Evidence');
+    expect(popupHtml).not.toContain('Nuevo caso de oportunidad');
+    expect(popup).toContain("new Option('New Evidence Case'");
+    expect(popup).not.toContain("new Option('New opportunity case'");
   });
 });
 
