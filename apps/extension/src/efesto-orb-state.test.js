@@ -51,7 +51,11 @@ describe('Efesto orb deterministic UI state', () => {
       },
       now,
     });
-    expect(view).toMatchObject({ state: 'completed', label: 'Forge complete' });
+    expect(view).toMatchObject({
+      state: 'completed',
+      label: 'A Kernel SUPPORT Find was forged',
+      detail: '1 Find passed Kernel SUPPORT. Inspect the Evidence.',
+    });
     expect(view.summary).toEqual({ received: 2, evidenceCreated: 1, opportunitiesForged: 1, obsidianNotesWritten: 4 });
     expect(view.obsidianReceipt).toMatchObject({ status: 'synced', notesWritten: 4 });
   });
@@ -69,6 +73,12 @@ describe('Efesto orb deterministic UI state', () => {
       now,
     });
     expect(promotedOnly.summary).toEqual({ received: 3, evidenceCreated: 2, opportunitiesForged: 0, obsidianNotesWritten: 0 });
+    expect(promotedOnly).toMatchObject({
+      state: 'completed',
+      label: 'Research completed',
+      detail: 'No Find passed Kernel SUPPORT.',
+    });
+    expect(promotedOnly.label).not.toMatch(/Forge complete/i);
 
     const unsupported = deriveEfestoOrbState({
       enabled: true,
@@ -83,6 +93,12 @@ describe('Efesto orb deterministic UI state', () => {
       now,
     });
     expect(unsupported.summary.opportunitiesForged).toBe(0);
+    expect(unsupported).toMatchObject({
+      state: 'completed',
+      label: 'Research completed',
+      detail: 'No Find passed Kernel SUPPORT.',
+    });
+    expect(unsupported.label).not.toMatch(/Forge complete/i);
 
     const supported = deriveEfestoOrbState({
       enabled: true,
@@ -101,6 +117,11 @@ describe('Efesto orb deterministic UI state', () => {
       now,
     });
     expect(supported.summary.opportunitiesForged).toBe(2);
+    expect(supported).toMatchObject({
+      state: 'completed',
+      label: 'Kernel SUPPORT Finds were forged',
+      detail: '2 Finds passed Kernel SUPPORT. Inspect the Evidence.',
+    });
   });
 
 
@@ -119,11 +140,41 @@ describe('Efesto orb deterministic UI state', () => {
     });
     expect(view.summary).toEqual({ received: 7, evidenceCreated: 2, opportunitiesForged: 0, obsidianNotesWritten: 0 });
     expect(view.summary).not.toHaveProperty('findingsReceived');
+    expect(view).toMatchObject({
+      state: 'completed',
+      label: 'Research completed',
+      detail: 'No Find passed Kernel SUPPORT.',
+    });
+    expect(view.label).not.toMatch(/Forge complete/i);
   });
 
-  it('shows Forge complete when Kernel workState is forged', () => {
+  it('names Kernel SUPPORT when workState is forged with SUPPORT Finds', () => {
+    const view = deriveEfestoOrbState({
+      enabled: true,
+      kernel: 'ready',
+      services,
+      mission: {
+        status: 'completed',
+        workState: 'forged',
+        verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: true }],
+      },
+      now,
+    });
+    expect(view).toMatchObject({
+      state: 'completed',
+      label: 'A Kernel SUPPORT Find was forged',
+      detail: '1 Find passed Kernel SUPPORT. Inspect the Evidence.',
+    });
+  });
+
+  it('does not brand forged-without-SUPPORT as Forge complete', () => {
     const view = deriveEfestoOrbState({ enabled: true, kernel: 'ready', services, mission: { status: 'completed', workState: 'forged' }, now });
-    expect(view).toMatchObject({ state: 'completed', label: 'Forge complete' });
+    expect(view).toMatchObject({
+      state: 'completed',
+      label: 'Research completed',
+      detail: 'No Find passed Kernel SUPPORT.',
+    });
+    expect(view.label).not.toMatch(/Forge complete/i);
   });
 
   it('does not present completed-without-forged as Forge complete', () => {
