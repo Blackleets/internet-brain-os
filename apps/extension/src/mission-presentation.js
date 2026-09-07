@@ -56,7 +56,7 @@ export function missionTimeline(mission = {}) {
   const events = [];
   addEvent(events, mission.createdAt, 'Commission authorized', 'Efesto stored the Goal scope after explicit approval.');
   addEvent(events, mission.claimedAt, `Hermes claimed attempt ${boundedCount(mission.attempt) || 1}`, 'A temporary execution lease was issued.');
-  addEvent(events, mission.verifyingAt, 'Kernel verification started', 'Returned findings entered local validation; no opportunity is accepted yet.');
+  addEvent(events, mission.verifyingAt, 'Kernel verification started', 'Returned material entered local validation; no Kernel SUPPORT Find is sealed yet.');
   addEvent(events, mission.lastFailure?.recordedAt, `Attempt ${boundedCount(mission.lastFailure?.attempt) || 1} failed safely`, 'The failure was recorded and the retry remained bounded.');
   const finds = countSupportedFinds(mission.verificationResults);
   const counts = `${boundedCount(mission.resultSummary?.received)} received · ${boundedCount(mission.resultSummary?.evidenceCreated)} Evidence · ${finds} Finds`;

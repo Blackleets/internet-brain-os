@@ -101,3 +101,12 @@ describe('popup mission-live-progress verifying honesty', () => {
     expect(hermesLive).toBeGreaterThan(verifyingReturn);
   });
 });
+
+describe('popup mission verifying ledger SUPPORT honesty', () => {
+  it('Activity ledger verifying detail must not brand validation as opportunity', () => {
+    const presentation = readFileSync(new URL('./mission-presentation.js', import.meta.url), 'utf8');
+    expect(presentation).toContain('no Kernel SUPPORT Find is sealed yet');
+    expect(presentation).not.toContain('no opportunity is accepted yet');
+    expect(presentation).not.toContain('Returned findings entered local validation; no opportunity');
+  });
+});

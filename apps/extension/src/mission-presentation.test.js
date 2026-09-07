@@ -47,6 +47,21 @@ describe('mission presentation', () => {
     const mission = { status: 'running', executionPhase: 'verifying', verifyingAt: '2026-07-22T10:02:00.000Z' };
     expect(presentMission(mission)).toMatchObject({ statusLabel: 'Verifying returned findings', opportunitiesPromoted: 0 });
     expect(missionTimeline(mission)[0].label).toBe('Kernel verification started');
+    expect(missionTimeline(mission)[0].detail).toMatch(/no Kernel SUPPORT Find is sealed yet/i);
+    expect(missionTimeline(mission)[0].detail).not.toMatch(/opportunit/i);
+  });
+
+  it('verifying Activity ledger must not brand Evidence validation as opportunity', () => {
+    const timeline = missionTimeline({
+      status: 'running',
+      executionPhase: 'verifying',
+      verifyingAt: '2026-07-22T10:02:00.000Z',
+      createdAt: '2026-07-22T10:00:00.000Z',
+    });
+    const verifying = timeline.find((event) => event.label === 'Kernel verification started');
+    expect(verifying?.detail).toBe('Returned material entered local validation; no Kernel SUPPORT Find is sealed yet.');
+    expect(verifying?.detail).not.toMatch(/opportunit/i);
+    expect(JSON.stringify(timeline)).not.toMatch(/opportunit/i);
   });
 
   it('fails closed for impossible result counts', () => {
