@@ -57,7 +57,7 @@ export function assessLivePublicWebJourney({ goalId, mission, opportunities = []
     ),
     check(
       'L7',
-      'Shared Goal Truth converged on the forged Mission from the same Kernel state',
+      'Shared Goal Truth converged on the forged or honestly blocked verifying Mission from the same Kernel state',
       admitsLiveSharedGoalTruth(surface, mission, goalId),
       `source=${surface?.sourceOfTruth ?? 'none'} workState=${surface?.mission?.workState ?? 'none'}`,
     ),

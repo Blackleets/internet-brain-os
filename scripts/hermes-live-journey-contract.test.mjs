@@ -54,6 +54,9 @@ describe('G5.3 authentic public-web acceptance contract', () => {
     // L6 check name must name Kernel SUPPORT — provenance gate already requires SUPPORT.
     expect(assessment).toContain('Kernel SUPPORT Find provenance resolves to Kernel-fetched Evidence rather than agent text');
     expect(assessment).not.toContain("'Find provenance resolves to Kernel-fetched Evidence rather than agent text'");
+    // L7 check name must admit forged or honest blocked verifying — gate is not forged-only.
+    expect(assessment).toContain('Shared Goal Truth converged on the forged or honestly blocked verifying Mission from the same Kernel state');
+    expect(assessment).not.toContain("'Shared Goal Truth converged on the forged Mission from the same Kernel state'");
   });
 
   it('keeps the adapter, worker and acceptance deadlines strictly nested', () => {

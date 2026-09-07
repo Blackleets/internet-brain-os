@@ -59,6 +59,12 @@ describe('authentic live public-web journey assessment', () => {
     expect(l6?.name).not.toMatch(/^Find provenance/i);
   });
 
+  it('L7 check name admits forged or honest blocked verifying (never forged-only)', () => {
+    const l7 = assessLivePublicWebJourney(fixture()).find(({ id }) => id === 'L7');
+    expect(l7?.name).toMatch(/honestly blocked verifying/i);
+    expect(l7?.name).not.toMatch(/converged on the forged Mission from the same Kernel state/i);
+  });
+
   it('admits an honest blocked investigation that kept Evidence without Completado', () => {
     const data = fixture();
     const checks = assessLivePublicWebJourney({
