@@ -55,11 +55,17 @@ describe('Efesto orb UI static contract', () => {
     expect(source).toContain('mission: restartedMission');
   });
 
-  it('never displays empty summaries or Obsidian receipts outside completed state', () => {
+  it('never displays empty summaries or Obsidian receipts outside completed/research_completed ledger', () => {
     const source = readFileSync(resolve('apps/extension/src/central-forge-power-controller.js'), 'utf8');
     const css = readFileSync(resolve('apps/extension/src/central-forge-power.css'), 'utf8');
-    expect(source).toContain("renderObsidianReceipt(obsidianReceipt, view.state === 'completed' ? view.obsidianReceipt : undefined)");
+    expect(source).toContain("const terminalLedger = view.state === 'completed' || view.state === 'research_completed'");
+    expect(source).toContain('renderObsidianReceipt(obsidianReceipt, terminalLedger ? view.obsidianReceipt : undefined)');
+    expect(source).toContain("view.state === 'completed' ? 'success'");
+    expect(source).not.toContain("view.state === 'research_completed' ? 'success'");
     expect(css).toContain('.forge-power-shell [hidden]{display:none!important}');
+    // Green Completado chrome stays on completed only — no research_completed green rule.
+    expect(css).toContain('.forge-power-panel[data-state="completed"] .forge-power{');
+    expect(css).not.toContain('data-state="research_completed"');
   });
 
   it('makes the visible orb and Retry safely copy part of the same accessible control', () => {

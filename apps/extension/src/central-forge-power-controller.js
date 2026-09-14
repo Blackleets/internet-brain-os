@@ -160,18 +160,21 @@ export function renderForgePowerView(elements = {}, view, overrideDetail) {
   powerButton.setAttribute('aria-label', enabled ? 'Pause Efesto after current work' : view.action ?? 'Start Efesto');
   powerLabel.textContent = view.action && view.state === 'failed' ? view.action : view.label;
   powerDetail.textContent = overrideDetail ?? view.detail;
+  // Green Living Forge success only for Kernel SUPPORT Completado (state completed).
+  // research_completed (zero-SUPPORT forged) must stay idle — not celebrate.
+  const terminalLedger = view.state === 'completed' || view.state === 'research_completed';
   applyLivingForgeActivity(livingForge, view.smithActive ? (view.state === 'verifying' ? 'verifying' : 'working') : view.state === 'completed' ? 'success' : view.state === 'failed' ? 'error' : 'idle');
   setText('#forge-orb-elapsed', view.elapsedLabel ?? 'No active mission');
   setText('#forge-orb-heartbeat', view.heartbeatLabel ?? 'No heartbeat yet');
   if (orbMeta) orbMeta.hidden = !view.active;
-  if (orbSummary) orbSummary.hidden = view.state !== 'completed';
+  if (orbSummary) orbSummary.hidden = !terminalLedger;
   if (view.summary) {
     setText('#forge-summary-received', String(view.summary.received));
     setText('#forge-summary-evidence', String(view.summary.evidenceCreated));
     setText('#forge-summary-opportunities', String(view.summary.opportunitiesForged));
     setText('#forge-summary-obsidian', String(view.summary.obsidianNotesWritten));
   }
-  renderObsidianReceipt(obsidianReceipt, view.state === 'completed' ? view.obsidianReceipt : undefined);
+  renderObsidianReceipt(obsidianReceipt, terminalLedger ? view.obsidianReceipt : undefined);
 }
 
 function renderObsidianReceipt(obsidianReceipt, receipt) {

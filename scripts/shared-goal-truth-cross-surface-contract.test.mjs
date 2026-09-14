@@ -130,6 +130,17 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(journey).not.toContain('completed: forged ? 3 : 2');
   });
 
+  it('keeps Central Forge Power orb Completado chrome behind Kernel SUPPORT', async () => {
+    const orb = await text('apps/extension/src/efesto-orb-state.js');
+    const controller = await text('apps/extension/src/central-forge-power-controller.js');
+    expect(orb).toContain("state: 'research_completed'");
+    expect(orb).toContain("state: 'completed'");
+    expect(orb).toContain('forgedCopy.state');
+    expect(controller).toContain("const terminalLedger = view.state === 'completed' || view.state === 'research_completed'");
+    expect(controller).toContain("view.state === 'completed' ? 'success'");
+    expect(controller).not.toContain("view.state === 'research_completed' ? 'success'");
+  });
+
   it('keeps mobile-width support separate from remote Kernel authority', async () => {
     const designContract = await text('docs/product-design/goal-first-cross-surface-g0.md');
     expect(designContract).toContain('390×844');
