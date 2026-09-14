@@ -142,6 +142,19 @@ describe('Efesto goal-first product shell', () => {
     expect(requests.some((request) => request.method === 'POST' && new URL(request.url).pathname === '/api/chat/stream')).toBe(true);
     expect(window.sessionStorage.getItem('hephaestus.owner.connection.session.v1')).toBeNull();
   });
+
+  it('dismiss toast names Kernel SUPPORT Find — never bare Find descartado alone', async () => {
+    // page.tsx → EfestoProductShell → recordFeedback; Home/Finds are kernelSupportedFinds-only.
+    render(<EfestoProductShell />);
+    await connect();
+    fireEvent.click(screen.getByRole('button', { name: /^Hallazgos/ }));
+    expect(screen.getByText('Kernel SUPPORT')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Descartar' }));
+    expect(await screen.findByText('Find SUPPORT descartado; Evidence objetiva no fue reescrita.')).toBeTruthy();
+    expect(screen.queryByText('Find descartado; Evidence objetiva no fue reescrita.')).toBeNull();
+    await waitFor(() => expect(requests.some((request) => request.method === 'POST' && new URL(request.url).pathname === '/api/opportunities/opp-1/feedback')).toBe(true));
+  });
+
   it('keeps Memory honest and never treats chat as durable memory', async () => {
     render(<EfestoProductShell />);
     fireEvent.click(screen.getByRole('button', { name: /^Memoria/ }));

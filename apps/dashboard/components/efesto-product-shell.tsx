@@ -295,7 +295,9 @@ export default function EfestoProductShell() {
     try {
       const client = new KernelClient(connection);
       await client.request(`/api/opportunities/${encodeURIComponent(opportunityId)}/feedback`, { method: 'POST', body: JSON.stringify({ signal }) }, parseOk);
-      await refresh(); setToast(signal === 'dismissed' ? 'Find descartado; Evidence objetiva no fue reescrita.' : 'Preferencia guardada en el Kernel.');
+      // Fail-close: Home/Finds feedback is kernelSupportedFinds-only (shell supportedFinds).
+      // Bare "Find descartado" must name SUPPORT like scorecard Finds SUPPORT descartados.
+      await refresh(); setToast(signal === 'dismissed' ? 'Find SUPPORT descartado; Evidence objetiva no fue reescrita.' : 'Preferencia guardada en el Kernel.');
     } catch { setToast('No se pudo registrar el feedback. El estado anterior se conserva.'); }
   }
 
