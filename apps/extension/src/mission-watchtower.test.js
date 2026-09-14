@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { markWatchtowerEventsRead, presentWatchtowerAviso, presentWatchtowerBanner, reconcileMissionWatchtower, unreadWatchtowerCount } from './mission-watchtower.js';
+import { chromeNotificationIdForWatchtowerAviso, markWatchtowerEventsRead, pendingWorkspaceViewForWatchtowerNotification, presentWatchtowerAviso, presentWatchtowerBanner, reconcileMissionWatchtower, unreadWatchtowerCount } from './mission-watchtower.js';
 
 const queued = { id: 'mission:1', status: 'queued', createdAt: '2026-07-22T10:00:00Z' };
 const completed = { ...queued, status: 'completed', executionPhase: 'forged', completedAt: '2026-07-22T10:05:00Z', forgedAt: '2026-07-22T10:05:00Z' };
@@ -120,6 +120,23 @@ describe('Watchtower Find aviso', () => {
   it('keeps failed missions as attention, not Find', () => {
     const aviso = presentWatchtowerAviso({ status: 'failed' }, [supportedFind], missionWithSupport);
     expect(aviso).toMatchObject({ notify: true, kind: 'attention', title: 'Efesto needs your attention' });
+  });
+
+
+  it('routes kind:find OS notify click to Finds workspace (Kernel gateway fallback parity)', () => {
+    const transition = { id: 'mission:1:completed:2026-07-22T10:05:00Z', missionId: 'mission:1', status: 'completed' };
+    const findId = chromeNotificationIdForWatchtowerAviso(transition, 'find');
+    expect(findId).toBe('efesto-mission:find:mission:1:completed:2026-07-22T10:05:00Z');
+    expect(pendingWorkspaceViewForWatchtowerNotification(findId)).toBe('finds');
+    expect(pendingWorkspaceViewForWatchtowerNotification(
+      chromeNotificationIdForWatchtowerAviso(transition, 'attention'),
+    )).toBe('missions');
+    expect(pendingWorkspaceViewForWatchtowerNotification(
+      chromeNotificationIdForWatchtowerAviso(transition, 'forged'),
+    )).toBe('missions');
+    // Legacy ids without kind stay on missions (pre-encoding watchtower notifies).
+    expect(pendingWorkspaceViewForWatchtowerNotification(`efesto-mission:${transition.id}`)).toBe('missions');
+    expect(pendingWorkspaceViewForWatchtowerNotification('efesto-kernel-notification:n1')).toBeNull();
   });
 
   it('Watchtower banner does not treat unsupported opportunity as Find', () => {

@@ -106,6 +106,46 @@ function countMissionSupportedFinds(mission) {
   return n;
 }
 
+
+const WATCHTOWER_NOTIFY_PREFIX = 'efesto-mission:';
+const WATCHTOWER_KIND_WORKSPACE = Object.freeze({
+  find: 'finds',
+  forged: 'missions',
+  attention: 'missions',
+});
+
+/**
+ * Encode aviso kind in the chrome.notifications id so click can route Find → finds.
+ * Legacy ids without a kind segment still parse as missions.
+ */
+export function chromeNotificationIdForWatchtowerAviso(transition = {}, kind) {
+  const id = typeof transition?.id === 'string' ? transition.id.trim() : '';
+  const safeKind = typeof kind === 'string' ? kind.trim() : '';
+  if (!id) return `${WATCHTOWER_NOTIFY_PREFIX}unknown`;
+  if (!safeKind || !Object.prototype.hasOwnProperty.call(WATCHTOWER_KIND_WORKSPACE, safeKind)) {
+    return `${WATCHTOWER_NOTIFY_PREFIX}${id}`;
+  }
+  return `${WATCHTOWER_NOTIFY_PREFIX}${safeKind}:${id}`;
+}
+
+/**
+ * Click route for watchtower OS notify. kind:'find' (SUPPORT Find aviso — gateway
+ * fallback) must open Finds workspace, same honesty as Kernel NotificationGateway
+ * click → pendingWorkspaceView finds. attention/forged stay on missions (Forge Ledger).
+ * Legacy efesto-mission:${transition.id} without kind → missions.
+ */
+export function pendingWorkspaceViewForWatchtowerNotification(notificationId) {
+  if (typeof notificationId !== 'string' || !notificationId.startsWith(WATCHTOWER_NOTIFY_PREFIX)) {
+    return null;
+  }
+  const rest = notificationId.slice(WATCHTOWER_NOTIFY_PREFIX.length);
+  const kind = rest.split(':')[0];
+  if (Object.prototype.hasOwnProperty.call(WATCHTOWER_KIND_WORKSPACE, kind)) {
+    return WATCHTOWER_KIND_WORKSPACE[kind];
+  }
+  return 'missions';
+}
+
 export function presentWatchtowerBanner(unread, event = {}) {
   const count = Number(unread) || 0;
   if (count <= 0) return '';

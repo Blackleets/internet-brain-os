@@ -1,6 +1,6 @@
 import { DEFAULT_KERNEL_BASE_URL, listAgentMissions, listNotifications, listOpportunities, markNotificationRead, sendPageContext } from './local-transport.js';
 import { evaluateAutoCapture } from './auto-capture-policy.js';
-import { presentWatchtowerAviso, reconcileMissionWatchtower } from './mission-watchtower.js';
+import { chromeNotificationIdForWatchtowerAviso, pendingWorkspaceViewForWatchtowerNotification, presentWatchtowerAviso, reconcileMissionWatchtower } from './mission-watchtower.js';
 import {
   chromeNotificationIdForKernelNotification,
   kernelFindsCoveringMission,
@@ -50,8 +50,10 @@ chrome.notifications.onClicked.addListener((notificationId) => {
     })();
     return;
   }
-  if (!notificationId.startsWith('efesto-mission:')) return;
-  void chrome.storage.local.set({ pendingWorkspaceView: 'missions' });
+  const watchtowerView = pendingWorkspaceViewForWatchtowerNotification(notificationId);
+  if (!watchtowerView) return;
+  // kind:'find' → finds (Kernel gateway fallback parity); attention/forged → missions.
+  void chrome.storage.local.set({ pendingWorkspaceView: watchtowerView });
   void chrome.notifications.clear(notificationId);
   void chrome.action.openPopup().catch(() => undefined);
 });
@@ -247,7 +249,7 @@ async function deliverKernelSupportedFindNotifications(notifications, deliveredI
 }
 
 async function notifyMissionTransition(transition, aviso) {
-  await chrome.notifications.create(`efesto-mission:${transition.id}`, {
+  await chrome.notifications.create(chromeNotificationIdForWatchtowerAviso(transition, aviso.kind), {
     type: 'basic',
     iconUrl: 'icons/efesto-notification.png',
     title: aviso.title,

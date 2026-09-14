@@ -20,7 +20,7 @@ describe('extension background runtime contract', () => {
   });
 
   it('fail-closes OS notify Find/Completado aviso through presentWatchtowerAviso', () => {
-    expect(source).toContain("import { presentWatchtowerAviso, reconcileMissionWatchtower } from './mission-watchtower.js'");
+    expect(source).toContain("import { chromeNotificationIdForWatchtowerAviso, pendingWorkspaceViewForWatchtowerNotification, presentWatchtowerAviso, reconcileMissionWatchtower } from './mission-watchtower.js'");
     expect(source).toContain('listOpportunities');
     expect(source).toContain('presentWatchtowerAviso(transition, opportunities, mission)');
     expect(source).toContain('shouldOsNotifyWatchtowerAviso(aviso, { coveringKernelFindNotifications: covering })');
@@ -39,5 +39,13 @@ describe('extension background runtime contract', () => {
     // Covering pool must include mark-read receipts (not state=unread only).
     expect(source).not.toContain("listNotifications({ ...options, state: 'unread'");
     expect(source).toContain('listNotifications({ ...options, limit: 40 })');
+  });
+
+  it('routes watchtower Find OS notify click to Finds (not missions-only)', () => {
+    expect(source).toContain('chromeNotificationIdForWatchtowerAviso');
+    expect(source).toContain('pendingWorkspaceViewForWatchtowerNotification');
+    expect(source).toContain('chromeNotificationIdForWatchtowerAviso(transition, aviso.kind)');
+    // Bare missions-only click path must not remain for all efesto-mission:* ids.
+    expect(source).not.toMatch(/if \(!notificationId\.startsWith\('efesto-mission:'\)\) return;[\s\S]*pendingWorkspaceView: 'missions'/);
   });
 });
