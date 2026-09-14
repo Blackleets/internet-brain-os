@@ -71,6 +71,20 @@ describe('delivery dedupe', () => {
       'notification:old',
     ]);
   });
+
+  it('covering still admits mark-read receipts so backlog advance cannot un-suppress watchtower', () => {
+    // background marks read after OS delivery to advance newest-first list(limit);
+    // covering must remain so watchtower Find/forged cannot double-fire.
+    const supportedRead = { ...supportedUnread, state: 'read' };
+    expect(selectKernelSupportedFindNotifications([supportedRead])).toEqual([]);
+    expect(selectKernelSupportedFindCoveringNotifications([supportedRead])).toEqual([supportedRead]);
+    expect(
+      shouldOsNotifyWatchtowerAviso(
+        { notify: true, kind: 'find' },
+        { coveringKernelFindNotifications: [supportedRead] },
+      ),
+    ).toBe(false);
+  });
 });
 
 

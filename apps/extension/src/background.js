@@ -206,6 +206,7 @@ async function inspectMissionTransitions() {
       await deliverKernelSupportedFindNotifications(
         kernelNotifications,
         stored.deliveredKernelNotifications,
+        options,
       );
     } catch {
       kernelNotifications = [];
@@ -226,7 +227,7 @@ async function inspectMissionTransitions() {
   }
 }
 
-async function deliverKernelSupportedFindNotifications(notifications, deliveredIds) {
+async function deliverKernelSupportedFindNotifications(notifications, deliveredIds, options = {}) {
   const selected = undeliveredKernelSupportedFindNotifications(notifications, deliveredIds);
   if (!selected.length) return false;
   for (const item of selected) {
@@ -238,6 +239,15 @@ async function deliverKernelSupportedFindNotifications(notifications, deliveredI
       message: copy.message,
       priority: 1,
     });
+    // Advance NotificationGateway unread window after local OS delivery. list() is
+    // newest-first + limit; receipts left unread until click starve older SUPPORT
+    // Finds outside the page. Covering suppress stays state-agnostic (read still covers).
+    // Click → Finds remains; mark-read on click is idempotent once advanced here.
+    try {
+      await markNotificationRead(item.id, options);
+    } catch {
+      // Kernel may be restarting; keep local delivered dedupe to avoid minute re-spam.
+    }
   }
   await chrome.storage.local.set({
     deliveredKernelNotifications: rememberDeliveredKernelNotificationIds(

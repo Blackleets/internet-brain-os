@@ -40,6 +40,11 @@ describe('extension background runtime contract', () => {
     expect(source).not.toContain("listNotifications({ ...options, state: 'unread'");
     expect(source).toContain('listNotifications({ ...options, limit: 40 })');
     expect(source).toContain('presentKernelSupportedFindOsNotify(item)');
+    // After OS delivery, markNotificationRead advances newest-first unread limit window
+    // so ignored alerts cannot starve older SUPPORT receipts outside the page.
+    expect(source).toContain('await markNotificationRead(item.id, options)');
+    expect(source).toContain('stored.deliveredKernelNotifications,');
+    expect(source).toContain('options,');
     // Lock-screen privacy: never pass Kernel receipt title/body straight into chrome.notifications.
     expect(source).not.toMatch(/title:\s*item\.title/);
     expect(source).not.toMatch(/message:\s*item\.body/);
