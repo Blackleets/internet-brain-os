@@ -25,7 +25,19 @@ describe('pixel forge activity contract', () => {
     expect(forgeActivityForMission({ status: 'failed' }).tone).toBe('error');
   });
 
-  it('reports Kernel-supported Find counts without inventing findings', () => {
+    it('keeps zero-SUPPORT forged Living Forge off success celebrate chrome', () => {
+    // Central Forge orb research_completed → idle; popup #living-forge must not paint
+    // data-activity=success (green badge + celebrate) for Research completed.
+    const zero = forgeActivityForMission({
+      status: 'completed',
+      executionPhase: 'forged',
+      verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: false }],
+    });
+    expect(zero).toMatchObject({ tone: 'idle', label: 'Research completed' });
+    expect(zero.tone).not.toBe('success');
+  });
+
+it('reports Kernel-supported Find counts without inventing findings', () => {
     const supportedAviso = forgeActivityForMission(forgedMission, [supported]);
     expect(supportedAviso).toMatchObject({
       tone: 'success',
@@ -34,7 +46,7 @@ describe('pixel forge activity contract', () => {
     });
     expect(supportedAviso.label).not.toMatch(/useful lead|opportunit/i);
     expect(forgeActivityForMission({ status: 'completed', workState: 'forged', resultSummary: { opportunitiesPromoted: 0 } })).toMatchObject({
-      tone: 'success', label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.',
+      tone: 'idle', label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.',
     });
   });
 
@@ -65,10 +77,10 @@ describe('pixel forge activity contract', () => {
     const unverified = { ...supported, supported: undefined };
     const mission = { ...forgedMission, verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: false }] };
     expect(forgeActivityForMission(mission, [unverified])).toMatchObject({
-      tone: 'success', label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.',
+      tone: 'idle', label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.',
     });
     expect(forgeActivityForMission({ status: 'completed', executionPhase: 'forged', resultSummary: { opportunitiesPromoted: 3 } })).toMatchObject({
-      tone: 'success', label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.',
+      tone: 'idle', label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.',
     });
   });
 

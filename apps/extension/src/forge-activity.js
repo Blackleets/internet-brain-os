@@ -25,13 +25,16 @@ export function forgeActivityForMission(mission, opportunities = []) {
     );
     // Fail-close Living Forge label+detail to Kernel SUPPORT (detail was aligned in da68517;
     // label must not keep branding SUPPORT Finds as bare "useful lead" on #forge-activity-label).
+    // Fail-close Living Forge chrome: zero-SUPPORT forged must not keep data-activity=success
+    // (green badge + celebrate) while Central Forge orb is research_completed → idle.
+    // Label/detail stay Research completed; tone mirrors completed-without-Evidence.
     return found > 0
       ? {
           ...ACTIVITIES.success,
           label: found === 1 ? 'A Kernel SUPPORT Find was forged' : 'Kernel SUPPORT Finds were forged',
           detail: `${found} ${found === 1 ? 'Find' : 'Finds'} passed Kernel SUPPORT and were forged.`,
         }
-      : { ...ACTIVITIES.success, label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.' };
+      : { label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.', tone: 'idle' };
   }
   if (mission.status === 'completed') return ACTIVITIES.idle;
   if (mission.status === 'failed') return ACTIVITIES.error;

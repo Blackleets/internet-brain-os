@@ -130,6 +130,17 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(journey).not.toContain('completed: forged ? 3 : 2');
   });
 
+
+  it('keeps Living Forge zero-SUPPORT forged off success celebrate chrome', async () => {
+    const forge = await text('apps/extension/src/forge-activity.js');
+    const goalSurface = await text('apps/extension/src/goal-surface-presentation.js');
+    expect(forge).toContain("tone: 'idle'");
+    expect(forge).toContain("label: 'Research completed'");
+    expect(forge).not.toContain("{ ...ACTIVITIES.success, label: 'Research completed'");
+    expect(goalSurface).toContain("tone: 'idle'");
+    expect(goalSurface).not.toContain("{ ...FORGE_ACTIVITY.forged, label: 'Research completed'");
+  });
+
   it('keeps Central Forge Power orb Completado chrome behind Kernel SUPPORT', async () => {
     const orb = await text('apps/extension/src/efesto-orb-state.js');
     const controller = await text('apps/extension/src/central-forge-power-controller.js');

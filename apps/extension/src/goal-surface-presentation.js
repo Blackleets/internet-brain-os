@@ -68,7 +68,9 @@ export function forgeActivityForGoalSurface(surface) {
     const found = Number.isSafeInteger(surface?.mission?.findCount) ? surface.mission.findCount : undefined;
     // Fail-close: missing findCount is not proof of a Find (verificationResults may be absent).
     if (found === undefined || found === 0) {
-      return { ...FORGE_ACTIVITY.forged, label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.' };
+      // Fail-close Living Forge chrome: zero-SUPPORT forged must not keep tone success
+      // (green + celebrate) while Central Forge orb is research_completed → idle.
+      return { label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.', tone: 'idle' };
     }
     // Fail-close Living Forge label: SUPPORT findCount must not keep "useful lead" on #forge-activity-label.
     return {
