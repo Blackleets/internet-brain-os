@@ -101,6 +101,22 @@ describe('Watchtower Find aviso', () => {
     });
   });
 
+  it('does not understate Living Forge SUPPORT when opportunities list is partial', () => {
+    // finds.length > 0 used to win the ternary and report 1 Find while verificationResults
+    // (Living Forge / mission-presentation) prove 2 SUPPORT rows.
+    const missionTwoSupport = {
+      ...missionWithSupport,
+      verificationResults: [
+        { candidateId: 'cand-1', evidenceId: 'ev-1', supported: true },
+        { candidateId: 'cand-2', evidenceId: 'ev-2', supported: true },
+      ],
+    };
+    const aviso = presentWatchtowerAviso(forgedTransition, [supportedFind], missionTwoSupport);
+    expect(aviso).toMatchObject({ notify: true, kind: 'find' });
+    expect(aviso.message).toContain('2 Finds passed Kernel SUPPORT');
+    expect(aviso.message).not.toContain('1 Find passed Kernel SUPPORT');
+  });
+
   it('keeps failed missions as attention, not Find', () => {
     const aviso = presentWatchtowerAviso({ status: 'failed' }, [supportedFind], missionWithSupport);
     expect(aviso).toMatchObject({ notify: true, kind: 'attention', title: 'Efesto needs your attention' });

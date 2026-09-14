@@ -72,11 +72,11 @@ export function presentWatchtowerAviso(transition = {}, opportunities = [], miss
     return { notify: false, kind: 'silent', title: '', message: '' };
   }
   const finds = kernelSupportedFindsForMission(opportunities, mission);
-  // Opportunities may be empty (background listOpportunities catch→[]) while
-  // mission.verificationResults still prove Kernel SUPPORT — same Living Forge /
-  // mission-presentation countSupportedFinds gate. Do not emit kind:forged copy
-  // that pretends zero Finds when SUPPORT rows exist.
-  const n = finds.length > 0 ? finds.length : countMissionSupportedFinds(mission);
+  // Living Forge / mission-presentation countSupportedFinds is the mission truth.
+  // Prefer max(inbox, verificationResults): empty inbox (catch→[]) must not demote
+  // to kind:forged, and a partial opportunities page must not understate SUPPORT
+  // below Living Forge when verificationResults prove more Finds.
+  const n = Math.max(finds.length, countMissionSupportedFinds(mission));
   if (n > 0) {
     // Fail-close Find aviso copy: SUPPORT-gated finds must name Kernel SUPPORT (same honesty as
     // Living Forge / mission-state / Kernel NotificationGateway body) — not bare "useful lead".
