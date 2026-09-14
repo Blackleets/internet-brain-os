@@ -38,7 +38,7 @@ const starterGoals = [
   'Ayúdame a tomar una decisión',
 ];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, supportedFinds = [], missions, onFindFeedback, onOpenCase }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, supportedFinds = [], forgeSupportedFindCount = 0, missions, onFindFeedback, onOpenCase }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
   input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
@@ -46,11 +46,16 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
   onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenNav: () => void;
   supportedFinds?: OpportunitySummary[];
+  /** Focused-mission SUPPORT count (Living Forge). Not global inbox length. */
+  forgeSupportedFindCount?: number;
   missions?: readonly MissionSummary[];
   onFindFeedback?: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void;
   onOpenCase?: (caseId: string) => void;
 }) {
-  const state = brainState(phase, supportedFinds.length);
+  // Fail-close: forge-state-action must use focused-mission SUPPORT count (shell
+  // countMissionKernelSupportedFinds), never global supportedFinds.length — older inbox
+  // Finds must not brand a zero-SUPPORT forged mission as Find SUPPORT forjado.
+  const state = brainState(phase, forgeSupportedFindCount);
   const showSuggestions = chatMode ? messages.length === 0 : !preparedGoal && supportedFinds.length === 0;
   const surfaceTitle = chatMode
     ? (messages.length ? 'Conversación' : 'Nueva conversación')
@@ -454,6 +459,8 @@ export function brainState(phase: BrainPhase, supportedFindCount = 0) {
   if (phase === 'queued') return { label: 'Misión preparada', detail: 'Esperando agente' };
   if (phase === 'forged') {
     // Fail-close Home forge-state-action (page.tsx → EfestoProductShell → HomeView):
+    // forgeSupportedFindCount is focused-mission verificationResults SUPPORT only
+    // (countMissionKernelSupportedFinds) — not global inbox length.
     // forged without Kernel SUPPORT Finds must not read like Completado/useful Find;
     // with SUPPORT Finds, name them like extension Living Forge / mission-state.
     if (supportedFindCount > 0) {

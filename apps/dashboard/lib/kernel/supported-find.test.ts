@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isKernelSupportedFind, kernelSupportedFinds } from './supported-find';
+import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportedFinds } from './supported-find';
 import type { MissionSummary, OpportunitySummary } from './contracts';
 
 const evidenceBacked: OpportunitySummary = {
@@ -85,5 +85,14 @@ describe('kernelSupportedFinds', () => {
     expect(isKernelSupportedFind(opportunity({ status: 'dismissed', supported: true }))).toBe(false);
     expect(isKernelSupportedFind(opportunity({ sourceUrl: 'javascript:alert(1)', supported: true }))).toBe(false);
     expect(isKernelSupportedFind(opportunity({ sourceUrl: 'not-a-url', supported: true }))).toBe(false);
+  });
+});
+
+describe('countMissionKernelSupportedFinds', () => {
+  it('counts focused-mission verificationResults SUPPORT only', () => {
+    expect(countMissionKernelSupportedFinds(missionWithSupport('ev-1', true))).toBe(1);
+    expect(countMissionKernelSupportedFinds(missionWithSupport('ev-1', false))).toBe(0);
+    expect(countMissionKernelSupportedFinds(undefined)).toBe(0);
+    expect(countMissionKernelSupportedFinds({ verificationResults: null })).toBe(0);
   });
 });

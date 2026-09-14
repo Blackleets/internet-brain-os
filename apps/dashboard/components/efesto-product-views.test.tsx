@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { FormEvent } from 'react';
 import { ActivityView, AgentsView, FindsView, GoalsView, HomeView, brainState, type ChatMessage, type Provider } from './efesto-product-views';
@@ -134,13 +136,33 @@ describe('HomeView Kernel-supported Find', () => {
   });
 
   it('Home forge-state-action names SUPPORT when forged with Finds', () => {
-    // page.tsx → EfestoProductShell → HomeView forge-state-action uses brainState(phase, findCount).
+    // page.tsx → EfestoProductShell → HomeView forge-state-action uses brainState(phase, forgeSupportedFindCount).
     // Gate-blind "Evidence forjada" must not remain when Kernel SUPPORT Finds exist.
-    render(<HomeView {...homeProps} phase="forged" connected supportedFinds={[supported]} />);
+    render(<HomeView {...homeProps} phase="forged" connected supportedFinds={[supported]} forgeSupportedFindCount={1} />);
     const action = screen.getByRole('button', { name: 'Kernel conectado' });
     expect(action.textContent).toMatch(/Find SUPPORT forjado/i);
     expect(action.textContent).not.toMatch(/Evidence forjada/i);
     expect(action.textContent).not.toMatch(/Completado/i);
+  });
+
+  it('Home forge-state-action ignores global inbox Finds for zero-SUPPORT forged mission', () => {
+    // phase is focusedGoalSurface.mission; forgeSupportedFindCount is mission-scoped.
+    // Older inbox SUPPORT Finds must not brand Investigación terminada as Find SUPPORT forjado.
+    render(
+      <HomeView
+        {...homeProps}
+        phase="forged"
+        connected
+        supportedFinds={[supported]}
+        forgeSupportedFindCount={0}
+      />,
+    );
+    const action = screen.getByRole('button', { name: 'Kernel conectado' });
+    expect(action.textContent).toMatch(/Investigación terminada/i);
+    expect(action.textContent).not.toMatch(/Find SUPPORT forjado/i);
+    expect(action.textContent).not.toMatch(/Evidence forjada|Completado/i);
+    // Inbox chrome may still show SUPPORT Finds — only forge-state-action is mission-scoped.
+    expect(screen.getByText('Taladro Bosch 21 EUR')).toBeTruthy();
   });
 
   it('Home forge-state-action zero-SUPPORT forged is Investigación terminada', () => {
@@ -407,3 +429,15 @@ describe('brainState forged SUPPORT honesty', () => {
     expect(brainState('forged', 0).label).not.toMatch(/Evidence forjada|Completado|Find SUPPORT/i);
   });
 });
+
+describe('Home forge-state-action shell wiring contract', () => {
+  it('shell feeds focused-mission SUPPORT count, never global supportedFinds.length', () => {
+    const shell = readFileSync(join(process.cwd(), 'apps/dashboard/components/efesto-product-shell.tsx'), 'utf8');
+    const views = readFileSync(join(process.cwd(), 'apps/dashboard/components/efesto-product-views.tsx'), 'utf8');
+    expect(shell).toContain('countMissionKernelSupportedFinds(focusedGoalSurface?.mission)');
+    expect(shell).toContain('forgeSupportedFindCount={forgeSupportedFindCount}');
+    expect(views).toContain('brainState(phase, forgeSupportedFindCount)');
+    expect(views).not.toContain('brainState(phase, supportedFinds.length)');
+  });
+});
+

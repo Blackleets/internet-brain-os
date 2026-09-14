@@ -55,3 +55,22 @@ export function kernelSupportedFinds(
 ): OpportunitySummary[] {
   return (items ?? []).filter((item) => isKernelSupportedFind(item, missions));
 }
+
+/**
+ * Mission-scoped Kernel SUPPORT Find count for Home forge-state-action.
+ * Mirrors extension Living Forge / mission-presentation countSupportedFinds:
+ * only verificationResults with supported === true. Global inbox Finds must not
+ * brand a zero-SUPPORT forged focused mission as Find SUPPORT forjado.
+ */
+export function countMissionKernelSupportedFinds(
+  mission?: { readonly verificationResults?: unknown } | null,
+): number {
+  const results = mission?.verificationResults;
+  if (!Array.isArray(results)) return 0;
+  let n = 0;
+  for (const entry of results) {
+    if (!entry || typeof entry !== 'object') continue;
+    if ((entry as Record<string, unknown>).supported === true) n += 1;
+  }
+  return n;
+}
