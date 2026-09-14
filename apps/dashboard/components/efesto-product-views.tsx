@@ -8,7 +8,7 @@ import {
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { CaseSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
-import { isKernelSupportedFind, kernelSupportedFinds } from '../lib/kernel/supported-find';
+import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportedFinds } from '../lib/kernel/supported-find';
 
 export type Provider = {
   id: string;
@@ -454,7 +454,11 @@ export function SettingsView({ connected, connecting, rememberSession, snapshot,
 
 function missionPillState(mission: MissionSummary): string {
   // Bare status completed (no Evidence / Kernel forge) must not look like Completado.
-  if (mission.executionPhase === 'forged') return 'forged';
+  // Forged without Kernel SUPPORT Finds must not keep a green "forged" Completado-lookalike
+  // on Goals/Actividad (Home already uses Investigación terminada / Research completed).
+  if (mission.executionPhase === 'forged') {
+    return countMissionKernelSupportedFinds(mission) > 0 ? 'forged' : 'research_completed';
+  }
   if (mission.executionPhase) return mission.executionPhase;
   if (mission.status === 'completed') return 'completed_without_forge';
   return mission.status;

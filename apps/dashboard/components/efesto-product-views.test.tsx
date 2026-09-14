@@ -47,7 +47,7 @@ describe('GoalsView mission StatePill honesty', () => {
     expect(screen.getByText('Find a drill offer')).toBeTruthy();
   });
 
-  it('presents Kernel forged missions as forged', () => {
+  it('presents Kernel forged missions with SUPPORT as forged', () => {
     const { container } = render(
       <GoalsView
         snapshot={snapshotWithMissions([
@@ -58,6 +58,7 @@ describe('GoalsView mission StatePill honesty', () => {
             executionPhase: 'forged' as const,
             attempt: 1,
             createdAt: '2026-07-26T10:04:00.000Z',
+            verificationResults: [{ evidenceId: 'evidence:drill', supported: true }],
           },
         ])}
         onNew={() => undefined}
@@ -65,7 +66,32 @@ describe('GoalsView mission StatePill honesty', () => {
     );
     const pill = container.querySelector('.state-pill');
     expect(pill?.textContent).toMatch(/forged/i);
+    expect(pill?.textContent).not.toMatch(/research completed/i);
     expect(pill?.className).toMatch(/\bgood\b/);
+  });
+
+  it('presents zero-SUPPORT forged missions as research completed, not green forged Completado', () => {
+    const { container } = render(
+      <GoalsView
+        snapshot={snapshotWithMissions([
+          {
+            id: 'mission-forged-empty',
+            goalId: 'goal-1',
+            status: 'completed',
+            executionPhase: 'forged' as const,
+            attempt: 1,
+            createdAt: '2026-07-26T10:05:00.000Z',
+            verificationResults: [{ evidenceId: 'evidence:jwt', supported: false }],
+          },
+        ])}
+        onNew={() => undefined}
+      />,
+    );
+    const pill = container.querySelector('.state-pill');
+    expect(pill?.textContent).toMatch(/research completed/i);
+    expect(pill?.textContent).not.toMatch(/\bforged\b/i);
+    expect(pill?.className).not.toMatch(/\bgood\b/);
+    expect(screen.getByText('Find a drill offer')).toBeTruthy();
   });
 });
 
@@ -453,4 +479,3 @@ describe('Home forge-state-action shell wiring contract', () => {
     expect(views).not.toContain('brainState(phase, supportedFinds.length)');
   });
 });
-

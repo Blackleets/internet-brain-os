@@ -86,6 +86,10 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(overview).toContain("return 'completed_without_forge'");
     expect(overview).toContain('missionActivityState(mission)');
     expect(overview).toContain("mission.status === 'completed'");
+    expect(overview).toContain('countMissionKernelSupportedFinds(mission)');
+    expect(overview).toContain("return countMissionKernelSupportedFinds(mission) > 0 ? 'forged' : 'research_completed'");
+    expect(overview).not.toContain("if (mission.executionPhase === 'forged') return 'forged';");
+    expect(feed).toContain("completed: 'Completada'");
     expect(feed).toContain("completed_without_forge: 'Terminada sin Evidence'");
   });
 
@@ -93,6 +97,8 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     const views = await text('apps/dashboard/components/efesto-product-views.tsx');
     expect(views).toContain('function missionPillState(mission: MissionSummary)');
     expect(views).toContain("return 'completed_without_forge'");
+    expect(views).toContain('countMissionKernelSupportedFinds(mission)');
+    expect(views).toContain("return countMissionKernelSupportedFinds(mission) > 0 ? 'forged' : 'research_completed'");
     expect(views).toContain('<StatePill state={mission ? missionPillState(mission) : goal.status} />');
     expect(views).toContain('<StatePill state={missionPillState(mission)} />');
     expect(views).not.toContain('<StatePill state={mission?.executionPhase ?? mission?.status ?? goal.status} />');

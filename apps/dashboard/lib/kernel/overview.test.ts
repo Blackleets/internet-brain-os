@@ -118,12 +118,22 @@ describe('loadOverview', () => {
             createdAt: '2026-07-26T10:03:00.000Z',
           },
           {
-            id: 'mission-forged',
+            id: 'mission-forged-empty',
             goalId: 'goal-1',
             status: 'completed',
             executionPhase: 'forged',
             attempt: 1,
             createdAt: '2026-07-26T10:04:00.000Z',
+            verificationResults: [{ evidenceId: 'evidence:jwt', supported: false }],
+          },
+          {
+            id: 'mission-forged-support',
+            goalId: 'goal-1',
+            status: 'completed',
+            executionPhase: 'forged',
+            attempt: 1,
+            createdAt: '2026-07-26T10:05:00.000Z',
+            verificationResults: [{ evidenceId: 'evidence:drill', supported: true }],
           },
         ],
       }),
@@ -137,10 +147,17 @@ describe('loadOverview', () => {
       state: 'completed_without_forge',
     });
     expect(snapshot.activity).toContainEqual({
-      id: 'mission:mission-forged',
-      recordId: 'mission-forged',
+      id: 'mission:mission-forged-empty',
+      recordId: 'mission-forged-empty',
       kind: 'mission',
       timestamp: '2026-07-26T10:04:00.000Z',
+      state: 'research_completed',
+    });
+    expect(snapshot.activity).toContainEqual({
+      id: 'mission:mission-forged-support',
+      recordId: 'mission-forged-support',
+      kind: 'mission',
+      timestamp: '2026-07-26T10:05:00.000Z',
       state: 'forged',
     });
     expect(snapshot.activity.some((entry) => entry.kind === 'mission' && entry.state === 'completed')).toBe(false);
