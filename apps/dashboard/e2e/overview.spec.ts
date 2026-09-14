@@ -33,8 +33,8 @@ async function switchToGoalMode(page: Page): Promise<void> {
 async function expectLocalScorecard(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Valor del producto', exact: true })).toBeVisible();
   await expect(page.getByText('Solo local · sin telemetría externa', { exact: true })).toBeVisible();
-  await expect(page.getByText('Goals con Find útil', { exact: true })).toBeVisible();
-  await expect(page.getByText('Tiempo al primer Find útil', { exact: true })).toBeVisible();
+  await expect(page.getByText('Goals con Find SUPPORT útil', { exact: true })).toBeVisible();
+  await expect(page.getByText('Tiempo al primer Find SUPPORT útil', { exact: true })).toBeVisible();
 }
 
 test('runs the Goal-first journey only after explicit confirmation', async ({ page }) => {
