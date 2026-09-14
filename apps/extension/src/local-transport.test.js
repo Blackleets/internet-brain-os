@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createGoal, getCaseVerdict, getEfestoBootstrapStatus, getKernelStatus, inspectModelForge, listAgentMissions, listCases, listGoals, listOpportunities, LocalTransportError, pairKernel, sendOpportunityFeedback, sendPageContext, startGoalResearch } from './local-transport.js';
+import { createGoal, getCaseVerdict, getEfestoBootstrapStatus, getKernelStatus, inspectModelForge, listAgentMissions, listCases, listGoals, listNotifications, listOpportunities, LocalTransportError, markNotificationRead, pairKernel, sendOpportunityFeedback, sendPageContext, startGoalResearch } from './local-transport.js';
 
 const context = {
   schemaVersion: 'hephaestus.page-context.v1',
@@ -107,6 +107,32 @@ describe('listOpportunities', () => {
     const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, feedback }) }));
     await expect(sendOpportunityFeedback('opportunity:1', 'useful', { fetchImpl, apiToken })).resolves.toEqual(feedback);
     expect(fetchImpl).toHaveBeenCalledWith('http://127.0.0.1:4000/api/opportunities/opportunity%3A1/feedback', expect.objectContaining({ method: 'POST', body: JSON.stringify({ signal: 'useful' }) }));
+  });
+});
+
+
+describe('Kernel notifications transport', () => {
+  it('lists unread NotificationGateway receipts through the authenticated Kernel', async () => {
+    const notifications = [{ id: 'notification:1', state: 'unread', sourceType: 'opportunity', dedupeKey: 'find:supported:opportunity:1' }];
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, notifications }) }));
+    await expect(listNotifications({ fetchImpl, apiToken, state: 'unread', limit: 20 })).resolves.toEqual(notifications);
+    expect(fetchImpl).toHaveBeenCalledWith('http://127.0.0.1:4000/api/notifications?state=unread&limit=20', {
+      headers: { 'x-hephaestus-token': apiToken },
+    });
+  });
+
+  it('marks a Kernel notification read without inventing Find UI', async () => {
+    const notification = { id: 'notification:1', state: 'read' };
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, notification }) }));
+    await expect(markNotificationRead('notification:1', { fetchImpl, apiToken })).resolves.toEqual(notification);
+    expect(fetchImpl).toHaveBeenCalledWith('http://127.0.0.1:4000/api/notifications/notification%3A1/read', {
+      method: 'POST',
+      headers: { 'x-hephaestus-token': apiToken },
+    });
+  });
+
+  it('rejects blank notification ids before network access', async () => {
+    await expect(markNotificationRead('  ', { fetchImpl: vi.fn(), apiToken })).rejects.toMatchObject({ code: 'INVALID_NOTIFICATION' });
   });
 });
 

@@ -21,10 +21,10 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 - Search snippet/agent text ≠ Evidence.
 - Responsive mobile-width support does not imply phone → PC Kernel authority.
 
-## Current checkpoint - 2026-09-02
+## Current checkpoint - 2026-09-14
 
-- GitHub `main` includes squash-merge PR #238 `1da97ef` (Kernel SUPPORT gate; Completado is not HTTP 200).
-- Follow-on: Home and Hallazgos render only Kernel-supported Finds (title, sourceUrl, evidenceId SUPPORT provenance). Hermes snippets do not mint Find cards. Completado stays forged-only; verifying stays verifying even when Evidence exists. `publicLaunchApproved` remains false.
+- GitHub `main` includes squash-merge PR #239 `944048d` (Home/Hallazgos Kernel-supported Find; SUPPORT empty/chrome sealed).
+- Follow-on branch work: extension consumes Kernel NotificationGateway unread `find:supported:*` receipts as OS chrome.notifications (no new UI). Watchtower Find OS notify suppressed only when Kernel covering receipts exist; failed/forged-without-finds unchanged. `publicLaunchApproved` remains false.
 - Live UAT A-F and packaged UAT-1 to UAT-6 have NOT been run on this candidate. Do not cite unit tests as UAT.
 - Historical G5.3 / internal.81 live run `31686750785` (SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb`, 14/14 completed/forged) is FROZEN HISTORY from before the SUPPORT gate. It is not current Completado proof and must not be cited as launch-ready or as the live L1 to L7 contract after #238.
 

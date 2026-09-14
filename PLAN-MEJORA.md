@@ -2,10 +2,10 @@
 
 > Canonical truth: `PROJECT_STATE.md`, live GitHub `main`, and the exact current CI run. This file is a planning view, not an older branch checkpoint.
 
-## Current checkpoint - 2026-09-02
+## Current checkpoint - 2026-09-14
 
-- PR #238 merged to `main` (`1da97ef`). Kernel SUPPORT gate is on main.
-- Home/Hallazgos now consume Kernel-supported Evidence/opportunity records (title, sourceUrl, SUPPORT). No snippet Find cards. No launch claim. `publicLaunchApproved` remains false.
+- PR #239 merged to `main` (`944048d`). Home/Hallazgos Kernel-supported Find chrome sealed.
+- Extension now delivers Kernel NotificationGateway unread `find:supported:*` receipts via existing chrome.notifications (no new UI). `publicLaunchApproved` remains false.
 - Next: packaged UAT-1 through UAT-6 on the exact candidate after Lewis asks; local scorecard already exists on Objetivos.
 - No ADMITTED wiring, i18n, Intelligence Brief, PWA, extra IPs, or founder Kernel in this slice.
 

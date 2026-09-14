@@ -22,8 +22,18 @@ describe('extension background runtime contract', () => {
   it('fail-closes OS notify Find/Completado aviso through presentWatchtowerAviso', () => {
     expect(source).toContain("import { presentWatchtowerAviso, reconcileMissionWatchtower } from './mission-watchtower.js'");
     expect(source).toContain('listOpportunities');
-    expect(source).toContain('presentWatchtowerAviso(transition, opportunities, byId[transition.missionId])');
-    expect(source).toContain('if (aviso.notify) await notifyMissionTransition(transition, aviso)');
+    expect(source).toContain('presentWatchtowerAviso(transition, opportunities, mission)');
+    expect(source).toContain('shouldOsNotifyWatchtowerAviso(aviso, { coveringKernelFindNotifications: covering })');
     expect(source).not.toContain("title: forged ? 'Efesto finished forging'");
+  });
+
+  it('delivers Kernel NotificationGateway SUPPORT Find receipts (half-built path closed)', () => {
+    expect(source).toContain('listNotifications');
+    expect(source).toContain('markNotificationRead');
+    expect(source).toContain('deliverKernelSupportedFindNotifications');
+    expect(source).toContain('undeliveredKernelSupportedFindNotifications');
+    expect(source).toContain('kernelFindsCoveringMission');
+    expect(source).toContain('chromeNotificationIdForKernelNotification');
+    expect(source).toContain("pendingWorkspaceView: 'finds'");
   });
 });
