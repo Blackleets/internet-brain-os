@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { FormEvent } from 'react';
-import { FindsView, GoalsView, HomeView, type ChatMessage, type Provider } from './efesto-product-views';
+import { AgentsView, FindsView, GoalsView, HomeView, type ChatMessage, type Provider } from './efesto-product-views';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
 
 afterEach(cleanup);
@@ -285,5 +285,21 @@ describe('FindCard / FindsView mission-proof SUPPORT honesty', () => {
     expect(screen.getByText(/Solo aparecen Finds con Kernel SUPPORT/i)).toBeTruthy();
     expect(screen.queryByText(/resultados promovidos/i)).toBeNull();
     expect(screen.getByText(/promover o completar no es un Find/i)).toBeTruthy();
+  });
+});
+
+describe('AgentsView Hermes return honesty', () => {
+  it('must not brand Hermes candidates as findings before Kernel SUPPORT', () => {
+    render(
+      <AgentsView
+        snapshot={snapshotWithMissions([])}
+        onSettings={() => undefined}
+        onNewGoal={() => undefined}
+      />,
+    );
+    expect(screen.getByText(/Sus candidatos deben regresar por el bridge autenticado/i)).toBeTruthy();
+    expect(screen.getByText(/Un Find exige Kernel SUPPORT/i)).toBeTruthy();
+    expect(screen.queryByText(/Sus findings deben/i)).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Hermes Agent' })).toBeTruthy();
   });
 });
