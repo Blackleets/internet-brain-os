@@ -44,4 +44,30 @@ describe('Hermes sensitive-data preflight', () => {
       { code: 'COOKIE_HEADER', line: 2 },
     ]);
   });
+
+  it('blocks Kernel auth header and apiToken JSON fields that previously bypassed preflight', () => {
+    const kernelToken = 'kernel-token-value-that-must-not-ingest';
+    const input = [
+      `x-hephaestus-token: ${kernelToken}`,
+      `X-Hephaestus-Token: ${kernelToken}`,
+      `{"apiToken":"${kernelToken}"}`,
+      `{"kernelApiToken":"${kernelToken}"}`,
+      `{"x-hephaestus-token":"${kernelToken}"}`,
+      `{"HEPHAESTUS_API_TOKEN":"${kernelToken}"}`,
+    ].join('\n');
+
+    const findings = scanHermesSensitiveData(input);
+
+    // Header form → HEPHAESTUS_TOKEN_HEADER; JSON credential fields → SENSITIVE_JSON_FIELD.
+    // Previously all six lines returned [] and could pass Hermes ingest/import preflight.
+    expect(findings).toEqual([
+      { code: 'HEPHAESTUS_TOKEN_HEADER', line: 1 },
+      { code: 'HEPHAESTUS_TOKEN_HEADER', line: 2 },
+      { code: 'SENSITIVE_JSON_FIELD', line: 3 },
+      { code: 'SENSITIVE_JSON_FIELD', line: 4 },
+      { code: 'SENSITIVE_JSON_FIELD', line: 5 },
+      { code: 'SENSITIVE_JSON_FIELD', line: 6 },
+    ]);
+    expect(JSON.stringify(findings)).not.toContain(kernelToken);
+  });
 });
