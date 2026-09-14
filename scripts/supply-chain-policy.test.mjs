@@ -26,4 +26,15 @@ describe('supply-chain audit policy', () => {
     expect(lockfile).toContain('nanoid: 3.3.18');
     expect(lockfile).not.toContain('nanoid@3.3.16:');
   });
+
+  it('requires patched Next.js and sharp floors that clear production audit criticals', async () => {
+    const policy = await read(workspaceUrl);
+    const dashboardPkg = await read(new URL('../apps/dashboard/package.json', import.meta.url));
+    // GHSA-p293-qw3h-jr36 / GHSA-2xp9-vwfh-vxw4: next >=16.0.0 <16.3.3
+    expect(dashboardPkg).toMatch(/"next"\s*:\s*"16\.(?:[3-9]|\d{2,})\./);
+    expect(dashboardPkg).not.toMatch(/"next"\s*:\s*"16\.2\./);
+    // GHSA-rgj7-g3m4-5g8c: sharp <0.35.4 via next>sharp
+    expect(policy).toContain("sharp: '>=0.35.4'");
+    expect(policy).not.toContain("sharp: '>=0.35.0'");
+  });
 });

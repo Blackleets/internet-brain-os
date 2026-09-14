@@ -63,8 +63,8 @@ describe('Efesto goal-first product shell', () => {
     expect(screen.getByText('Confirmación humana')).toBeTruthy();
     expect(screen.getByLabelText('Goal')).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Modo de trabajo' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Chat', exact: true }).getAttribute('aria-pressed')).toBe('false');
-    expect(screen.getByRole('button', { name: 'Goal', exact: true }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Chat' }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('button', { name: 'Goal' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: 'Conectar' })).toBeTruthy();
     expect(requests).toHaveLength(0);
   });
@@ -78,7 +78,7 @@ describe('Efesto goal-first product shell', () => {
   it('drives the Home forge from Shared Goal Truth when legacy Mission state conflicts', async () => {
     render(<EfestoProductShell />);
     await connect();
-    fireEvent.click(screen.getByRole('button', { name: 'Inicio', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inicio' }));
     // Shared Goal Truth wins: the goal-surface mission reports workState
     // 'verifying' while the legacy agent-mission record says 'forged'.
     const stateAction = await screen.findByText('Verificando Evidence');
@@ -95,7 +95,7 @@ describe('Efesto goal-first product shell', () => {
   it('prepares a Goal locally and mutates the Kernel only after explicit confirmation', async () => {
     render(<EfestoProductShell />);
     await connect();
-    fireEvent.click(screen.getByRole('button', { name: 'Inicio', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inicio' }));
     const goal = 'Encuéntrame un taladro bueno por 18 a 25 euros';
     fireEvent.change(screen.getByLabelText('Goal'), { target: { value: goal } });
     fireEvent.click(screen.getByRole('button', { name: 'Preparar Goal' }));
@@ -105,7 +105,7 @@ describe('Efesto goal-first product shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar y ejecutar' }));
     await waitFor(() => expect(requests.filter((request) => request.method === 'POST').map((request) => new URL(request.url).pathname)).toEqual(['/api/goals', '/api/goals/goal-created/missions']));
     expect(await screen.findByText('Goal persistido y misión confirmada para Hermes.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Goal', exact: true }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Goal' }).getAttribute('aria-pressed')).toBe('true');
   });
 
   it('wires Finds feedback and Evidence source inspection to real Kernel routes', async () => {

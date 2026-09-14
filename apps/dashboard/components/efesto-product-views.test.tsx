@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { FormEvent } from 'react';
 import { AgentsView, FindsView, GoalsView, HomeView, type ChatMessage, type Provider } from './efesto-product-views';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
+import type { MissionSummary } from '../lib/kernel/contracts';
 
 afterEach(cleanup);
 
@@ -52,7 +53,7 @@ describe('GoalsView mission StatePill honesty', () => {
             id: 'mission-forged',
             goalId: 'goal-1',
             status: 'completed',
-            executionPhase: 'forged',
+            executionPhase: 'forged' as const,
             attempt: 1,
             createdAt: '2026-07-26T10:04:00.000Z',
           },
@@ -191,10 +192,10 @@ describe('FindCard / FindsView mission-proof SUPPORT honesty', () => {
     // intentionally no item.supported — proof lives on verificationResults only
   };
 
-  const missions = [{
+  const missions: MissionSummary[] = [{
     id: 'mission-proof',
     goalId: 'goal-1',
-    status: 'completed' as const,
+    status: 'completed',
     executionPhase: 'forged',
     attempt: 1,
     createdAt: '2026-09-02T00:00:00.000Z',
