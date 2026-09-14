@@ -28,9 +28,9 @@ function Unavailable() {
 function ScorecardBody({ scorecard }: { scorecard: ProductValueScorecard }) {
   const unavailableCount = countUnavailable(scorecard);
   return <>
-    {/* Fail-close Find labels: goalLinkedFinds / useful Find metrics are Kernel SUPPORT-only
-        (product-value-scorecard.mjs). Bare "Find útil" / "Goal verificado" must name SUPPORT
-        like Hallazgos empty and Misiones forjadas honesty. */}
+    {/* Fail-close Find labels: goalLinkedFinds / useful Find / dismissal metrics are Kernel
+        SUPPORT-only (product-value-scorecard.mjs). Bare "Find útil" / "Goal verificado" /
+        "Descartados" must name SUPPORT like Hallazgos empty and Misiones forjadas honesty. */}
     <dl className="scorecard-primary">
       <ScoreMetric icon={<Gauge size={17} aria-hidden="true" />} label="Goals con Find SUPPORT útil" metric={scorecard.primary.goalUsefulFindRate} />
       <ScoreMetric icon={<Clock3 size={17} aria-hidden="true" />} label="Tiempo al primer Find SUPPORT útil" metric={scorecard.primary.timeToFirstUsefulFind} />
@@ -43,7 +43,7 @@ function ScorecardBody({ scorecard }: { scorecard: ProductValueScorecard }) {
       <span>Goals medidos <strong>{scorecard.coverage.executedGoals}</strong></span>
       <span>Finds SUPPORT con Goal <strong>{scorecard.coverage.goalLinkedFinds}</strong></span>
       <span>Fallos de misión <strong>{formatMetric(scorecard.guardrails.missionFailureRate)}</strong></span>
-      <span>Descartados <strong>{formatMetric(scorecard.guardrails.findDismissalNotInterestedRate)}</strong></span>
+      <span>Finds SUPPORT descartados <strong>{formatMetric(scorecard.guardrails.findDismissalNotInterestedRate)}</strong></span>
     </div>
     {unavailableCount > 0 ? <p className="scorecard-caveat">{unavailableCount} métricas aún no tienen un ledger o cohorte fiable. Efesto muestra “Sin datos” en lugar de estimarlas.</p> : null}
   </>;

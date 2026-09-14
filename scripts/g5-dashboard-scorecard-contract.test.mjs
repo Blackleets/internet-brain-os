@@ -58,4 +58,11 @@ describe('G5.2 active dashboard product-scorecard contract', () => {
     expect(panelSource).toMatch(/no_goal_linked_finds:\s*'Aún no hay Finds con Kernel SUPPORT ligados a un Goal\.'/);
     expect(panelSource).toMatch(/no_useful_or_saved_find_feedback:\s*'Aún no hay Finds con Kernel SUPPORT marcados como útiles o guardados\.'/);
   });
+
+  it('findDismissal guardrail label names Kernel SUPPORT Finds, never bare Descartados alone', () => {
+    // findDismissalNotInterestedRate denominator is goalLinkedFinds (SUPPORT-only).
+    expect(panelSource).toContain('Finds SUPPORT descartados');
+    expect(panelSource).toContain('findDismissalNotInterestedRate');
+    expect(panelSource).not.toContain('>Descartados <');
+  });
 });
