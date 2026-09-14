@@ -122,6 +122,14 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(workspaces).not.toContain("if (mission.executionPhase === 'forged') return { state: 'healthy', label: 'forged' };");
   });
 
+  it('keeps extension #mission-progress Forged stage behind Kernel SUPPORT', async () => {
+    const journey = await text('apps/extension/src/product-journey.js');
+    expect(journey).toContain('forgedWithSupport');
+    expect(journey).toContain('countMissionSupportedFinds(mission)');
+    expect(journey).toContain('forgedWithSupport ? 3 : 2');
+    expect(journey).not.toContain('completed: forged ? 3 : 2');
+  });
+
   it('keeps mobile-width support separate from remote Kernel authority', async () => {
     const designContract = await text('docs/product-design/goal-first-cross-surface-g0.md');
     expect(designContract).toContain('390×844');
