@@ -110,4 +110,42 @@ describe('Hermes sensitive-data preflight', () => {
     ]);
     expect(JSON.stringify(findings)).not.toContain(kernelToken);
   });
+
+  it('blocks Chrome HAR name/value Kernel credential dumps that previously bypassed key:value preflight', () => {
+    const kernelToken = 'kernel-token-value-that-must-not-ingest';
+    // Real mounted DevTools dump: Network → Save all as HAR / Copy as HAR stores Kernel
+    // auth as adjacent name/value objects, not "token":"..." or x-hephaestus-token: value.
+    const prettyHar = JSON.stringify({
+      log: {
+        version: '1.2',
+        entries: [{
+          request: {
+            method: 'GET',
+            url: 'http://127.0.0.1:4000/api/opportunities',
+            headers: [
+              { name: 'Accept', value: 'application/json' },
+              { name: 'x-hephaestus-token', value: kernelToken },
+              { name: 'Authorization', value: `Bearer ${kernelToken}` },
+            ],
+            queryString: [{ name: 'token', value: kernelToken }],
+          },
+        }],
+      },
+    }, null, 2);
+    const compact = [
+      JSON.stringify({ name: 'kernelApiToken', value: kernelToken }),
+      JSON.stringify({ name: 'apiToken', value: kernelToken }),
+      JSON.stringify({ name: 'Cookie', value: `session=${kernelToken}` }),
+    ].join('\n');
+
+    const findings = scanHermesSensitiveData(`${prettyHar}\n${compact}`);
+
+    expect(findings.length).toBeGreaterThanOrEqual(5);
+    expect(findings.every((item) => item.code === 'SENSITIVE_HAR_NAME_VALUE')).toBe(true);
+    expect(JSON.stringify(findings)).not.toContain(kernelToken);
+    // Proven bypass before this gate: the same HAR returned [].
+    expect(scanHermesSensitiveData(JSON.stringify({ name: 'x-hephaestus-token', value: kernelToken }))).toEqual([
+      { code: 'SENSITIVE_HAR_NAME_VALUE', line: 1 },
+    ]);
+  });
 });

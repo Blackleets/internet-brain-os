@@ -15,6 +15,13 @@ const SENSITIVE_PATTERNS = [
     String.raw`(?:["'](?:${SENSITIVE_FIELD_NAMES})["']|(?<![A-Za-z0-9_'"-])(?:${SENSITIVE_FIELD_NAMES})(?![A-Za-z0-9_]))\s*[:=]\s*["'][^"']+["']`,
     'giu',
   )],
+  // Chrome/DevTools HAR + Network copy: headers/query/postData use adjacent
+  // {"name":"x-hephaestus-token","value":"..."} (or pretty-printed) — not key:value
+  // JSON fields, so SESSION dumps and Kernel API HARs previously bypassed preflight.
+  ['SENSITIVE_HAR_NAME_VALUE', new RegExp(
+    String.raw`["']name["']\s*:\s*["'](?:${SENSITIVE_FIELD_NAMES}|set[_-]?cookie)["']\s*,\s*["']value["']\s*:\s*["'][^"']{8,}["']`,
+    'giu',
+  )],
   ['SENSITIVE_ENV_VALUE', /\b(?:IBOS_HERMES_SECRET|HEPHAESTUS_HERMES_SECRET|HEPHAESTUS_API_TOKEN|OPENAI_API_KEY|ANTHROPIC_API_KEY|GITHUB_TOKEN)\s*=\s*["']?[^\s"']+/giu],
   ['URL_CREDENTIALS', /https?:\/\/[^/\s:@]+:[^/\s@]+@/giu],
 ];
