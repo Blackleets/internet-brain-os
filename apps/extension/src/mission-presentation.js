@@ -36,8 +36,12 @@ function missionStatusCopy(mission) {
     // Fail-close positive path: name Kernel SUPPORT Finds (same honesty as #mission-state / Living Forge).
     // Never claim bare "findings passed through" — unsupported verification rows may coexist.
     if (finds > 0) {
+      // Fail-close positive label: name Kernel SUPPORT (same honesty as orb / Living Forge).
+      // Bare "Commission forged" must not stand in for a sealed SUPPORT Find on mission cards.
       return {
-        label: STATUS_COPY.completed.label,
+        label: finds === 1
+          ? 'A Kernel SUPPORT Find was forged'
+          : 'Kernel SUPPORT Finds were forged',
         detail: finds === 1
           ? 'The bounded attempt finished. 1 Find passed Kernel SUPPORT.'
           : `The bounded attempt finished. ${finds} Finds passed Kernel SUPPORT.`,

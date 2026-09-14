@@ -62,9 +62,13 @@ describe('Shared Goal Truth cross-surface freeze', () => {
 
   it('keeps mission card Commission forged behind Kernel forged', async () => {
     const presentation = await text('apps/extension/src/mission-presentation.js');
+    // STATUS_COPY.completed keeps the forged-gated constant; runtime positive path must name SUPPORT.
     expect(presentation).toContain("label: 'Commission forged'");
     expect(presentation).toContain("mission.executionPhase === 'forged' || mission.workState === 'forged'");
     expect(presentation).toContain('STATUS_COPY.completedWithoutForge');
+    expect(presentation).toContain("'A Kernel SUPPORT Find was forged'");
+    expect(presentation).toContain("'Kernel SUPPORT Finds were forged'");
+    expect(presentation).not.toContain('label: STATUS_COPY.completed.label');
   });
 
   it('keeps mission timeline Kernel verification completed behind forge', async () => {

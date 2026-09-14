@@ -101,7 +101,8 @@ describe('mission presentation', () => {
       executionPhase: 'forged',
       verificationResults: [{ evidenceId: 'ev-1', supported: true }],
     });
-    expect(supported.statusLabel).toBe('Commission forged');
+    expect(supported.statusLabel).toBe('A Kernel SUPPORT Find was forged');
+    expect(supported.statusLabel).not.toMatch(/Commission forged|Completado/i);
     expect(supported.statusDetail).toMatch(/1 Find passed Kernel SUPPORT/i);
     expect(supported.statusDetail).not.toMatch(/findings passed through the local Kernel/i);
 
@@ -114,7 +115,8 @@ describe('mission presentation', () => {
         { evidenceId: 'ev-3', supported: false },
       ],
     });
-    expect(supportedMany.statusLabel).toBe('Commission forged');
+    expect(supportedMany.statusLabel).toBe('Kernel SUPPORT Finds were forged');
+    expect(supportedMany.statusLabel).not.toMatch(/Commission forged|Completado/i);
     expect(supportedMany.statusDetail).toMatch(/2 Finds passed Kernel SUPPORT/i);
     expect(supportedMany.statusDetail).not.toMatch(/findings passed through/i);
   });
