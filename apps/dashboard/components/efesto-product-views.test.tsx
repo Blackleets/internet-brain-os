@@ -287,6 +287,22 @@ describe('FindCard / FindsView mission-proof SUPPORT honesty', () => {
     expect(screen.queryByText(/resultados promovidos/i)).toBeNull();
     expect(screen.getByText(/promover o completar no es un Find/i)).toBeTruthy();
   });
+
+  it('disconnected Hallazgos empty must name Kernel SUPPORT like bandeja sibling', () => {
+    // Without connection FindsView keeps the empty mounted — gate-blind "hallazgos reales"
+    // must name Kernel SUPPORT like the connected empty and extension bandeja HTML.
+    render(
+      <FindsView
+        connected={false}
+        missions={[]}
+        onFeedback={() => undefined}
+        opportunities={[]}
+      />,
+    );
+    expect(screen.getByText('Kernel sin conexión')).toBeTruthy();
+    expect(screen.getByText(/cargar hallazgos con Kernel SUPPORT/i)).toBeTruthy();
+    expect(screen.queryByText(/cargar hallazgos reales/i)).toBeNull();
+  });
 });
 
 describe('AgentsView Hermes return honesty', () => {
