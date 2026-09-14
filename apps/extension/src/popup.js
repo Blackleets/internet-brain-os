@@ -347,7 +347,7 @@ function renderCommandCenter(opportunities, missions = []) {
   const container = $('#command-center-content');
   container.replaceChildren();
   if (!center.lead) {
-    const empty = document.createElement('p'); empty.className = 'empty'; empty.textContent = 'No action queue yet. Efesto needs a provenance-backed Find first.'; container.append(empty); return;
+    const empty = document.createElement('p'); empty.className = 'empty'; empty.textContent = 'No action queue yet. Efesto needs a Kernel SUPPORT Find first.'; container.append(empty); return;
   }
 
   const lead = document.createElement('article'); lead.className = 'command-lead';

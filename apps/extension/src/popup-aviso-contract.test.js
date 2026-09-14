@@ -126,3 +126,13 @@ describe('popup Goal forge toast SUPPORT honesty', () => {
     expect(popup).not.toContain('prioritize matching opportunities');
   });
 });
+
+describe('popup command-center empty Find gate honesty', () => {
+  it('empty command center must name Kernel SUPPORT — never provenance-backed alone', () => {
+    // Provenance-backed (Evidence+URL) is the old wrong Find gate. Empty Centro de Mando
+    // must require Kernel SUPPORT like the Finds bandeja empty copy.
+    expect(popup).toContain('No action queue yet');
+    expect(popup).toMatch(/Kernel SUPPORT Find/);
+    expect(popup).not.toContain('provenance-backed Find');
+  });
+});
