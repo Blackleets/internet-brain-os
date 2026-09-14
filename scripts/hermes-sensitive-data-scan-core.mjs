@@ -22,6 +22,13 @@ const SENSITIVE_PATTERNS = [
     String.raw`["']name["']\s*:\s*["'](?:${SENSITIVE_FIELD_NAMES}|set[_-]?cookie)["']\s*,\s*["']value["']\s*:\s*["'][^"']{8,}["']`,
     'giu',
   )],
+  // Node undici/fetch Headers.entries() / request init dumps use Kernel auth as
+  // ["x-hephaestus-token","..."] tuples — not HAR name/value objects or key:value JSON.
+  // Hermes workers + acceptance libs are Node fetch; these dumps previously bypassed preflight.
+  ['SENSITIVE_HEADER_TUPLE', new RegExp(
+    String.raw`\[\s*["'](?:${SENSITIVE_FIELD_NAMES}|set[_-]?cookie)["']\s*,\s*["'][^"']{8,}["']\s*\]`,
+    'giu',
+  )],
   ['SENSITIVE_ENV_VALUE', /\b(?:IBOS_HERMES_SECRET|HEPHAESTUS_HERMES_SECRET|HEPHAESTUS_API_TOKEN|OPENAI_API_KEY|ANTHROPIC_API_KEY|GITHUB_TOKEN)\s*=\s*["']?[^\s"']+/giu],
   ['URL_CREDENTIALS', /https?:\/\/[^/\s:@]+:[^/\s@]+@/giu],
 ];

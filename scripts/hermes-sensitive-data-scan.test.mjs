@@ -148,4 +148,29 @@ describe('Hermes sensitive-data preflight', () => {
       { code: 'SENSITIVE_HAR_NAME_VALUE', line: 1 },
     ]);
   });
+
+  it('blocks Node undici/fetch header-tuple Kernel credential dumps that previously bypassed HAR/JSON preflight', () => {
+    const kernelToken = 'kernel-token-value-that-must-not-ingest';
+    // Real mounted Node shapes: undici/fetch RequestInit.headers as array-of-pairs,
+    // Headers.entries() JSON dumps, and pretty-printed mission-worker request options.
+    // 213b340 closed HAR {name,value}; key:value JSON still misses ["x-hephaestus-token","..."].
+    const input = [
+      JSON.stringify({ headers: [['x-hephaestus-token', kernelToken], ['accept', 'application/json']] }),
+      JSON.stringify({ headers: [['Authorization', `Bearer ${kernelToken}`]] }),
+      JSON.stringify({ headers: [['apiToken', kernelToken]] }),
+      JSON.stringify([['kernelApiToken', kernelToken]]),
+      JSON.stringify({ method: 'GET', headers: [['accept', 'application/json'], ['x-hephaestus-token', kernelToken]] }, null, 2),
+      `headers: [ [ 'x-hephaestus-token', '${kernelToken}' ] ]`,
+    ].join('\n');
+
+    const findings = scanHermesSensitiveData(input);
+
+    expect(findings.length).toBeGreaterThanOrEqual(6);
+    expect(findings.every((item) => item.code === 'SENSITIVE_HEADER_TUPLE')).toBe(true);
+    expect(JSON.stringify(findings)).not.toContain(kernelToken);
+    // Proven bypass before this gate: the same undici header array returned [].
+    expect(scanHermesSensitiveData(JSON.stringify({ headers: [['x-hephaestus-token', kernelToken]] }))).toEqual([
+      { code: 'SENSITIVE_HEADER_TUPLE', line: 1 },
+    ]);
+  });
 });
