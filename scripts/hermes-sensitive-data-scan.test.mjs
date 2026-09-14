@@ -45,6 +45,24 @@ describe('Hermes sensitive-data preflight', () => {
     ]);
   });
 
+  it('blocks dashboard session connection token JSON that previously bypassed preflight', () => {
+    const kernelToken = 'kernel-token-value-that-must-not-ingest';
+    // Real mounted dashboard shape: SESSION_CONNECTION_KEY / KernelConnection stores { baseUrl, token }.
+    // 50da372 covered apiToken/kernelApiToken but not bare "token", so session dumps could ingest.
+    const input = [
+      JSON.stringify({ baseUrl: 'http://127.0.0.1:4000', token: kernelToken }),
+      `{"token":"${kernelToken}"}`,
+    ].join('\n');
+
+    const findings = scanHermesSensitiveData(input);
+
+    expect(findings).toEqual([
+      { code: 'SENSITIVE_JSON_FIELD', line: 1 },
+      { code: 'SENSITIVE_JSON_FIELD', line: 2 },
+    ]);
+    expect(JSON.stringify(findings)).not.toContain(kernelToken);
+  });
+
   it('blocks Kernel auth header and apiToken JSON fields that previously bypassed preflight', () => {
     const kernelToken = 'kernel-token-value-that-must-not-ingest';
     const input = [
