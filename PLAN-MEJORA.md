@@ -5,7 +5,7 @@
 ## Current checkpoint - 2026-09-14
 
 - PR #239 merged to `main` (`944048d`). Home/Hallazgos Kernel-supported Find chrome sealed.
-- Extension now delivers Kernel NotificationGateway unread `find:supported:*` receipts via existing chrome.notifications (no new UI). Packaged zip must include `icons/efesto-notification.png` (chrome.notifications rejects missing/SVG-only packaging). Covering for watchtower Find/forged suppress stays after mark-read (state-agnostic covering pool); opportunities-empty forged cannot double-fire beside Kernel Find. Watchtower Find aviso uses max(inbox Finds, mission verificationResults SUPPORT) for Living Forge parity — empty or partial inbox must not demote/understate SUPPORT.
+- Extension now delivers Kernel NotificationGateway unread `find:supported:*` receipts via existing chrome.notifications (no new UI). Packaged zip must include `icons/efesto-notification.png` (chrome.notifications rejects missing/SVG-only packaging). Covering for watchtower Find/forged suppress stays after mark-read (state-agnostic covering pool); opportunities-empty forged cannot double-fire beside Kernel Find. Watchtower Find aviso, Living Forge `#forge-activity`, and popup `#mission-state` use max(inbox Finds, mission verificationResults SUPPORT) so empty/partial inbox cannot demote SUPPORT-proven forged missions to Research completed / kind:forged.
 - Home forge-state-action forged chrome uses focused-mission SUPPORT count (not global inbox) — zero-SUPPORT forged stays Investigación terminada. `publicLaunchApproved` remains false.
 - Next: packaged UAT-1 through UAT-6 on the exact candidate after Lewis asks; local scorecard already exists on Objetivos.
 - No ADMITTED wiring, i18n, Intelligence Brief, PWA, extra IPs, or founder Kernel in this slice.

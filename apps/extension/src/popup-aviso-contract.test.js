@@ -7,6 +7,8 @@ const popupHtml = readFileSync(new URL('./popup.html', import.meta.url), 'utf8')
 describe('popup Watchtower Find copy contract', () => {
   it('fail-closes mission-state Find copy to Kernel SUPPORT, not bare opportunities', () => {
     expect(popup).toContain('kernelSupportedFindsForMission(opportunities, latest)');
+    expect(popup).toContain('presentMission(latest).opportunitiesPromoted');
+    expect(popup).toContain('Math.max(');
     expect(popup).toContain('presentWatchtowerBanner(unread, latest)');
     expect(popup).toContain('forgeActivityForMission(latest, opportunities)');
     expect(popup).toContain("Find' : 'Finds'} passed Kernel SUPPORT");

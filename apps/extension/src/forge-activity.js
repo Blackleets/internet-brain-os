@@ -16,7 +16,13 @@ export function forgeActivityForMission(mission, opportunities = []) {
   if (mission.status === 'waiting_for_agent') return { ...ACTIVITIES.error, label: 'Hermes not available', detail: 'The mission is authorized, but no Hermes worker is connected.' };
   if (mission.status === 'queued') return ACTIVITIES.queued;
   if (mission.status === 'completed' && (mission.executionPhase === 'forged' || mission.workState === 'forged')) {
-    const found = kernelSupportedFindsForMission(opportunities, mission).length;
+    // Living Forge truth = max(inbox Finds, verificationResults SUPPORT) — same gate as
+    // presentWatchtowerAviso / mission-presentation. listOpportunities catch→[] must not
+    // demote a SUPPORT-proven mission to "Research completed" on #forge-activity-label.
+    const found = Math.max(
+      kernelSupportedFindsForMission(opportunities, mission).length,
+      countMissionSupportedFinds(mission),
+    );
     // Fail-close Living Forge label+detail to Kernel SUPPORT (detail was aligned in da68517;
     // label must not keep branding SUPPORT Finds as bare "useful lead" on #forge-activity-label).
     return found > 0
@@ -30,6 +36,18 @@ export function forgeActivityForMission(mission, opportunities = []) {
   if (mission.status === 'completed') return ACTIVITIES.idle;
   if (mission.status === 'failed') return ACTIVITIES.error;
   return ACTIVITIES.idle;
+}
+
+
+/** Living Forge gate: verificationResults with supported === true. */
+function countMissionSupportedFinds(mission) {
+  const results = mission?.verificationResults;
+  if (!Array.isArray(results)) return 0;
+  let n = 0;
+  for (const entry of results) {
+    if (entry && typeof entry === 'object' && entry.supported === true) n += 1;
+  }
+  return n;
 }
 
 export function temporaryForgeActivity(kind) {

@@ -195,7 +195,12 @@ async function loadAgentHub(stored) {
   try { opportunities = await listOpportunities(auth); } catch { opportunities = []; }
   const latest = newestMission(missions);
   const forged = latest?.status === 'completed' && (latest.executionPhase === 'forged' || latest.workState === 'forged');
-  const findCount = kernelSupportedFindsForMission(opportunities, latest).length;
+  // Living Forge / mission-presentation parity: max(inbox, verificationResults SUPPORT).
+  // listOpportunities catch→[] must not demote #mission-state below Kernel SUPPORT proof.
+  const findCount = Math.max(
+    kernelSupportedFindsForMission(opportunities, latest).length,
+    latest ? presentMission(latest).opportunitiesPromoted : 0,
+  );
   // Fail-close mission-state: SUPPORT-gated findCount must name Kernel SUPPORT Finds, not bare opportunities.
   const completedCopy = findCount > 0
     ? `${findCount} ${findCount === 1 ? 'Find' : 'Finds'} passed Kernel SUPPORT`

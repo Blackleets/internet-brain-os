@@ -38,6 +38,29 @@ describe('pixel forge activity contract', () => {
     });
   });
 
+
+  it('uses mission verificationResults SUPPORT when inbox is empty or understates', () => {
+    // listOpportunities catch→[] must not demote Living Forge below Kernel SUPPORT proof.
+    expect(forgeActivityForMission(forgedMission, [])).toMatchObject({
+      tone: 'success',
+      label: 'A Kernel SUPPORT Find was forged',
+      detail: '1 Find passed Kernel SUPPORT and were forged.',
+    });
+    const twoSupport = {
+      ...forgedMission,
+      verificationResults: [
+        { candidateId: 'cand-1', evidenceId: 'ev-1', supported: true },
+        { candidateId: 'cand-2', evidenceId: 'ev-2', supported: true },
+      ],
+    };
+    // Partial opportunities page understates vs Living Forge verificationResults.
+    expect(forgeActivityForMission(twoSupport, [supported])).toMatchObject({
+      tone: 'success',
+      label: 'Kernel SUPPORT Finds were forged',
+      detail: '2 Finds passed Kernel SUPPORT and were forged.',
+    });
+  });
+
   it('does not treat opportunitiesPromoted or Evidence+URL as a Find without SUPPORT', () => {
     const unverified = { ...supported, supported: undefined };
     const mission = { ...forgedMission, verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: false }] };
