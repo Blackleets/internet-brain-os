@@ -54,7 +54,9 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   const showSuggestions = chatMode ? messages.length === 0 : !preparedGoal && supportedFinds.length === 0;
   const surfaceTitle = chatMode
     ? (messages.length ? 'Conversación' : 'Nueva conversación')
-    : (preparedGoal ? 'Goal preparado' : supportedFinds.length ? 'Hallazgo útil' : 'Nuevo Goal');
+    // Fail-close chrome: supportedFinds is Kernel SUPPORT-only (shell kernelSupportedFinds).
+    // Bare "Hallazgo útil" must name SUPPORT like ActivityView / scorecard Find SUPPORT honesty.
+    : (preparedGoal ? 'Goal preparado' : supportedFinds.length ? 'Hallazgo · Kernel SUPPORT' : 'Nuevo Goal');
 
   return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal')} aria-label={chatMode ? 'Conversación con Efesto' : 'Nuevo Goal'}>
     <header className="forge-surface-bar">
@@ -108,7 +110,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
       </section> : supportedFinds.length ? <section className="forge-home-finds" aria-label="Hallazgos respaldados por el Kernel">
         <header>
           <small>FIND · KERNEL SUPPORT</small>
-          <h1>Hallazgo útil</h1>
+          <h1>Hallazgo · Kernel SUPPORT</h1>
           <p>Resultado persistido por el Kernel: título, fuente y procedencia SUPPORT. Un snippet de Hermes no aparece aquí.</p>
         </header>
         <div className="find-grid">{supportedFinds.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFindFeedback ?? (() => undefined)} onOpenCase={onOpenCase} />)}</div>

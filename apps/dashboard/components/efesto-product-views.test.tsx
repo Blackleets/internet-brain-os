@@ -116,11 +116,21 @@ describe('HomeView Kernel-supported Find', () => {
 
   it('renders persisted Kernel Find title, sourceUrl and SUPPORT provenance', () => {
     render(<HomeView {...homeProps} supportedFinds={[supported]} />);
-    expect(screen.getByRole('heading', { name: 'Hallazgo útil' })).toBeTruthy();
+    // Fail-close: Home finds chrome/h1 must name Kernel SUPPORT (supportedFinds is SUPPORT-only).
+    expect(screen.getByRole('heading', { name: 'Hallazgo · Kernel SUPPORT' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Hallazgo útil' })).toBeNull();
     expect(screen.getByText('Taladro Bosch 21 EUR')).toBeTruthy();
-    expect(screen.getByText('Kernel SUPPORT')).toBeTruthy();
+    expect(screen.getAllByText('Kernel SUPPORT').length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: /Abrir fuente/ }).getAttribute('href')).toBe('https://shop.example/drill');
     expect(screen.queryByText('Hermes snippet drill')).toBeNull();
+  });
+
+  it('Home finds surfaceTitle names Kernel SUPPORT, never bare Hallazgo útil alone', () => {
+    // page.tsx → EfestoProductShell → HomeView; supportedFinds is kernelSupportedFinds-only.
+    render(<HomeView {...homeProps} supportedFinds={[supported]} />);
+    // Chrome strong + h1 both name SUPPORT (gate-blind Hallazgo útil must not remain).
+    expect(screen.getAllByText('Hallazgo · Kernel SUPPORT').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('Hallazgo útil')).toBeNull();
   });
 
   it('does not mint a Find card from a Hermes snippet', () => {
