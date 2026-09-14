@@ -337,6 +337,16 @@ describe('ActivityView Kernel SUPPORT honesty', () => {
     expect(screen.queryByText(/una misión o un hallazgo, aparecerá/i)).toBeNull();
   });
 
+  it('disconnected Actividad empty must name Kernel SUPPORT like Hallazgos sibling', () => {
+    // Without connection ActivityView keeps the empty mounted. overview activityFrom only
+    // lists opportunity rows with Kernel SUPPORT — gate-blind "actividad real" must name
+    // SUPPORT like the connected empty and Hallazgos disconnected honesty.
+    render(<ActivityView connected={false} />);
+    expect(screen.getByText('Kernel sin conexión')).toBeTruthy();
+    expect(screen.getByText(/Conecta el Kernel para leer actividad real de Goals, misiones y hallazgos con Kernel SUPPORT/i)).toBeTruthy();
+    expect(screen.queryByText(/^Conecta el Kernel para leer actividad real\.$/)).toBeNull();
+  });
+
   it('opportunity activity rows must name Kernel SUPPORT Hallazgo', () => {
     const snapshot = snapshotWithMissions([]);
     snapshot.activity = [
