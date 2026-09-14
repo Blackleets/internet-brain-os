@@ -23,12 +23,28 @@ export async function syncGoalSurfacePopup(options = {}) {
   }
 }
 
+/**
+ * Fail-close #mission-state chrome for Shared Goal Truth sync.
+ * Raw workState=forged must not overwrite loadAgentHub's SUPPORT-gated
+ * completed / research_completed — one-click-mission-ui MutationObserver
+ * re-applies Shared Truth whenever legacy diverges, so ungated forged
+ * permanently undoes Agent Hub Completado honesty.
+ * forged + findCount>0 → completed (green); zero/missing SUPPORT → research_completed.
+ */
+function chromeStatusForGoalSurfaceWork(workState, findCount) {
+  if (workState === 'forged') {
+    const found = Number.isSafeInteger(findCount) ? findCount : undefined;
+    return found !== undefined && found > 0 ? 'completed' : 'research_completed';
+  }
+  return workState ?? 'idle';
+}
+
 export function applyGoalTruthPresentation(doc, presentation) {
   const focused = presentation?.focused;
   const activity = presentation?.forgeActivity ?? {
     label: 'The forge is ready', detail: 'Create a Goal or analyze a public page.', tone: 'idle',
   };
-  const status = focused?.workState ?? 'idle';
+  const status = chromeStatusForGoalSurfaceWork(focused?.workState, focused?.findCount);
   const text = focused?.workLabel ?? 'No research mission yet';
   setText(doc.querySelector?.('#mission-state'), text);
   setDataset(doc.querySelector?.('#mission-state'), 'status', status);

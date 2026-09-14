@@ -61,6 +61,33 @@ describe('Shared Goal Truth popup binding', () => {
     expect(document.querySelector('#living-forge')?.dataset.activity).toBe('verifying');
   });
 
+
+  it('gates #mission-state chrome on GoalSurface findCount — forged without SUPPORT is research_completed', () => {
+    mount();
+    const zero = applyGoalTruthPresentation(document, {
+      focused: { workState: 'forged', workLabel: 'Research completed', findCount: 0 },
+      forgeActivity: { label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.', tone: 'idle' },
+    });
+    expect(zero).toEqual({ status: 'research_completed', text: 'Research completed' });
+    expect(document.querySelector('#mission-state')?.dataset.status).toBe('research_completed');
+    expect(document.querySelector('#mission-state')?.dataset.status).not.toBe('forged');
+    expect(document.querySelector('#living-forge')?.dataset.activity).toBe('idle');
+
+    const missing = applyGoalTruthPresentation(document, {
+      focused: { workState: 'forged', workLabel: 'Research completed' },
+      forgeActivity: { label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.', tone: 'idle' },
+    });
+    expect(missing.status).toBe('research_completed');
+
+    const support = applyGoalTruthPresentation(document, {
+      focused: { workState: 'forged', workLabel: '1 Find passed Kernel SUPPORT', findCount: 1 },
+      forgeActivity: { label: 'A Kernel SUPPORT Find was forged', detail: '1 Find passed Kernel SUPPORT and were forged.', tone: 'success' },
+    });
+    expect(support).toEqual({ status: 'completed', text: '1 Find passed Kernel SUPPORT' });
+    expect(document.querySelector('#mission-state')?.dataset.status).toBe('completed');
+    expect(document.querySelector('#living-forge')?.dataset.activity).toBe('success');
+  });
+
   it('fails visually closed when Goal truth cannot be read instead of retaining legacy activity', async () => {
     mount();
     document.querySelector('#mission-state').textContent = 'stale mission-state';

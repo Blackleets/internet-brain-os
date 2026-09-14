@@ -159,3 +159,16 @@ describe('popup command-center empty Find gate honesty', () => {
     expect(popupHtml).toContain('cargar hallazgos con Kernel SUPPORT');
   });
 });
+
+describe('popup Goal Surface Shared Truth chrome SUPPORT honesty', () => {
+  it('keeps Shared Goal Truth #mission-state chrome behind Kernel SUPPORT findCount', () => {
+    const binding = readFileSync(new URL('./goal-surface-popup-binding.js', import.meta.url), 'utf8');
+    expect(binding).toContain('chromeStatusForGoalSurfaceWork');
+    expect(binding).toContain("workState === 'forged'");
+    expect(binding).toContain("'research_completed'");
+    expect(binding).toContain("'completed'");
+    expect(binding).toContain('focused?.findCount');
+    expect(binding).not.toContain("const status = focused?.workState ?? 'idle'");
+  });
+});
+

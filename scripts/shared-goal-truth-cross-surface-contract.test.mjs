@@ -165,6 +165,15 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(css).not.toContain('.forge-state-action.phase-research_completed i {\n  background: var(--forge-green)');
   });
 
+
+  it('keeps Shared Goal Truth popup binding #mission-state chrome behind Kernel SUPPORT', async () => {
+    const binding = await text('apps/extension/src/goal-surface-popup-binding.js');
+    expect(binding).toContain('chromeStatusForGoalSurfaceWork');
+    expect(binding).toContain("workState === 'forged'");
+    expect(binding).toContain("'research_completed'");
+    expect(binding).not.toContain("const status = focused?.workState ?? 'idle'");
+  });
+
   it('keeps Central Forge Power orb Completado chrome behind Kernel SUPPORT', async () => {
     const orb = await text('apps/extension/src/efesto-orb-state.js');
     const controller = await text('apps/extension/src/central-forge-power-controller.js');
