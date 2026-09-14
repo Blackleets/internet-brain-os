@@ -435,7 +435,7 @@ function renderActionWorkspace(item, reviewState) {
         const next = updateOpportunityReviewState(reviewState, item.id, step.id, input.checked);
         Object.keys(reviewState).forEach((key) => delete reviewState[key]); Object.assign(reviewState, next);
         await chrome.storage.local.set({ opportunityReviewState: reviewState });
-        render(); setStatus('Private review progress saved locally. The lead remains unverified.');
+        render(); setStatus('Private review progress saved locally. Human review only — Kernel SUPPORT is unchanged.');
       });
       label.append(input, copy); list.append(label);
     }

@@ -111,3 +111,10 @@ describe('popup mission verifying ledger SUPPORT honesty', () => {
     expect(presentation).not.toContain('Returned findings entered local validation; no opportunity');
   });
 });
+
+describe('popup SUPPORT Find action-workspace review honesty', () => {
+  it('must not brand Kernel SUPPORT Finds as unverified after human checklist save', () => {
+    expect(popup).toContain('Human review only — Kernel SUPPORT is unchanged');
+    expect(popup).not.toContain('The lead remains unverified');
+  });
+});
