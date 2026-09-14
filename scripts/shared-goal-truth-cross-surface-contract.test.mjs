@@ -131,6 +131,17 @@ describe('Shared Goal Truth cross-surface freeze', () => {
   });
 
 
+
+  it('keeps Agent Hub #mission-state / mission-card Completado chrome behind Kernel SUPPORT', async () => {
+    const popup = await text('apps/extension/src/popup.js');
+    const css = await text('apps/extension/src/popup.css');
+    expect(popup).toContain("findCount > 0 ? 'completed' : 'research_completed'");
+    expect(popup).toContain("view.opportunitiesPromoted === 0");
+    expect(popup).toContain("'research_completed'");
+    expect(css).toContain('data-status="research_completed"');
+    expect(css).not.toContain('.agent-hub strong[data-status="research_completed"]{color:var(--good)}');
+  });
+
   it('keeps Living Forge zero-SUPPORT forged off success celebrate chrome', async () => {
     const forge = await text('apps/extension/src/forge-activity.js');
     const goalSurface = await text('apps/extension/src/goal-surface-presentation.js');

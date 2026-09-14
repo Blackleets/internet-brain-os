@@ -211,8 +211,14 @@ async function loadAgentHub(stored) {
     waiting_for_agent: 'Waiting for Hermes', queued: 'Ready for Hermes', running: 'Hermes is researching',
     completed: completedCopy, failed: 'Research needs attention',
   }[latest?.status] ?? 'No research mission yet';
+  // Fail-close Agent Hub #mission-state chrome: zero-SUPPORT forged must not keep
+  // data-status=completed (green Completado) while Living Forge / orb already use
+  // idle / research_completed. SUPPORT Finds keep completed → green.
+  const chromeStatus = forged
+    ? (findCount > 0 ? 'completed' : 'research_completed')
+    : (latest?.status ?? 'idle');
   $('#mission-state').textContent = latest?.executionPhase === 'verifying' ? 'Efesto is verifying Evidence' : copy;
-  $('#mission-state').dataset.status = latest?.status ?? 'idle';
+  $('#mission-state').dataset.status = chromeStatus;
   renderMissionProgress(latest);
   renderMissionHistory(missions);
   setForgeActivity(forgeActivityForMission(latest, opportunities));
@@ -228,7 +234,12 @@ function renderMissionHistory(missions) {
 }
 
 function renderMissionCard(view) {
-  const card = document.createElement('article'); card.className = 'mission-card'; card.dataset.status = view.status;
+  const card = document.createElement('article'); card.className = 'mission-card';
+  // Fail-close mission history chrome: completed without Kernel SUPPORT Finds must not
+  // keep green Completado border (Living Forge idle / orb research_completed).
+  card.dataset.status = view.status === 'completed' && view.opportunitiesPromoted === 0
+    ? 'research_completed'
+    : view.status;
   const heading = document.createElement('div'); heading.className = 'mission-card-heading';
   const copy = document.createElement('span'); const title = document.createElement('b'); title.textContent = view.title;
   const statusLabel = document.createElement('small'); statusLabel.textContent = view.statusLabel; copy.append(title, statusLabel);

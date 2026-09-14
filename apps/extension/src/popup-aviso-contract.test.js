@@ -79,6 +79,18 @@ describe('popup mission-card statusDetail SUPPORT honesty', () => {
   });
 });
 
+describe('popup Agent Hub zero-SUPPORT forged chrome', () => {
+  it('keeps #mission-state and mission-card off green completed without Kernel SUPPORT', () => {
+    const css = readFileSync(new URL('./popup.css', import.meta.url), 'utf8');
+    expect(popup).toContain("findCount > 0 ? 'completed' : 'research_completed'");
+    expect(popup).toContain("view.status === 'completed' && view.opportunitiesPromoted === 0");
+    expect(popup).toContain("? 'research_completed'");
+    expect(popup).not.toContain("$('#mission-state').dataset.status = latest?.status ?? 'idle'");
+    expect(css).toContain('data-status="research_completed"');
+    expect(css).toContain('.mission-card[data-status="research_completed"] .mission-results strong');
+  });
+});
+
 describe('popup Goal Surface workLabel SUPPORT honesty', () => {
   it('names Kernel SUPPORT Finds on #mission-state via Goal Surface workLabel — never bare Evidence-backed findings', () => {
     const presentation = readFileSync(new URL('./goal-surface-presentation.js', import.meta.url), 'utf8');
