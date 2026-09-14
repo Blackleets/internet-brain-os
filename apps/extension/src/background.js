@@ -196,9 +196,11 @@ async function inspectMissionTransitions() {
     }
     // Close the half-built Kernel NotificationGateway path: deliver unread SUPPORT Find
     // receipts as OS notifies (no new UI). Watchtower remains fallback when gateway fails.
+    // Fetch without state=unread so covering still sees mark-read receipts on a later
+    // watchtower revision transition (delivery itself stays unread-only via select*).
     let kernelNotifications = [];
     try {
-      kernelNotifications = await listNotifications({ ...options, state: 'unread', limit: 20 });
+      kernelNotifications = await listNotifications({ ...options, limit: 40 });
       await deliverKernelSupportedFindNotifications(
         kernelNotifications,
         stored.deliveredKernelNotifications,

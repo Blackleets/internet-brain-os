@@ -5,7 +5,7 @@
 ## Current checkpoint - 2026-09-14
 
 - PR #239 merged to `main` (`944048d`). Home/Hallazgos Kernel-supported Find chrome sealed.
-- Extension now delivers Kernel NotificationGateway unread `find:supported:*` receipts via existing chrome.notifications (no new UI). Packaged zip must include `icons/efesto-notification.png` (chrome.notifications rejects missing/SVG-only packaging).
+- Extension now delivers Kernel NotificationGateway unread `find:supported:*` receipts via existing chrome.notifications (no new UI). Packaged zip must include `icons/efesto-notification.png` (chrome.notifications rejects missing/SVG-only packaging). Covering for watchtower Find suppress stays after mark-read (state-agnostic covering pool).
 - Home forge-state-action forged chrome fail-closes to Kernel SUPPORT Finds (not gate-blind Evidence forjada). `publicLaunchApproved` remains false.
 - Next: packaged UAT-1 through UAT-6 on the exact candidate after Lewis asks; local scorecard already exists on Objetivos.
 - No ADMITTED wiring, i18n, Intelligence Brief, PWA, extra IPs, or founder Kernel in this slice.

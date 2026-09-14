@@ -5,6 +5,7 @@ import {
   parseKernelNotificationId,
   presentKernelSupportedFindOsNotify,
   rememberDeliveredKernelNotificationIds,
+  selectKernelSupportedFindCoveringNotifications,
   selectKernelSupportedFindNotifications,
   shouldOsNotifyWatchtowerAviso,
   undeliveredKernelSupportedFindNotifications,
@@ -72,6 +73,7 @@ describe('delivery dedupe', () => {
   });
 });
 
+
 describe('kernelFindsCoveringMission', () => {
   it('matches only SUPPORT evidence rows for this mission', () => {
     const mission = {
@@ -82,6 +84,27 @@ describe('kernelFindsCoveringMission', () => {
     };
     expect(kernelFindsCoveringMission([supportedUnread], mission)).toEqual([supportedUnread]);
     expect(kernelFindsCoveringMission([supportedUnread], { verificationResults: [] })).toEqual([]);
+  });
+
+  it('keeps covering after mark-read so watchtower cannot double-fire Find', () => {
+    const supportedRead = { ...supportedUnread, state: 'read' };
+    const supportedDismissed = { ...supportedUnread, id: 'notification:dismissed', state: 'dismissed' };
+    const mission = {
+      verificationResults: [{ evidenceId: 'evidence:supported', supported: true }],
+    };
+    // Delivery stays unread-only (no minute re-spam after click → markNotificationRead).
+    expect(selectKernelSupportedFindNotifications([supportedRead, supportedDismissed])).toEqual([]);
+    expect(undeliveredKernelSupportedFindNotifications([supportedRead], [])).toEqual([]);
+    // Covering must still see the Kernel SUPPORT receipt after mark-read / dismiss.
+    expect(selectKernelSupportedFindCoveringNotifications([supportedRead])).toEqual([supportedRead]);
+    expect(kernelFindsCoveringMission([supportedRead], mission)).toEqual([supportedRead]);
+    expect(kernelFindsCoveringMission([supportedDismissed], mission)).toEqual([supportedDismissed]);
+    expect(
+      shouldOsNotifyWatchtowerAviso(
+        { notify: true, kind: 'find' },
+        { coveringKernelFindNotifications: kernelFindsCoveringMission([supportedRead], mission) },
+      ),
+    ).toBe(false);
   });
 });
 

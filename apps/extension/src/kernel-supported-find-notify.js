@@ -5,26 +5,42 @@
  */
 
 /**
- * Fail-closed: only unread opportunity notifications with dedupeKey
- * `find:supported:*` and at least one evidenceId become OS notifies.
+ * Shared shape gate for Kernel SUPPORT Find receipts (state-agnostic).
  * Evidence-only, unsupported leads, and Completado fakes never pass.
  */
+function isKernelSupportedFindReceipt(item) {
+  if (!item || typeof item !== 'object') return false;
+  if (item.sourceType !== 'opportunity') return false;
+  const dedupeKey = typeof item.dedupeKey === 'string' ? item.dedupeKey.trim() : '';
+  if (!dedupeKey.startsWith('find:supported:')) return false;
+  const id = typeof item.id === 'string' ? item.id.trim() : '';
+  const title = typeof item.title === 'string' ? item.title.trim() : '';
+  if (!id || !title) return false;
+  const evidenceIds = Array.isArray(item.evidenceIds)
+    ? item.evidenceIds.filter((value) => typeof value === 'string' && value.trim())
+    : [];
+  if (!evidenceIds.length) return false;
+  return true;
+}
+
+/**
+ * Fail-closed OS-notify admission: unread find:supported:* receipts only.
+ * Mark-read must not keep re-firing chrome.notifications every alarm tick.
+ */
 export function selectKernelSupportedFindNotifications(notifications = []) {
-  return (Array.isArray(notifications) ? notifications : []).filter((item) => {
-    if (!item || typeof item !== 'object') return false;
-    if (item.state !== 'unread') return false;
-    if (item.sourceType !== 'opportunity') return false;
-    const dedupeKey = typeof item.dedupeKey === 'string' ? item.dedupeKey.trim() : '';
-    if (!dedupeKey.startsWith('find:supported:')) return false;
-    const id = typeof item.id === 'string' ? item.id.trim() : '';
-    const title = typeof item.title === 'string' ? item.title.trim() : '';
-    if (!id || !title) return false;
-    const evidenceIds = Array.isArray(item.evidenceIds)
-      ? item.evidenceIds.filter((value) => typeof value === 'string' && value.trim())
-      : [];
-    if (!evidenceIds.length) return false;
-    return true;
-  });
+  return (Array.isArray(notifications) ? notifications : []).filter(
+    (item) => isKernelSupportedFindReceipt(item) && item.state === 'unread',
+  );
+}
+
+/**
+ * Covering pool for watchtower Find suppression: unread OR read (and dismissed).
+ * Click → markNotificationRead drops state to read; a later watchtower revision
+ * transition must still see Kernel already covered this Evidence — otherwise
+ * watchtower double-fires kind:'find' after Kernel already OS-notified.
+ */
+export function selectKernelSupportedFindCoveringNotifications(notifications = []) {
+  return (Array.isArray(notifications) ? notifications : []).filter(isKernelSupportedFindReceipt);
 }
 
 /** Skip OS notify for Kernel receipts already delivered locally (avoid minute re-spam). */
@@ -52,6 +68,7 @@ export function rememberDeliveredKernelNotificationIds(previous = [], newlyDeliv
 /**
  * Kernel Find receipts whose evidenceIds intersect this mission's SUPPORT rows.
  * Used to suppress duplicate watchtower kind:'find' OS notify for the same Evidence.
+ * State-agnostic: mark-read must not un-cover.
  */
 export function kernelFindsCoveringMission(notifications = [], mission) {
   const evidenceIds = new Set();
@@ -61,7 +78,7 @@ export function kernelFindsCoveringMission(notifications = [], mission) {
     if (evidenceId) evidenceIds.add(evidenceId);
   }
   if (!evidenceIds.size) return [];
-  return selectKernelSupportedFindNotifications(notifications).filter((item) =>
+  return selectKernelSupportedFindCoveringNotifications(notifications).filter((item) =>
     (Array.isArray(item.evidenceIds) ? item.evidenceIds : []).some((id) => evidenceIds.has(String(id).trim())),
   );
 }

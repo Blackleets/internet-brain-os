@@ -36,5 +36,8 @@ describe('extension background runtime contract', () => {
     expect(source).toContain('chromeNotificationIdForKernelNotification');
     expect(source).toContain("pendingWorkspaceView: 'finds'");
     expect(source).toContain("iconUrl: 'icons/efesto-notification.png'");
+    // Covering pool must include mark-read receipts (not state=unread only).
+    expect(source).not.toContain("listNotifications({ ...options, state: 'unread'");
+    expect(source).toContain('listNotifications({ ...options, limit: 40 })');
   });
 });
