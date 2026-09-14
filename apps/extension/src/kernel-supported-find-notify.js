@@ -95,13 +95,22 @@ export function parseKernelNotificationId(chromeNotificationId) {
 }
 
 /**
- * Suppress watchtower kind:'find' OS notify only when Kernel already has a covering
- * SUPPORT Find receipt for this mission's Evidence. Failed / forged-without-finds
- * still notify. If Kernel gateway was unreachable, watchtower remains the Find fallback.
+ * Suppress watchtower Find/forged OS notify when Kernel already has a covering
+ * SUPPORT Find receipt for this mission's Evidence.
+ * listOpportunities catch→[] makes presentWatchtowerAviso emit kind:'forged' even
+ * when verificationResults + NotificationGateway covering prove SUPPORT Finds —
+ * suppressing only kind:'find' then double-fires Kernel Find + forged OS notify.
+ * Failed / attention / forged-without-covering still notify. If Kernel gateway was
+ * unreachable (covering empty), watchtower remains the Find fallback.
  */
 export function shouldOsNotifyWatchtowerAviso(aviso, { coveringKernelFindNotifications = [] } = {}) {
   if (!aviso?.notify) return false;
-  if (aviso.kind === 'find' && coveringKernelFindNotifications.length > 0) return false;
+  if (
+    coveringKernelFindNotifications.length > 0
+    && (aviso.kind === 'find' || aviso.kind === 'forged')
+  ) {
+    return false;
+  }
   return true;
 }
 

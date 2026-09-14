@@ -119,12 +119,29 @@ describe('chrome notification id round-trip', () => {
 });
 
 describe('shouldOsNotifyWatchtowerAviso', () => {
-  it('suppresses find avisos only when Kernel covering Find receipts exist', () => {
+  it('suppresses find and forged when Kernel covering Find receipts exist', () => {
     expect(shouldOsNotifyWatchtowerAviso({ notify: true, kind: 'find' }, { coveringKernelFindNotifications: [supportedUnread] })).toBe(false);
     expect(shouldOsNotifyWatchtowerAviso({ notify: true, kind: 'find' }, { coveringKernelFindNotifications: [] })).toBe(true);
-    expect(shouldOsNotifyWatchtowerAviso({ notify: true, kind: 'failed' }, { coveringKernelFindNotifications: [supportedUnread] })).toBe(true);
-    expect(shouldOsNotifyWatchtowerAviso({ notify: true, kind: 'forged' }, { coveringKernelFindNotifications: [supportedUnread] })).toBe(true);
+    // Opportunities empty / failed → kind forged, but covering still proves Kernel Finds.
+    expect(shouldOsNotifyWatchtowerAviso({ notify: true, kind: 'forged' }, { coveringKernelFindNotifications: [supportedUnread] })).toBe(false);
+    expect(shouldOsNotifyWatchtowerAviso({ notify: true, kind: 'forged' }, { coveringKernelFindNotifications: [] })).toBe(true);
+    expect(shouldOsNotifyWatchtowerAviso({ notify: true, kind: 'attention' }, { coveringKernelFindNotifications: [supportedUnread] })).toBe(true);
     expect(shouldOsNotifyWatchtowerAviso({ notify: false, kind: 'find' })).toBe(false);
+  });
+
+  it('covers opportunities-empty forged path after Kernel already OS-notified Find', () => {
+    const mission = {
+      verificationResults: [{ evidenceId: 'evidence:supported', supported: true }],
+    };
+    const covering = kernelFindsCoveringMission([supportedUnread], mission);
+    expect(covering).toEqual([supportedUnread]);
+    // Mirrors background.js when listOpportunities throws → opportunities=[] → kind forged.
+    expect(
+      shouldOsNotifyWatchtowerAviso(
+        { notify: true, kind: 'forged', title: 'Efesto finished forging' },
+        { coveringKernelFindNotifications: covering },
+      ),
+    ).toBe(false);
   });
 });
 
