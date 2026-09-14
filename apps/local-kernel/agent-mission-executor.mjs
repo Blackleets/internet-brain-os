@@ -137,7 +137,7 @@ function isPrivateLiteralHost(hostname) {
   if (host === 'localhost' || host === '::1' || host === '::' || host.endsWith('.local')) return true;
   // Reuse Kernel/connector intent from packages/connectors/src/web-page.ts isPublicAddress:
   // loopback, unique-local fc00::/7, link-local fe80::/10, IPv4-mapped/translated ::ffff:[0:]x.x.x.x,
-  // NAT64 well-known prefix 64:ff9b::/96.
+  // NAT64 well-known prefix 64:ff9b::/96, deprecated IPv4-compatible ::/96.
   if (host.includes(':') && (host.startsWith('fe80:') || host.startsWith('fc') || host.startsWith('fd'))) return true;
   return isPrivateIpv4Literal(ipv4MappedFromLiteral(host) ?? host);
 }
@@ -156,9 +156,19 @@ function ipv4MappedFromLiteral(host) {
   if (dotted) return dotted[1];
   // WHATWG: mapped ::ffff:7f00:1; translated/SIIT ::ffff:0:7f00:1 — both embed private IPv4.
   const hex = host.match(/^::ffff:(?:0:)?([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
-  if (!hex) return undefined;
-  const hi = Number.parseInt(hex[1], 16);
-  const lo = Number.parseInt(hex[2], 16);
+  if (hex) {
+    const hi = Number.parseInt(hex[1], 16);
+    const lo = Number.parseInt(hex[2], 16);
+    return `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
+  }
+  // Deprecated IPv4-compatible ::/96 (RFC 4291) — same gate as packages/connectors web-page.ts.
+  // WHATWG: ::127.0.0.1 → ::7f00:1; DNS may also return 0:0:0:0:0:0:7f00:1.
+  const compatDotted = host.match(/^(?:0:0:0:0:0:0|:)?:(\d+\.\d+\.\d+\.\d+)$/);
+  if (compatDotted) return compatDotted[1];
+  const compatHex = host.match(/^(?:0:0:0:0:0:0|:)?:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (!compatHex) return undefined;
+  const hi = Number.parseInt(compatHex[1], 16);
+  const lo = Number.parseInt(compatHex[2], 16);
   return `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
 }
 
