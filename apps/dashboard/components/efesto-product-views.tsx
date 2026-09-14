@@ -52,9 +52,9 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   onFindFeedback?: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void;
   onOpenCase?: (caseId: string) => void;
 }) {
-  // Fail-close: forge-state-action must use focused-mission SUPPORT count (shell
-  // countMissionKernelSupportedFinds), never global supportedFinds.length — older inbox
-  // Finds must not brand a zero-SUPPORT forged mission as Find SUPPORT forjado.
+  // Fail-close: forge-state-action uses focused GoalSurface mission SUPPORT
+  // (findCount / verificationResults via countMissionKernelSupportedFinds), never
+  // global supportedFinds.length — older inbox must not brand zero-SUPPORT forged.
   const state = brainState(phase, forgeSupportedFindCount);
   const showSuggestions = chatMode ? messages.length === 0 : !preparedGoal && supportedFinds.length === 0;
   const surfaceTitle = chatMode
@@ -459,8 +459,8 @@ export function brainState(phase: BrainPhase, supportedFindCount = 0) {
   if (phase === 'queued') return { label: 'Misión preparada', detail: 'Esperando agente' };
   if (phase === 'forged') {
     // Fail-close Home forge-state-action (page.tsx → EfestoProductShell → HomeView):
-    // forgeSupportedFindCount is focused-mission verificationResults SUPPORT only
-    // (countMissionKernelSupportedFinds) — not global inbox length.
+    // forgeSupportedFindCount is focused GoalSurface SUPPORT (findCount when
+    // verificationResults are stripped) — not global inbox length.
     // forged without Kernel SUPPORT Finds must not read like Completado/useful Find;
     // with SUPPORT Finds, name them like extension Living Forge / mission-state.
     if (supportedFindCount > 0) {

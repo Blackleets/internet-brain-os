@@ -374,7 +374,8 @@ export default function EfestoProductShell() {
   }
 
   const supportedFinds = kernelSupportedFinds(snapshot?.opportunities, snapshot?.missions);
-  // Focused-mission SUPPORT only — Home forge-state-action must not use global inbox length.
+  // Focused GoalSurface mission: findCount is Kernel SUPPORT (verificationResults stripped).
+  // Must not use global inbox length; countMissionKernelSupportedFinds reads findCount.
   const forgeSupportedFindCount = countMissionKernelSupportedFinds(focusedGoalSurface?.mission);
 
   return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''}`}>

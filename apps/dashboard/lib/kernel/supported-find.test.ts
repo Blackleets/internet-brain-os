@@ -95,4 +95,19 @@ describe('countMissionKernelSupportedFinds', () => {
     expect(countMissionKernelSupportedFinds(undefined)).toBe(0);
     expect(countMissionKernelSupportedFinds({ verificationResults: null })).toBe(0);
   });
+
+  it('uses GoalSurface findCount when verificationResults are stripped', () => {
+    // focusedGoalSurface.mission never carries verificationResults — only findCount
+    // (Kernel SUPPORT total from Shared Goal Truth). Must not always read as 0.
+    expect(countMissionKernelSupportedFinds({ id: 'mission-1', findCount: 2 })).toBe(2);
+    expect(countMissionKernelSupportedFinds({ id: 'mission-1', findCount: 0 })).toBe(0);
+    expect(countMissionKernelSupportedFinds({ id: 'mission-1' })).toBe(0);
+    expect(countMissionKernelSupportedFinds({ findCount: -1 })).toBe(0);
+    expect(countMissionKernelSupportedFinds({ findCount: 1.5 })).toBe(0);
+    // verificationResults wins when present (do not double-count findCount).
+    expect(countMissionKernelSupportedFinds({
+      findCount: 99,
+      verificationResults: [{ supported: true }, { supported: false }],
+    })).toBe(1);
+  });
 });
