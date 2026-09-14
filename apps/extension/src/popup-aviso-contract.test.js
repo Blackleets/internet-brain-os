@@ -93,9 +93,10 @@ describe('popup mission-live-progress verifying honesty', () => {
     expect(live).toContain('presentMissionLiveProgress');
     expect(live).toContain("executionPhase === 'verifying'");
     expect(live).toContain("workState === 'verifying'");
-    expect(live).toContain("text: 'Efesto is verifying findings'");
+    expect(live).toContain("text: 'Efesto is verifying Evidence'");
+    expect(live).not.toContain("text: 'Efesto is verifying findings'");
     expect(live).toContain("status: 'verifying'");
-    const verifyingReturn = live.indexOf("text: 'Efesto is verifying findings'");
+    const verifyingReturn = live.indexOf("text: 'Efesto is verifying Evidence'");
     const hermesLive = live.indexOf("'Hermes is researching'");
     expect(verifyingReturn).toBeGreaterThan(-1);
     expect(hermesLive).toBeGreaterThan(verifyingReturn);

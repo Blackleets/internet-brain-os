@@ -3,7 +3,7 @@ const FORGE_ACTIVITY = Object.freeze({
   waiting: { label: 'Hermes not available', detail: 'The mission is authorized, but no Hermes worker is connected.', tone: 'error' },
   queued: { label: 'Preparing the tools', detail: 'A research mission is ready for Hermes.', tone: 'queued' },
   working: { label: 'Forging new intelligence', detail: 'Hermes is researching authorized public sources.', tone: 'working' },
-  verifying: { label: 'Inspecting the piece', detail: 'Efesto is validating returned findings inside the local Kernel.', tone: 'verifying' },
+  verifying: { label: 'Inspecting the piece', detail: 'Efesto is validating returned material inside the local Kernel. Finds still require Kernel SUPPORT.', tone: 'verifying' },
   forged: { label: 'A useful lead was forged', detail: 'Efesto forged the latest persisted findings.', tone: 'success' },
   failed: { label: 'Inspecting a broken piece', detail: 'Research stopped safely and needs attention.', tone: 'error' },
 });
@@ -14,7 +14,7 @@ const WORK_COPY = Object.freeze({
   queued: 'Ready for Hermes',
   running: 'Hermes is researching',
   investigating: 'Hermes is researching',
-  verifying: 'Efesto is verifying findings',
+  verifying: 'Efesto is verifying Evidence',
   // forged workLabel is SUPPORT-aware via workLabelForMission — do not claim findings here.
   completed: 'No research mission yet',
   failed: 'Research needs attention',

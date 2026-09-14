@@ -45,7 +45,9 @@ describe('mission presentation', () => {
 
   it('presents a persisted verification phase without claiming completion', () => {
     const mission = { status: 'running', executionPhase: 'verifying', verifyingAt: '2026-07-22T10:02:00.000Z' };
-    expect(presentMission(mission)).toMatchObject({ statusLabel: 'Verifying returned findings', opportunitiesPromoted: 0 });
+    expect(presentMission(mission)).toMatchObject({ statusLabel: 'Verifying returned material', opportunitiesPromoted: 0 });
+    expect(presentMission(mission).statusLabel).not.toMatch(/findings/i);
+    expect(presentMission(mission).statusDetail).not.toMatch(/findings/i);
     expect(missionTimeline(mission)[0].label).toBe('Kernel verification started');
     expect(missionTimeline(mission)[0].detail).toMatch(/no Kernel SUPPORT Find is sealed yet/i);
     expect(missionTimeline(mission)[0].detail).not.toMatch(/opportunit/i);

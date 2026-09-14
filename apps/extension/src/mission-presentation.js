@@ -1,7 +1,7 @@
 const STATUS_COPY = Object.freeze({
   waiting_for_agent: { label: 'Waiting for Hermes', detail: 'The commission is authorized, but no Hermes adapter is connected.' },
   queued: { label: 'Ready for Hermes', detail: 'The commission is queued for a bounded public-source attempt.' },
-  running: { label: 'Researching public sources', detail: 'Hermes holds a temporary lease. Efesto will verify every returned finding locally.' },
+  running: { label: 'Researching public sources', detail: 'Hermes holds a temporary lease. Efesto will verify every returned candidate locally.' },
   completed: { label: 'Commission forged', detail: 'The bounded attempt finished. Kernel SUPPORT Finds were sealed by the local Kernel.' },
   completedWithoutForge: { label: 'Research ended without Evidence', detail: 'The bounded attempt finished. No Kernel-sealed lead was saved.' },
   failed: { label: 'Research stopped safely', detail: 'Three bounded attempts were exhausted. The Goal and existing Evidence remain intact.' },
@@ -29,7 +29,7 @@ export function presentMission(mission) {
  */
 function missionStatusCopy(mission) {
   if (mission?.executionPhase === 'verifying') {
-    return { label: 'Verifying returned findings', detail: 'Efesto is validating and preserving the returned material inside the local Kernel.' };
+    return { label: 'Verifying returned material', detail: 'Efesto is validating returned candidates inside the local Kernel. Finds still require Kernel SUPPORT.' };
   }
   if (mission?.status === 'completed' && (mission.executionPhase === 'forged' || mission.workState === 'forged')) {
     const finds = countSupportedFinds(mission?.verificationResults);

@@ -206,7 +206,7 @@ async function loadAgentHub(stored) {
     waiting_for_agent: 'Waiting for Hermes', queued: 'Ready for Hermes', running: 'Hermes is researching',
     completed: completedCopy, failed: 'Research needs attention',
   }[latest?.status] ?? 'No research mission yet';
-  $('#mission-state').textContent = latest?.executionPhase === 'verifying' ? 'Efesto is verifying findings' : copy;
+  $('#mission-state').textContent = latest?.executionPhase === 'verifying' ? 'Efesto is verifying Evidence' : copy;
   $('#mission-state').dataset.status = latest?.status ?? 'idle';
   renderMissionProgress(latest);
   renderMissionHistory(missions);

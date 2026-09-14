@@ -12,7 +12,7 @@ export function presentMissionLiveProgress(mission, now = Date.now()) {
   if (!mission || !ACTIVE_STATUSES.has(mission.status)) return null;
   if (mission.executionPhase === 'verifying' || mission.workState === 'verifying') {
     return {
-      text: 'Efesto is verifying findings',
+      text: 'Efesto is verifying Evidence',
       status: 'verifying',
       title: 'The local Kernel is validating Evidence. Hermes research is no longer the live phase.',
     };

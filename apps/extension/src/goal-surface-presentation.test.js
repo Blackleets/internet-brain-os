@@ -29,7 +29,7 @@ describe('extension Shared Goal Truth presentation', () => {
     const second = { ...surface('queued'), goal: { ...surface('queued').goal, id: 'goal:2', title: 'Second goal' } };
     const view = presentGoalSurfaces([first, second]);
     expect(view.goalCount).toBe(2);
-    expect(view.focused).toMatchObject({ id: 'goal:1', workState: 'verifying', workLabel: 'Efesto is verifying findings' });
+    expect(view.focused).toMatchObject({ id: 'goal:1', workState: 'verifying', workLabel: 'Efesto is verifying Evidence' });
     expect(view.goals.map((goal) => goal.id)).toEqual(['goal:1', 'goal:2']);
   });
 

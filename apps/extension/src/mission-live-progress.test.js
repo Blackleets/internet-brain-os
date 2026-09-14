@@ -32,7 +32,7 @@ describe('mission live progress #mission-state honesty', () => {
       createdAt: '2026-09-07T09:50:00.000Z',
     }, now);
     expect(byPhase).toEqual({
-      text: 'Efesto is verifying findings',
+      text: 'Efesto is verifying Evidence',
       status: 'verifying',
       title: 'The local Kernel is validating Evidence. Hermes research is no longer the live phase.',
     });
@@ -43,7 +43,7 @@ describe('mission live progress #mission-state honesty', () => {
       workState: 'verifying',
       claimedAt: '2026-09-07T09:55:00.000Z',
     }, now);
-    expect(byWorkState).toMatchObject({ text: 'Efesto is verifying findings', status: 'verifying' });
+    expect(byWorkState).toMatchObject({ text: 'Efesto is verifying Evidence', status: 'verifying' });
     expect(byWorkState.text).not.toMatch(/Hermes is researching|elapsed|· live/i);
   });
 
