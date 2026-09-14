@@ -710,7 +710,7 @@
   background: var(--forge-green);
 }
 
-/* Zero-SUPPORT forged → research_completed: keep default dim dot, not Completado green. */
+/* Zero-SUPPORT forged / completed-without-Evidence → research_completed: dim dot, not Completado green. */
 .forge-state-action.phase-research_completed i {
   background: #67676e;
 }

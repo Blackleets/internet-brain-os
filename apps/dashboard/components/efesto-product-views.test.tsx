@@ -211,6 +211,18 @@ describe('HomeView Kernel-supported Find', () => {
     expect(action.textContent).toMatch(/Finds SUPPORT forjados/i);
   });
 
+  it('Home forge-state-action completed-without-Evidence stays off Forja lista green', () => {
+    // brainPhaseFromWorkState(completed) must not collapse to ready → phase-ready green Forja lista
+    // while Actividad / extension already say Terminada sin Evidence / Research ended without Evidence.
+    render(<HomeView {...homeProps} phase="completed" connected supportedFinds={[]} forgeSupportedFindCount={0} />);
+    const action = screen.getByRole('button', { name: 'Kernel conectado' });
+    expect(action.textContent).toMatch(/Terminada sin Evidence/i);
+    expect(action.textContent).not.toMatch(/Forja lista|Completado|Find SUPPORT|Investigación terminada/i);
+    expect(action.className).toContain('phase-research_completed');
+    expect(action.className).not.toMatch(/phase-ready(?!\w)/);
+    expect(action.className).not.toMatch(/phase-forged(?!\w)/);
+  });
+
   it('Home surfaceTitle honors focused findCount when inbox is empty', () => {
     // Tip 96514e2 fixed forge-state-action via GoalSurface findCount; header/body still
     // keyed off supportedFinds.length → Nuevo Goal + create-Goal empty beside Find SUPPORT forjado.
@@ -478,6 +490,12 @@ describe('brainState forged SUPPORT honesty', () => {
     expect(brainState('forged', 0).detail).toMatch(/Ningún Find pasó Kernel SUPPORT/i);
     expect(brainState('forged', 0).label).not.toMatch(/Evidence forjada|Completado|Find SUPPORT/i);
   });
+
+  it('completed-without-Evidence is Terminada sin Evidence, not Forja lista', () => {
+    expect(brainState('completed').label).toBe('Terminada sin Evidence');
+    expect(brainState('completed').detail).toMatch(/sin Evidence forjada/i);
+    expect(brainState('completed').label).not.toMatch(/Forja lista|Completado|Find SUPPORT/i);
+  });
 });
 
 describe('Home forge-state-action shell wiring contract', () => {
@@ -486,9 +504,11 @@ describe('Home forge-state-action shell wiring contract', () => {
     const views = readFileSync(join(process.cwd(), 'apps/dashboard/components/efesto-product-views.tsx'), 'utf8');
     expect(shell).toContain('countMissionKernelSupportedFinds(focusedGoalSurface?.mission)');
     expect(shell).toContain('forgeSupportedFindCount={forgeSupportedFindCount}');
+    expect(shell).toContain("workState === 'completed'");
+    expect(shell).toContain("return 'completed'");
     expect(views).toContain('brainState(phase, forgeSupportedFindCount)');
     expect(views).not.toContain('brainState(phase, supportedFinds.length)');
-    expect(views).toContain("phase === 'forged' && forgeSupportedFindCount === 0");
+    expect(views).toContain("(phase === 'forged' && forgeSupportedFindCount === 0) || phase === 'completed'");
     expect(views).toContain("'research_completed'");
     expect(views).toContain("phase-' + chromePhase");
     expect(views).not.toContain("phase-' + phase");

@@ -156,13 +156,24 @@ describe('Shared Goal Truth cross-surface freeze', () => {
   it('keeps Home forge-state-action Completado green chrome behind Kernel SUPPORT', async () => {
     const views = await text('apps/dashboard/components/efesto-product-views.tsx');
     const css = await text('apps/dashboard/app/efesto-forge-redesign.css');
-    expect(views).toContain("phase === 'forged' && forgeSupportedFindCount === 0");
+    expect(views).toContain("(phase === 'forged' && forgeSupportedFindCount === 0) || phase === 'completed'");
     expect(views).toContain("'research_completed'");
     expect(views).toContain("phase-' + chromePhase");
     expect(views).not.toContain("phase-' + phase");
     expect(css).toContain('.forge-state-action.phase-forged i');
     expect(css).toContain('.forge-state-action.phase-research_completed i');
     expect(css).not.toContain('.forge-state-action.phase-research_completed i {\n  background: var(--forge-green)');
+  });
+
+  it('keeps Home forge-state-action completed-without-Evidence off Forja lista green', async () => {
+    const views = await text('apps/dashboard/components/efesto-product-views.tsx');
+    const shell = await text('apps/dashboard/components/efesto-product-shell.tsx');
+    expect(shell).toContain("workState === 'completed'");
+    expect(shell).toContain("return 'completed'");
+    expect(shell).not.toContain("if (workState === 'forged') return 'forged';\n  if (workState === 'failed') return 'failed';\n  return 'ready';");
+    expect(views).toContain("phase === 'completed'");
+    expect(views).toContain("Terminada sin Evidence");
+    expect(views).toContain("'completed'");
   });
 
 

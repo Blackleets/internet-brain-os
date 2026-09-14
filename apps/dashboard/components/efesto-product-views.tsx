@@ -25,7 +25,7 @@ export type EvidenceRecord = {
   tags?: string[]; entityIds?: string[]; relationshipIds?: string[];
 };
 export type CaseDetail = { case: Record<string, unknown>; evidence: EvidenceRecord[] };
-export type BrainPhase = 'offline' | 'ready' | 'queued' | 'investigating' | 'verifying' | 'forged' | 'thinking' | 'failed' | 'blocked' | 'unavailable';
+export type BrainPhase = 'offline' | 'ready' | 'queued' | 'investigating' | 'verifying' | 'forged' | 'completed' | 'thinking' | 'failed' | 'blocked' | 'unavailable';
 
 const starterGoals = [
   'Encuentra las mejores herramientas para mi negocio',
@@ -59,7 +59,9 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   // Fail-close chrome: zero-SUPPORT forged must not keep phase-forged (green Completado
   // lookalike) while label is Investigación terminada. Mirror extension orb / Agent Hub
   // research_completed neutral chrome; SUPPORT forged keeps phase-forged green.
-  const chromePhase = phase === 'forged' && forgeSupportedFindCount === 0
+  // workState=completed (completed-without-Evidence) must not keep phase-ready green
+  // "Forja lista" Completado lookalike — Actividad already uses Terminada sin Evidence.
+  const chromePhase = (phase === 'forged' && forgeSupportedFindCount === 0) || phase === 'completed'
     ? 'research_completed'
     : phase;
   // GoalSurface findCount can prove SUPPORT while inbox is empty (dismissed / not loaded).
@@ -493,6 +495,11 @@ export function brainState(phase: BrainPhase, supportedFindCount = 0) {
       };
     }
     return { label: 'Investigación terminada', detail: 'Ningún Find pasó Kernel SUPPORT' };
+  }
+  // Bare completed (no forged Evidence) — same honesty as Actividad completed_without_forge
+  // / extension Research ended without Evidence. Must not fall through to Forja lista.
+  if (phase === 'completed') {
+    return { label: 'Terminada sin Evidence', detail: 'El intento terminó sin Evidence forjada' };
   }
   if (phase === 'failed') return { label: 'Atención requerida', detail: 'La última misión falló' };
   if (phase === 'blocked') return { label: 'BLOCKED', detail: 'La política del Kernel denegó la ejecución automática' };

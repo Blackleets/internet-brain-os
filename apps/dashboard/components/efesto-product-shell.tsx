@@ -444,6 +444,8 @@ function brainPhaseFromWorkState(workState: GoalSurfaceWorkState | undefined): B
   if (workState === 'investigating' || workState === 'running') return 'investigating';
   if (workState === 'waiting_for_agent' || workState === 'queued') return 'queued';
   if (workState === 'forged') return 'forged';
+  // completed-without-Evidence: never collapse to ready → green Forja lista.
+  if (workState === 'completed') return 'completed';
   if (workState === 'failed') return 'failed';
   return 'ready';
 }
