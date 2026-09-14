@@ -16,7 +16,11 @@ const WORK_COPY = Object.freeze({
   investigating: 'Hermes is researching',
   verifying: 'Efesto is verifying Evidence',
   // forged workLabel is SUPPORT-aware via workLabelForMission — do not claim findings here.
-  completed: 'No research mission yet',
+  // completed = Kernel status completed without executionPhase forged (no Evidence sealed).
+  // Must not keep "No research mission yet" — research DID end; mirror mission-presentation /
+  // loadAgentHub "Research ended without Evidence" so MutationObserver Shared Truth sync
+  // cannot overwrite Agent Hub honesty with idle-looking copy beside green Completado chrome.
+  completed: 'Research ended without Evidence',
   failed: 'Research needs attention',
 });
 
@@ -89,6 +93,8 @@ export function forgeActivityForGoalSurface(surface) {
  * forged + Kernel SUPPORT findCount → name Kernel SUPPORT Finds (same honesty as
  * Living Forge / popup.js loadAgentHub mission-state); never bare evidence-backed wording.
  * forged without proven Finds → Research completed.
+ * workState=completed (no forged Evidence) → Research ended without Evidence — never
+ * "No research mission yet" (MutationObserver would undo Agent Hub honesty).
  */
 function workLabelForMission(mission) {
   const workState = mission?.workState ?? 'idle';

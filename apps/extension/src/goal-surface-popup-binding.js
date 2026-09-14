@@ -30,12 +30,15 @@ export async function syncGoalSurfacePopup(options = {}) {
  * re-applies Shared Truth whenever legacy diverges, so ungated forged
  * permanently undoes Agent Hub Completado honesty.
  * forged + findCount>0 → completed (green); zero/missing SUPPORT → research_completed.
+ * workState=completed (Kernel completed-without-forge) must not keep data-status=completed
+ * green Completado — mission-card / Living Forge already use research_completed / idle.
  */
 function chromeStatusForGoalSurfaceWork(workState, findCount) {
   if (workState === 'forged') {
     const found = Number.isSafeInteger(findCount) ? findCount : undefined;
     return found !== undefined && found > 0 ? 'completed' : 'research_completed';
   }
+  if (workState === 'completed') return 'research_completed';
   return workState ?? 'idle';
 }
 

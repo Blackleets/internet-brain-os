@@ -85,6 +85,9 @@ describe('popup Agent Hub zero-SUPPORT forged chrome', () => {
     expect(popup).toContain("findCount > 0 ? 'completed' : 'research_completed'");
     expect(popup).toContain("view.status === 'completed' && view.opportunitiesPromoted === 0");
     expect(popup).toContain("? 'research_completed'");
+    // completed-without-forge must not keep raw status=completed green Completado.
+    expect(popup).toContain("latest?.status === 'completed'");
+    expect(popup).toContain("? 'research_completed'");
     expect(popup).not.toContain("$('#mission-state').dataset.status = latest?.status ?? 'idle'");
     expect(css).toContain('data-status="research_completed"');
     expect(css).toContain('.mission-card[data-status="research_completed"] .mission-results strong');
@@ -165,10 +168,19 @@ describe('popup Goal Surface Shared Truth chrome SUPPORT honesty', () => {
     const binding = readFileSync(new URL('./goal-surface-popup-binding.js', import.meta.url), 'utf8');
     expect(binding).toContain('chromeStatusForGoalSurfaceWork');
     expect(binding).toContain("workState === 'forged'");
+    expect(binding).toContain("workState === 'completed'");
     expect(binding).toContain("'research_completed'");
     expect(binding).toContain("'completed'");
     expect(binding).toContain('focused?.findCount');
     expect(binding).not.toContain("const status = focused?.workState ?? 'idle'");
+  });
+});
+
+describe('popup Goal Surface completed-without-Evidence workLabel honesty', () => {
+  it('names Research ended without Evidence — never No research mission yet', () => {
+    const presentation = readFileSync(new URL('./goal-surface-presentation.js', import.meta.url), 'utf8');
+    expect(presentation).toContain("completed: 'Research ended without Evidence'");
+    expect(presentation).not.toContain("completed: 'No research mission yet'");
   });
 });
 

@@ -41,10 +41,15 @@ describe('Shared Goal Truth popup binding', () => {
 
   it('does not present completed as forged without persisted forged work state', () => {
     mount();
-    applyGoalTruthPresentation(document, {
-      focused: { workState: 'completed', workLabel: 'Research completed' },
+    const result = applyGoalTruthPresentation(document, {
+      focused: { workState: 'completed', workLabel: 'Research ended without Evidence' },
       forgeActivity: { label: 'The forge is ready', detail: 'Create a Goal or analyze a public page.', tone: 'idle' },
     });
+    // completed-without-forge must not keep green Completado (data-status=completed).
+    expect(result).toEqual({ status: 'research_completed', text: 'Research ended without Evidence' });
+    expect(document.querySelector('#mission-state')?.dataset.status).toBe('research_completed');
+    expect(document.querySelector('#mission-state')?.dataset.status).not.toBe('completed');
+    expect(document.querySelector('#mission-state')?.textContent).toBe('Research ended without Evidence');
     expect(document.querySelector('#living-forge')?.dataset.activity).toBe('idle');
     expect(document.querySelector('.live-badge-label')?.textContent).toBe('LISTA');
     expect(document.querySelector('.live-badge-label')?.textContent).not.toMatch(/EN VIVO/i);

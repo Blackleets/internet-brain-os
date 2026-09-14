@@ -86,7 +86,8 @@ describe('extension Shared Goal Truth presentation', () => {
   it('never upgrades completed into forged success without persisted forged work state', () => {
     const view = presentGoalSurface(surface('completed'));
     expect(view.workState).toBe('completed');
-    expect(view.workLabel).not.toMatch(/completado|forged|Forge complete|Research completed/i);
+    expect(view.workLabel).toBe('Research ended without Evidence');
+    expect(view.workLabel).not.toMatch(/completado|forged|Forge complete|Research completed|No research mission yet/i);
     expect(forgeActivityForGoalSurface(surface('completed'))).toEqual({
       label: 'The forge is ready', detail: 'Create a Goal or analyze a public page.', tone: 'idle',
     });

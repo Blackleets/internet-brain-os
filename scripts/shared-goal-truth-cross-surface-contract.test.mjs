@@ -170,8 +170,18 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     const binding = await text('apps/extension/src/goal-surface-popup-binding.js');
     expect(binding).toContain('chromeStatusForGoalSurfaceWork');
     expect(binding).toContain("workState === 'forged'");
+    expect(binding).toContain("workState === 'completed'");
     expect(binding).toContain("'research_completed'");
     expect(binding).not.toContain("const status = focused?.workState ?? 'idle'");
+  });
+
+  it('keeps completed-without-Evidence Goal Surface workLabel off No research mission yet', async () => {
+    const presentation = await text('apps/extension/src/goal-surface-presentation.js');
+    const popup = await text('apps/extension/src/popup.js');
+    expect(presentation).toContain("completed: 'Research ended without Evidence'");
+    expect(presentation).not.toContain("completed: 'No research mission yet'");
+    expect(popup).toContain("latest?.status === 'completed'");
+    expect(popup).toContain("? 'research_completed'");
   });
 
   it('keeps Central Forge Power orb Completado chrome behind Kernel SUPPORT', async () => {

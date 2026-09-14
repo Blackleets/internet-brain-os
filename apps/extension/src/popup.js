@@ -214,9 +214,14 @@ async function loadAgentHub(stored) {
   // Fail-close Agent Hub #mission-state chrome: zero-SUPPORT forged must not keep
   // data-status=completed (green Completado) while Living Forge / orb already use
   // idle / research_completed. SUPPORT Finds keep completed → green.
+  // completed-without-forge (status completed, not forged) must also stay off green
+  // Completado — mission-card already maps opportunitiesPromoted===0 → research_completed;
+  // Shared Goal Truth MutationObserver would otherwise re-apply honest copy beside green.
   const chromeStatus = forged
     ? (findCount > 0 ? 'completed' : 'research_completed')
-    : (latest?.status ?? 'idle');
+    : latest?.status === 'completed'
+      ? 'research_completed'
+      : (latest?.status ?? 'idle');
   $('#mission-state').textContent = latest?.executionPhase === 'verifying' ? 'Efesto is verifying Evidence' : copy;
   $('#mission-state').dataset.status = chromeStatus;
   renderMissionProgress(latest);
