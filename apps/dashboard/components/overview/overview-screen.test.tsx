@@ -224,7 +224,9 @@ describe('OverviewScreen', () => {
     );
 
     expect(screen.getByText('No hay misiones activas.')).toBeTruthy();
-    expect(screen.getAllByText('No hay oportunidades priorizadas todavía.').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('No hay hallazgos con Kernel SUPPORT priorizados todavía.').length).toBeGreaterThan(0);
+    expect(screen.getByRole('region', { name: 'Prioridad de oportunidades' }).textContent).toMatch(/Kernel SUPPORT/i);
+    expect(screen.queryByText('No hay oportunidades priorizadas todavía.')).toBeNull();
     expect(screen.getByText('No hay actividad persistida para mostrar.')).toBeTruthy();
   });
 

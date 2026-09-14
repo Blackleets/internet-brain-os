@@ -9,7 +9,9 @@ type OpportunityPanelProps = {
 };
 
 export function OpportunityPanel({ opportunities, unavailable, missions }: OpportunityPanelProps) {
-  return <Panel title="Prioridad de oportunidades" eyebrow="Inbox del Kernel" className="overview-opportunities">{unavailable ? <p className="empty-state" role="status">Datos temporalmente no disponibles</p> : opportunities.length === 0 ? <p className="empty-state">No hay oportunidades priorizadas todavía.</p> : <ul className="opportunity-list">{opportunities.map((opportunity) => {
+  // Fail-close empty: inbox is Kernel SUPPORT-only (OpportunityProjector.list / isKernelSupportedFind).
+  // Gate-blind "oportunidades priorizadas" must name SUPPORT like Hallazgos/Actividad empty honesty.
+  return <Panel title="Prioridad de oportunidades" eyebrow="Inbox del Kernel" className="overview-opportunities">{unavailable ? <p className="empty-state" role="status">Datos temporalmente no disponibles</p> : opportunities.length === 0 ? <p className="empty-state">No hay hallazgos con Kernel SUPPORT priorizados todavía.</p> : <ul className="opportunity-list">{opportunities.map((opportunity) => {
     // Fail-close label: Kernel SUPPORT Finds must not render as Lead no verificado (mirrors FindCard).
     const kernelSupported = isKernelSupportedFind(opportunity, missions);
     return (
