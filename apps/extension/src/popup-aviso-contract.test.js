@@ -135,4 +135,13 @@ describe('popup command-center empty Find gate honesty', () => {
     expect(popup).toMatch(/Kernel SUPPORT Find/);
     expect(popup).not.toContain('provenance-backed Find');
   });
+
+  it('disconnected command-center HTML empty must name Kernel SUPPORT Find like bandeja', () => {
+    // Without kernelApiToken loadOpportunities returns early — HTML empty stays mounted.
+    // Sibling bandeja already names Kernel SUPPORT; Centro de Mando must not stay gate-blind.
+    expect(popupHtml).toContain('command-center-content');
+    expect(popupHtml).toMatch(/Kernel SUPPORT Find/);
+    expect(popupHtml).not.toContain('cola de acción explicable');
+    expect(popupHtml).toContain('cargar hallazgos con Kernel SUPPORT');
+  });
 });
