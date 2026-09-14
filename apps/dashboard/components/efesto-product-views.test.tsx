@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { FormEvent } from 'react';
-import { AgentsView, FindsView, GoalsView, HomeView, type ChatMessage, type Provider } from './efesto-product-views';
+import { ActivityView, AgentsView, FindsView, GoalsView, HomeView, type ChatMessage, type Provider } from './efesto-product-views';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
 import type { MissionSummary } from '../lib/kernel/contracts';
 
@@ -318,5 +318,38 @@ describe('AgentsView Hermes return honesty', () => {
     expect(screen.getByText(/Un Find exige Kernel SUPPORT/i)).toBeTruthy();
     expect(screen.queryByText(/Sus findings deben/i)).toBeNull();
     expect(screen.getByRole('heading', { name: 'Hermes Agent' })).toBeTruthy();
+  });
+});
+
+describe('ActivityView Kernel SUPPORT honesty', () => {
+  it('empty Actividad must name Kernel SUPPORT for hallazgos (Evidence≠Find)', () => {
+    // overview activityFrom only lists opportunity rows with Kernel SUPPORT.
+    // Gate-blind "un hallazgo" must name SUPPORT like Hallazgos / FindCard honesty.
+    render(
+      <ActivityView
+        connected
+        snapshot={snapshotWithMissions([])}
+      />,
+    );
+    expect(screen.getByText('Sin actividad publicada')).toBeTruthy();
+    expect(screen.getByText(/hallazgo con Kernel SUPPORT/i)).toBeTruthy();
+    expect(screen.getByText(/hallazgos con Kernel SUPPORT/i)).toBeTruthy();
+    expect(screen.queryByText(/una misión o un hallazgo, aparecerá/i)).toBeNull();
+  });
+
+  it('opportunity activity rows must name Kernel SUPPORT Hallazgo', () => {
+    const snapshot = snapshotWithMissions([]);
+    snapshot.activity = [
+      {
+        id: 'opportunity:opp-1',
+        recordId: 'opp-1',
+        kind: 'opportunity',
+        timestamp: '2026-07-26T10:00:00.000Z',
+        state: 'new',
+      },
+    ];
+    render(<ActivityView connected snapshot={snapshot} />);
+    expect(screen.getByText('Hallazgo · Kernel SUPPORT')).toBeTruthy();
+    expect(screen.queryByText(/^Hallazgo$/)).toBeNull();
   });
 });

@@ -398,9 +398,11 @@ export function MemoryView({ connected }: { connected: boolean }) {
 
 export function ActivityView({ snapshot, connected }: { snapshot?: OverviewSnapshot; connected: boolean }) {
   const activity = snapshot?.activity ?? [];
-  const kindLabel = (kind: string) => kind === 'goal' ? 'Goal' : kind === 'mission' ? 'Misión' : kind === 'opportunity' ? 'Hallazgo' : kind;
-  return <Workspace icon={Activity} eyebrow="Estado persistido" title="Actividad" copy="Solo transiciones reales de Goals, misiones e hallazgos. Sin progreso inventado.">
-    {!connected ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para leer actividad real." /> : activity.length === 0 ? <Empty icon={Activity} title="Sin actividad publicada" copy="Cuando el Kernel persista un Goal, una misión o un hallazgo, aparecerá aquí." /> : <div className="record-list">{activity.map((entry) => <article key={entry.id}><div className="record-icon"><Activity /></div><div><strong>{kindLabel(entry.kind)}</strong><small>{entry.recordId} · {formatDate(entry.timestamp)}</small></div><StatePill state={entry.state} /></article>)}</div>}
+  // Fail-close: opportunity activity rows are Kernel SUPPORT Finds only (overview activityFrom).
+  // Bare "Hallazgo" must name Kernel SUPPORT like FindCard / Hallazgos empty honesty.
+  const kindLabel = (kind: string) => kind === 'goal' ? 'Goal' : kind === 'mission' ? 'Misión' : kind === 'opportunity' ? 'Hallazgo · Kernel SUPPORT' : kind;
+  return <Workspace icon={Activity} eyebrow="Estado persistido" title="Actividad" copy="Solo transiciones reales de Goals, misiones y hallazgos con Kernel SUPPORT. Sin progreso inventado.">
+    {!connected ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para leer actividad real." /> : activity.length === 0 ? <Empty icon={Activity} title="Sin actividad publicada" copy="Cuando el Kernel persista un Goal, una misión o un hallazgo con Kernel SUPPORT, aparecerá aquí." /> : <div className="record-list">{activity.map((entry) => <article key={entry.id}><div className="record-icon"><Activity /></div><div><strong>{kindLabel(entry.kind)}</strong><small>{entry.recordId} · {formatDate(entry.timestamp)}</small></div><StatePill state={entry.state} /></article>)}</div>}
   </Workspace>;
 }
 
