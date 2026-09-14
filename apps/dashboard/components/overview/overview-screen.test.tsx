@@ -101,6 +101,24 @@ describe('OverviewScreen', () => {
     await waitFor(() => expect(actions.recordOpportunityFeedback).toHaveBeenCalledWith('opportunity-1', 'useful'));
   });
 
+  it('KernelWorkspaces dismiss toast names Find SUPPORT — never bare Oportunidad descartada', async () => {
+    // overview-screen → KernelWorkspaces; GET /api/opportunities inbox is Kernel SUPPORT-only.
+    // Sibling of EfestoProductShell recordFeedback dismiss toast (2c37398).
+    const actions = {
+      createGoal: vi.fn().mockResolvedValue(undefined),
+      createMission: vi.fn().mockResolvedValue(undefined),
+      recordOpportunityFeedback: vi.fn().mockResolvedValue(undefined),
+    };
+    render(<OverviewScreen snapshot={snapshot} reload={vi.fn()} disconnect={vi.fn()} actions={actions} />);
+
+    const opportunities = screen.getByRole('region', { name: 'Oportunidades' });
+    fireEvent.click(within(opportunities).getByRole('button', { name: 'Descartar' }));
+    await waitFor(() => expect(actions.recordOpportunityFeedback).toHaveBeenCalledWith('opportunity-1', 'dismissed'));
+    expect(await screen.findByText('Find SUPPORT descartado; Evidence objetiva no fue reescrita.')).toBeTruthy();
+    expect(screen.queryByText('Oportunidad descartada')).toBeNull();
+    expect(screen.queryByText(/Oportunidad guardada/i)).toBeNull();
+  });
+
   it('renders the Internet Brain hero artwork without competing with Kernel status copy', () => {
     render(<OverviewScreen snapshot={snapshot} reload={vi.fn()} disconnect={vi.fn()} />);
 
