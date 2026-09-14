@@ -24,7 +24,8 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 ## Current checkpoint - 2026-09-14
 
 - GitHub `main` includes squash-merge PR #239 `944048d` (Home/Hallazgos Kernel-supported Find; SUPPORT empty/chrome sealed).
-- Follow-on branch work: extension consumes Kernel NotificationGateway unread `find:supported:*` receipts as OS chrome.notifications (no new UI). Packaged `efesto-extension.zip` ships `icons/efesto-notification.png` for chrome.notifications (build fail-closes if missing). Watchtower Find OS notify suppressed only when Kernel covering receipts exist; failed/forged-without-finds unchanged. `publicLaunchApproved` remains false.
+- Follow-on branch work: extension consumes Kernel NotificationGateway unread `find:supported:*` receipts as OS chrome.notifications (no new UI). Packaged `efesto-extension.zip` ships `icons/efesto-notification.png` for chrome.notifications (build fail-closes if missing). Watchtower Find OS notify suppressed only when Kernel covering receipts exist; failed/forged-without-finds unchanged.
+- Home forge-state-action (`brainState` forged) fail-closes to Kernel SUPPORT Finds — zero SUPPORT is Investigación terminada, not Evidence forjada Completado. `publicLaunchApproved` remains false.
 - Live UAT A-F and packaged UAT-1 to UAT-6 have NOT been run on this candidate. Do not cite unit tests as UAT.
 - Historical G5.3 / internal.81 live run `31686750785` (SHA `f7a85b65f6df10ba656964cc317cb95ce8b481cb`, 14/14 completed/forged) is FROZEN HISTORY from before the SUPPORT gate. It is not current Completado proof and must not be cited as launch-ready or as the live L1 to L7 contract after #238.
 

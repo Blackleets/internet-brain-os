@@ -50,7 +50,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   onFindFeedback?: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void;
   onOpenCase?: (caseId: string) => void;
 }) {
-  const state = brainState(phase);
+  const state = brainState(phase, supportedFinds.length);
   const showSuggestions = chatMode ? messages.length === 0 : !preparedGoal && supportedFinds.length === 0;
   const surfaceTitle = chatMode
     ? (messages.length ? 'Conversación' : 'Nueva conversación')
@@ -447,7 +447,31 @@ function Workspace({ icon: Icon, eyebrow, title, copy, action, children }: { ico
 function Empty({ icon: Icon, title, copy }: { icon: typeof Target; title: string; copy: string }) { return <div className="empty-state"><Icon /><strong>{title}</strong><p>{copy}</p></div>; }
 function StatePill({ state }: { state: string }) { const tone = ['ready', 'forged', 'available', 'new'].includes(state) ? 'good' : ['failed', 'invalid', 'blocked'].includes(state) ? 'bad' : ['running', 'investigating', 'verifying', 'queued', 'waiting_for_agent'].includes(state) ? 'working' : 'neutral'; return <span className={`state-pill ${tone}`}><i />{state.replaceAll('_', ' ')}</span>; }
 function ReadinessRow({ label, value, ready }: { label: string; value: string; ready: boolean }) { return <div className="readiness-row"><span>{label}</span><strong className={ready ? 'ready' : ''}><i />{value}</strong></div>; }
-export function brainState(phase: BrainPhase) { if (phase === 'thinking') return { label: 'Conversando', detail: 'Modelo transmitiendo' }; if (phase === 'investigating') return { label: 'Investigando', detail: 'Hermes ejecutando una misión' }; if (phase === 'verifying') return { label: 'Verificando Evidence', detail: 'Kernel aplicando gates' }; if (phase === 'queued') return { label: 'Misión preparada', detail: 'Esperando agente' }; if (phase === 'forged') return { label: 'Evidence forjada', detail: 'Resultado persistido' }; if (phase === 'failed') return { label: 'Atención requerida', detail: 'La última misión falló' }; if (phase === 'blocked') return { label: 'BLOCKED', detail: 'La política del Kernel denegó la ejecución automática' }; if (phase === 'unavailable') return { label: 'Hermes no disponible', detail: 'El agente no está listo; no hay investigación inventada' }; if (phase === 'ready') return { label: 'Forja lista', detail: 'Listo para un nuevo Goal' }; return { label: 'Modo local desconectado', detail: 'Sin actividad simulada' }; }
+export function brainState(phase: BrainPhase, supportedFindCount = 0) {
+  if (phase === 'thinking') return { label: 'Conversando', detail: 'Modelo transmitiendo' };
+  if (phase === 'investigating') return { label: 'Investigando', detail: 'Hermes ejecutando una misión' };
+  if (phase === 'verifying') return { label: 'Verificando Evidence', detail: 'Kernel aplicando gates' };
+  if (phase === 'queued') return { label: 'Misión preparada', detail: 'Esperando agente' };
+  if (phase === 'forged') {
+    // Fail-close Home forge-state-action (page.tsx → EfestoProductShell → HomeView):
+    // forged without Kernel SUPPORT Finds must not read like Completado/useful Find;
+    // with SUPPORT Finds, name them like extension Living Forge / mission-state.
+    if (supportedFindCount > 0) {
+      return {
+        label: supportedFindCount === 1 ? 'Find SUPPORT forjado' : 'Finds SUPPORT forjados',
+        detail: supportedFindCount === 1
+          ? '1 Find pasó Kernel SUPPORT'
+          : `${supportedFindCount} Finds pasaron Kernel SUPPORT`,
+      };
+    }
+    return { label: 'Investigación terminada', detail: 'Ningún Find pasó Kernel SUPPORT' };
+  }
+  if (phase === 'failed') return { label: 'Atención requerida', detail: 'La última misión falló' };
+  if (phase === 'blocked') return { label: 'BLOCKED', detail: 'La política del Kernel denegó la ejecución automática' };
+  if (phase === 'unavailable') return { label: 'Hermes no disponible', detail: 'El agente no está listo; no hay investigación inventada' };
+  if (phase === 'ready') return { label: 'Forja lista', detail: 'Listo para un nuevo Goal' };
+  return { label: 'Modo local desconectado', detail: 'Sin actividad simulada' };
+}
 function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' }).format(date); }
 function formatRelevance(value: number) { return value <= 1 ? `${Math.round(value * 100)}%` : String(Math.round(value)); }
 function optionalText(value: unknown): string | undefined { return typeof value === 'string' && value.trim() ? value.trim() : undefined; }

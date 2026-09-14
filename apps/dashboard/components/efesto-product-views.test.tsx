@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { FormEvent } from 'react';
-import { ActivityView, AgentsView, FindsView, GoalsView, HomeView, type ChatMessage, type Provider } from './efesto-product-views';
+import { ActivityView, AgentsView, FindsView, GoalsView, HomeView, brainState, type ChatMessage, type Provider } from './efesto-product-views';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
 import type { MissionSummary } from '../lib/kernel/contracts';
 
@@ -131,6 +131,25 @@ describe('HomeView Kernel-supported Find', () => {
     // Chrome strong + h1 both name SUPPORT (gate-blind Hallazgo útil must not remain).
     expect(screen.getAllByText('Hallazgo · Kernel SUPPORT').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText('Hallazgo útil')).toBeNull();
+  });
+
+  it('Home forge-state-action names SUPPORT when forged with Finds', () => {
+    // page.tsx → EfestoProductShell → HomeView forge-state-action uses brainState(phase, findCount).
+    // Gate-blind "Evidence forjada" must not remain when Kernel SUPPORT Finds exist.
+    render(<HomeView {...homeProps} phase="forged" connected supportedFinds={[supported]} />);
+    const action = screen.getByRole('button', { name: 'Kernel conectado' });
+    expect(action.textContent).toMatch(/Find SUPPORT forjado/i);
+    expect(action.textContent).not.toMatch(/Evidence forjada/i);
+    expect(action.textContent).not.toMatch(/Completado/i);
+  });
+
+  it('Home forge-state-action zero-SUPPORT forged is Investigación terminada', () => {
+    // Forged without Kernel SUPPORT Finds must not brand Completado / useful Find / Evidence forjada.
+    render(<HomeView {...homeProps} phase="forged" connected supportedFinds={[]} />);
+    const action = screen.getByRole('button', { name: 'Kernel conectado' });
+    expect(action.textContent).toMatch(/Investigación terminada/i);
+    expect(action.textContent).not.toMatch(/Evidence forjada/i);
+    expect(action.textContent).not.toMatch(/Completado|Find SUPPORT/i);
   });
 
   it('does not mint a Find card from a Hermes snippet', () => {
@@ -371,5 +390,20 @@ describe('ActivityView Kernel SUPPORT honesty', () => {
     render(<ActivityView connected snapshot={snapshot} />);
     expect(screen.getByText('Hallazgo · Kernel SUPPORT')).toBeTruthy();
     expect(screen.queryByText(/^Hallazgo$/)).toBeNull();
+  });
+});
+
+describe('brainState forged SUPPORT honesty', () => {
+  it('names Kernel SUPPORT Finds when forged with finds', () => {
+    expect(brainState('forged', 1).label).toMatch(/Find SUPPORT forjado/i);
+    expect(brainState('forged', 2).label).toMatch(/Finds SUPPORT forjados/i);
+    expect(brainState('forged', 1).label).not.toMatch(/Evidence forjada/i);
+    expect(brainState('forged', 1).detail).toMatch(/Kernel SUPPORT/i);
+  });
+
+  it('zero-SUPPORT forged is Investigación terminada, not Evidence forjada Completado', () => {
+    expect(brainState('forged', 0).label).toBe('Investigación terminada');
+    expect(brainState('forged', 0).detail).toMatch(/Ningún Find pasó Kernel SUPPORT/i);
+    expect(brainState('forged', 0).label).not.toMatch(/Evidence forjada|Completado|Find SUPPORT/i);
   });
 });
