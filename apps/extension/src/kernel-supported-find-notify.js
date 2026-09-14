@@ -114,12 +114,16 @@ export function shouldOsNotifyWatchtowerAviso(aviso, { coveringKernelFindNotific
   return true;
 }
 
-export function presentKernelSupportedFindOsNotify(notification = {}) {
-  const title = typeof notification.title === 'string' && notification.title.trim()
-    ? notification.title.trim().slice(0, 160)
-    : 'Kernel SUPPORT Find';
-  const body = typeof notification.body === 'string' && notification.body.trim()
-    ? notification.body.trim().slice(0, 180)
-    : 'Find passed Kernel SUPPORT. Open Efesto to inspect.';
-  return { title, message: body };
+/**
+ * Lock-screen-safe OS notify copy (ARCHITECTURE.md + extension README).
+ * Kernel receipts may carry Find titles for in-app / Finds workspace honesty,
+ * but chrome.notifications must never echo Goal titles, sources, or findings
+ * onto a locked or shared screen — same generic contract as Mission Watchtower.
+ * Click still opens Finds where the real title is visible.
+ */
+export function presentKernelSupportedFindOsNotify(_notification = {}) {
+  return {
+    title: 'Efesto finished forging',
+    message: 'A Find passed Kernel SUPPORT. Open Efesto to inspect.',
+  };
 }

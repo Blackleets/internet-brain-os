@@ -146,11 +146,14 @@ describe('shouldOsNotifyWatchtowerAviso', () => {
 });
 
 describe('presentKernelSupportedFindOsNotify', () => {
-  it('keeps Kernel SUPPORT copy bounded for chrome.notifications', () => {
+  it('uses generic lock-screen-safe copy — never Find titles or bodies', () => {
+    // Receipt title/body may name the researched item; OS notify must not leak it.
     expect(presentKernelSupportedFindOsNotify(supportedUnread)).toEqual({
-      title: 'Quality drill 24.99 EUR',
-      message: supportedUnread.body,
+      title: 'Efesto finished forging',
+      message: 'A Find passed Kernel SUPPORT. Open Efesto to inspect.',
     });
-    expect(presentKernelSupportedFindOsNotify({}).title).toContain('Kernel SUPPORT');
+    expect(presentKernelSupportedFindOsNotify(supportedUnread).title).not.toBe(supportedUnread.title);
+    expect(presentKernelSupportedFindOsNotify(supportedUnread).message).not.toContain('Quality drill');
+    expect(presentKernelSupportedFindOsNotify({}).message).toMatch(/Kernel SUPPORT/);
   });
 });

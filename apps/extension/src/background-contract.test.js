@@ -39,6 +39,10 @@ describe('extension background runtime contract', () => {
     // Covering pool must include mark-read receipts (not state=unread only).
     expect(source).not.toContain("listNotifications({ ...options, state: 'unread'");
     expect(source).toContain('listNotifications({ ...options, limit: 40 })');
+    expect(source).toContain('presentKernelSupportedFindOsNotify(item)');
+    // Lock-screen privacy: never pass Kernel receipt title/body straight into chrome.notifications.
+    expect(source).not.toMatch(/title:\s*item\.title/);
+    expect(source).not.toMatch(/message:\s*item\.body/);
   });
 
   it('routes watchtower Find OS notify click to Finds (not missions-only)', () => {

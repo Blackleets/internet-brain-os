@@ -6,7 +6,7 @@ The Kernel separates ordinary Evidence from strong opportunities across work, fu
 
 Users can add private Goals with a category, keywords, optional location, and priority. Goals stay in the local Kernel, synchronize to the user's own vault, and add an explainable personalization layer to Inbox ordering without replacing the original Evidence relevance score. They do not start external browsing until an Agent Hub adapter is explicitly connected and enabled.
 
-Mission Watchtower checks the authenticated loopback Agent Hub once per minute while the popup is closed. It notifies only on newly observed terminal transitions for already-known missions, uses generic lock-screen-safe copy, and keeps a bounded local unread result center. It never exposes Goal or finding content in notifications and cannot advance mission state.
+Mission Watchtower checks the authenticated loopback Agent Hub once per minute while the popup is closed. It notifies only on newly observed terminal transitions for already-known missions, uses generic lock-screen-safe copy, and keeps a bounded local unread result center. Kernel NotificationGateway SUPPORT Find OS notifies use the same generic lock-screen-safe copy (Find titles stay inside the Finds workspace after click). Neither path exposes Goal or finding content on the lock screen, and neither can advance mission state.
 
 Privacy defaults:
 
