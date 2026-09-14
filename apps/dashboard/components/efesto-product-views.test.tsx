@@ -193,11 +193,22 @@ describe('HomeView Kernel-supported Find', () => {
 
   it('Home forge-state-action zero-SUPPORT forged is Investigación terminada', () => {
     // Forged without Kernel SUPPORT Finds must not brand Completado / useful Find / Evidence forjada.
-    render(<HomeView {...homeProps} phase="forged" connected supportedFinds={[]} />);
+    render(<HomeView {...homeProps} phase="forged" connected supportedFinds={[]} forgeSupportedFindCount={0} />);
     const action = screen.getByRole('button', { name: 'Kernel conectado' });
     expect(action.textContent).toMatch(/Investigación terminada/i);
     expect(action.textContent).not.toMatch(/Evidence forjada/i);
     expect(action.textContent).not.toMatch(/Completado|Find SUPPORT/i);
+    // Chrome must drop phase-forged green Completado lookalike (orb / Agent Hub research_completed).
+    expect(action.className).toContain('phase-research_completed');
+    expect(action.className).not.toMatch(/phase-forged(?!\w)/);
+  });
+
+  it('Home forge-state-action SUPPORT forged keeps phase-forged green chrome', () => {
+    render(<HomeView {...homeProps} phase="forged" connected supportedFinds={[]} forgeSupportedFindCount={2} />);
+    const action = screen.getByRole('button', { name: 'Kernel conectado' });
+    expect(action.className).toContain('phase-forged');
+    expect(action.className).not.toContain('phase-research_completed');
+    expect(action.textContent).toMatch(/Finds SUPPORT forjados/i);
   });
 
   it('Home surfaceTitle honors focused findCount when inbox is empty', () => {
@@ -477,5 +488,9 @@ describe('Home forge-state-action shell wiring contract', () => {
     expect(shell).toContain('forgeSupportedFindCount={forgeSupportedFindCount}');
     expect(views).toContain('brainState(phase, forgeSupportedFindCount)');
     expect(views).not.toContain('brainState(phase, supportedFinds.length)');
+    expect(views).toContain("phase === 'forged' && forgeSupportedFindCount === 0");
+    expect(views).toContain("'research_completed'");
+    expect(views).toContain("phase-' + chromePhase");
+    expect(views).not.toContain("phase-' + phase");
   });
 });

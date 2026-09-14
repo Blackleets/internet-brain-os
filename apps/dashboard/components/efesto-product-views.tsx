@@ -56,6 +56,12 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   // (findCount / verificationResults via countMissionKernelSupportedFinds), never
   // global supportedFinds.length — older inbox must not brand zero-SUPPORT forged.
   const state = brainState(phase, forgeSupportedFindCount);
+  // Fail-close chrome: zero-SUPPORT forged must not keep phase-forged (green Completado
+  // lookalike) while label is Investigación terminada. Mirror extension orb / Agent Hub
+  // research_completed neutral chrome; SUPPORT forged keeps phase-forged green.
+  const chromePhase = phase === 'forged' && forgeSupportedFindCount === 0
+    ? 'research_completed'
+    : phase;
   // GoalSurface findCount can prove SUPPORT while inbox is empty (dismissed / not loaded).
   // surfaceTitle + empty body must not say Nuevo Goal beside Find SUPPORT forjado.
   const focusedMissionHasSupport = forgeSupportedFindCount > 0;
@@ -82,7 +88,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
 
       <ModeSwitcher chatMode={chatMode} onToggleChat={onToggleChat} />
 
-      <button type="button" className={'forge-state-action phase-' + phase} onClick={onOpenSettings} aria-label={connected ? 'Kernel conectado' : 'Conectar Kernel'}>
+      <button type="button" className={'forge-state-action phase-' + chromePhase} onClick={onOpenSettings} aria-label={connected ? 'Kernel conectado' : 'Conectar Kernel'}>
         <i />
         <span>{connected ? state.label : 'Conectar Kernel'}</span>
         <Plug />

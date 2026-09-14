@@ -710,6 +710,11 @@
   background: var(--forge-green);
 }
 
+/* Zero-SUPPORT forged → research_completed: keep default dim dot, not Completado green. */
+.forge-state-action.phase-research_completed i {
+  background: #67676e;
+}
+
 .forge-state-action.phase-thinking i,
 .forge-state-action.phase-queued i,
 .forge-state-action.phase-investigating i,

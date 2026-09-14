@@ -152,6 +152,19 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(goalSurface).not.toContain("{ ...FORGE_ACTIVITY.forged, label: 'Research completed'");
   });
 
+
+  it('keeps Home forge-state-action Completado green chrome behind Kernel SUPPORT', async () => {
+    const views = await text('apps/dashboard/components/efesto-product-views.tsx');
+    const css = await text('apps/dashboard/app/efesto-forge-redesign.css');
+    expect(views).toContain("phase === 'forged' && forgeSupportedFindCount === 0");
+    expect(views).toContain("'research_completed'");
+    expect(views).toContain("phase-' + chromePhase");
+    expect(views).not.toContain("phase-' + phase");
+    expect(css).toContain('.forge-state-action.phase-forged i');
+    expect(css).toContain('.forge-state-action.phase-research_completed i');
+    expect(css).not.toContain('.forge-state-action.phase-research_completed i {\n  background: var(--forge-green)');
+  });
+
   it('keeps Central Forge Power orb Completado chrome behind Kernel SUPPORT', async () => {
     const orb = await text('apps/extension/src/efesto-orb-state.js');
     const controller = await text('apps/extension/src/central-forge-power-controller.js');
