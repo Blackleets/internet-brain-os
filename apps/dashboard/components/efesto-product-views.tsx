@@ -56,14 +56,21 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   // (findCount / verificationResults via countMissionKernelSupportedFinds), never
   // global supportedFinds.length — older inbox must not brand zero-SUPPORT forged.
   const state = brainState(phase, forgeSupportedFindCount);
-  const showSuggestions = chatMode ? messages.length === 0 : !preparedGoal && supportedFinds.length === 0;
+  // GoalSurface findCount can prove SUPPORT while inbox is empty (dismissed / not loaded).
+  // surfaceTitle + empty body must not say Nuevo Goal beside Find SUPPORT forjado.
+  const focusedMissionHasSupport = forgeSupportedFindCount > 0;
+  const showSuggestions = chatMode
+    ? messages.length === 0
+    : !preparedGoal && supportedFinds.length === 0 && !focusedMissionHasSupport;
   const surfaceTitle = chatMode
     ? (messages.length ? 'Conversación' : 'Nueva conversación')
-    // Fail-close chrome: supportedFinds is Kernel SUPPORT-only (shell kernelSupportedFinds).
-    // Bare "Hallazgo útil" must name SUPPORT like ActivityView / scorecard Find SUPPORT honesty.
-    : (preparedGoal ? 'Goal preparado' : supportedFinds.length ? 'Hallazgo · Kernel SUPPORT' : 'Nuevo Goal');
+    // Fail-close chrome: inbox SUPPORT Finds OR focused-mission findCount — never bare Hallazgo útil.
+    : (preparedGoal ? 'Goal preparado' : (supportedFinds.length || focusedMissionHasSupport) ? 'Hallazgo · Kernel SUPPORT' : 'Nuevo Goal');
+  const surfaceAria = chatMode
+    ? 'Conversación con Efesto'
+    : (preparedGoal ? 'Goal preparado' : (supportedFinds.length || focusedMissionHasSupport) ? 'Hallazgos Kernel SUPPORT' : 'Nuevo Goal');
 
-  return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal')} aria-label={chatMode ? 'Conversación con Efesto' : 'Nuevo Goal'}>
+  return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal')} aria-label={surfaceAria}>
     <header className="forge-surface-bar">
       <div className="forge-surface-leading">
         <button type="button" className="forge-menu-button" onClick={onOpenNav} aria-label="Alternar navegación"><Menu /></button>
@@ -112,13 +119,17 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
           <button type="button" className="secondary-action" onClick={onEditGoal}>Editar Goal</button>
         </div>
         <p className="forge-plan-boundary"><ShieldCheck /> Nada se ejecuta sin tu confirmación explícita.</p>
-      </section> : supportedFinds.length ? <section className="forge-home-finds" aria-label="Hallazgos respaldados por el Kernel">
+      </section> : (supportedFinds.length || focusedMissionHasSupport) ? <section className="forge-home-finds" aria-label="Hallazgos respaldados por el Kernel">
         <header>
           <small>FIND · KERNEL SUPPORT</small>
           <h1>Hallazgo · Kernel SUPPORT</h1>
-          <p>Resultado persistido por el Kernel: título, fuente y procedencia SUPPORT. Un snippet de Hermes no aparece aquí.</p>
+          <p>{supportedFinds.length
+            ? 'Resultado persistido por el Kernel: título, fuente y procedencia SUPPORT. Un snippet de Hermes no aparece aquí.'
+            : 'La misión enfocada forjó Kernel SUPPORT (GoalSurface findCount). El inbox no muestra Finds visibles ahora (vacío, filtrado o descartado).'}</p>
         </header>
-        <div className="find-grid">{supportedFinds.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFindFeedback ?? (() => undefined)} onOpenCase={onOpenCase} />)}</div>
+        {supportedFinds.length
+          ? <div className="find-grid">{supportedFinds.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFindFeedback ?? (() => undefined)} onOpenCase={onOpenCase} />)}</div>
+          : <p className="truth-card"><ShieldCheck /> Find SUPPORT forjado en la misión; sin tarjetas de inbox que mostrar.</p>}
       </section> : <section className="forge-empty forge-goal-empty" aria-label="Crear un Goal">
         <span className="forge-empty-mark"><Target /></span>
         <small>EFESTO · CONTROLLED MISSION</small>

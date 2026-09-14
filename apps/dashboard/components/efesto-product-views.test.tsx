@@ -174,6 +174,19 @@ describe('HomeView Kernel-supported Find', () => {
     expect(action.textContent).not.toMatch(/Completado|Find SUPPORT/i);
   });
 
+  it('Home surfaceTitle honors focused findCount when inbox is empty', () => {
+    // Tip 96514e2 fixed forge-state-action via GoalSurface findCount; header/body still
+    // keyed off supportedFinds.length → Nuevo Goal + create-Goal empty beside Find SUPPORT forjado.
+    render(<HomeView {...homeProps} phase="forged" connected supportedFinds={[]} forgeSupportedFindCount={2} />);
+    const action = screen.getByRole('button', { name: 'Kernel conectado' });
+    expect(action.textContent).toMatch(/Finds SUPPORT forjados/i);
+    expect(screen.getAllByText('Hallazgo · Kernel SUPPORT').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('Nuevo Goal')).toBeNull();
+    expect(screen.queryByRole('heading', { name: '¿Qué estás buscando?' })).toBeNull();
+    expect(screen.getByText(/sin tarjetas de inbox/i)).toBeTruthy();
+    expect(screen.queryByLabelText('Ideas para nuevos Goals')).toBeNull();
+  });
+
   it('does not mint a Find card from a Hermes snippet', () => {
     render(<HomeView {...homeProps} phase="verifying" supportedFinds={[]} />);
     expect(screen.queryByText('Hermes snippet drill')).toBeNull();
