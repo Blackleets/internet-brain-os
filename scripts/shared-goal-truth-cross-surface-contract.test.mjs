@@ -91,6 +91,7 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(overview).not.toContain("if (mission.executionPhase === 'forged') return 'forged';");
     expect(feed).toContain("completed: 'Completada'");
     expect(feed).toContain("completed_without_forge: 'Terminada sin Evidence'");
+    expect(feed).toContain("research_completed: 'Investigación terminada'");
   });
 
   it('keeps GoalsView StatePill Completado off completed-without-forged missions', async () => {
@@ -111,6 +112,14 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(workspaces).toContain("label: 'completed_without_forge'");
     expect(workspaces).toContain('<StatusBadge state={badge.state} label={badge.label} />');
     expect(workspaces).not.toContain("mission.status === 'completed' ? 'healthy'");
+  });
+
+  it('keeps Agent Hub workspace healthy forged off zero-SUPPORT forged missions', async () => {
+    const workspaces = await text('apps/dashboard/components/workspaces/kernel-workspaces.tsx');
+    expect(workspaces).toContain('countMissionKernelSupportedFinds(mission)');
+    expect(workspaces).toContain("label: 'research_completed'");
+    expect(workspaces).toContain("label: 'forged'");
+    expect(workspaces).not.toContain("if (mission.executionPhase === 'forged') return { state: 'healthy', label: 'forged' };");
   });
 
   it('keeps mobile-width support separate from remote Kernel authority', async () => {

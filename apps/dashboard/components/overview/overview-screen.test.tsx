@@ -386,20 +386,55 @@ describe('OverviewScreen', () => {
 
   it('does not paint Agent Hub completed-without-forged missions as healthy', () => {
     const missions = [
-      { ...snapshot.missions[0], id: 'forged', status: 'completed' as const, executionPhase: 'forged' as const },
       { ...snapshot.missions[0], id: 'bare', status: 'completed' as const, executionPhase: undefined },
     ];
     render(<OverviewScreen snapshot={{ ...snapshot, missions, metrics: { ...snapshot.metrics, missions: missions.length, activeMissions: 0 } }} reload={vi.fn()} disconnect={vi.fn()} />);
     const hub = screen.getByRole('region', { name: 'Agent Hub' });
     const items = [...hub.querySelectorAll('.workspace-records li')];
-    expect(items).toHaveLength(2);
-    const forgedItem = items.find((item) => item.textContent?.includes('Misión forged'));
+    expect(items).toHaveLength(1);
     const bareItem = items.find((item) => item.textContent?.includes('Misión bare'));
-    expect(forgedItem?.querySelector('.status-badge--healthy')).toBeTruthy();
-    expect(forgedItem?.querySelector('.status-badge')?.textContent).toContain('forged');
     expect(bareItem?.querySelector('.status-badge--healthy')).toBeNull();
     expect(bareItem?.querySelector('.status-badge--unavailable')).toBeTruthy();
     expect(bareItem?.querySelector('.status-badge')?.textContent).toBe('completed_without_forge');
+  });
+
+  it('Agent Hub zero-SUPPORT forged is research_completed, not healthy forged', () => {
+    const missions = [
+      { ...snapshot.missions[0], id: 'forged-empty', status: 'completed' as const, executionPhase: 'forged' as const },
+      {
+        ...snapshot.missions[0],
+        id: 'forged-support',
+        status: 'completed' as const,
+        executionPhase: 'forged' as const,
+        verificationResults: [{ evidenceId: 'ev-1', supported: true }],
+      },
+    ];
+    render(<OverviewScreen snapshot={{ ...snapshot, missions, metrics: { ...snapshot.metrics, missions: missions.length, activeMissions: 0 } }} reload={vi.fn()} disconnect={vi.fn()} />);
+    const hub = screen.getByRole('region', { name: 'Agent Hub' });
+    const items = [...hub.querySelectorAll('.workspace-records li')];
+    expect(items).toHaveLength(2);
+    const emptyItem = items.find((item) => item.textContent?.includes('Misión forged-empty'));
+    const supportItem = items.find((item) => item.textContent?.includes('Misión forged-support'));
+    expect(emptyItem?.querySelector('.status-badge--healthy')).toBeNull();
+    expect(emptyItem?.querySelector('.status-badge--unavailable')).toBeTruthy();
+    expect(emptyItem?.querySelector('.status-badge')?.textContent).toBe('research_completed');
+    expect(supportItem?.querySelector('.status-badge--healthy')).toBeTruthy();
+    expect(supportItem?.querySelector('.status-badge')?.textContent).toContain('forged');
+  });
+
+  it('labels zero-SUPPORT forged mission activity as Investigación terminada', () => {
+    render(<OverviewScreen snapshot={{
+      ...snapshot,
+      activity: [
+        { id: 'mission:empty', recordId: 'empty', kind: 'mission', timestamp: '2026-07-26T10:05:00.000Z', state: 'research_completed' },
+        { id: 'mission:forged', recordId: 'forged', kind: 'mission', timestamp: '2026-07-26T10:04:00.000Z', state: 'forged' },
+      ],
+    }} reload={vi.fn()} disconnect={vi.fn()} />);
+
+    const activity = screen.getByRole('region', { name: 'Actividad reciente' });
+    expect(activity.textContent).toContain('MisionInvestigación terminada');
+    expect(activity.textContent).toContain('MisionForjada');
+    expect(activity.textContent).not.toContain('research_completed');
   });
 
   it('marks a failed refresh stale until a later refresh succeeds', async () => {
