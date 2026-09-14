@@ -55,3 +55,30 @@ export function kernelSupportedFinds(
 ): OpportunitySummary[] {
   return (items ?? []).filter((item) => isKernelSupportedFind(item, missions));
 }
+
+/**
+ * Mission-scoped Kernel SUPPORT Find count for Home forge-state-action.
+ * Prefer verificationResults supported === true when present (raw Mission rows).
+ * GoalSurface missions strip verificationResults and expose the same Kernel
+ * SUPPORT total as findCount — use that so focusedGoalSurface.mission is honest.
+ * Global inbox Finds must not brand a zero-SUPPORT forged focused mission.
+ */
+export function countMissionKernelSupportedFinds(mission?: unknown): number {
+  if (!mission || typeof mission !== 'object') return 0;
+  const record = mission as Record<string, unknown>;
+  const results = record.verificationResults;
+  if (Array.isArray(results)) {
+    let n = 0;
+    for (const entry of results) {
+      if (!entry || typeof entry !== 'object') continue;
+      if ((entry as Record<string, unknown>).supported === true) n += 1;
+    }
+    return n;
+  }
+  // Shared Goal Truth projection: findCount is already SUPPORT-only.
+  const findCount = record.findCount;
+  if (typeof findCount === 'number' && Number.isSafeInteger(findCount) && findCount >= 0) {
+    return findCount;
+  }
+  return 0;
+}

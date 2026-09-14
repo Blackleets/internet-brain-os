@@ -86,7 +86,8 @@ describe('extension Shared Goal Truth presentation', () => {
   it('never upgrades completed into forged success without persisted forged work state', () => {
     const view = presentGoalSurface(surface('completed'));
     expect(view.workState).toBe('completed');
-    expect(view.workLabel).not.toMatch(/completado|forged|Forge complete|Research completed/i);
+    expect(view.workLabel).toBe('Research ended without Evidence');
+    expect(view.workLabel).not.toMatch(/completado|forged|Forge complete|Research completed|No research mission yet/i);
     expect(forgeActivityForGoalSurface(surface('completed'))).toEqual({
       label: 'The forge is ready', detail: 'Create a Goal or analyze a public page.', tone: 'idle',
     });
@@ -96,7 +97,7 @@ describe('extension Shared Goal Truth presentation', () => {
     expect(forgeActivityForGoalSurface(surface('forged', { mission: { findCount: 1 } })).label).toBe('A Kernel SUPPORT Find was forged');
     expect(forgeActivityForGoalSurface(surface('forged', { mission: { findCount: 2 } })).label).not.toMatch(/useful lead|opportunit/i);
     expect(forgeActivityForGoalSurface(surface('forged', { mission: { findCount: 0 } }))).toEqual({
-      label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.', tone: 'success',
+      label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.', tone: 'idle',
     });
   });
 
@@ -109,7 +110,7 @@ describe('extension Shared Goal Truth presentation', () => {
     // Missing findCount is not proof of a Find — fail-close like findCount 0.
     expect(presentGoalSurface(surface('forged')).workLabel).toBe('Research completed');
     expect(forgeActivityForGoalSurface(surface('forged'))).toEqual({
-      label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.', tone: 'success',
+      label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.', tone: 'idle',
     });
   });
 

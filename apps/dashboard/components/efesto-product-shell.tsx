@@ -10,7 +10,7 @@ import { KernelClient, KernelClientError } from '../lib/kernel/client';
 import type { CaseSummary } from '../lib/kernel/contracts';
 import { loadGoalSurfaces, type GoalSurface, type GoalSurfaceWorkState } from '../lib/kernel/goal-surfaces';
 import { loadOverview, type OverviewSnapshot } from '../lib/kernel/overview';
-import { kernelSupportedFinds } from '../lib/kernel/supported-find';
+import { countMissionKernelSupportedFinds, kernelSupportedFinds } from '../lib/kernel/supported-find';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { connectionStore } from '../lib/session/connection-store';
 import { ProductValueScorecardPanel } from './overview/product-value-scorecard';
@@ -374,6 +374,9 @@ export default function EfestoProductShell() {
   }
 
   const supportedFinds = kernelSupportedFinds(snapshot?.opportunities, snapshot?.missions);
+  // Focused GoalSurface mission: findCount is Kernel SUPPORT (verificationResults stripped).
+  // Must not use global inbox length; countMissionKernelSupportedFinds reads findCount.
+  const forgeSupportedFindCount = countMissionKernelSupportedFinds(focusedGoalSurface?.mission);
 
   return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''}`}>
     <aside className="efesto-sidebar" aria-label="Navegación principal">
@@ -420,7 +423,7 @@ export default function EfestoProductShell() {
         <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? 'Kernel listo' : 'Conectar'}</button></div>
       </header>
       <main className="efesto-main">
-        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} supportedFinds={supportedFinds} missions={snapshot?.missions} onFindFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
+        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} supportedFinds={supportedFinds} forgeSupportedFindCount={forgeSupportedFindCount} missions={snapshot?.missions} onFindFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
         {view === 'goals' ? <div className="missions-route"><GoalsView snapshot={snapshot} onNew={newGoal} /><ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot?.productScorecard} /></div> : null}
         {view === 'finds' ? <FindsView opportunities={supportedFinds} missions={snapshot?.missions} connected={Boolean(connection)} onFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
         {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} onOpen={(record) => void openCase(record)} /> : null}
@@ -441,6 +444,8 @@ function brainPhaseFromWorkState(workState: GoalSurfaceWorkState | undefined): B
   if (workState === 'investigating' || workState === 'running') return 'investigating';
   if (workState === 'waiting_for_agent' || workState === 'queued') return 'queued';
   if (workState === 'forged') return 'forged';
+  // completed-without-Evidence: never collapse to ready → green Forja lista.
+  if (workState === 'completed') return 'completed';
   if (workState === 'failed') return 'failed';
   return 'ready';
 }

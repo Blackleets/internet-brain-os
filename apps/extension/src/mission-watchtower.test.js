@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { markWatchtowerEventsRead, presentWatchtowerAviso, presentWatchtowerBanner, reconcileMissionWatchtower, unreadWatchtowerCount } from './mission-watchtower.js';
+import { chromeNotificationIdForWatchtowerAviso, markWatchtowerEventsRead, pendingWorkspaceViewForWatchtowerNotification, presentWatchtowerAviso, presentWatchtowerBanner, reconcileMissionWatchtower, unreadWatchtowerCount } from './mission-watchtower.js';
 
 const queued = { id: 'mission:1', status: 'queued', createdAt: '2026-07-22T10:00:00Z' };
 const completed = { ...queued, status: 'completed', executionPhase: 'forged', completedAt: '2026-07-22T10:05:00Z', forgedAt: '2026-07-22T10:05:00Z' };
@@ -84,9 +84,59 @@ describe('Watchtower Find aviso', () => {
     expect(aviso.message).not.toMatch(/useful lead|opportunit/i);
   });
 
+  it('names Kernel SUPPORT from verificationResults when opportunities list is empty', () => {
+    // Mirrors background.js listOpportunities catch→[] — inbox empty must not
+    // demote a SUPPORT forged mission to kind:forged "inspect the Evidence".
+    const aviso = presentWatchtowerAviso(forgedTransition, [], missionWithSupport);
+    expect(aviso).toMatchObject({ notify: true, kind: 'find', title: 'Efesto finished forging' });
+    expect(aviso.message).toContain('1 Find passed Kernel SUPPORT');
+    expect(aviso.message).not.toMatch(/useful lead|opportunit|local mission finished/i);
+    const zeroSupport = {
+      ...missionWithSupport,
+      verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: false }],
+    };
+    expect(presentWatchtowerAviso(forgedTransition, [], zeroSupport)).toMatchObject({
+      notify: true,
+      kind: 'forged',
+    });
+  });
+
+  it('does not understate Living Forge SUPPORT when opportunities list is partial', () => {
+    // finds.length > 0 used to win the ternary and report 1 Find while verificationResults
+    // (Living Forge / mission-presentation) prove 2 SUPPORT rows.
+    const missionTwoSupport = {
+      ...missionWithSupport,
+      verificationResults: [
+        { candidateId: 'cand-1', evidenceId: 'ev-1', supported: true },
+        { candidateId: 'cand-2', evidenceId: 'ev-2', supported: true },
+      ],
+    };
+    const aviso = presentWatchtowerAviso(forgedTransition, [supportedFind], missionTwoSupport);
+    expect(aviso).toMatchObject({ notify: true, kind: 'find' });
+    expect(aviso.message).toContain('2 Finds passed Kernel SUPPORT');
+    expect(aviso.message).not.toContain('1 Find passed Kernel SUPPORT');
+  });
+
   it('keeps failed missions as attention, not Find', () => {
     const aviso = presentWatchtowerAviso({ status: 'failed' }, [supportedFind], missionWithSupport);
     expect(aviso).toMatchObject({ notify: true, kind: 'attention', title: 'Efesto needs your attention' });
+  });
+
+
+  it('routes kind:find OS notify click to Finds workspace (Kernel gateway fallback parity)', () => {
+    const transition = { id: 'mission:1:completed:2026-07-22T10:05:00Z', missionId: 'mission:1', status: 'completed' };
+    const findId = chromeNotificationIdForWatchtowerAviso(transition, 'find');
+    expect(findId).toBe('efesto-mission:find:mission:1:completed:2026-07-22T10:05:00Z');
+    expect(pendingWorkspaceViewForWatchtowerNotification(findId)).toBe('finds');
+    expect(pendingWorkspaceViewForWatchtowerNotification(
+      chromeNotificationIdForWatchtowerAviso(transition, 'attention'),
+    )).toBe('missions');
+    expect(pendingWorkspaceViewForWatchtowerNotification(
+      chromeNotificationIdForWatchtowerAviso(transition, 'forged'),
+    )).toBe('missions');
+    // Legacy ids without kind stay on missions (pre-encoding watchtower notifies).
+    expect(pendingWorkspaceViewForWatchtowerNotification(`efesto-mission:${transition.id}`)).toBe('missions');
+    expect(pendingWorkspaceViewForWatchtowerNotification('efesto-kernel-notification:n1')).toBeNull();
   });
 
   it('Watchtower banner does not treat unsupported opportunity as Find', () => {

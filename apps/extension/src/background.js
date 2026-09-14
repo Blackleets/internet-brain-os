@@ -1,6 +1,15 @@
-import { DEFAULT_KERNEL_BASE_URL, listAgentMissions, listOpportunities, sendPageContext } from './local-transport.js';
+import { DEFAULT_KERNEL_BASE_URL, listAgentMissions, listNotifications, listOpportunities, markNotificationRead, sendPageContext } from './local-transport.js';
 import { evaluateAutoCapture } from './auto-capture-policy.js';
-import { presentWatchtowerAviso, reconcileMissionWatchtower } from './mission-watchtower.js';
+import { chromeNotificationIdForWatchtowerAviso, pendingWorkspaceViewForWatchtowerNotification, presentWatchtowerAviso, reconcileMissionWatchtower } from './mission-watchtower.js';
+import {
+  chromeNotificationIdForKernelNotification,
+  kernelFindsCoveringMission,
+  parseKernelNotificationId,
+  presentKernelSupportedFindOsNotify,
+  rememberDeliveredKernelNotificationIds,
+  shouldOsNotifyWatchtowerAviso,
+  undeliveredKernelSupportedFindNotifications,
+} from './kernel-supported-find-notify.js';
 import { AutoRadar, AUTO_RADAR_STATES } from './auto-radar.js';
 
 const WATCHTOWER_ALARM = 'efesto-mission-watchtower';
@@ -21,8 +30,30 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   }
 });
 chrome.notifications.onClicked.addListener((notificationId) => {
-  if (!notificationId.startsWith('efesto-mission:')) return;
-  void chrome.storage.local.set({ pendingWorkspaceView: 'missions' });
+  const kernelNotificationId = parseKernelNotificationId(notificationId);
+  if (kernelNotificationId) {
+    void (async () => {
+      const stored = await chrome.storage.local.get(['kernelBaseUrl', 'kernelApiToken']);
+      if (stored.kernelApiToken) {
+        try {
+          await markNotificationRead(kernelNotificationId, {
+            baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL,
+            apiToken: stored.kernelApiToken,
+          });
+        } catch {
+          // Local Kernel may be asleep; still open the Finds workspace.
+        }
+      }
+      await chrome.storage.local.set({ pendingWorkspaceView: 'finds' });
+      void chrome.notifications.clear(notificationId);
+      void chrome.action.openPopup().catch(() => undefined);
+    })();
+    return;
+  }
+  const watchtowerView = pendingWorkspaceViewForWatchtowerNotification(notificationId);
+  if (!watchtowerView) return;
+  // kind:'find' → finds (Kernel gateway fallback parity); attention/forged → missions.
+  void chrome.storage.local.set({ pendingWorkspaceView: watchtowerView });
   void chrome.notifications.clear(notificationId);
   void chrome.action.openPopup().catch(() => undefined);
 });
@@ -149,7 +180,9 @@ async function ensureWatchtower() {
 }
 
 async function inspectMissionTransitions() {
-  const stored = await chrome.storage.local.get(['kernelBaseUrl', 'kernelApiToken', 'missionWatchtower']);
+  const stored = await chrome.storage.local.get([
+    'kernelBaseUrl', 'kernelApiToken', 'missionWatchtower', 'deliveredKernelNotifications',
+  ]);
   if (!stored.kernelApiToken) return;
   try {
     const options = {
@@ -163,22 +196,82 @@ async function inspectMissionTransitions() {
     } catch {
       opportunities = [];
     }
+    // Close the half-built Kernel NotificationGateway path: deliver unread SUPPORT Find
+    // receipts as OS notifies (no new UI). Watchtower remains fallback when gateway fails.
+    // Covering list is state-agnostic (mark-read must not un-cover). Delivery must list
+    // state=unread: NotificationGateway list() filters THEN slices — mark-read after OS
+    // create only advances the unread window. Unfiltered limit:40 keeps read receipts in
+    // the newest slots, so older unread SUPPORT Finds stay starved (a6b0e2c alone lied).
+    let kernelNotifications = [];
+    try {
+      kernelNotifications = await listNotifications({ ...options, limit: 40 });
+    } catch {
+      kernelNotifications = [];
+    }
+    try {
+      const unreadKernelNotifications = await listNotifications({
+        ...options,
+        state: 'unread',
+        limit: 40,
+      });
+      await deliverKernelSupportedFindNotifications(
+        unreadKernelNotifications,
+        stored.deliveredKernelNotifications,
+        options,
+      );
+    } catch {
+      // Delivery optional this tick; covering still uses state-agnostic list above.
+    }
     const result = reconcileMissionWatchtower(missions, stored.missionWatchtower);
     await chrome.storage.local.set({ missionWatchtower: result.state });
     const byId = Object.fromEntries(missions.filter((mission) => typeof mission?.id === 'string').map((mission) => [mission.id, mission]));
     for (const transition of result.transitions) {
-      const aviso = presentWatchtowerAviso(transition, opportunities, byId[transition.missionId]);
-      if (aviso.notify) await notifyMissionTransition(transition, aviso);
+      const mission = byId[transition.missionId];
+      const aviso = presentWatchtowerAviso(transition, opportunities, mission);
+      const covering = kernelFindsCoveringMission(kernelNotifications, mission);
+      if (shouldOsNotifyWatchtowerAviso(aviso, { coveringKernelFindNotifications: covering })) {
+        await notifyMissionTransition(transition, aviso);
+      }
     }
   } catch {
     // A sleeping or restarting local Kernel is expected; retain the last observation.
   }
 }
 
+async function deliverKernelSupportedFindNotifications(notifications, deliveredIds, options = {}) {
+  const selected = undeliveredKernelSupportedFindNotifications(notifications, deliveredIds);
+  if (!selected.length) return false;
+  for (const item of selected) {
+    const copy = presentKernelSupportedFindOsNotify(item);
+    await chrome.notifications.create(chromeNotificationIdForKernelNotification(item.id), {
+      type: 'basic',
+      iconUrl: 'icons/efesto-notification.png',
+      title: copy.title,
+      message: copy.message,
+      priority: 1,
+    });
+    // Advance unread window after local OS delivery (delivery list is state=unread).
+    // Covering suppress stays on the separate state-agnostic list (read still covers).
+    // Click → Finds remains; mark-read on click is idempotent once advanced here.
+    try {
+      await markNotificationRead(item.id, options);
+    } catch {
+      // Kernel may be restarting; keep local delivered dedupe to avoid minute re-spam.
+    }
+  }
+  await chrome.storage.local.set({
+    deliveredKernelNotifications: rememberDeliveredKernelNotificationIds(
+      deliveredIds,
+      selected.map((item) => item.id),
+    ),
+  });
+  return true;
+}
+
 async function notifyMissionTransition(transition, aviso) {
-  await chrome.notifications.create(`efesto-mission:${transition.id}`, {
+  await chrome.notifications.create(chromeNotificationIdForWatchtowerAviso(transition, aviso.kind), {
     type: 'basic',
-    iconUrl: 'icons/efesto-notification.svg',
+    iconUrl: 'icons/efesto-notification.png',
     title: aviso.title,
     message: aviso.message,
     priority: 1,

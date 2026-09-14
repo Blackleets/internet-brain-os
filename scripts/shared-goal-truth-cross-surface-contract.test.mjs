@@ -86,13 +86,20 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(overview).toContain("return 'completed_without_forge'");
     expect(overview).toContain('missionActivityState(mission)');
     expect(overview).toContain("mission.status === 'completed'");
+    expect(overview).toContain('countMissionKernelSupportedFinds(mission)');
+    expect(overview).toContain("return countMissionKernelSupportedFinds(mission) > 0 ? 'forged' : 'research_completed'");
+    expect(overview).not.toContain("if (mission.executionPhase === 'forged') return 'forged';");
+    expect(feed).toContain("completed: 'Completada'");
     expect(feed).toContain("completed_without_forge: 'Terminada sin Evidence'");
+    expect(feed).toContain("research_completed: 'Investigación terminada'");
   });
 
   it('keeps GoalsView StatePill Completado off completed-without-forged missions', async () => {
     const views = await text('apps/dashboard/components/efesto-product-views.tsx');
     expect(views).toContain('function missionPillState(mission: MissionSummary)');
     expect(views).toContain("return 'completed_without_forge'");
+    expect(views).toContain('countMissionKernelSupportedFinds(mission)');
+    expect(views).toContain("return countMissionKernelSupportedFinds(mission) > 0 ? 'forged' : 'research_completed'");
     expect(views).toContain('<StatePill state={mission ? missionPillState(mission) : goal.status} />');
     expect(views).toContain('<StatePill state={missionPillState(mission)} />');
     expect(views).not.toContain('<StatePill state={mission?.executionPhase ?? mission?.status ?? goal.status} />');
@@ -105,6 +112,98 @@ describe('Shared Goal Truth cross-surface freeze', () => {
     expect(workspaces).toContain("label: 'completed_without_forge'");
     expect(workspaces).toContain('<StatusBadge state={badge.state} label={badge.label} />');
     expect(workspaces).not.toContain("mission.status === 'completed' ? 'healthy'");
+  });
+
+  it('keeps Agent Hub workspace healthy forged off zero-SUPPORT forged missions', async () => {
+    const workspaces = await text('apps/dashboard/components/workspaces/kernel-workspaces.tsx');
+    expect(workspaces).toContain('countMissionKernelSupportedFinds(mission)');
+    expect(workspaces).toContain("label: 'research_completed'");
+    expect(workspaces).toContain("label: 'forged'");
+    expect(workspaces).not.toContain("if (mission.executionPhase === 'forged') return { state: 'healthy', label: 'forged' };");
+  });
+
+  it('keeps extension #mission-progress Forged stage behind Kernel SUPPORT', async () => {
+    const journey = await text('apps/extension/src/product-journey.js');
+    expect(journey).toContain('forgedWithSupport');
+    expect(journey).toContain('countMissionSupportedFinds(mission)');
+    expect(journey).toContain('forgedWithSupport ? 3 : 2');
+    expect(journey).not.toContain('completed: forged ? 3 : 2');
+  });
+
+
+
+  it('keeps Agent Hub #mission-state / mission-card Completado chrome behind Kernel SUPPORT', async () => {
+    const popup = await text('apps/extension/src/popup.js');
+    const css = await text('apps/extension/src/popup.css');
+    expect(popup).toContain("findCount > 0 ? 'completed' : 'research_completed'");
+    expect(popup).toContain("view.opportunitiesPromoted === 0");
+    expect(popup).toContain("'research_completed'");
+    expect(css).toContain('data-status="research_completed"');
+    expect(css).not.toContain('.agent-hub strong[data-status="research_completed"]{color:var(--good)}');
+  });
+
+  it('keeps Living Forge zero-SUPPORT forged off success celebrate chrome', async () => {
+    const forge = await text('apps/extension/src/forge-activity.js');
+    const goalSurface = await text('apps/extension/src/goal-surface-presentation.js');
+    expect(forge).toContain("tone: 'idle'");
+    expect(forge).toContain("label: 'Research completed'");
+    expect(forge).not.toContain("{ ...ACTIVITIES.success, label: 'Research completed'");
+    expect(goalSurface).toContain("tone: 'idle'");
+    expect(goalSurface).not.toContain("{ ...FORGE_ACTIVITY.forged, label: 'Research completed'");
+  });
+
+
+  it('keeps Home forge-state-action Completado green chrome behind Kernel SUPPORT', async () => {
+    const views = await text('apps/dashboard/components/efesto-product-views.tsx');
+    const css = await text('apps/dashboard/app/efesto-forge-redesign.css');
+    expect(views).toContain("(phase === 'forged' && forgeSupportedFindCount === 0) || phase === 'completed'");
+    expect(views).toContain("'research_completed'");
+    expect(views).toContain("phase-' + chromePhase");
+    expect(views).not.toContain("phase-' + phase");
+    expect(css).toContain('.forge-state-action.phase-forged i');
+    expect(css).toContain('.forge-state-action.phase-research_completed i');
+    expect(css).not.toContain('.forge-state-action.phase-research_completed i {\n  background: var(--forge-green)');
+  });
+
+  it('keeps Home forge-state-action completed-without-Evidence off Forja lista green', async () => {
+    const views = await text('apps/dashboard/components/efesto-product-views.tsx');
+    const shell = await text('apps/dashboard/components/efesto-product-shell.tsx');
+    expect(shell).toContain("workState === 'completed'");
+    expect(shell).toContain("return 'completed'");
+    expect(shell).not.toContain("if (workState === 'forged') return 'forged';\n  if (workState === 'failed') return 'failed';\n  return 'ready';");
+    expect(views).toContain("phase === 'completed'");
+    expect(views).toContain("Terminada sin Evidence");
+    expect(views).toContain("'completed'");
+  });
+
+
+  it('keeps Shared Goal Truth popup binding #mission-state chrome behind Kernel SUPPORT', async () => {
+    const binding = await text('apps/extension/src/goal-surface-popup-binding.js');
+    expect(binding).toContain('chromeStatusForGoalSurfaceWork');
+    expect(binding).toContain("workState === 'forged'");
+    expect(binding).toContain("workState === 'completed'");
+    expect(binding).toContain("'research_completed'");
+    expect(binding).not.toContain("const status = focused?.workState ?? 'idle'");
+  });
+
+  it('keeps completed-without-Evidence Goal Surface workLabel off No research mission yet', async () => {
+    const presentation = await text('apps/extension/src/goal-surface-presentation.js');
+    const popup = await text('apps/extension/src/popup.js');
+    expect(presentation).toContain("completed: 'Research ended without Evidence'");
+    expect(presentation).not.toContain("completed: 'No research mission yet'");
+    expect(popup).toContain("latest?.status === 'completed'");
+    expect(popup).toContain("? 'research_completed'");
+  });
+
+  it('keeps Central Forge Power orb Completado chrome behind Kernel SUPPORT', async () => {
+    const orb = await text('apps/extension/src/efesto-orb-state.js');
+    const controller = await text('apps/extension/src/central-forge-power-controller.js');
+    expect(orb).toContain("state: 'research_completed'");
+    expect(orb).toContain("state: 'completed'");
+    expect(orb).toContain('forgedCopy.state');
+    expect(controller).toContain("const terminalLedger = view.state === 'completed' || view.state === 'research_completed'");
+    expect(controller).toContain("view.state === 'completed' ? 'success'");
+    expect(controller).not.toContain("view.state === 'research_completed' ? 'success'");
   });
 
   it('keeps mobile-width support separate from remote Kernel authority', async () => {

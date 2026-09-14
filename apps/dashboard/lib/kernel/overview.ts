@@ -20,7 +20,7 @@ import {
   parseOpportunities,
   parseStatus,
 } from './parse';
-import { isKernelSupportedFind } from './supported-find';
+import { countMissionKernelSupportedFinds, isKernelSupportedFind } from './supported-find';
 
 type OverviewEndpoint = 'health' | 'status' | 'bootstrap' | 'cases' | 'goals' | 'missions' | 'opportunities' | 'activity' | 'modelForge' | 'scorecard';
 type OverviewIssueCode = KernelClientErrorCode | 'UNAVAILABLE' | 'UNKNOWN';
@@ -177,7 +177,11 @@ function unavailableIssues(endpoints: OverviewEndpoint[]): OverviewIssue[] {
 }
 
 function missionActivityState(mission: MissionSummary): string {
-  if (mission.executionPhase === 'forged') return 'forged';
+  // Forged without Kernel SUPPORT Finds must not stay green "forged" on Actividad
+  // (mirrors GoalsView missionPillState + Home Investigación terminada).
+  if (mission.executionPhase === 'forged') {
+    return countMissionKernelSupportedFinds(mission) > 0 ? 'forged' : 'research_completed';
+  }
   if (mission.executionPhase) return mission.executionPhase;
   // Bare status completed (e.g. zero Hermes candidates, no Evidence) is not Completado.
   if (mission.status === 'completed') return 'completed_without_forge';

@@ -53,8 +53,9 @@ function isForgedComplete(record = {}) {
 }
 
 /**
- * OS notify + Watchtower Find aviso. Fail-close: Find/opportunity copy only when
- * kernelSupportedFindsForMission (same gate as find-presentation.js).
+ * OS notify + Watchtower Find aviso. Fail-close: Find copy when inbox Finds match
+ * this mission OR verificationResults prove Kernel SUPPORT (Living Forge gate).
+ * listOpportunities catch→[] must not demote SUPPORT missions to kind:forged.
  * Do not notify Completado for unverified (bare completed) leads.
  */
 export function presentWatchtowerAviso(transition = {}, opportunities = [], mission) {
@@ -71,10 +72,14 @@ export function presentWatchtowerAviso(transition = {}, opportunities = [], miss
     return { notify: false, kind: 'silent', title: '', message: '' };
   }
   const finds = kernelSupportedFindsForMission(opportunities, mission);
-  if (finds.length > 0) {
+  // Living Forge / mission-presentation countSupportedFinds is the mission truth.
+  // Prefer max(inbox, verificationResults): empty inbox (catch→[]) must not demote
+  // to kind:forged, and a partial opportunities page must not understate SUPPORT
+  // below Living Forge when verificationResults prove more Finds.
+  const n = Math.max(finds.length, countMissionSupportedFinds(mission));
+  if (n > 0) {
     // Fail-close Find aviso copy: SUPPORT-gated finds must name Kernel SUPPORT (same honesty as
     // Living Forge / mission-state / Kernel NotificationGateway body) — not bare "useful lead".
-    const n = finds.length;
     return {
       notify: true,
       kind: 'find',
@@ -88,6 +93,57 @@ export function presentWatchtowerAviso(transition = {}, opportunities = [], miss
     title: 'Efesto finished forging',
     message: 'A local mission finished. Open Efesto to inspect the Evidence.',
   };
+}
+
+/** Living Forge gate: verificationResults with supported === true. */
+function countMissionSupportedFinds(mission) {
+  const results = mission?.verificationResults;
+  if (!Array.isArray(results)) return 0;
+  let n = 0;
+  for (const entry of results) {
+    if (entry && typeof entry === 'object' && entry.supported === true) n += 1;
+  }
+  return n;
+}
+
+
+const WATCHTOWER_NOTIFY_PREFIX = 'efesto-mission:';
+const WATCHTOWER_KIND_WORKSPACE = Object.freeze({
+  find: 'finds',
+  forged: 'missions',
+  attention: 'missions',
+});
+
+/**
+ * Encode aviso kind in the chrome.notifications id so click can route Find → finds.
+ * Legacy ids without a kind segment still parse as missions.
+ */
+export function chromeNotificationIdForWatchtowerAviso(transition = {}, kind) {
+  const id = typeof transition?.id === 'string' ? transition.id.trim() : '';
+  const safeKind = typeof kind === 'string' ? kind.trim() : '';
+  if (!id) return `${WATCHTOWER_NOTIFY_PREFIX}unknown`;
+  if (!safeKind || !Object.prototype.hasOwnProperty.call(WATCHTOWER_KIND_WORKSPACE, safeKind)) {
+    return `${WATCHTOWER_NOTIFY_PREFIX}${id}`;
+  }
+  return `${WATCHTOWER_NOTIFY_PREFIX}${safeKind}:${id}`;
+}
+
+/**
+ * Click route for watchtower OS notify. kind:'find' (SUPPORT Find aviso — gateway
+ * fallback) must open Finds workspace, same honesty as Kernel NotificationGateway
+ * click → pendingWorkspaceView finds. attention/forged stay on missions (Forge Ledger).
+ * Legacy efesto-mission:${transition.id} without kind → missions.
+ */
+export function pendingWorkspaceViewForWatchtowerNotification(notificationId) {
+  if (typeof notificationId !== 'string' || !notificationId.startsWith(WATCHTOWER_NOTIFY_PREFIX)) {
+    return null;
+  }
+  const rest = notificationId.slice(WATCHTOWER_NOTIFY_PREFIX.length);
+  const kind = rest.split(':')[0];
+  if (Object.prototype.hasOwnProperty.call(WATCHTOWER_KIND_WORKSPACE, kind)) {
+    return WATCHTOWER_KIND_WORKSPACE[kind];
+  }
+  return 'missions';
 }
 
 export function presentWatchtowerBanner(unread, event = {}) {
