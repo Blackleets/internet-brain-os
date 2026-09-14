@@ -198,18 +198,29 @@ async function inspectMissionTransitions() {
     }
     // Close the half-built Kernel NotificationGateway path: deliver unread SUPPORT Find
     // receipts as OS notifies (no new UI). Watchtower remains fallback when gateway fails.
-    // Fetch without state=unread so covering still sees mark-read receipts on a later
-    // watchtower revision transition (delivery itself stays unread-only via select*).
+    // Covering list is state-agnostic (mark-read must not un-cover). Delivery must list
+    // state=unread: NotificationGateway list() filters THEN slices — mark-read after OS
+    // create only advances the unread window. Unfiltered limit:40 keeps read receipts in
+    // the newest slots, so older unread SUPPORT Finds stay starved (a6b0e2c alone lied).
     let kernelNotifications = [];
     try {
       kernelNotifications = await listNotifications({ ...options, limit: 40 });
+    } catch {
+      kernelNotifications = [];
+    }
+    try {
+      const unreadKernelNotifications = await listNotifications({
+        ...options,
+        state: 'unread',
+        limit: 40,
+      });
       await deliverKernelSupportedFindNotifications(
-        kernelNotifications,
+        unreadKernelNotifications,
         stored.deliveredKernelNotifications,
         options,
       );
     } catch {
-      kernelNotifications = [];
+      // Delivery optional this tick; covering still uses state-agnostic list above.
     }
     const result = reconcileMissionWatchtower(missions, stored.missionWatchtower);
     await chrome.storage.local.set({ missionWatchtower: result.state });
@@ -239,9 +250,8 @@ async function deliverKernelSupportedFindNotifications(notifications, deliveredI
       message: copy.message,
       priority: 1,
     });
-    // Advance NotificationGateway unread window after local OS delivery. list() is
-    // newest-first + limit; receipts left unread until click starve older SUPPORT
-    // Finds outside the page. Covering suppress stays state-agnostic (read still covers).
+    // Advance unread window after local OS delivery (delivery list is state=unread).
+    // Covering suppress stays on the separate state-agnostic list (read still covers).
     // Click → Finds remains; mark-read on click is idempotent once advanced here.
     try {
       await markNotificationRead(item.id, options);

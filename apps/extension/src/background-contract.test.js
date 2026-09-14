@@ -36,12 +36,12 @@ describe('extension background runtime contract', () => {
     expect(source).toContain('chromeNotificationIdForKernelNotification');
     expect(source).toContain("pendingWorkspaceView: 'finds'");
     expect(source).toContain("iconUrl: 'icons/efesto-notification.png'");
-    // Covering pool must include mark-read receipts (not state=unread only).
-    expect(source).not.toContain("listNotifications({ ...options, state: 'unread'");
+    // Covering: state-agnostic list. Delivery: separate state=unread list so mark-read
+    // after OS create advances the unread window (unfiltered limit keeps read in-page).
     expect(source).toContain('listNotifications({ ...options, limit: 40 })');
+    expect(source).toContain("state: 'unread'");
+    expect(source).toContain('unreadKernelNotifications');
     expect(source).toContain('presentKernelSupportedFindOsNotify(item)');
-    // After OS delivery, markNotificationRead advances newest-first unread limit window
-    // so ignored alerts cannot starve older SUPPORT receipts outside the page.
     expect(source).toContain('await markNotificationRead(item.id, options)');
     expect(source).toContain('stored.deliveredKernelNotifications,');
     expect(source).toContain('options,');

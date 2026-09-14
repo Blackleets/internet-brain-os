@@ -46,8 +46,9 @@ export function selectKernelSupportedFindCoveringNotifications(notifications = [
 /**
  * Skip OS notify for Kernel receipts already delivered locally (avoid minute re-spam).
  * After a successful chrome.notifications.create, background must markNotificationRead
- * so NotificationGateway list(newest-first, limit) advances — unread-until-click alone
- * starves older SUPPORT Finds outside the page. Covering stays state-agnostic.
+ * AND list delivery with state=unread — Gateway filters then slices, so only the unread
+ * window advances. Unfiltered list(limit) keeps read receipts in newest slots (starves
+ * older unread SUPPORT). Covering stays on a separate state-agnostic list.
  */
 export function undeliveredKernelSupportedFindNotifications(notifications = [], deliveredIds = []) {
   const seen = new Set(
