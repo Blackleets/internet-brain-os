@@ -53,8 +53,9 @@ function isForgedComplete(record = {}) {
 }
 
 /**
- * OS notify + Watchtower Find aviso. Fail-close: Find/opportunity copy only when
- * kernelSupportedFindsForMission (same gate as find-presentation.js).
+ * OS notify + Watchtower Find aviso. Fail-close: Find copy when inbox Finds match
+ * this mission OR verificationResults prove Kernel SUPPORT (Living Forge gate).
+ * listOpportunities catch→[] must not demote SUPPORT missions to kind:forged.
  * Do not notify Completado for unverified (bare completed) leads.
  */
 export function presentWatchtowerAviso(transition = {}, opportunities = [], mission) {
@@ -71,10 +72,14 @@ export function presentWatchtowerAviso(transition = {}, opportunities = [], miss
     return { notify: false, kind: 'silent', title: '', message: '' };
   }
   const finds = kernelSupportedFindsForMission(opportunities, mission);
-  if (finds.length > 0) {
+  // Opportunities may be empty (background listOpportunities catch→[]) while
+  // mission.verificationResults still prove Kernel SUPPORT — same Living Forge /
+  // mission-presentation countSupportedFinds gate. Do not emit kind:forged copy
+  // that pretends zero Finds when SUPPORT rows exist.
+  const n = finds.length > 0 ? finds.length : countMissionSupportedFinds(mission);
+  if (n > 0) {
     // Fail-close Find aviso copy: SUPPORT-gated finds must name Kernel SUPPORT (same honesty as
     // Living Forge / mission-state / Kernel NotificationGateway body) — not bare "useful lead".
-    const n = finds.length;
     return {
       notify: true,
       kind: 'find',
@@ -88,6 +93,17 @@ export function presentWatchtowerAviso(transition = {}, opportunities = [], miss
     title: 'Efesto finished forging',
     message: 'A local mission finished. Open Efesto to inspect the Evidence.',
   };
+}
+
+/** Living Forge gate: verificationResults with supported === true. */
+function countMissionSupportedFinds(mission) {
+  const results = mission?.verificationResults;
+  if (!Array.isArray(results)) return 0;
+  let n = 0;
+  for (const entry of results) {
+    if (entry && typeof entry === 'object' && entry.supported === true) n += 1;
+  }
+  return n;
 }
 
 export function presentWatchtowerBanner(unread, event = {}) {

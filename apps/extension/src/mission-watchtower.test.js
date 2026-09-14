@@ -84,6 +84,23 @@ describe('Watchtower Find aviso', () => {
     expect(aviso.message).not.toMatch(/useful lead|opportunit/i);
   });
 
+  it('names Kernel SUPPORT from verificationResults when opportunities list is empty', () => {
+    // Mirrors background.js listOpportunities catch→[] — inbox empty must not
+    // demote a SUPPORT forged mission to kind:forged "inspect the Evidence".
+    const aviso = presentWatchtowerAviso(forgedTransition, [], missionWithSupport);
+    expect(aviso).toMatchObject({ notify: true, kind: 'find', title: 'Efesto finished forging' });
+    expect(aviso.message).toContain('1 Find passed Kernel SUPPORT');
+    expect(aviso.message).not.toMatch(/useful lead|opportunit|local mission finished/i);
+    const zeroSupport = {
+      ...missionWithSupport,
+      verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: false }],
+    };
+    expect(presentWatchtowerAviso(forgedTransition, [], zeroSupport)).toMatchObject({
+      notify: true,
+      kind: 'forged',
+    });
+  });
+
   it('keeps failed missions as attention, not Find', () => {
     const aviso = presentWatchtowerAviso({ status: 'failed' }, [supportedFind], missionWithSupport);
     expect(aviso).toMatchObject({ notify: true, kind: 'attention', title: 'Efesto needs your attention' });
