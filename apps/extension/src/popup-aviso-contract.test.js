@@ -118,3 +118,11 @@ describe('popup SUPPORT Find action-workspace review honesty', () => {
     expect(popup).not.toContain('The lead remains unverified');
   });
 });
+
+describe('popup Goal forge toast SUPPORT honesty', () => {
+  it('must not promise matching opportunities after Goal create — Finds require Kernel SUPPORT', () => {
+    expect(popup).toContain('Goal forged privately. Matching still requires Kernel SUPPORT Finds');
+    expect(popup).toContain('not bare opportunities');
+    expect(popup).not.toContain('prioritize matching opportunities');
+  });
+});

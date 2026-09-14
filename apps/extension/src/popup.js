@@ -310,7 +310,7 @@ async function addGoal() {
     const stored = await chrome.storage.local.get(['kernelBaseUrl', 'kernelApiToken']);
     await createGoal({ title: $('#goal-title').value, categories: [$('#goal-category').value], location: $('#goal-location').value || undefined, keywords: $('#goal-keywords').value.split(',').map((value) => value.trim()).filter(Boolean), priority: 2 }, { baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL, apiToken: stored.kernelApiToken });
     $('#goal-title').value = ''; $('#goal-location').value = ''; $('#goal-keywords').value = '';
-    setStatus('Goal forged privately. Efesto will prioritize matching opportunities.');
+    setStatus('Goal forged privately. Matching still requires Kernel SUPPORT Finds — not bare opportunities.');
     await Promise.all([loadGoals(stored), loadOpportunities(stored)]);
   } catch (error) { setStatus(error instanceof Error ? error.message : 'Unable to forge Goal', true); }
   finally { button.disabled = false; }
