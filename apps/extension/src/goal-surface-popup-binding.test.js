@@ -27,11 +27,12 @@ describe('Shared Goal Truth popup binding', () => {
   it('binds persisted verifying state to mission copy and Living Forge', () => {
     mount();
     const result = applyGoalTruthPresentation(document, {
-      focused: { workState: 'verifying', workLabel: 'Efesto is verifying findings' },
-      forgeActivity: { label: 'Inspecting the piece', detail: 'Efesto is validating returned findings inside the local Kernel.', tone: 'verifying' },
+      focused: { workState: 'verifying', workLabel: 'Efesto is verifying Evidence' },
+      forgeActivity: { label: 'Inspecting the piece', detail: 'Efesto is validating returned material inside the local Kernel. Finds still require Kernel SUPPORT.', tone: 'verifying' },
     });
-    expect(result).toEqual({ status: 'verifying', text: 'Efesto is verifying findings' });
-    expect(document.querySelector('#mission-state')?.textContent).toBe('Efesto is verifying findings');
+    expect(result).toEqual({ status: 'verifying', text: 'Efesto is verifying Evidence' });
+    expect(document.querySelector('#mission-state')?.textContent).toBe('Efesto is verifying Evidence');
+    expect(document.querySelector('#mission-state')?.textContent).not.toMatch(/finding/i);
     expect(document.querySelector('#mission-state')?.dataset.status).toBe('verifying');
     expect(document.querySelector('#living-forge')?.dataset.activity).toBe('verifying');
     expect(document.querySelector('.live-badge-label')?.textContent).toBe('EN VIVO');
@@ -54,7 +55,8 @@ describe('Shared Goal Truth popup binding', () => {
     mount();
     const storage = { get: vi.fn(async () => ({ kernelBaseUrl: 'http://127.0.0.1:4000', kernelApiToken: 'x'.repeat(40) })) };
     const listGoalSurfacesFn = vi.fn(async () => [surface]);
-    await expect(syncGoalSurfacePopup({ document, storage, listGoalSurfacesFn })).resolves.toEqual({ status: 'verifying', text: 'Efesto is verifying findings' });
+    await expect(syncGoalSurfacePopup({ document, storage, listGoalSurfacesFn })).resolves.toEqual({ status: 'verifying', text: 'Efesto is verifying Evidence' });
+    expect(document.querySelector('#mission-state')?.textContent).not.toMatch(/finding/i);
     expect(listGoalSurfacesFn).toHaveBeenCalledWith({ baseUrl: 'http://127.0.0.1:4000', apiToken: 'x'.repeat(40) });
     expect(document.querySelector('#living-forge')?.dataset.activity).toBe('verifying');
   });

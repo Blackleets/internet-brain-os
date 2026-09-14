@@ -12,7 +12,9 @@ describe('G4 automatic read-only cross-surface contract', () => {
     expect(dashboard).toContain('loadGoalSurfaces');
     expect(dashboard).toContain('brainPhaseFromWorkState');
     expect(extension).toContain('listGoalSurfaces');
-    expect(extension).toContain("latest?.executionPhase === 'verifying' ? 'Efesto is verifying findings'");
+    // Fail-close verifying honesty (4c5a132): candidates are Evidence, not findings before SUPPORT.
+    expect(extension).toContain("latest?.executionPhase === 'verifying' ? 'Efesto is verifying Evidence'");
+    expect(extension).not.toContain("latest?.executionPhase === 'verifying' ? 'Efesto is verifying findings'");
     expect(goalSnapshot).toContain("mission.executionPhase === 'verifying'");
     expect(goalSnapshot).toContain("mission.executionPhase === 'forged'");
   });
