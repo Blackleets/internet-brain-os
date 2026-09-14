@@ -88,4 +88,26 @@ describe('Hermes sensitive-data preflight', () => {
     ]);
     expect(JSON.stringify(findings)).not.toContain(kernelToken);
   });
+
+  it('blocks JS/Python object-literal Kernel credential dumps that previously bypassed JSON-only preflight', () => {
+    const kernelToken = 'kernel-token-value-that-must-not-ingest';
+    // Real console / DevTools shapes: SESSION_CONNECTION / KernelConnection / chrome.storage
+    // often serialize with unquoted or single-quoted keys — dee4431 only closed double-quoted JSON.
+    const input = [
+      `{baseUrl: 'http://127.0.0.1:4000', token: '${kernelToken}'}`,
+      `{'baseUrl': 'http://127.0.0.1:4000', 'token': '${kernelToken}'}`,
+      `{kernelBaseUrl: 'http://127.0.0.1:4000', kernelApiToken: '${kernelToken}'}`,
+      `apiToken: "${kernelToken}"`,
+    ].join('\n');
+
+    const findings = scanHermesSensitiveData(input);
+
+    expect(findings).toEqual([
+      { code: 'SENSITIVE_JSON_FIELD', line: 1 },
+      { code: 'SENSITIVE_JSON_FIELD', line: 2 },
+      { code: 'SENSITIVE_JSON_FIELD', line: 3 },
+      { code: 'SENSITIVE_JSON_FIELD', line: 4 },
+    ]);
+    expect(JSON.stringify(findings)).not.toContain(kernelToken);
+  });
 });
