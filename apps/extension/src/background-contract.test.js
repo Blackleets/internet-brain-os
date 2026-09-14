@@ -35,5 +35,6 @@ describe('extension background runtime contract', () => {
     expect(source).toContain('kernelFindsCoveringMission');
     expect(source).toContain('chromeNotificationIdForKernelNotification');
     expect(source).toContain("pendingWorkspaceView: 'finds'");
+    expect(source).toContain("iconUrl: 'icons/efesto-notification.png'");
   });
 });

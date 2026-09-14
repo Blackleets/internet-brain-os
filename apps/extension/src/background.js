@@ -229,7 +229,7 @@ async function deliverKernelSupportedFindNotifications(notifications, deliveredI
     const copy = presentKernelSupportedFindOsNotify(item);
     await chrome.notifications.create(chromeNotificationIdForKernelNotification(item.id), {
       type: 'basic',
-      iconUrl: 'icons/efesto-notification.svg',
+      iconUrl: 'icons/efesto-notification.png',
       title: copy.title,
       message: copy.message,
       priority: 1,
@@ -247,7 +247,7 @@ async function deliverKernelSupportedFindNotifications(notifications, deliveredI
 async function notifyMissionTransition(transition, aviso) {
   await chrome.notifications.create(`efesto-mission:${transition.id}`, {
     type: 'basic',
-    iconUrl: 'icons/efesto-notification.svg',
+    iconUrl: 'icons/efesto-notification.png',
     title: aviso.title,
     message: aviso.message,
     priority: 1,
