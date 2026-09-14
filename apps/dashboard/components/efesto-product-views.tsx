@@ -8,6 +8,7 @@ import {
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { CaseSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
+import { isKernelSupportedFind, kernelSupportedFinds } from '../lib/kernel/supported-find';
 
 export type Provider = {
   id: string;
@@ -37,19 +38,25 @@ const starterGoals = [
   'Ayúdame a tomar una decisión',
 ];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, supportedFinds = [], missions, onFindFeedback, onOpenCase }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
   input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
   onConfirmGoal: () => void; onEditGoal: () => void; onStarterGoal: (goal: string) => void; onStarterChat: (prompt: string) => void;
   onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
   onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenNav: () => void;
+  supportedFinds?: OpportunitySummary[];
+  missions?: readonly MissionSummary[];
+  onFindFeedback?: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void;
+  onOpenCase?: (caseId: string) => void;
 }) {
   const state = brainState(phase);
-  const showSuggestions = chatMode ? messages.length === 0 : !preparedGoal;
+  const showSuggestions = chatMode ? messages.length === 0 : !preparedGoal && supportedFinds.length === 0;
   const surfaceTitle = chatMode
     ? (messages.length ? 'Conversación' : 'Nueva conversación')
-    : (preparedGoal ? 'Goal preparado' : 'Nuevo Goal');
+    // Fail-close chrome: supportedFinds is Kernel SUPPORT-only (shell kernelSupportedFinds).
+    // Bare "Hallazgo útil" must name SUPPORT like ActivityView / scorecard Find SUPPORT honesty.
+    : (preparedGoal ? 'Goal preparado' : supportedFinds.length ? 'Hallazgo · Kernel SUPPORT' : 'Nuevo Goal');
 
   return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal')} aria-label={chatMode ? 'Conversación con Efesto' : 'Nuevo Goal'}>
     <header className="forge-surface-bar">
@@ -93,13 +100,20 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
         <ol>
           <li><b>1</b><span><strong>Crear Goal privado</strong><small>El Kernel conserva el objetivo y sus palabras clave.</small></span></li>
           <li><b>2</b><span><strong>Confirmar la misión</strong><small>La ejecución comienza solo después de tu autorización explícita.</small></span></li>
-          <li><b>3</b><span><strong>Forjar Evidence y Finds</strong><small>Solo se muestran resultados respaldados por contratos verificables.</small></span></li>
+          <li><b>3</b><span><strong>Forjar Evidence · Finds SUPPORT</strong><small>Forjar Evidence no es un Find. Solo aparecen hallazgos con Kernel SUPPORT.</small></span></li>
         </ol>
         <div className="forge-plan-actions">
           <button type="button" className="primary-action" disabled={!connected || goalPending} onClick={onConfirmGoal}>{goalPending ? 'Confirmando…' : connected ? 'Confirmar y ejecutar' : 'Conecta el Kernel para ejecutar'}</button>
           <button type="button" className="secondary-action" onClick={onEditGoal}>Editar Goal</button>
         </div>
         <p className="forge-plan-boundary"><ShieldCheck /> Nada se ejecuta sin tu confirmación explícita.</p>
+      </section> : supportedFinds.length ? <section className="forge-home-finds" aria-label="Hallazgos respaldados por el Kernel">
+        <header>
+          <small>FIND · KERNEL SUPPORT</small>
+          <h1>Hallazgo · Kernel SUPPORT</h1>
+          <p>Resultado persistido por el Kernel: título, fuente y procedencia SUPPORT. Un snippet de Hermes no aparece aquí.</p>
+        </header>
+        <div className="find-grid">{supportedFinds.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFindFeedback ?? (() => undefined)} onOpenCase={onOpenCase} />)}</div>
       </section> : <section className="forge-empty forge-goal-empty" aria-label="Crear un Goal">
         <span className="forge-empty-mark"><Target /></span>
         <small>EFESTO · CONTROLLED MISSION</small>
@@ -316,26 +330,31 @@ export function GoalsView({ snapshot, onNew }: { snapshot?: OverviewSnapshot; on
   </Workspace>;
 }
 
-export function FindsView({ opportunities, connected, onFeedback, onOpenCase }: { opportunities: OpportunitySummary[]; connected: boolean; onFeedback: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void; onOpenCase?: (caseId: string) => void }) {
-  return <Workspace icon={Sparkles} eyebrow="Hallazgos priorizados por el Kernel" title="Hallazgos" copy="Cada Find es un lead no verificado. El feedback cambia preferencia, no Evidence objetiva.">
-    {!connected ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para cargar hallazgos reales." /> : opportunities.length === 0 ? <Empty icon={Search} title="Aún no hay hallazgos" copy="Ejecuta un Goal público y los resultados promovidos aparecerán aquí." /> : <div className="find-grid">{opportunities.map((item) => <FindCard key={item.id} item={item} onFeedback={onFeedback} onOpenCase={onOpenCase} />)}</div>}
+export function FindsView({ opportunities, connected, onFeedback, onOpenCase, missions }: { opportunities: OpportunitySummary[]; connected: boolean; onFeedback: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void; onOpenCase?: (caseId: string) => void; missions?: readonly MissionSummary[] }) {
+  // Fail-close: keep mission verificationResults SUPPORT in the gate (same as Home/shell).
+  const supported = kernelSupportedFinds(opportunities, missions);
+  return <Workspace icon={Sparkles} eyebrow="Hallazgos priorizados por el Kernel" title="Hallazgos" copy="Solo Finds con Kernel SUPPORT. El feedback cambia preferencia, no Evidence objetiva.">
+    {!connected ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para cargar hallazgos con Kernel SUPPORT." /> : supported.length === 0 ? <Empty icon={Search} title="Aún no hay hallazgos" copy="Ejecuta un Goal público. Solo aparecen Finds con Kernel SUPPORT; promover o completar no es un Find." /> : <div className="find-grid">{supported.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFeedback} onOpenCase={onOpenCase} />)}</div>}
   </Workspace>;
 }
 
-function FindCard({ item, onFeedback, onOpenCase }: { item: OpportunitySummary; onFeedback: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void; onOpenCase?: (caseId: string) => void }) {
+function FindCard({ item, onFeedback, onOpenCase, missions }: { item: OpportunitySummary; onFeedback: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void; onOpenCase?: (caseId: string) => void; missions?: readonly MissionSummary[] }) {
   const evidenceId = optionalText(item.evidenceId);
   const caseId = optionalText(item.caseId);
   const sourceUrl = optionalText(item.sourceUrl);
+  // Fail-close label: mission verificationResults SUPPORT must not render as Lead no verificado.
+  const kernelSupported = isKernelSupportedFind(item, missions);
   const reasons = Array.isArray(item.reasons) ? item.reasons.filter((value): value is string => typeof value === 'string' && value.trim().length > 0) : [];
   const evidenceCount = evidenceId ? 1 : 0;
   return <article className="find-card">
-    <header><span>{item.categoryLabel}</span><span className="lead-label">Lead no verificado</span></header>
+    <header><span>{item.categoryLabel}</span><span className={'lead-label' + (kernelSupported ? ' kernel-support' : '')}>{kernelSupported ? 'Kernel SUPPORT' : 'Lead no verificado'}</span></header>
     <h2>{item.title}</h2>
     {reasons.length ? <p className="find-signals">Señales: {reasons.join(' · ')}</p> : null}
     <p>{item.sourceHost} · relevancia {formatRelevance(item.relevance)}</p>
     <dl className="find-provenance">
       <div><dt>Evidence</dt><dd>{evidenceCount > 0 ? `${evidenceCount} registro` : 'no vinculada'}</dd></div>
       {caseId ? <div><dt>Case</dt><dd>{onOpenCase ? <button type="button" className="provenance-link" onClick={() => onOpenCase(caseId)}>{caseId}</button> : caseId}</dd></div> : null}
+      {kernelSupported ? <div><dt>Kernel</dt><dd>SUPPORT</dd></div> : null}
       {evidenceId ? <div><dt>Procedencia</dt><dd>Hallazgo → {evidenceId}{caseId ? ` → ${caseId}` : ''}{sourceUrl ? ' → fuente' : ''}</dd></div> : <div><dt>Procedencia</dt><dd>no publicada</dd></div>}
     </dl>
     {sourceUrl ? <a className="find-source" href={sourceUrl} target="_blank" rel="noreferrer">Abrir fuente <ExternalLink /></a> : <span className="source-missing">Sin URL publicada</span>}
@@ -381,9 +400,12 @@ export function MemoryView({ connected }: { connected: boolean }) {
 
 export function ActivityView({ snapshot, connected }: { snapshot?: OverviewSnapshot; connected: boolean }) {
   const activity = snapshot?.activity ?? [];
-  const kindLabel = (kind: string) => kind === 'goal' ? 'Goal' : kind === 'mission' ? 'Misión' : kind === 'opportunity' ? 'Hallazgo' : kind;
-  return <Workspace icon={Activity} eyebrow="Estado persistido" title="Actividad" copy="Solo transiciones reales de Goals, misiones e hallazgos. Sin progreso inventado.">
-    {!connected ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para leer actividad real." /> : activity.length === 0 ? <Empty icon={Activity} title="Sin actividad publicada" copy="Cuando el Kernel persista un Goal, una misión o un hallazgo, aparecerá aquí." /> : <div className="record-list">{activity.map((entry) => <article key={entry.id}><div className="record-icon"><Activity /></div><div><strong>{kindLabel(entry.kind)}</strong><small>{entry.recordId} · {formatDate(entry.timestamp)}</small></div><StatePill state={entry.state} /></article>)}</div>}
+  // Fail-close: opportunity activity rows are Kernel SUPPORT Finds only (overview activityFrom).
+  // Bare "Hallazgo" must name Kernel SUPPORT like FindCard / Hallazgos empty honesty.
+  // Disconnected empty stays mounted — gate-blind "actividad real" must name SUPPORT like Hallazgos.
+  const kindLabel = (kind: string) => kind === 'goal' ? 'Goal' : kind === 'mission' ? 'Misión' : kind === 'opportunity' ? 'Hallazgo · Kernel SUPPORT' : kind;
+  return <Workspace icon={Activity} eyebrow="Estado persistido" title="Actividad" copy="Solo transiciones reales de Goals, misiones y hallazgos con Kernel SUPPORT. Sin progreso inventado.">
+    {!connected ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para leer actividad real de Goals, misiones y hallazgos con Kernel SUPPORT." /> : activity.length === 0 ? <Empty icon={Activity} title="Sin actividad publicada" copy="Cuando el Kernel persista un Goal, una misión o un hallazgo con Kernel SUPPORT, aparecerá aquí." /> : <div className="record-list">{activity.map((entry) => <article key={entry.id}><div className="record-icon"><Activity /></div><div><strong>{kindLabel(entry.kind)}</strong><small>{entry.recordId} · {formatDate(entry.timestamp)}</small></div><StatePill state={entry.state} /></article>)}</div>}
   </Workspace>;
 }
 
@@ -396,7 +418,7 @@ export function ModelsView({ providers, selectedProviderId, selectedModel, model
 export function AgentsView({ snapshot, onSettings, onNewGoal }: { snapshot?: OverviewSnapshot; onSettings: () => void; onNewGoal: () => void }) {
   const hermes = snapshot?.readiness.bootstrap?.hermes;
   return <Workspace icon={Bot} eyebrow="Ejecución controlada" title="Agentes" copy="Hermes y futuros agentes pueden ejecutar herramientas; el Kernel conserva la autoridad." action={<button type="button" className="secondary-action" onClick={onSettings}><Settings /> Configurar</button>}>
-    <div className="agent-hero"><div className="agent-mark"><Bot /></div><div><small>NOUS RESEARCH</small><h2>Hermes Agent</h2><p>Discovery y ejecución acotada. Sus findings deben regresar por el bridge autenticado.</p></div><StatePill state={hermes === 'ready' ? 'ready' : hermes ?? 'offline'} /></div><div className="agent-contract"><span><b>Kernel</b>{snapshot?.readiness.kernel ?? 'offline'}</span><span><b>Hermes</b>{hermes ?? 'sin diagnóstico'}</span><span><b>Missions</b>{snapshot?.missions.length ?? 0}</span><span><b>Autoridad</b>Kernel-only</span></div><button type="button" className="primary-action" onClick={onNewGoal}><Target /> Preparar una misión</button>
+    <div className="agent-hero"><div className="agent-mark"><Bot /></div><div><small>NOUS RESEARCH</small><h2>Hermes Agent</h2><p>Discovery y ejecución acotada. Sus candidatos deben regresar por el bridge autenticado. Un Find exige Kernel SUPPORT.</p></div><StatePill state={hermes === 'ready' ? 'ready' : hermes ?? 'offline'} /></div><div className="agent-contract"><span><b>Kernel</b>{snapshot?.readiness.kernel ?? 'offline'}</span><span><b>Hermes</b>{hermes ?? 'sin diagnóstico'}</span><span><b>Missions</b>{snapshot?.missions.length ?? 0}</span><span><b>Autoridad</b>Kernel-only</span></div><button type="button" className="primary-action" onClick={onNewGoal}><Target /> Preparar una misión</button>
   </Workspace>;
 }
 

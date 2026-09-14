@@ -1,4 +1,5 @@
 import { DEFAULT_KERNEL_BASE_URL, getEfestoBootstrapStatus, listAgentMissions, listGoals, startGoalResearch } from './local-transport.js';
+import { applyLivingForgeActivity } from './forge-activity.js';
 import { deriveEfestoOrbState, resolveForgePowerIntent, selectNextGoal, shouldCreateMission } from './efesto-orb-state.js';
 
 const ACTIVE_STATUSES = new Set(['queued', 'running']);
@@ -116,7 +117,7 @@ export function createForgePowerController({
       if (!shouldCreateMission({ enabled, kernel, goals, completedGoalIds: [...completed], mission: latest })) {
         if (!selectNextGoal(goals, [...completed])) {
           await storage.set({ efestoForgeEnabled: false, efestoForgeCompletedGoals: [] });
-          renderForgePowerView(elements, deriveEfestoOrbState({ enabled: false, kernel, services, mission: latest }), goals.length ? 'Forge cycle complete. Results are in Finds and Obsidian receipts when confirmed.' : 'Create a Goal, then start the forge.');
+          renderForgePowerView(elements, deriveEfestoOrbState({ enabled: false, kernel, services, mission: latest }), goals.length ? forgeCycleCompleteDetail(latest) : 'Create a Goal, then start the forge.');
           state.currentOrbState = elements.powerButton?.dataset.state ?? 'idle';
         }
         return;
@@ -159,13 +160,13 @@ export function renderForgePowerView(elements = {}, view, overrideDetail) {
   powerButton.setAttribute('aria-label', enabled ? 'Pause Efesto after current work' : view.action ?? 'Start Efesto');
   powerLabel.textContent = view.action && view.state === 'failed' ? view.action : view.label;
   powerDetail.textContent = overrideDetail ?? view.detail;
-  livingForge?.setAttribute?.('data-activity', view.smithActive ? (view.state === 'verifying' ? 'verifying' : 'working') : view.state === 'completed' ? 'success' : view.state === 'failed' ? 'error' : 'idle');
+  applyLivingForgeActivity(livingForge, view.smithActive ? (view.state === 'verifying' ? 'verifying' : 'working') : view.state === 'completed' ? 'success' : view.state === 'failed' ? 'error' : 'idle');
   setText('#forge-orb-elapsed', view.elapsedLabel ?? 'No active mission');
   setText('#forge-orb-heartbeat', view.heartbeatLabel ?? 'No heartbeat yet');
   if (orbMeta) orbMeta.hidden = !view.active;
   if (orbSummary) orbSummary.hidden = view.state !== 'completed';
   if (view.summary) {
-    setText('#forge-summary-findings', String(view.summary.findingsReceived));
+    setText('#forge-summary-received', String(view.summary.received));
     setText('#forge-summary-evidence', String(view.summary.evidenceCreated));
     setText('#forge-summary-opportunities', String(view.summary.opportunitiesForged));
     setText('#forge-summary-obsidian', String(view.summary.obsidianNotesWritten));
@@ -187,6 +188,35 @@ function renderObsidianReceipt(obsidianReceipt, receipt) {
   }[status] ?? status;
   setText('#forge-obsidian-state', `Obsidian ${copy}`);
   setText('#forge-obsidian-detail', receipt.lastSyncedAt ? `${receipt.vaultRelativePath ?? 'vault path unavailable'} · ${new Date(receipt.lastSyncedAt).toLocaleString()}` : 'The Kernel has not returned a sync receipt.');
+}
+
+
+/** Fail-close cycle-complete copy: never claim Finds without Kernel SUPPORT. */
+export function forgeCycleCompleteDetail(mission) {
+  const supported = countSupportedFinds(mission?.verificationResults);
+  const summary = mission?.resultSummary ?? {};
+  const received = Number(summary.received);
+  const evidence = Number(summary.evidenceCreated);
+  const hasReceivedOrEvidence =
+    (Number.isInteger(received) && received > 0) || (Number.isInteger(evidence) && evidence > 0);
+  if (supported > 0) {
+    const noun = supported === 1 ? 'Find' : 'Finds';
+    return `Forge cycle complete. ${supported} ${noun} passed Kernel SUPPORT. Obsidian receipts when confirmed.`;
+  }
+  if (hasReceivedOrEvidence) {
+    return 'Forge cycle complete. Evidence/Received saved; no Find passed Kernel SUPPORT. Obsidian receipts when confirmed.';
+  }
+  return 'Forge cycle complete. No Find passed Kernel SUPPORT.';
+}
+
+/** Count verificationResults with supported === true. opportunitiesPromoted is ignored. */
+function countSupportedFinds(results) {
+  if (!Array.isArray(results)) return 0;
+  let n = 0;
+  for (const entry of results) {
+    if (entry && typeof entry === 'object' && entry.supported === true) n += 1;
+  }
+  return n;
 }
 
 function newest(missions = []) { return [...missions].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))[0]; }

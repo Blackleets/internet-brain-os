@@ -1,3 +1,4 @@
+import { applyLivingForgeActivity } from './forge-activity.js';
 import { presentGoalSurfaces } from './goal-surface-presentation.js';
 import { listGoalSurfaces } from './goal-surface-transport.js';
 import { DEFAULT_KERNEL_BASE_URL } from './local-transport.js';
@@ -31,7 +32,7 @@ export function applyGoalTruthPresentation(doc, presentation) {
   const text = focused?.workLabel ?? 'No research mission yet';
   setText(doc.querySelector?.('#mission-state'), text);
   setDataset(doc.querySelector?.('#mission-state'), 'status', status);
-  setDataset(doc.querySelector?.('#living-forge'), 'activity', activity.tone);
+  applyLivingForgeActivity(doc.querySelector?.('#living-forge'), activity.tone);
   setText(doc.querySelector?.('#forge-activity-label'), activity.label);
   setText(doc.querySelector?.('#forge-activity-detail'), activity.detail);
   return { status, text };
@@ -42,7 +43,7 @@ function applyUnavailable(doc, detail) {
   const text = 'Shared Goal Truth unavailable';
   setText(doc.querySelector?.('#mission-state'), text);
   setDataset(doc.querySelector?.('#mission-state'), 'status', status);
-  setDataset(doc.querySelector?.('#living-forge'), 'activity', 'error');
+  applyLivingForgeActivity(doc.querySelector?.('#living-forge'), 'error');
   setText(doc.querySelector?.('#forge-activity-label'), 'Goal truth unavailable');
   setText(doc.querySelector?.('#forge-activity-detail'), detail);
   return { status, text };

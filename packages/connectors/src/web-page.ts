@@ -141,14 +141,55 @@ function pinnedRequest(url: URL, address: string, signal: AbortSignal, headers: 
   });
 }
 
+/**
+ * Fail-close public-address gate for Kernel web.read.
+ * WHATWG URL serializes IPv4-mapped hosts as ::ffff:7f00:1 (not ::ffff:127.0.0.1)
+ * and IPv4-translated (SIIT) hosts as ::ffff:0:7f00:1 (not ::ffff:0:127.0.0.1).
+ * NAT64 well-known prefix 64:ff9b::/96 (RFC 6052) embeds IPv4 the same way —
+ * WHATWG serializes 64:ff9b::127.0.0.1 as 64:ff9b::7f00:1.
+ * Deprecated IPv4-compatible (::/96, RFC 4291) embeds IPv4 without ::ffff: —
+ * WHATWG serializes ::127.0.0.1 as ::7f00:1; DNS may also return 0:0:0:0:0:0:7f00:1.
+ * Treat mapped, translated, NAT64, and compatible embeddings as the embedded IPv4 before private-range checks.
+ */
+function ipv4MappedFromAddress(address: string): string | undefined {
+  // NAT64 well-known prefix 64:ff9b::/96 — last 32 bits are the embedded IPv4.
+  const nat64Dotted = address.match(/^64:ff9b::(\d+\.\d+\.\d+\.\d+)$/);
+  if (nat64Dotted) return nat64Dotted[1];
+  const nat64Hex = address.match(/^64:ff9b::([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (nat64Hex) {
+    const hi = Number.parseInt(nat64Hex[1], 16);
+    const lo = Number.parseInt(nat64Hex[2], 16);
+    return `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
+  }
+  const dotted = address.match(/^::ffff:(?:0:)?(\d+\.\d+\.\d+\.\d+)$/);
+  if (dotted) return dotted[1];
+  // IPv4-mapped ::ffff:XXXX:YYYY and IPv4-translated ::ffff:0:XXXX:YYYY
+  const hex = address.match(/^::ffff:(?:0:)?([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (hex) {
+    const hi = Number.parseInt(hex[1], 16);
+    const lo = Number.parseInt(hex[2], 16);
+    return `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
+  }
+  // Deprecated IPv4-compatible ::/96 (RFC 4291) — last 32 bits embed IPv4 without ::ffff:.
+  const compatDotted = address.match(/^(?:0:0:0:0:0:0|:)?:(\d+\.\d+\.\d+\.\d+)$/);
+  if (compatDotted) return compatDotted[1];
+  const compatHex = address.match(/^(?:0:0:0:0:0:0|:)?:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (!compatHex) return undefined;
+  const hi = Number.parseInt(compatHex[1], 16);
+  const lo = Number.parseInt(compatHex[2], 16);
+  return `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
+}
+
 function isPublicAddress(address: string): boolean {
   const normalized = address.toLowerCase();
   if (normalized === '::1' || normalized === '::' || normalized.startsWith('fe80:')
     || normalized.startsWith('fc') || normalized.startsWith('fd')) return false;
-  const mapped = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/)?.[1];
+  const mapped = ipv4MappedFromAddress(normalized);
   const ipv4 = mapped ?? (isIP(normalized) === 4 ? normalized : undefined);
   if (!ipv4) return isIP(normalized) === 6;
-  const [a, b] = ipv4.split('.').map(Number);
+  const parts = ipv4.split('.').map(Number);
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+  const [a, b] = parts;
   return !(a === 0 || a === 10 || a === 127 || a >= 224
     || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254)
     || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168));

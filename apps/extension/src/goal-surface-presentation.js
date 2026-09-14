@@ -3,7 +3,7 @@ const FORGE_ACTIVITY = Object.freeze({
   waiting: { label: 'Hermes not available', detail: 'The mission is authorized, but no Hermes worker is connected.', tone: 'error' },
   queued: { label: 'Preparing the tools', detail: 'A research mission is ready for Hermes.', tone: 'queued' },
   working: { label: 'Forging new intelligence', detail: 'Hermes is researching authorized public sources.', tone: 'working' },
-  verifying: { label: 'Inspecting the piece', detail: 'Efesto is validating returned findings inside the local Kernel.', tone: 'verifying' },
+  verifying: { label: 'Inspecting the piece', detail: 'Efesto is validating returned material inside the local Kernel. Finds still require Kernel SUPPORT.', tone: 'verifying' },
   forged: { label: 'A useful lead was forged', detail: 'Efesto forged the latest persisted findings.', tone: 'success' },
   failed: { label: 'Inspecting a broken piece', detail: 'Research stopped safely and needs attention.', tone: 'error' },
 });
@@ -14,8 +14,8 @@ const WORK_COPY = Object.freeze({
   queued: 'Ready for Hermes',
   running: 'Hermes is researching',
   investigating: 'Hermes is researching',
-  verifying: 'Efesto is verifying findings',
-  forged: 'Evidence-backed findings forged',
+  verifying: 'Efesto is verifying Evidence',
+  // forged workLabel is SUPPORT-aware via workLabelForMission — do not claim findings here.
   completed: 'No research mission yet',
   failed: 'Research needs attention',
 });
@@ -45,7 +45,7 @@ export function presentGoalSurface(surface) {
     workState: mission?.workState ?? 'idle',
     workLabel: mission?.blockedReason
       ? 'Automatic research blocked safely'
-      : WORK_COPY[mission?.workState ?? 'idle'] ?? 'Kernel state unavailable',
+      : workLabelForMission(mission),
     missionId: mission?.id,
     findCount: mission?.findCount,
     blockedReason: mission?.blockedReason,
@@ -66,12 +66,42 @@ export function forgeActivityForGoalSurface(surface) {
   if (workState === 'verifying') return FORGE_ACTIVITY.verifying;
   if (workState === 'forged') {
     const found = Number.isSafeInteger(surface?.mission?.findCount) ? surface.mission.findCount : undefined;
-    if (found === undefined) return FORGE_ACTIVITY.forged;
-    if (found === 0) return { ...FORGE_ACTIVITY.forged, label: 'Research completed', detail: 'No strong opportunity passed the local checks.' };
-    return { ...FORGE_ACTIVITY.forged, detail: `${found} ${found === 1 ? 'opportunity' : 'opportunities'} passed local checks and were forged.` };
+    // Fail-close: missing findCount is not proof of a Find (verificationResults may be absent).
+    if (found === undefined || found === 0) {
+      return { ...FORGE_ACTIVITY.forged, label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.' };
+    }
+    // Fail-close Living Forge label: SUPPORT findCount must not keep "useful lead" on #forge-activity-label.
+    return {
+      ...FORGE_ACTIVITY.forged,
+      label: found === 1 ? 'A Kernel SUPPORT Find was forged' : 'Kernel SUPPORT Finds were forged',
+      detail: `${found} ${found === 1 ? 'Find' : 'Finds'} passed Kernel SUPPORT and were forged.`,
+    };
   }
   if (workState === 'failed') return FORGE_ACTIVITY.failed;
   return FORGE_ACTIVITY.idle;
+}
+
+
+/**
+ * Fail-close Goal Surface mission workLabel → mounted #mission-state.
+ * forged + Kernel SUPPORT findCount → name Kernel SUPPORT Finds (same honesty as
+ * Living Forge / popup.js loadAgentHub mission-state); never bare evidence-backed wording.
+ * forged without proven Finds → Research completed.
+ */
+function workLabelForMission(mission) {
+  const workState = mission?.workState ?? 'idle';
+  if (workState === 'forged') {
+    const found = Number.isSafeInteger(mission?.findCount) ? mission.findCount : undefined;
+    // Fail-close positive path: SUPPORT findCount must name Kernel SUPPORT on #mission-state
+    // (syncGoalSurfacePopup → applyGoalTruthPresentation), not bare evidence-backed findings copy.
+    if (found !== undefined && found > 0) {
+      return found === 1
+        ? '1 Find passed Kernel SUPPORT'
+        : `${found} Finds passed Kernel SUPPORT`;
+    }
+    return 'Research completed';
+  }
+  return WORK_COPY[workState] ?? 'Kernel state unavailable';
 }
 
 function blockedActivity(reason) {

@@ -149,7 +149,7 @@ describe('GoalSurfaceSnapshot v1', () => {
     });
   });
 
-  it('exposes the latest completed Mission outcome and Find count when no active work exists', () => {
+  it('exposes Find count only from Kernel SUPPORT verificationResults, not opportunitiesPromoted', () => {
     const snapshot = buildGoalSurfaceSnapshot({
       goal: universalGoal({ status: 'completed' }),
       observedAt,
@@ -158,7 +158,14 @@ describe('GoalSurfaceSnapshot v1', () => {
         executionPhase: 'forged',
         verifyingAt: '2026-08-09T15:40:00.000Z',
         completedAt: '2026-08-09T15:45:00.000Z',
-        resultSummary: { opportunitiesPromoted: 4 },
+        resultSummary: { opportunitiesPromoted: 99 },
+        verificationResults: [
+          { evidenceId: 'ev-1', supported: true },
+          { evidenceId: 'ev-2', supported: true },
+          { evidenceId: 'ev-3', supported: false },
+          { evidenceId: 'ev-4', supported: true },
+          { evidenceId: 'ev-5', supported: true },
+        ],
       })],
     });
     expect(snapshot.goal.status).toBe('completed');
@@ -169,6 +176,20 @@ describe('GoalSurfaceSnapshot v1', () => {
       updatedAt: '2026-08-09T15:45:00.000Z',
       findCount: 4,
     });
+  });
+
+  it('does not mint findCount from opportunitiesPromoted alone', () => {
+    const snapshot = buildGoalSurfaceSnapshot({
+      goal: universalGoal({ status: 'completed' }),
+      observedAt,
+      missions: [mission({
+        status: 'completed',
+        executionPhase: 'forged',
+        completedAt: '2026-08-09T15:45:00.000Z',
+        resultSummary: { opportunitiesPromoted: 4 },
+      })],
+    });
+    expect(snapshot.mission?.findCount).toBeUndefined();
   });
 
   it('sorts Goal surfaces deterministically without rewriting lifecycle state', () => {
@@ -205,6 +226,11 @@ describe('GoalSurfaceSnapshot v1', () => {
       goal: universalGoal(),
       observedAt,
       missions: [{ ...mission(), resultSummary: { opportunitiesPromoted: -1 } }],
+    })).toThrowError(GoalSurfaceSnapshotInputError);
+    expect(() => buildGoalSurfaceSnapshot({
+      goal: universalGoal(),
+      observedAt,
+      missions: [{ ...mission(), verificationResults: 'nope' as never }],
     })).toThrowError(GoalSurfaceSnapshotInputError);
     expect(() => buildGoalSurfaceSnapshot({
       goal: universalGoal(),

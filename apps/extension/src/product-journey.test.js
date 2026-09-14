@@ -19,4 +19,11 @@ describe('Efesto product journey', () => {
     expect(onboardingJourney({ connected: true, goalCount: 1 }).next).toMatchObject({ id: 'radar', view: 'forge' });
     expect(onboardingJourney({ connected: true, goalCount: 1, radarEnabled: true, findCount: 1 }).complete).toBe(true);
   });
+
+  it('fail-closes onboarding Find step to Kernel SUPPORT, not bare useful find', () => {
+    const findStep = onboardingJourney({ connected: true, goalCount: 1, radarEnabled: true }).next;
+    expect(findStep).toMatchObject({ id: 'find', view: 'finds' });
+    expect(findStep.label).toContain('Kernel SUPPORT');
+    expect(findStep.label).not.toContain('useful find');
+  });
 });

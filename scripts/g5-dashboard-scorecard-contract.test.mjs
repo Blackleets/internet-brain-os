@@ -31,4 +31,38 @@ describe('G5.2 active dashboard product-scorecard contract', () => {
     expect(panelSource).toContain('sin telemetría externa');
     expect(panelSource).toContain('No mostramos ceros inventados');
   });
+
+  it('missionCompletionRate label is forged-only and never bare completadas', () => {
+    // missionCompletionRate is isKernelForgedMission-only; bare completed ≠ Completado/forged.
+    expect(panelSource).toContain('Misiones forjadas');
+    expect(panelSource).toContain('missionCompletionRate');
+    expect(panelSource).not.toMatch(/Misiones completadas/i);
+    expect(panelSource).not.toMatch(/no_completed_goals:\s*'Aún no hay Goals completados\.'/);
+    expect(panelSource).toMatch(/no_completed_goals:\s*'Aún no hay Goals con misión forjada por el Kernel\.'/);
+  });
+
+  it('goalLinked / useful Find labels name Kernel SUPPORT and never bare Find útil alone', () => {
+    // goalLinkedFinds and usefulSavedFindShare are isKernelSupportedOpportunity-only.
+    expect(panelSource).toContain('Goals con Find SUPPORT útil');
+    expect(panelSource).toContain('Tiempo al primer Find SUPPORT útil');
+    expect(panelSource).toContain('Finds SUPPORT útiles');
+    expect(panelSource).toContain('Finds SUPPORT con Goal');
+    expect(panelSource).toContain('goalUsefulFindRate');
+    expect(panelSource).toContain('usefulSavedFindShare');
+    expect(panelSource).toContain('goalLinkedFinds');
+    expect(panelSource).not.toContain('label="Goals con Find útil"');
+    expect(panelSource).not.toContain('label="Tiempo al primer Find útil"');
+    expect(panelSource).not.toContain('>Finds útiles <');
+    expect(panelSource).not.toContain('>Finds con Goal <');
+    expect(panelSource).not.toMatch(/no_goal_linked_finds:\s*'Aún no hay Finds ligados a un Goal verificado\.'/);
+    expect(panelSource).toMatch(/no_goal_linked_finds:\s*'Aún no hay Finds con Kernel SUPPORT ligados a un Goal\.'/);
+    expect(panelSource).toMatch(/no_useful_or_saved_find_feedback:\s*'Aún no hay Finds con Kernel SUPPORT marcados como útiles o guardados\.'/);
+  });
+
+  it('findDismissal guardrail label names Kernel SUPPORT Finds, never bare Descartados alone', () => {
+    // findDismissalNotInterestedRate denominator is goalLinkedFinds (SUPPORT-only).
+    expect(panelSource).toContain('Finds SUPPORT descartados');
+    expect(panelSource).toContain('findDismissalNotInterestedRate');
+    expect(panelSource).not.toContain('>Descartados <');
+  });
 });

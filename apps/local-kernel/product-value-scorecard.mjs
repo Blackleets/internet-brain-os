@@ -36,6 +36,8 @@ export function buildProductValueScorecard(data = {}, options = {}) {
     const mission = evidenceRecord && validId(evidenceRecord.missionId) ? missionById.get(evidenceRecord.missionId) : undefined;
     const execution = executionIdentity(mission);
     if (!execution) continue;
+    // Fail-closed: evidenceId/URL alone is not a Kernel Find — require SUPPORT stamp.
+    if (!isKernelSupportedOpportunity(opportunity, mission)) continue;
     goalLinkedFinds.set(opportunity.id, { opportunity, execution });
   }
 
@@ -145,6 +147,25 @@ function isKernelForgedMission(mission) {
   return mission.executionPhase === 'forged'
     || mission.workState === 'forged'
     || (typeof mission.forgedAt === 'string' && mission.forgedAt.length > 0);
+}
+
+/**
+ * Fail-closed Kernel SUPPORT gate for scorecard Finds.
+ * Mirrors dashboard isKernelSupportedFind for already-persisted opportunities:
+ * evidenceId alone is not enough — require opportunity.supported === true or
+ * mission.verificationResults entry with matching evidenceId and supported === true.
+ */
+function isKernelSupportedOpportunity(opportunity, mission) {
+  if (!validId(opportunity?.evidenceId)) return false;
+  if (opportunity.supported === true) return true;
+  const results = mission?.verificationResults;
+  if (!Array.isArray(results)) return false;
+  const evidenceId = opportunity.evidenceId;
+  for (const entry of results) {
+    if (!entry || typeof entry !== 'object') continue;
+    if (entry.evidenceId === evidenceId && entry.supported === true) return true;
+  }
+  return false;
 }
 
 function executionIdentity(mission) {

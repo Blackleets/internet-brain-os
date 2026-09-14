@@ -2,12 +2,12 @@
 
 > Canonical truth: `PROJECT_STATE.md`, live GitHub `main`, and the exact current CI run. This file is a planning view, not an older branch checkpoint.
 
-## Current checkpoint - 2026-08-31
+## Current checkpoint - 2026-09-02
 
-- PR #237 merged to `main` (`f325611`).
-- PR #238 OPEN: Kernel SUPPORT gate; Completado is not HTTP 200; live UAT not run; `publicLaunchApproved` remains false.
-- Next: live UAT-D, then merge #238 only if Lewis says so; then packaged UAT-1 through UAT-6; then local scorecard.
-- No new features, UI, PWA-OG or launch until asked.
+- PR #238 merged to `main` (`1da97ef`). Kernel SUPPORT gate is on main.
+- Home/Hallazgos now consume Kernel-supported Evidence/opportunity records (title, sourceUrl, SUPPORT). No snippet Find cards. No launch claim. `publicLaunchApproved` remains false.
+- Next: packaged UAT-1 through UAT-6 on the exact candidate after Lewis asks; local scorecard already exists on Objetivos.
+- No ADMITTED wiring, i18n, Intelligence Brief, PWA, extra IPs, or founder Kernel in this slice.
 
 ## Verified baseline — 2026-08-09
 

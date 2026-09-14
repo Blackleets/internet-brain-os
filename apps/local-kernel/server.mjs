@@ -20,6 +20,7 @@ import { interactiveMissionConfirmationActor } from './mission-confirmation-boun
 import { GoalSurfaceReaderError, createGoalSurfaceReader } from './goal-surface-reader.mjs';
 import { PreferenceLearner } from './preference-learner.mjs';
 import { AgentMissionExecutor } from './agent-mission-executor.mjs';
+import { FileNotificationReceiptStore } from './notification-receipt-store.mjs';
 import { ModelForge } from './model-forge.mjs';
 import { ModelProviderError, ModelProviderRegistry } from './model-provider-registry.mjs';
 import { ChatServiceError, KernelChatService } from './chat-service.mjs';
@@ -72,7 +73,11 @@ const hermesWorkerReady = process.env.HEPHAESTUS_HERMES_READY === '1';
 const agentMissionManager = new AgentMissionManager(knowledgeStore, { isAgentReady: (agent) => agent === 'hermes' && (hermesWorkerReady || Boolean(hermes)) });
 const goalSurfaceReader = isMain ? await createGoalSurfaceReader(knowledgeStore) : undefined;
 const preferenceLearner = new PreferenceLearner(knowledgeStore);
-const agentMissionExecutor = new AgentMissionExecutor(knowledgeStore, opportunityProjector);
+const notificationReceiptStore = new FileNotificationReceiptStore(resolve(dataDir, 'notification-receipts.json'));
+const notificationGateway = await loadNotificationGateway(notificationReceiptStore);
+const agentMissionExecutor = new AgentMissionExecutor(knowledgeStore, opportunityProjector, {
+  verifierOptions: notificationGateway ? { notificationGateway } : {},
+});
 const modelForge = new ModelForge({
   baseUrl: process.env.HEPHAESTUS_OLLAMA_URL,
   activeModel: process.env.HEPHAESTUS_OLLAMA_MODEL,
@@ -128,6 +133,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const chat = options.chatService;
   const conversations = options.chatConversationStore;
   const bootstrapStatus = options.bootstrapStatus;
+  const notificationGateway = options.notificationGateway;
   const allowedDashboardOrigins = new Set(options.allowedDashboardOrigins ?? []);
   const hermesMaxBodyBytes = Number(options.hermesMaxBodyBytes ?? 256 * 1024);
   const server = createServer(async (request, response) => {
@@ -366,6 +372,35 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         return send(response, 500, { ok: false, code: 'OPPORTUNITY_INBOX_FAILED' });
       }
     }
+    if (request.method === 'GET' && isNotificationsListPath(request.url)) {
+      if (!notificationGateway) return send(response, 404, { ok: false, code: 'NOTIFICATION_GATEWAY_UNAVAILABLE' });
+      try {
+        const options = parseNotificationsListQuery(request.url);
+        return send(response, 200, { ok: true, notifications: await notificationGateway.list(options) });
+      } catch (error) {
+        const mapped = mapNotificationError(error);
+        if (mapped) return send(response, mapped.status, { ok: false, code: mapped.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'NOTIFICATION_LIST_FAILED' });
+      }
+    }
+    if (request.method === 'POST') {
+      const readId = matchNotificationActionPath(request.url, 'read');
+      const dismissId = matchNotificationActionPath(request.url, 'dismiss');
+      if (readId || dismissId) {
+        if (!notificationGateway) return send(response, 404, { ok: false, code: 'NOTIFICATION_GATEWAY_UNAVAILABLE' });
+        try {
+          const at = new Date().toISOString();
+          const notification = readId
+            ? await notificationGateway.markRead(readId, 'user:local', at)
+            : await notificationGateway.dismiss(dismissId, 'user:local', at);
+          return send(response, 200, { ok: true, notification });
+        } catch (error) {
+          const mapped = mapNotificationError(error);
+          if (mapped) return send(response, mapped.status, { ok: false, code: mapped.code, error: error.message });
+          return send(response, 500, { ok: false, code: 'NOTIFICATION_MUTATION_FAILED' });
+        }
+      }
+    }
     if (request.method === 'POST' && request.url?.startsWith('/api/opportunities/') && request.url.endsWith('/feedback')) {
       if (!preferences) return send(response, 404, { ok: false, code: 'PREFERENCE_LEARNING_UNAVAILABLE' });
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
@@ -553,13 +588,11 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       const intelligence = projection && evidenceSummarizer
         ? await evidenceSummarizer.summarize(projection.evidenceId)
         : undefined;
-      const opportunity = projection && opportunities
-        ? await opportunities.project(body, projection)
-        : undefined;
+      // Fail-closed: capture mints Case+Evidence only. Regex classification is not Kernel SUPPORT; jwt.io/snippet-only stay Evidence. Finds persist from the mission verifier after evidenceSupportsGoal.
       const obsidianNotes = projection && obsidianProjector
         ? await obsidianProjector.syncCase(projection.caseId)
         : undefined;
-      return send(response, 202, { ok: true, ...receipt, ...projection, intelligence, opportunity, obsidianNotes });
+      return send(response, 202, { ok: true, ...receipt, ...projection, intelligence, obsidianNotes });
     } catch (error) {
       const known = error instanceof InboxError;
       return send(response, known ? error.status : 500, {
@@ -591,6 +624,7 @@ export const server = createLocalKernelServer(inbox, projector, obsidian, summar
   modelProviderRegistry: modelProviders,
   chatService,
   chatConversationStore: chatConversations,
+  notificationGateway,
   allowedDashboardOrigins: dashboardOrigins,
 });
 
@@ -612,6 +646,18 @@ if (isMain) {
       console.log(`Extension pairing code: ${pairing.code} (expires ${pairing.expiresAt}, one use, five attempts)`);
     }
   });
+}
+
+
+async function loadNotificationGateway(store) {
+  try {
+    const mod = await import('../../packages/kernel/dist/index.js');
+    const kernel = mod?.default && typeof mod.default === 'object' ? { ...mod.default, ...mod } : mod;
+    if (typeof kernel.NotificationGateway !== 'function') return undefined;
+    return new kernel.NotificationGateway(store);
+  } catch {
+    return undefined;
+  }
 }
 
 async function readJson(request, maxBodyBytes = MAX_BODY_BYTES) {
@@ -680,6 +726,48 @@ function dashboardOriginsFrom(value) {
   return configured.length
     ? configured
     : ['https://internet-brain-os.leerenmos.chatgpt.site'];
+}
+
+
+function isNotificationsListPath(url) {
+  return typeof url === 'string' && (url === '/api/notifications' || url.startsWith('/api/notifications?'));
+}
+
+function parseNotificationsListQuery(url) {
+  const parsed = new URL(url, 'http://127.0.0.1');
+  const options = {};
+  const state = parsed.searchParams.get('state');
+  if (state !== null) options.state = state;
+  const limitRaw = parsed.searchParams.get('limit');
+  if (limitRaw !== null) {
+    const limit = Number(limitRaw);
+    if (!Number.isInteger(limit)) throw Object.assign(new Error('limit must be an integer between 1 and 500'), { code: 'INVALID_NOTIFICATION' });
+    options.limit = limit;
+  }
+  return options;
+}
+
+function matchNotificationActionPath(url, action) {
+  if (typeof url !== 'string' || typeof action !== 'string') return null;
+  const prefix = '/api/notifications/';
+  const suffix = `/${action}`;
+  if (!url.startsWith(prefix) || !url.endsWith(suffix)) return null;
+  const encoded = url.slice(prefix.length, -suffix.length);
+  if (!encoded || encoded.includes('/')) return null;
+  try {
+    const id = decodeURIComponent(encoded).trim();
+    return id || null;
+  } catch {
+    return null;
+  }
+}
+
+function mapNotificationError(error) {
+  const code = error?.code;
+  if (code === 'NOTIFICATION_NOT_FOUND') return { status: 404, code };
+  if (code === 'INVALID_NOTIFICATION') return { status: 400, code };
+  if (code === 'NOTIFICATION_IDEMPOTENCY_CONFLICT') return { status: 409, code };
+  return null;
 }
 
 function send(response, status, body) {

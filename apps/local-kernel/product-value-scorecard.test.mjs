@@ -28,8 +28,8 @@ describe('local-first product value scorecard', () => {
         { id: 'evidence:2', missionId: 'mission:2' },
       ],
       opportunities: [
-        { id: 'opportunity:1', evidenceId: 'evidence:1' },
-        { id: 'opportunity:2', evidenceId: 'evidence:2' },
+        { id: 'opportunity:1', evidenceId: 'evidence:1', supported: true },
+        { id: 'opportunity:2', evidenceId: 'evidence:2', supported: true },
       ],
       preferenceFeedback: [
         { opportunityId: 'opportunity:1', signal: 'useful', recordedAt: '2026-08-10T10:05:00.000Z' },
@@ -83,7 +83,7 @@ describe('local-first product value scorecard', () => {
       productCohort,
       agentMissions: [{ id: 'mission:1', goalId: 'goal:1', status: 'completed', authorization: authorization('goal:1', '2026-08-10T10:00:00.000Z') }],
       evidence: [{ id: 'evidence:1', missionId: 'mission:1' }],
-      opportunities: [{ id: 'opportunity:1', evidenceId: 'evidence:1' }],
+      opportunities: [{ id: 'opportunity:1', evidenceId: 'evidence:1', supported: true }],
     }, { now: '2026-08-10T12:00:00.000Z' });
 
     expect(scorecard.primary.goalUsefulFindRate).toMatchObject({ status: 'measured', value: 0, numerator: 0, denominator: 1 });
@@ -97,7 +97,7 @@ describe('local-first product value scorecard', () => {
       agentMissions: [{ id: 'mission:1', goalId: 'goal:1', status: 'completed', authorization: authorization('goal:1', '2026-08-10T10:00:00.000Z') }],
       evidence: [{ id: 'evidence:1', missionId: 'mission:1' }, { id: 'evidence:manual' }],
       opportunities: [
-        { id: 'opportunity:1', evidenceId: 'evidence:1' },
+        { id: 'opportunity:1', evidenceId: 'evidence:1', supported: true },
         { id: 'opportunity:manual', evidenceId: 'evidence:manual' },
       ],
       preferenceFeedback: [
@@ -108,6 +108,85 @@ describe('local-first product value scorecard', () => {
 
     expect(scorecard.primary.goalUsefulFindRate.value).toBe(0);
     expect(scorecard.coverage).toMatchObject({ goalLinkedFinds: 1, orphanFeedbackEvents: 1, invalidTimestampEvents: 1 });
+  });
+
+  it('does not count unsupported opportunity with evidenceId as a Find for completed Goals', () => {
+    const scorecard = buildProductValueScorecard({
+      productCohort,
+      agentMissions: [
+        {
+          id: 'mission:1',
+          goalId: 'goal:1',
+          status: 'completed',
+          executionPhase: 'forged',
+          authorization: authorization('goal:1', '2026-08-10T10:00:00.000Z'),
+        },
+      ],
+      evidence: [{ id: 'evidence:1', missionId: 'mission:1' }],
+      opportunities: [{ id: 'opportunity:1', evidenceId: 'evidence:1' }],
+    }, { now: '2026-08-10T12:00:00.000Z' });
+
+    expect(scorecard.coverage.completedGoals).toBe(1);
+    expect(scorecard.coverage.goalLinkedFinds).toBe(0);
+    expect(scorecard.drivers.findsPerCompletedGoal).toMatchObject({
+      status: 'measured',
+      value: 0,
+      numerator: 0,
+      denominator: 1,
+    });
+    expect(scorecard.drivers.usefulSavedFindShare).toMatchObject({
+      status: 'not_measurable',
+      reason: 'no_goal_linked_finds',
+    });
+  });
+
+  it('counts Kernel-supported Finds via opportunity.supported or verificationResults SUPPORT', () => {
+    const stamped = buildProductValueScorecard({
+      productCohort,
+      agentMissions: [
+        {
+          id: 'mission:stamp',
+          goalId: 'goal:stamp',
+          status: 'completed',
+          executionPhase: 'forged',
+          authorization: authorization('goal:stamp', '2026-08-10T10:00:00.000Z'),
+        },
+      ],
+      evidence: [{ id: 'evidence:stamp', missionId: 'mission:stamp' }],
+      opportunities: [{ id: 'opportunity:stamp', evidenceId: 'evidence:stamp', supported: true }],
+    }, { now: '2026-08-10T12:00:00.000Z' });
+
+    expect(stamped.coverage.goalLinkedFinds).toBe(1);
+    expect(stamped.drivers.findsPerCompletedGoal).toMatchObject({
+      status: 'measured',
+      value: 1,
+      numerator: 1,
+      denominator: 1,
+    });
+
+    const viaVerification = buildProductValueScorecard({
+      productCohort,
+      agentMissions: [
+        {
+          id: 'mission:vr',
+          goalId: 'goal:vr',
+          status: 'completed',
+          executionPhase: 'forged',
+          authorization: authorization('goal:vr', '2026-08-10T10:00:00.000Z'),
+          verificationResults: [{ evidenceId: 'evidence:vr', supported: true }],
+        },
+      ],
+      evidence: [{ id: 'evidence:vr', missionId: 'mission:vr' }],
+      opportunities: [{ id: 'opportunity:vr', evidenceId: 'evidence:vr' }],
+    }, { now: '2026-08-10T12:00:00.000Z' });
+
+    expect(viaVerification.coverage.goalLinkedFinds).toBe(1);
+    expect(viaVerification.drivers.findsPerCompletedGoal).toMatchObject({
+      status: 'measured',
+      value: 1,
+      numerator: 1,
+      denominator: 1,
+    });
   });
 
   it('keeps repeat usage unavailable before activation while measuring the local installation denominator', () => {

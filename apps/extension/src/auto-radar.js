@@ -1,7 +1,7 @@
 // Auto Radar - Automatic browsing analysis for Efesto Opportunity Radar
 // Implements automatic page analysis based on navigation events
 
-import { listGoals } from './local-transport.js';
+import { listGoals, sendPageContext } from './local-transport.js';
 
 const DEFAULT_KERNEL_BASE_URL = 'http://127.0.0.1:4000';
 
@@ -15,11 +15,75 @@ export const AUTO_RADAR_STATES = {
   BLOCKED: 'blocked',
   DUPLICATE: 'duplicate',
   SUBMITTING: 'submitting',
+  CAPTURED: 'captured',
   ADMITTED: 'admitted',
   REJECTED: 'rejected',
   NEEDS_RESEARCH: 'needs_research',
   FAILED: 'failed'
 };
+
+const FIND_OR_ADMIT_COPY = /admitido|admitted|\bfind\b|hallazgo/i;
+
+const AUTO_RADAR_STATUS_COPY = {
+  paused: { text: 'Pausado', className: 'paused', icon: '⏸', color: [128, 128, 128, 230] },
+  observing: { text: 'Observando', className: 'observing', icon: '👁', color: [0, 150, 255, 230] },
+  waiting: { text: 'Esperando estabilización', className: 'waiting', icon: '⏳', color: [255, 165, 0, 230] },
+  evaluating: { text: 'Evaluando', className: 'evaluating', icon: '🔍', color: [255, 255, 0, 230] },
+  irrelevant: { text: 'Irrelevante', className: 'irrelevant', icon: '❌', color: [128, 128, 128, 230] },
+  blocked: { text: 'Bloqueado', className: 'blocked', icon: '🚫', color: [255, 0, 0, 230] },
+  duplicate: { text: 'Duplicado', className: 'duplicate', icon: '🔄', color: [128, 0, 128, 230] },
+  submitting: { text: 'Enviando', className: 'submitting', icon: '📤', color: [0, 255, 0, 230] },
+  captured: { text: 'Evidence capturada', className: 'captured', icon: '📡', color: [0, 150, 255, 230] },
+  // Leftover stored "admitted" from Evidence-only capture is not Kernel ADMITTED and not a Find.
+  admitted: { text: 'Evidence capturada', className: 'captured', icon: '📡', color: [0, 150, 255, 230] },
+  rejected: { text: 'Rechazado', className: 'rejected', icon: '❌', color: [255, 0, 0, 230] },
+  needs_research: { text: 'Necesita investigación', className: 'needs-research', icon: '🔬', color: [0, 150, 255, 230] },
+  failed: { text: 'Falló', className: 'failed', icon: '💥', color: [255, 69, 0, 230] },
+};
+
+export function autoRadarStatusCopy(state) {
+  return AUTO_RADAR_STATUS_COPY[state] ?? { text: 'Desconocido', className: 'unknown', icon: '❓', color: [0, 0, 0, 0] };
+}
+
+export function autoRadarActionTitle(state) {
+  const copy = autoRadarStatusCopy(state);
+  return copy.text === 'Desconocido' ? 'Efesto Opportunity Radar' : `Efesto Opportunity Radar - ${copy.text}`;
+}
+
+export function autoRadarLastResultLabel(status) {
+  switch (status) {
+    case 'captured':
+    case 'admitted':
+      return 'Evidence capturada';
+    case 'rejected':
+      return 'Rechazado ❌';
+    case 'failed':
+      return 'Falló 💥';
+    case 'duplicate':
+      return 'Duplicado 🔄';
+    case 'blocked':
+      return 'Bloqueado 🚫';
+    case 'irrelevant':
+      return 'Irrelevante';
+    default:
+      return status ? String(status) : '—';
+  }
+}
+
+export function radarEventAfterEvidenceCapture(context) {
+  return {
+    status: 'captured',
+    title: typeof context?.title === 'string' ? context.title : '',
+    url: typeof context?.url === 'string' ? context.url : undefined,
+    at: Date.now(),
+  };
+}
+
+export function pageContextCaptureIsFind() {
+  return false;
+}
+
+export { FIND_OR_ADMIT_COPY };
 
 // Configuración por defecto
 const DEFAULT_DEBOUNCE_MS = 1500;
@@ -138,68 +202,10 @@ export class AutoRadar {
       let badgeColor = [0, 0, 0, 0]; // transparent
       let title = 'Efesto Opportunity Radar';
 
-      switch (this.state) {
-        case AUTO_RADAR_STATES.PAUSED:
-          badgeText = '⏸';
-          badgeColor = [128, 128, 128, 230]; // gris
-          title += ' - Pausado';
-          break;
-        case AUTO_RADAR_STATES.OBSERVING:
-          badgeText = '👁';
-          badgeColor = [0, 150, 255, 230]; // azul
-          title += ' - Observando';
-          break;
-        case AUTO_RADAR_STATES.WAITING:
-          badgeText = '⏳';
-          badgeColor = [255, 165, 0, 230]; // naranja
-          title += ' - Esperando estabilización';
-          break;
-        case AUTO_RADAR_STATES.EVALUATING:
-          badgeText = '🔍';
-          badgeColor = [255, 255, 0, 230]; // amarillo
-          title += ' - Evaluando';
-          break;
-        case AUTO_RADAR_STATES.IRRELEVANT:
-          badgeText = '❌';
-          badgeColor = [128, 128, 128, 230]; // gris
-          title += ' - Irrelevante';
-          break;
-        case AUTO_RADAR_STATES.BLOCKED:
-          badgeText = '🚫';
-          badgeColor = [255, 0, 0, 230]; // rojo
-          title += ' - Bloqueado';
-          break;
-        case AUTO_RADAR_STATES.DUPLICATE:
-          badgeText = '🔄';
-          badgeColor = [128, 0, 128, 230]; // púrpura
-          title += ' - Duplicado';
-          break;
-        case AUTO_RADAR_STATES.SUBMITTING:
-          badgeText = '📤';
-          badgeColor = [0, 255, 0, 230]; // verde
-          title += ' - Enviando';
-          break;
-        case AUTO_RADAR_STATES.ADMITTED:
-          badgeText = '✅';
-          badgeColor = [0, 200, 0, 230]; // verde oscuro
-          title += ' - Admitido';
-          break;
-        case AUTO_RADAR_STATES.REJECTED:
-          badgeText = '❌';
-          badgeColor = [255, 0, 0, 230]; // rojo
-          title += ' - Rechazado';
-          break;
-        case AUTO_RADAR_STATES.NEEDS_RESEARCH:
-          badgeText = '🔬';
-          badgeColor = [0, 150, 255, 230]; // azul
-          title += ' - Necesita investigación';
-          break;
-        case AUTO_RADAR_STATES.FAILED:
-          badgeText = '💥';
-          badgeColor = [255, 69, 0, 230]; // rojo-naranja
-          title += ' - Falló';
-          break;
-      }
+      const copy = autoRadarStatusCopy(this.state);
+      badgeText = copy.icon === '❓' ? '' : copy.icon;
+      badgeColor = copy.color;
+      title = autoRadarActionTitle(this.state);
 
       await chrome.action.setBadgeText({ text: badgeText });
       await chrome.action.setBadgeBackgroundColor({ color: badgeColor });
@@ -507,12 +513,10 @@ export class AutoRadar {
           apiToken: this.kernelApiToken,
         });
 
-        // Estado admitido (asumimos que el Kernel lo admite por ahora)
-        await this.setState(AUTO_RADAR_STATES.ADMITTED);
-
-        // Guardar evento en storage
+        // sendPageContext persists Evidence only — not Kernel ADMITTED and not a Find.
+        await this.setState(AUTO_RADAR_STATES.CAPTURED);
         await chrome.storage.local.set({
-          lastRadarEvent: { status: 'admitted', title: context.title, at: Date.now() }
+          lastRadarEvent: radarEventAfterEvidenceCapture(context),
         });
 
         // Después de un breve momento, volver a observar

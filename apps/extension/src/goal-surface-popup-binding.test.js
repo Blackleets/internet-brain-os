@@ -5,7 +5,7 @@ import { applyGoalTruthPresentation, syncGoalSurfacePopup } from './goal-surface
 function mount() {
   document.body.innerHTML = `
     <span id="mission-state" data-status="idle"></span>
-    <section id="living-forge" data-activity="idle"></section>
+    <section id="living-forge" data-activity="idle"><span class="live-badge"><i></i><span class="live-badge-label">EN VIVO</span></span></section>
     <h2 id="forge-activity-label"></h2>
     <p id="forge-activity-detail"></p>`;
 }
@@ -27,13 +27,15 @@ describe('Shared Goal Truth popup binding', () => {
   it('binds persisted verifying state to mission copy and Living Forge', () => {
     mount();
     const result = applyGoalTruthPresentation(document, {
-      focused: { workState: 'verifying', workLabel: 'Efesto is verifying findings' },
-      forgeActivity: { label: 'Inspecting the piece', detail: 'Efesto is validating returned findings inside the local Kernel.', tone: 'verifying' },
+      focused: { workState: 'verifying', workLabel: 'Efesto is verifying Evidence' },
+      forgeActivity: { label: 'Inspecting the piece', detail: 'Efesto is validating returned material inside the local Kernel. Finds still require Kernel SUPPORT.', tone: 'verifying' },
     });
-    expect(result).toEqual({ status: 'verifying', text: 'Efesto is verifying findings' });
-    expect(document.querySelector('#mission-state')?.textContent).toBe('Efesto is verifying findings');
+    expect(result).toEqual({ status: 'verifying', text: 'Efesto is verifying Evidence' });
+    expect(document.querySelector('#mission-state')?.textContent).toBe('Efesto is verifying Evidence');
+    expect(document.querySelector('#mission-state')?.textContent).not.toMatch(/finding/i);
     expect(document.querySelector('#mission-state')?.dataset.status).toBe('verifying');
     expect(document.querySelector('#living-forge')?.dataset.activity).toBe('verifying');
+    expect(document.querySelector('.live-badge-label')?.textContent).toBe('EN VIVO');
     expect(document.querySelector('#forge-activity-label')?.textContent).toBe('Inspecting the piece');
   });
 
@@ -44,6 +46,8 @@ describe('Shared Goal Truth popup binding', () => {
       forgeActivity: { label: 'The forge is ready', detail: 'Create a Goal or analyze a public page.', tone: 'idle' },
     });
     expect(document.querySelector('#living-forge')?.dataset.activity).toBe('idle');
+    expect(document.querySelector('.live-badge-label')?.textContent).toBe('LISTA');
+    expect(document.querySelector('.live-badge-label')?.textContent).not.toMatch(/EN VIVO/i);
     expect(document.querySelector('#forge-activity-label')?.textContent).toBe('The forge is ready');
   });
 
@@ -51,14 +55,15 @@ describe('Shared Goal Truth popup binding', () => {
     mount();
     const storage = { get: vi.fn(async () => ({ kernelBaseUrl: 'http://127.0.0.1:4000', kernelApiToken: 'x'.repeat(40) })) };
     const listGoalSurfacesFn = vi.fn(async () => [surface]);
-    await expect(syncGoalSurfacePopup({ document, storage, listGoalSurfacesFn })).resolves.toEqual({ status: 'verifying', text: 'Efesto is verifying findings' });
+    await expect(syncGoalSurfacePopup({ document, storage, listGoalSurfacesFn })).resolves.toEqual({ status: 'verifying', text: 'Efesto is verifying Evidence' });
+    expect(document.querySelector('#mission-state')?.textContent).not.toMatch(/finding/i);
     expect(listGoalSurfacesFn).toHaveBeenCalledWith({ baseUrl: 'http://127.0.0.1:4000', apiToken: 'x'.repeat(40) });
     expect(document.querySelector('#living-forge')?.dataset.activity).toBe('verifying');
   });
 
   it('fails visually closed when Goal truth cannot be read instead of retaining legacy activity', async () => {
     mount();
-    document.querySelector('#mission-state').textContent = '3 opportunities found';
+    document.querySelector('#mission-state').textContent = 'stale mission-state';
     document.querySelector('#mission-state').dataset.status = 'completed';
     document.querySelector('#living-forge').dataset.activity = 'success';
     const storage = { get: vi.fn(async () => ({ kernelApiToken: 'x'.repeat(40) })) };

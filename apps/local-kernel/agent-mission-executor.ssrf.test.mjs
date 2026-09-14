@@ -75,6 +75,23 @@ describe('agent mission executor SSRF hardening', () => {
     'http://[::ffff:127.0.0.1]/mapped-loopback',
     'http://[::ffff:10.0.0.1]/mapped-private',
     'http://[::ffff:192.168.1.2]/mapped-rfc1918',
+    'http://[::ffff:0:127.0.0.1]/translated-loopback',
+    'http://[::ffff:0:7f00:1]/hex-translated-loopback',
+    'http://[::ffff:0:10.0.0.1]/translated-private',
+    'http://[::ffff:0:a00:1]/hex-translated-rfc1918',
+    'http://[64:ff9b::127.0.0.1]/nat64-loopback',
+    'http://[64:ff9b::7f00:1]/hex-nat64-loopback',
+    'http://[64:ff9b::10.0.0.1]/nat64-private',
+    'http://[64:ff9b::a00:1]/hex-nat64-rfc1918',
+    // Deprecated IPv4-compatible ::/96 — same gate as connectors web-page.ts (2fd1f2c).
+    'http://[::127.0.0.1]/compat-loopback',
+    'http://[::7f00:1]/hex-compat-loopback',
+    'http://[::169.254.169.254]/compat-metadata',
+    'http://[::a9fe:a9fe]/hex-compat-metadata',
+    'http://[::10.0.0.1]/compat-rfc1918',
+    'http://[::a00:1]/hex-compat-rfc1918',
+    'http://[0:0:0:0:0:0:7f00:1]/expanded-compat',
+    'http://[0:0:0:0:0:0:127.0.0.1]/expanded-compat-dotted',
   ];
 
   for (const url of PRIVATE_SEARCH_CANDIDATE_URLS) {

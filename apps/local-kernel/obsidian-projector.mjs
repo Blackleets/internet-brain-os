@@ -13,7 +13,8 @@ export class ObsidianKnowledgeProjector {
     const caseRecord = data.cases.find((item) => item.id === caseId);
     if (!caseRecord) throw new InboxError('CASE_NOT_FOUND', `Case not found: ${caseId}`, 404);
     const evidence = data.evidence.filter((item) => item.caseId === caseId);
-    const opportunities = (data.opportunities ?? []).filter((item) => item.caseId === caseId);
+    // Fail-closed: capture Evidence+URL without Kernel SUPPORT is not a Find.
+    const opportunities = (data.opportunities ?? []).filter((item) => item.caseId === caseId && isKernelSupportedOpportunity(item));
     const caseFile = `${safeId(caseId)}.md`;
 
     await Promise.all([
@@ -46,6 +47,10 @@ export class ObsidianKnowledgeProjector {
     )));
     return { goalNotes: goals.map((item) => `Goals/${safeId(item.id)}.md`) };
   }
+}
+
+function isKernelSupportedOpportunity(item) {
+  return item?.supported === true && item?.status !== 'dismissed';
 }
 
 function renderGoal(item) {

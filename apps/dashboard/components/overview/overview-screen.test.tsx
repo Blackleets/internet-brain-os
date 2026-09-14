@@ -101,6 +101,24 @@ describe('OverviewScreen', () => {
     await waitFor(() => expect(actions.recordOpportunityFeedback).toHaveBeenCalledWith('opportunity-1', 'useful'));
   });
 
+  it('KernelWorkspaces dismiss toast names Find SUPPORT — never bare Oportunidad descartada', async () => {
+    // overview-screen → KernelWorkspaces; GET /api/opportunities inbox is Kernel SUPPORT-only.
+    // Sibling of EfestoProductShell recordFeedback dismiss toast (2c37398).
+    const actions = {
+      createGoal: vi.fn().mockResolvedValue(undefined),
+      createMission: vi.fn().mockResolvedValue(undefined),
+      recordOpportunityFeedback: vi.fn().mockResolvedValue(undefined),
+    };
+    render(<OverviewScreen snapshot={snapshot} reload={vi.fn()} disconnect={vi.fn()} actions={actions} />);
+
+    const opportunities = screen.getByRole('region', { name: 'Oportunidades' });
+    fireEvent.click(within(opportunities).getByRole('button', { name: 'Descartar' }));
+    await waitFor(() => expect(actions.recordOpportunityFeedback).toHaveBeenCalledWith('opportunity-1', 'dismissed'));
+    expect(await screen.findByText('Find SUPPORT descartado; Evidence objetiva no fue reescrita.')).toBeTruthy();
+    expect(screen.queryByText('Oportunidad descartada')).toBeNull();
+    expect(screen.queryByText(/Oportunidad guardada/i)).toBeNull();
+  });
+
   it('renders the Internet Brain hero artwork without competing with Kernel status copy', () => {
     render(<OverviewScreen snapshot={snapshot} reload={vi.fn()} disconnect={vi.fn()} />);
 
@@ -132,6 +150,48 @@ describe('OverviewScreen', () => {
     expect(screen.getByRole('region', { name: 'Misiones activas' }).textContent).toContain('Verificando');
     expect(screen.queryByText(/%/)).toBeNull();
     expect(screen.getByText('Lead no verificado')).toBeTruthy();
+  });
+
+  it('labels Kernel SUPPORT Finds instead of Lead no verificado on OpportunityPanel', () => {
+    const supportedOpportunity = {
+      ...snapshot.opportunities[0],
+      id: 'opportunity-supported',
+      title: 'Quality drill 24.99 EUR',
+      evidenceId: 'ev-supported-1',
+      sourceUrl: 'https://shop.example/quality-drill',
+      supported: true,
+    };
+    const missionProofOpportunity = {
+      ...snapshot.opportunities[0],
+      id: 'opportunity-mission-proof',
+      title: 'Mission-proof drill',
+      evidenceId: 'ev-mission-1',
+      sourceUrl: 'https://shop.example/mission-proof-drill',
+    };
+    const missions = [{
+      ...snapshot.missions[0],
+      id: 'mission-support',
+      status: 'completed' as const,
+      executionPhase: 'forged' as const,
+      verificationResults: [{ evidenceId: 'ev-mission-1', supported: true }],
+    }];
+    render(
+      <OverviewScreen
+        snapshot={{
+          ...snapshot,
+          missions,
+          opportunities: [supportedOpportunity, missionProofOpportunity, snapshot.opportunities[0]],
+        }}
+        reload={vi.fn()}
+        disconnect={vi.fn()}
+      />,
+    );
+
+    const panel = screen.getByRole('region', { name: 'Prioridad de oportunidades' });
+    expect(within(panel).getAllByText('Kernel SUPPORT')).toHaveLength(2);
+    expect(within(panel).getByText('Lead no verificado')).toBeTruthy();
+    expect(within(panel).getByText('Quality drill 24.99 EUR')).toBeTruthy();
+    expect(within(panel).getByText('Mission-proof drill')).toBeTruthy();
   });
 
   it('keeps successful panels visible while explaining a partial endpoint failure', () => {
@@ -182,7 +242,11 @@ describe('OverviewScreen', () => {
     );
 
     expect(screen.getByText('No hay misiones activas.')).toBeTruthy();
-    expect(screen.getAllByText('No hay oportunidades priorizadas todavía.').length).toBeGreaterThan(0);
+    // OpportunityPanel + KernelWorkspaces Oportunidades empty both name Kernel SUPPORT.
+    expect(screen.getAllByText('No hay hallazgos con Kernel SUPPORT priorizados todavía.')).toHaveLength(2);
+    expect(screen.getByRole('region', { name: 'Prioridad de oportunidades' }).textContent).toMatch(/Kernel SUPPORT/i);
+    expect(screen.getByRole('region', { name: 'Oportunidades' }).textContent).toMatch(/Kernel SUPPORT/i);
+    expect(screen.queryByText('No hay oportunidades priorizadas todavía.')).toBeNull();
     expect(screen.getByText('No hay actividad persistida para mostrar.')).toBeTruthy();
   });
 
