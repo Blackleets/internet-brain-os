@@ -17,7 +17,8 @@ describe('mission presentation', () => {
         { evidenceId: 'ev-2', supported: true },
       ],
     });
-    expect(timeline.map((event) => event.label)).toEqual(['Commission authorized', 'Hermes claimed attempt 1', 'Kernel verification completed']);
+    expect(timeline.map((event) => event.label)).toEqual(['Commission authorized', 'Hermes claimed attempt 1', 'Kernel SUPPORT Finds sealed']);
+    expect(timeline.map((event) => event.label)).not.toContain('Kernel verification completed');
     expect(timeline[2].detail).toBe('4 received · 4 Evidence · 2 Finds');
   });
 
@@ -121,6 +122,33 @@ describe('mission presentation', () => {
     expect(supportedMany.statusDetail).not.toMatch(/findings passed through/i);
   });
 
+  it('mission-card ledger seal event names Kernel SUPPORT; zero-SUPPORT forged stays off verification-completed Completado', () => {
+    const zero = missionTimeline({
+      status: 'completed',
+      executionPhase: 'forged',
+      forgedAt: '2026-07-22T10:02:00.000Z',
+      createdAt: '2026-07-22T10:00:00.000Z',
+      resultSummary: { received: 1, evidenceCreated: 1, opportunitiesPromoted: 1 },
+      verificationResults: [{ evidenceId: 'ev-1', supported: false }],
+    });
+    expect(zero.at(-1).label).toBe('Research completed');
+    expect(zero.at(-1).detail).toBe('1 received · 1 Evidence · 0 Finds');
+    expect(zero.map((e) => e.label)).not.toContain('Kernel verification completed');
+    expect(zero.map((e) => e.label).join(' ')).not.toMatch(/SUPPORT Find sealed/i);
+
+    const one = missionTimeline({
+      status: 'completed',
+      workState: 'forged',
+      forgedAt: '2026-07-22T10:02:00.000Z',
+      createdAt: '2026-07-22T10:00:00.000Z',
+      verificationResults: [{ evidenceId: 'ev-1', supported: true }],
+      resultSummary: { received: 1, evidenceCreated: 1, opportunitiesPromoted: 0 },
+    });
+    expect(one.at(-1).label).toBe('Kernel SUPPORT Find sealed');
+    expect(one.at(-1).detail).toBe('1 received · 1 Evidence · 1 Finds');
+    expect(one.map((e) => e.label)).not.toContain('Kernel verification completed');
+  });
+
   it('does not treat opportunitiesPromoted as Finds without Kernel SUPPORT', () => {
     const promotedOnly = presentMission({
       status: 'completed',
@@ -130,7 +158,9 @@ describe('mission presentation', () => {
       resultSummary: { received: 4, evidenceCreated: 4, opportunitiesPromoted: 9 },
     });
     expect(promotedOnly.opportunitiesPromoted).toBe(0);
-    expect(promotedOnly.timeline.find((e) => e.label === 'Kernel verification completed')?.detail).toBe('4 received · 4 Evidence · 0 Finds');
+    expect(promotedOnly.timeline.find((e) => e.label === 'Research completed')?.detail).toBe('4 received · 4 Evidence · 0 Finds');
+    expect(promotedOnly.timeline.map((e) => e.label)).not.toContain('Kernel verification completed');
+    expect(promotedOnly.timeline.map((e) => e.label).join(' ')).not.toMatch(/Kernel SUPPORT Find sealed/i);
 
     const unsupported = presentMission({
       status: 'completed',
@@ -156,6 +186,7 @@ describe('mission presentation', () => {
       ],
     });
     expect(supported.opportunitiesPromoted).toBe(2);
+    expect(supported.timeline.at(-1).label).toBe('Kernel SUPPORT Finds sealed');
     expect(supported.timeline.at(-1).detail).toBe('3 received · 3 Evidence · 2 Finds');
   });
 });

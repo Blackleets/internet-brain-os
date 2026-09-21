@@ -68,7 +68,13 @@ export function missionTimeline(mission = {}) {
     || mission.executionPhase === 'forged'
     || mission.workState === 'forged';
   if (forged) {
-    addEvent(events, mission.forgedAt ?? mission.completedAt, 'Kernel verification completed', counts);
+    // Fail-close mission-card ledger: zero-SUPPORT forged must not brand Completado-lookalike
+    // "Kernel verification completed" while statusLabel is Research completed (Living Forge /
+    // Agent Hub / watchtower honesty). SUPPORT path must name Kernel SUPPORT on the seal event.
+    const sealLabel = finds > 0
+      ? (finds === 1 ? 'Kernel SUPPORT Find sealed' : 'Kernel SUPPORT Finds sealed')
+      : 'Research completed';
+    addEvent(events, mission.forgedAt ?? mission.completedAt, sealLabel, counts);
   } else if (mission.status === 'completed') {
     addEvent(events, mission.completedAt, 'Research ended without Evidence', counts);
   }
