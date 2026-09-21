@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import type { CaseSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
 import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportedFinds } from '../lib/kernel/supported-find';
+import { statePillLabel, statePillTone } from '../lib/ui/state-pill-label.mjs';
 
 export type Provider = {
   id: string;
@@ -473,7 +474,13 @@ function missionPillState(mission: MissionSummary): string {
 }
 function Workspace({ icon: Icon, eyebrow, title, copy, action, children }: { icon: typeof Target; eyebrow: string; title: string; copy: string; action?: ReactNode; children: ReactNode }) { return <section className="workspace"><header className="workspace-heading"><span><Icon /></span><div><small>{eyebrow}</small><h1>{title}</h1><p>{copy}</p></div>{action ? <div className="workspace-heading-action">{action}</div> : null}</header><div className="workspace-body">{children}</div></section>; }
 function Empty({ icon: Icon, title, copy }: { icon: typeof Target; title: string; copy: string }) { return <div className="empty-state"><Icon /><strong>{title}</strong><p>{copy}</p></div>; }
-function StatePill({ state }: { state: string }) { const tone = ['ready', 'forged', 'available', 'new'].includes(state) ? 'good' : ['failed', 'invalid', 'blocked'].includes(state) ? 'bad' : ['running', 'investigating', 'verifying', 'queued', 'waiting_for_agent'].includes(state) ? 'working' : 'neutral'; return <span className={`state-pill ${tone}`}><i />{state.replaceAll('_', ' ')}</span>; }
+// Fail-close Goals/Actividad/Automations StatePill labels (page.tsx → EfestoProductShell).
+// missionPillState / activityFrom already gate forged → SUPPORT-only; bare English
+// "forged" / "research completed" must not stand in for Home forge-state-action honesty
+// (Find SUPPORT forjado / Investigación terminada / Terminada sin Evidence).
+function StatePill({ state }: { state: string }) {
+  return <span className={`state-pill ${statePillTone(state)}`}><i />{statePillLabel(state)}</span>;
+}
 function ReadinessRow({ label, value, ready }: { label: string; value: string; ready: boolean }) { return <div className="readiness-row"><span>{label}</span><strong className={ready ? 'ready' : ''}><i />{value}</strong></div>; }
 export function brainState(phase: BrainPhase, supportedFindCount = 0) {
   if (phase === 'thinking') return { label: 'Conversando', detail: 'Modelo transmitiendo' };

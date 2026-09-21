@@ -41,13 +41,15 @@ describe('GoalsView mission StatePill honesty', () => {
       />,
     );
     const pill = container.querySelector('.state-pill');
-    expect(pill?.textContent).toMatch(/completed without forge/i);
-    expect(pill?.textContent).not.toMatch(/^\s*completed\s*$/i);
+    // page.tsx → EfestoProductShell → GoalsView StatePill: bare completed-without-Evidence
+    // must not read Completado; match Home Terminada sin Evidence.
+    expect(pill?.textContent).toMatch(/Terminada sin Evidence/i);
+    expect(pill?.textContent).not.toMatch(/Completado|\bforged\b|Find SUPPORT/i);
     expect(pill?.className).not.toMatch(/\bgood\b/);
     expect(screen.getByText('Find a drill offer')).toBeTruthy();
   });
 
-  it('presents Kernel forged missions with SUPPORT as forged', () => {
+  it('presents Kernel forged missions with SUPPORT naming Find SUPPORT, not bare forged', () => {
     const { container } = render(
       <GoalsView
         snapshot={snapshotWithMissions([
@@ -65,12 +67,15 @@ describe('GoalsView mission StatePill honesty', () => {
       />,
     );
     const pill = container.querySelector('.state-pill');
-    expect(pill?.textContent).toMatch(/forged/i);
-    expect(pill?.textContent).not.toMatch(/research completed/i);
+    // missionPillState already SUPPORT-gates forged; StatePill must name Kernel SUPPORT
+    // like Home forge-state-action — bare English "forged" is Completado-adjacent branding.
+    expect(pill?.textContent).toMatch(/Find SUPPORT forjado/i);
+    expect(pill?.textContent).not.toMatch(/^\s*forged\s*$/i);
+    expect(pill?.textContent).not.toMatch(/Investigación terminada|research completed/i);
     expect(pill?.className).toMatch(/\bgood\b/);
   });
 
-  it('presents zero-SUPPORT forged missions as research completed, not green forged Completado', () => {
+  it('presents zero-SUPPORT forged missions as Investigación terminada, not green Find SUPPORT', () => {
     const { container } = render(
       <GoalsView
         snapshot={snapshotWithMissions([
@@ -88,10 +93,55 @@ describe('GoalsView mission StatePill honesty', () => {
       />,
     );
     const pill = container.querySelector('.state-pill');
-    expect(pill?.textContent).toMatch(/research completed/i);
-    expect(pill?.textContent).not.toMatch(/\bforged\b/i);
+    expect(pill?.textContent).toMatch(/Investigación terminada/i);
+    expect(pill?.textContent).not.toMatch(/Find SUPPORT|\bforged\b|Completado/i);
     expect(pill?.className).not.toMatch(/\bgood\b/);
     expect(screen.getByText('Find a drill offer')).toBeTruthy();
+  });
+});
+
+describe('ActivityView mission StatePill SUPPORT honesty', () => {
+  it('names Kernel SUPPORT on forged mission activity and keeps zero-SUPPORT off Completado', () => {
+    const base = snapshotWithMissions([]);
+    const withSupport = {
+      ...base,
+      activity: [
+        {
+          id: 'mission:mission-forged',
+          recordId: 'mission-forged',
+          kind: 'mission' as const,
+          timestamp: '2026-07-26T10:04:00.000Z',
+          state: 'forged',
+        },
+      ],
+    };
+    const { container, rerender } = render(<ActivityView snapshot={withSupport} connected />);
+    let pill = container.querySelector('.state-pill');
+    expect(pill?.textContent).toMatch(/Find SUPPORT forjado/i);
+    expect(pill?.textContent).not.toMatch(/^\s*forged\s*$/i);
+    expect(pill?.className).toMatch(/\bgood\b/);
+
+    rerender(
+      <ActivityView
+        snapshot={{
+          ...base,
+          activity: [
+            {
+              id: 'mission:mission-empty',
+              recordId: 'mission-empty',
+              kind: 'mission' as const,
+              timestamp: '2026-07-26T10:05:00.000Z',
+              state: 'research_completed',
+            },
+          ],
+        }}
+        connected
+      />,
+    );
+    pill = container.querySelector('.state-pill');
+    expect(pill?.textContent).toMatch(/Investigación terminada/i);
+    expect(pill?.textContent).not.toMatch(/Find SUPPORT|Completado|\bforged\b/i);
+    expect(pill?.className).not.toMatch(/\bgood\b/);
   });
 });
 
