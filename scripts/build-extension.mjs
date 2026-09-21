@@ -117,11 +117,25 @@ async function main() {
     await cp(join(srcDir, entry.name), join(distSrc, entry.name));
   }
 
+  // OS notify path (Kernel SUPPORT Find + watchtower) requires icons/efesto-notification.png
+  // inside the packaged zip. Source icons must ship even when root action PNGs are absent.
+  console.log('[build-extension] packaging extension icons for OS notify...');
+  const iconDir = join(distDir, 'icons');
+  await mkdir(iconDir, { recursive: true });
+  const sourceIconDir = join(extDir, 'icons');
+  if (await exists(sourceIconDir)) {
+    for (const entry of await readdir(sourceIconDir, { withFileTypes: true })) {
+      if (!entry.isFile()) continue;
+      await cp(join(sourceIconDir, entry.name), join(iconDir, entry.name));
+    }
+  }
+  if (!(await exists(join(iconDir, 'efesto-notification.png')))) {
+    throw new Error('Packaged extension is missing icons/efesto-notification.png required for chrome.notifications');
+  }
+
   console.log('[build-extension] writing manifest with icons...');
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
   if (await exists(rootIcon)) {
-    const iconDir = join(distDir, 'icons');
-    await mkdir(iconDir, { recursive: true });
     for (const size of [16, 48, 128]) {
       await cp(rootIcon, join(iconDir, `icon${size}.png`));
     }

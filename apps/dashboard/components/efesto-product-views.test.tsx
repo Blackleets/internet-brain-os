@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { FormEvent } from 'react';
-import { ActivityView, AgentsView, FindsView, GoalsView, HomeView, type ChatMessage, type Provider } from './efesto-product-views';
+import { ActivityView, AgentsView, FindsView, GoalsView, HomeView, brainState, type ChatMessage, type Provider } from './efesto-product-views';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
 import type { MissionSummary } from '../lib/kernel/contracts';
 
@@ -39,13 +41,15 @@ describe('GoalsView mission StatePill honesty', () => {
       />,
     );
     const pill = container.querySelector('.state-pill');
-    expect(pill?.textContent).toMatch(/completed without forge/i);
-    expect(pill?.textContent).not.toMatch(/^\s*completed\s*$/i);
+    // page.tsx → EfestoProductShell → GoalsView StatePill: bare completed-without-Evidence
+    // must not read Completado; match Home Terminada sin Evidence.
+    expect(pill?.textContent).toMatch(/Terminada sin Evidence/i);
+    expect(pill?.textContent).not.toMatch(/Completado|\bforged\b|Find SUPPORT/i);
     expect(pill?.className).not.toMatch(/\bgood\b/);
     expect(screen.getByText('Find a drill offer')).toBeTruthy();
   });
 
-  it('presents Kernel forged missions as forged', () => {
+  it('presents Kernel forged missions with SUPPORT naming Find SUPPORT, not bare forged', () => {
     const { container } = render(
       <GoalsView
         snapshot={snapshotWithMissions([
@@ -56,14 +60,88 @@ describe('GoalsView mission StatePill honesty', () => {
             executionPhase: 'forged' as const,
             attempt: 1,
             createdAt: '2026-07-26T10:04:00.000Z',
+            verificationResults: [{ evidenceId: 'evidence:drill', supported: true }],
           },
         ])}
         onNew={() => undefined}
       />,
     );
     const pill = container.querySelector('.state-pill');
-    expect(pill?.textContent).toMatch(/forged/i);
+    // missionPillState already SUPPORT-gates forged; StatePill must name Kernel SUPPORT
+    // like Home forge-state-action — bare English "forged" is Completado-adjacent branding.
+    expect(pill?.textContent).toMatch(/Find SUPPORT forjado/i);
+    expect(pill?.textContent).not.toMatch(/^\s*forged\s*$/i);
+    expect(pill?.textContent).not.toMatch(/Investigación terminada|research completed/i);
     expect(pill?.className).toMatch(/\bgood\b/);
+  });
+
+  it('presents zero-SUPPORT forged missions as Investigación terminada, not green Find SUPPORT', () => {
+    const { container } = render(
+      <GoalsView
+        snapshot={snapshotWithMissions([
+          {
+            id: 'mission-forged-empty',
+            goalId: 'goal-1',
+            status: 'completed',
+            executionPhase: 'forged' as const,
+            attempt: 1,
+            createdAt: '2026-07-26T10:05:00.000Z',
+            verificationResults: [{ evidenceId: 'evidence:jwt', supported: false }],
+          },
+        ])}
+        onNew={() => undefined}
+      />,
+    );
+    const pill = container.querySelector('.state-pill');
+    expect(pill?.textContent).toMatch(/Investigación terminada/i);
+    expect(pill?.textContent).not.toMatch(/Find SUPPORT|\bforged\b|Completado/i);
+    expect(pill?.className).not.toMatch(/\bgood\b/);
+    expect(screen.getByText('Find a drill offer')).toBeTruthy();
+  });
+});
+
+describe('ActivityView mission StatePill SUPPORT honesty', () => {
+  it('names Kernel SUPPORT on forged mission activity and keeps zero-SUPPORT off Completado', () => {
+    const base = snapshotWithMissions([]);
+    const withSupport = {
+      ...base,
+      activity: [
+        {
+          id: 'mission:mission-forged',
+          recordId: 'mission-forged',
+          kind: 'mission' as const,
+          timestamp: '2026-07-26T10:04:00.000Z',
+          state: 'forged',
+        },
+      ],
+    };
+    const { container, rerender } = render(<ActivityView snapshot={withSupport} connected />);
+    let pill = container.querySelector('.state-pill');
+    expect(pill?.textContent).toMatch(/Find SUPPORT forjado/i);
+    expect(pill?.textContent).not.toMatch(/^\s*forged\s*$/i);
+    expect(pill?.className).toMatch(/\bgood\b/);
+
+    rerender(
+      <ActivityView
+        snapshot={{
+          ...base,
+          activity: [
+            {
+              id: 'mission:mission-empty',
+              recordId: 'mission-empty',
+              kind: 'mission' as const,
+              timestamp: '2026-07-26T10:05:00.000Z',
+              state: 'research_completed',
+            },
+          ],
+        }}
+        connected
+      />,
+    );
+    pill = container.querySelector('.state-pill');
+    expect(pill?.textContent).toMatch(/Investigación terminada/i);
+    expect(pill?.textContent).not.toMatch(/Find SUPPORT|Completado|\bforged\b/i);
+    expect(pill?.className).not.toMatch(/\bgood\b/);
   });
 });
 
@@ -131,6 +209,81 @@ describe('HomeView Kernel-supported Find', () => {
     // Chrome strong + h1 both name SUPPORT (gate-blind Hallazgo útil must not remain).
     expect(screen.getAllByText('Hallazgo · Kernel SUPPORT').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText('Hallazgo útil')).toBeNull();
+  });
+
+  it('Home forge-state-action names SUPPORT when forged with Finds', () => {
+    // page.tsx → EfestoProductShell → HomeView forge-state-action uses brainState(phase, forgeSupportedFindCount).
+    // Gate-blind "Evidence forjada" must not remain when Kernel SUPPORT Finds exist.
+    render(<HomeView {...homeProps} phase="forged" connected supportedFinds={[supported]} forgeSupportedFindCount={1} />);
+    const action = screen.getByRole('button', { name: 'Kernel conectado' });
+    expect(action.textContent).toMatch(/Find SUPPORT forjado/i);
+    expect(action.textContent).not.toMatch(/Evidence forjada/i);
+    expect(action.textContent).not.toMatch(/Completado/i);
+  });
+
+  it('Home forge-state-action ignores global inbox Finds for zero-SUPPORT forged mission', () => {
+    // phase is focusedGoalSurface.mission; forgeSupportedFindCount is mission-scoped.
+    // Older inbox SUPPORT Finds must not brand Investigación terminada as Find SUPPORT forjado.
+    render(
+      <HomeView
+        {...homeProps}
+        phase="forged"
+        connected
+        supportedFinds={[supported]}
+        forgeSupportedFindCount={0}
+      />,
+    );
+    const action = screen.getByRole('button', { name: 'Kernel conectado' });
+    expect(action.textContent).toMatch(/Investigación terminada/i);
+    expect(action.textContent).not.toMatch(/Find SUPPORT forjado/i);
+    expect(action.textContent).not.toMatch(/Evidence forjada|Completado/i);
+    // Inbox chrome may still show SUPPORT Finds — only forge-state-action is mission-scoped.
+    expect(screen.getByText('Taladro Bosch 21 EUR')).toBeTruthy();
+  });
+
+  it('Home forge-state-action zero-SUPPORT forged is Investigación terminada', () => {
+    // Forged without Kernel SUPPORT Finds must not brand Completado / useful Find / Evidence forjada.
+    render(<HomeView {...homeProps} phase="forged" connected supportedFinds={[]} forgeSupportedFindCount={0} />);
+    const action = screen.getByRole('button', { name: 'Kernel conectado' });
+    expect(action.textContent).toMatch(/Investigación terminada/i);
+    expect(action.textContent).not.toMatch(/Evidence forjada/i);
+    expect(action.textContent).not.toMatch(/Completado|Find SUPPORT/i);
+    // Chrome must drop phase-forged green Completado lookalike (orb / Agent Hub research_completed).
+    expect(action.className).toContain('phase-research_completed');
+    expect(action.className).not.toMatch(/phase-forged(?!\w)/);
+  });
+
+  it('Home forge-state-action SUPPORT forged keeps phase-forged green chrome', () => {
+    render(<HomeView {...homeProps} phase="forged" connected supportedFinds={[]} forgeSupportedFindCount={2} />);
+    const action = screen.getByRole('button', { name: 'Kernel conectado' });
+    expect(action.className).toContain('phase-forged');
+    expect(action.className).not.toContain('phase-research_completed');
+    expect(action.textContent).toMatch(/Finds SUPPORT forjados/i);
+  });
+
+  it('Home forge-state-action completed-without-Evidence stays off Forja lista green', () => {
+    // brainPhaseFromWorkState(completed) must not collapse to ready → phase-ready green Forja lista
+    // while Actividad / extension already say Terminada sin Evidence / Research ended without Evidence.
+    render(<HomeView {...homeProps} phase="completed" connected supportedFinds={[]} forgeSupportedFindCount={0} />);
+    const action = screen.getByRole('button', { name: 'Kernel conectado' });
+    expect(action.textContent).toMatch(/Terminada sin Evidence/i);
+    expect(action.textContent).not.toMatch(/Forja lista|Completado|Find SUPPORT|Investigación terminada/i);
+    expect(action.className).toContain('phase-research_completed');
+    expect(action.className).not.toMatch(/phase-ready(?!\w)/);
+    expect(action.className).not.toMatch(/phase-forged(?!\w)/);
+  });
+
+  it('Home surfaceTitle honors focused findCount when inbox is empty', () => {
+    // Tip 96514e2 fixed forge-state-action via GoalSurface findCount; header/body still
+    // keyed off supportedFinds.length → Nuevo Goal + create-Goal empty beside Find SUPPORT forjado.
+    render(<HomeView {...homeProps} phase="forged" connected supportedFinds={[]} forgeSupportedFindCount={2} />);
+    const action = screen.getByRole('button', { name: 'Kernel conectado' });
+    expect(action.textContent).toMatch(/Finds SUPPORT forjados/i);
+    expect(screen.getAllByText('Hallazgo · Kernel SUPPORT').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('Nuevo Goal')).toBeNull();
+    expect(screen.queryByRole('heading', { name: '¿Qué estás buscando?' })).toBeNull();
+    expect(screen.getByText(/sin tarjetas de inbox/i)).toBeTruthy();
+    expect(screen.queryByLabelText('Ideas para nuevos Goals')).toBeNull();
   });
 
   it('does not mint a Find card from a Hermes snippet', () => {
@@ -371,5 +524,43 @@ describe('ActivityView Kernel SUPPORT honesty', () => {
     render(<ActivityView connected snapshot={snapshot} />);
     expect(screen.getByText('Hallazgo · Kernel SUPPORT')).toBeTruthy();
     expect(screen.queryByText(/^Hallazgo$/)).toBeNull();
+  });
+});
+
+describe('brainState forged SUPPORT honesty', () => {
+  it('names Kernel SUPPORT Finds when forged with finds', () => {
+    expect(brainState('forged', 1).label).toMatch(/Find SUPPORT forjado/i);
+    expect(brainState('forged', 2).label).toMatch(/Finds SUPPORT forjados/i);
+    expect(brainState('forged', 1).label).not.toMatch(/Evidence forjada/i);
+    expect(brainState('forged', 1).detail).toMatch(/Kernel SUPPORT/i);
+  });
+
+  it('zero-SUPPORT forged is Investigación terminada, not Evidence forjada Completado', () => {
+    expect(brainState('forged', 0).label).toBe('Investigación terminada');
+    expect(brainState('forged', 0).detail).toMatch(/Ningún Find pasó Kernel SUPPORT/i);
+    expect(brainState('forged', 0).label).not.toMatch(/Evidence forjada|Completado|Find SUPPORT/i);
+  });
+
+  it('completed-without-Evidence is Terminada sin Evidence, not Forja lista', () => {
+    expect(brainState('completed').label).toBe('Terminada sin Evidence');
+    expect(brainState('completed').detail).toMatch(/sin Evidence forjada/i);
+    expect(brainState('completed').label).not.toMatch(/Forja lista|Completado|Find SUPPORT/i);
+  });
+});
+
+describe('Home forge-state-action shell wiring contract', () => {
+  it('shell feeds focused-mission SUPPORT count, never global supportedFinds.length', () => {
+    const shell = readFileSync(join(process.cwd(), 'apps/dashboard/components/efesto-product-shell.tsx'), 'utf8');
+    const views = readFileSync(join(process.cwd(), 'apps/dashboard/components/efesto-product-views.tsx'), 'utf8');
+    expect(shell).toContain('countMissionKernelSupportedFinds(focusedGoalSurface?.mission)');
+    expect(shell).toContain('forgeSupportedFindCount={forgeSupportedFindCount}');
+    expect(shell).toContain("workState === 'completed'");
+    expect(shell).toContain("return 'completed'");
+    expect(views).toContain('brainState(phase, forgeSupportedFindCount)');
+    expect(views).not.toContain('brainState(phase, supportedFinds.length)');
+    expect(views).toContain("(phase === 'forged' && forgeSupportedFindCount === 0) || phase === 'completed'");
+    expect(views).toContain("'research_completed'");
+    expect(views).toContain("phase-' + chromePhase");
+    expect(views).not.toContain("phase-' + phase");
   });
 });

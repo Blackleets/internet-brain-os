@@ -195,7 +195,12 @@ async function loadAgentHub(stored) {
   try { opportunities = await listOpportunities(auth); } catch { opportunities = []; }
   const latest = newestMission(missions);
   const forged = latest?.status === 'completed' && (latest.executionPhase === 'forged' || latest.workState === 'forged');
-  const findCount = kernelSupportedFindsForMission(opportunities, latest).length;
+  // Living Forge / mission-presentation parity: max(inbox, verificationResults SUPPORT).
+  // listOpportunities catch→[] must not demote #mission-state below Kernel SUPPORT proof.
+  const findCount = Math.max(
+    kernelSupportedFindsForMission(opportunities, latest).length,
+    latest ? presentMission(latest).opportunitiesPromoted : 0,
+  );
   // Fail-close mission-state: SUPPORT-gated findCount must name Kernel SUPPORT Finds, not bare opportunities.
   const completedCopy = findCount > 0
     ? `${findCount} ${findCount === 1 ? 'Find' : 'Finds'} passed Kernel SUPPORT`
@@ -206,8 +211,19 @@ async function loadAgentHub(stored) {
     waiting_for_agent: 'Waiting for Hermes', queued: 'Ready for Hermes', running: 'Hermes is researching',
     completed: completedCopy, failed: 'Research needs attention',
   }[latest?.status] ?? 'No research mission yet';
+  // Fail-close Agent Hub #mission-state chrome: zero-SUPPORT forged must not keep
+  // data-status=completed (green Completado) while Living Forge / orb already use
+  // idle / research_completed. SUPPORT Finds keep completed → green.
+  // completed-without-forge (status completed, not forged) must also stay off green
+  // Completado — mission-card already maps opportunitiesPromoted===0 → research_completed;
+  // Shared Goal Truth MutationObserver would otherwise re-apply honest copy beside green.
+  const chromeStatus = forged
+    ? (findCount > 0 ? 'completed' : 'research_completed')
+    : latest?.status === 'completed'
+      ? 'research_completed'
+      : (latest?.status ?? 'idle');
   $('#mission-state').textContent = latest?.executionPhase === 'verifying' ? 'Efesto is verifying Evidence' : copy;
-  $('#mission-state').dataset.status = latest?.status ?? 'idle';
+  $('#mission-state').dataset.status = chromeStatus;
   renderMissionProgress(latest);
   renderMissionHistory(missions);
   setForgeActivity(forgeActivityForMission(latest, opportunities));
@@ -223,7 +239,12 @@ function renderMissionHistory(missions) {
 }
 
 function renderMissionCard(view) {
-  const card = document.createElement('article'); card.className = 'mission-card'; card.dataset.status = view.status;
+  const card = document.createElement('article'); card.className = 'mission-card';
+  // Fail-close mission history chrome: completed without Kernel SUPPORT Finds must not
+  // keep green Completado border (Living Forge idle / orb research_completed).
+  card.dataset.status = view.status === 'completed' && view.opportunitiesPromoted === 0
+    ? 'research_completed'
+    : view.status;
   const heading = document.createElement('div'); heading.className = 'mission-card-heading';
   const copy = document.createElement('span'); const title = document.createElement('b'); title.textContent = view.title;
   const statusLabel = document.createElement('small'); statusLabel.textContent = view.statusLabel; copy.append(title, statusLabel);

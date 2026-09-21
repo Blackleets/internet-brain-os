@@ -8,7 +8,8 @@ import {
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { CaseSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
-import { isKernelSupportedFind, kernelSupportedFinds } from '../lib/kernel/supported-find';
+import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportedFinds } from '../lib/kernel/supported-find';
+import { statePillLabel, statePillTone } from '../lib/ui/state-pill-label.mjs';
 
 export type Provider = {
   id: string;
@@ -25,7 +26,7 @@ export type EvidenceRecord = {
   tags?: string[]; entityIds?: string[]; relationshipIds?: string[];
 };
 export type CaseDetail = { case: Record<string, unknown>; evidence: EvidenceRecord[] };
-export type BrainPhase = 'offline' | 'ready' | 'queued' | 'investigating' | 'verifying' | 'forged' | 'thinking' | 'failed' | 'blocked' | 'unavailable';
+export type BrainPhase = 'offline' | 'ready' | 'queued' | 'investigating' | 'verifying' | 'forged' | 'completed' | 'thinking' | 'failed' | 'blocked' | 'unavailable';
 
 const starterGoals = [
   'Encuentra las mejores herramientas para mi negocio',
@@ -38,7 +39,7 @@ const starterGoals = [
   'Ayúdame a tomar una decisión',
 ];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, supportedFinds = [], missions, onFindFeedback, onOpenCase }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, supportedFinds = [], forgeSupportedFindCount = 0, missions, onFindFeedback, onOpenCase }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
   input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
@@ -46,19 +47,39 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
   onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenNav: () => void;
   supportedFinds?: OpportunitySummary[];
+  /** Focused-mission SUPPORT count (Living Forge). Not global inbox length. */
+  forgeSupportedFindCount?: number;
   missions?: readonly MissionSummary[];
   onFindFeedback?: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void;
   onOpenCase?: (caseId: string) => void;
 }) {
-  const state = brainState(phase);
-  const showSuggestions = chatMode ? messages.length === 0 : !preparedGoal && supportedFinds.length === 0;
+  // Fail-close: forge-state-action uses focused GoalSurface mission SUPPORT
+  // (findCount / verificationResults via countMissionKernelSupportedFinds), never
+  // global supportedFinds.length — older inbox must not brand zero-SUPPORT forged.
+  const state = brainState(phase, forgeSupportedFindCount);
+  // Fail-close chrome: zero-SUPPORT forged must not keep phase-forged (green Completado
+  // lookalike) while label is Investigación terminada. Mirror extension orb / Agent Hub
+  // research_completed neutral chrome; SUPPORT forged keeps phase-forged green.
+  // workState=completed (completed-without-Evidence) must not keep phase-ready green
+  // "Forja lista" Completado lookalike — Actividad already uses Terminada sin Evidence.
+  const chromePhase = (phase === 'forged' && forgeSupportedFindCount === 0) || phase === 'completed'
+    ? 'research_completed'
+    : phase;
+  // GoalSurface findCount can prove SUPPORT while inbox is empty (dismissed / not loaded).
+  // surfaceTitle + empty body must not say Nuevo Goal beside Find SUPPORT forjado.
+  const focusedMissionHasSupport = forgeSupportedFindCount > 0;
+  const showSuggestions = chatMode
+    ? messages.length === 0
+    : !preparedGoal && supportedFinds.length === 0 && !focusedMissionHasSupport;
   const surfaceTitle = chatMode
     ? (messages.length ? 'Conversación' : 'Nueva conversación')
-    // Fail-close chrome: supportedFinds is Kernel SUPPORT-only (shell kernelSupportedFinds).
-    // Bare "Hallazgo útil" must name SUPPORT like ActivityView / scorecard Find SUPPORT honesty.
-    : (preparedGoal ? 'Goal preparado' : supportedFinds.length ? 'Hallazgo · Kernel SUPPORT' : 'Nuevo Goal');
+    // Fail-close chrome: inbox SUPPORT Finds OR focused-mission findCount — never bare Hallazgo útil.
+    : (preparedGoal ? 'Goal preparado' : (supportedFinds.length || focusedMissionHasSupport) ? 'Hallazgo · Kernel SUPPORT' : 'Nuevo Goal');
+  const surfaceAria = chatMode
+    ? 'Conversación con Efesto'
+    : (preparedGoal ? 'Goal preparado' : (supportedFinds.length || focusedMissionHasSupport) ? 'Hallazgos Kernel SUPPORT' : 'Nuevo Goal');
 
-  return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal')} aria-label={chatMode ? 'Conversación con Efesto' : 'Nuevo Goal'}>
+  return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal')} aria-label={surfaceAria}>
     <header className="forge-surface-bar">
       <div className="forge-surface-leading">
         <button type="button" className="forge-menu-button" onClick={onOpenNav} aria-label="Alternar navegación"><Menu /></button>
@@ -70,7 +91,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
 
       <ModeSwitcher chatMode={chatMode} onToggleChat={onToggleChat} />
 
-      <button type="button" className={'forge-state-action phase-' + phase} onClick={onOpenSettings} aria-label={connected ? 'Kernel conectado' : 'Conectar Kernel'}>
+      <button type="button" className={'forge-state-action phase-' + chromePhase} onClick={onOpenSettings} aria-label={connected ? 'Kernel conectado' : 'Conectar Kernel'}>
         <i />
         <span>{connected ? state.label : 'Conectar Kernel'}</span>
         <Plug />
@@ -107,13 +128,17 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
           <button type="button" className="secondary-action" onClick={onEditGoal}>Editar Goal</button>
         </div>
         <p className="forge-plan-boundary"><ShieldCheck /> Nada se ejecuta sin tu confirmación explícita.</p>
-      </section> : supportedFinds.length ? <section className="forge-home-finds" aria-label="Hallazgos respaldados por el Kernel">
+      </section> : (supportedFinds.length || focusedMissionHasSupport) ? <section className="forge-home-finds" aria-label="Hallazgos respaldados por el Kernel">
         <header>
           <small>FIND · KERNEL SUPPORT</small>
           <h1>Hallazgo · Kernel SUPPORT</h1>
-          <p>Resultado persistido por el Kernel: título, fuente y procedencia SUPPORT. Un snippet de Hermes no aparece aquí.</p>
+          <p>{supportedFinds.length
+            ? 'Resultado persistido por el Kernel: título, fuente y procedencia SUPPORT. Un snippet de Hermes no aparece aquí.'
+            : 'La misión enfocada forjó Kernel SUPPORT (GoalSurface findCount). El inbox no muestra Finds visibles ahora (vacío, filtrado o descartado).'}</p>
         </header>
-        <div className="find-grid">{supportedFinds.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFindFeedback ?? (() => undefined)} onOpenCase={onOpenCase} />)}</div>
+        {supportedFinds.length
+          ? <div className="find-grid">{supportedFinds.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFindFeedback ?? (() => undefined)} onOpenCase={onOpenCase} />)}</div>
+          : <p className="truth-card"><ShieldCheck /> Find SUPPORT forjado en la misión; sin tarjetas de inbox que mostrar.</p>}
       </section> : <section className="forge-empty forge-goal-empty" aria-label="Crear un Goal">
         <span className="forge-empty-mark"><Target /></span>
         <small>EFESTO · CONTROLLED MISSION</small>
@@ -438,16 +463,57 @@ export function SettingsView({ connected, connecting, rememberSession, snapshot,
 
 function missionPillState(mission: MissionSummary): string {
   // Bare status completed (no Evidence / Kernel forge) must not look like Completado.
-  if (mission.executionPhase === 'forged') return 'forged';
+  // Forged without Kernel SUPPORT Finds must not keep a green "forged" Completado-lookalike
+  // on Goals/Actividad (Home already uses Investigación terminada / Research completed).
+  if (mission.executionPhase === 'forged') {
+    return countMissionKernelSupportedFinds(mission) > 0 ? 'forged' : 'research_completed';
+  }
   if (mission.executionPhase) return mission.executionPhase;
   if (mission.status === 'completed') return 'completed_without_forge';
   return mission.status;
 }
 function Workspace({ icon: Icon, eyebrow, title, copy, action, children }: { icon: typeof Target; eyebrow: string; title: string; copy: string; action?: ReactNode; children: ReactNode }) { return <section className="workspace"><header className="workspace-heading"><span><Icon /></span><div><small>{eyebrow}</small><h1>{title}</h1><p>{copy}</p></div>{action ? <div className="workspace-heading-action">{action}</div> : null}</header><div className="workspace-body">{children}</div></section>; }
 function Empty({ icon: Icon, title, copy }: { icon: typeof Target; title: string; copy: string }) { return <div className="empty-state"><Icon /><strong>{title}</strong><p>{copy}</p></div>; }
-function StatePill({ state }: { state: string }) { const tone = ['ready', 'forged', 'available', 'new'].includes(state) ? 'good' : ['failed', 'invalid', 'blocked'].includes(state) ? 'bad' : ['running', 'investigating', 'verifying', 'queued', 'waiting_for_agent'].includes(state) ? 'working' : 'neutral'; return <span className={`state-pill ${tone}`}><i />{state.replaceAll('_', ' ')}</span>; }
+// Fail-close Goals/Actividad/Automations StatePill labels (page.tsx → EfestoProductShell).
+// missionPillState / activityFrom already gate forged → SUPPORT-only; bare English
+// "forged" / "research completed" must not stand in for Home forge-state-action honesty
+// (Find SUPPORT forjado / Investigación terminada / Terminada sin Evidence).
+function StatePill({ state }: { state: string }) {
+  return <span className={`state-pill ${statePillTone(state)}`}><i />{statePillLabel(state)}</span>;
+}
 function ReadinessRow({ label, value, ready }: { label: string; value: string; ready: boolean }) { return <div className="readiness-row"><span>{label}</span><strong className={ready ? 'ready' : ''}><i />{value}</strong></div>; }
-export function brainState(phase: BrainPhase) { if (phase === 'thinking') return { label: 'Conversando', detail: 'Modelo transmitiendo' }; if (phase === 'investigating') return { label: 'Investigando', detail: 'Hermes ejecutando una misión' }; if (phase === 'verifying') return { label: 'Verificando Evidence', detail: 'Kernel aplicando gates' }; if (phase === 'queued') return { label: 'Misión preparada', detail: 'Esperando agente' }; if (phase === 'forged') return { label: 'Evidence forjada', detail: 'Resultado persistido' }; if (phase === 'failed') return { label: 'Atención requerida', detail: 'La última misión falló' }; if (phase === 'blocked') return { label: 'BLOCKED', detail: 'La política del Kernel denegó la ejecución automática' }; if (phase === 'unavailable') return { label: 'Hermes no disponible', detail: 'El agente no está listo; no hay investigación inventada' }; if (phase === 'ready') return { label: 'Forja lista', detail: 'Listo para un nuevo Goal' }; return { label: 'Modo local desconectado', detail: 'Sin actividad simulada' }; }
+export function brainState(phase: BrainPhase, supportedFindCount = 0) {
+  if (phase === 'thinking') return { label: 'Conversando', detail: 'Modelo transmitiendo' };
+  if (phase === 'investigating') return { label: 'Investigando', detail: 'Hermes ejecutando una misión' };
+  if (phase === 'verifying') return { label: 'Verificando Evidence', detail: 'Kernel aplicando gates' };
+  if (phase === 'queued') return { label: 'Misión preparada', detail: 'Esperando agente' };
+  if (phase === 'forged') {
+    // Fail-close Home forge-state-action (page.tsx → EfestoProductShell → HomeView):
+    // forgeSupportedFindCount is focused GoalSurface SUPPORT (findCount when
+    // verificationResults are stripped) — not global inbox length.
+    // forged without Kernel SUPPORT Finds must not read like Completado/useful Find;
+    // with SUPPORT Finds, name them like extension Living Forge / mission-state.
+    if (supportedFindCount > 0) {
+      return {
+        label: supportedFindCount === 1 ? 'Find SUPPORT forjado' : 'Finds SUPPORT forjados',
+        detail: supportedFindCount === 1
+          ? '1 Find pasó Kernel SUPPORT'
+          : `${supportedFindCount} Finds pasaron Kernel SUPPORT`,
+      };
+    }
+    return { label: 'Investigación terminada', detail: 'Ningún Find pasó Kernel SUPPORT' };
+  }
+  // Bare completed (no forged Evidence) — same honesty as Actividad completed_without_forge
+  // / extension Research ended without Evidence. Must not fall through to Forja lista.
+  if (phase === 'completed') {
+    return { label: 'Terminada sin Evidence', detail: 'El intento terminó sin Evidence forjada' };
+  }
+  if (phase === 'failed') return { label: 'Atención requerida', detail: 'La última misión falló' };
+  if (phase === 'blocked') return { label: 'BLOCKED', detail: 'La política del Kernel denegó la ejecución automática' };
+  if (phase === 'unavailable') return { label: 'Hermes no disponible', detail: 'El agente no está listo; no hay investigación inventada' };
+  if (phase === 'ready') return { label: 'Forja lista', detail: 'Listo para un nuevo Goal' };
+  return { label: 'Modo local desconectado', detail: 'Sin actividad simulada' };
+}
 function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' }).format(date); }
 function formatRelevance(value: number) { return value <= 1 ? `${Math.round(value * 100)}%` : String(Math.round(value)); }
 function optionalText(value: unknown): string | undefined { return typeof value === 'string' && value.trim() ? value.trim() : undefined; }

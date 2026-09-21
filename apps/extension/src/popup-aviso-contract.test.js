@@ -7,6 +7,8 @@ const popupHtml = readFileSync(new URL('./popup.html', import.meta.url), 'utf8')
 describe('popup Watchtower Find copy contract', () => {
   it('fail-closes mission-state Find copy to Kernel SUPPORT, not bare opportunities', () => {
     expect(popup).toContain('kernelSupportedFindsForMission(opportunities, latest)');
+    expect(popup).toContain('presentMission(latest).opportunitiesPromoted');
+    expect(popup).toContain('Math.max(');
     expect(popup).toContain('presentWatchtowerBanner(unread, latest)');
     expect(popup).toContain('forgeActivityForMission(latest, opportunities)');
     expect(popup).toContain("Find' : 'Finds'} passed Kernel SUPPORT");
@@ -74,6 +76,21 @@ describe('popup mission-card statusDetail SUPPORT honesty', () => {
     expect(presentation).toContain('Find passed Kernel SUPPORT');
     expect(presentation).toContain('Finds passed Kernel SUPPORT');
     expect(presentation).not.toContain('its findings passed through the local Kernel');
+  });
+});
+
+describe('popup Agent Hub zero-SUPPORT forged chrome', () => {
+  it('keeps #mission-state and mission-card off green completed without Kernel SUPPORT', () => {
+    const css = readFileSync(new URL('./popup.css', import.meta.url), 'utf8');
+    expect(popup).toContain("findCount > 0 ? 'completed' : 'research_completed'");
+    expect(popup).toContain("view.status === 'completed' && view.opportunitiesPromoted === 0");
+    expect(popup).toContain("? 'research_completed'");
+    // completed-without-forge must not keep raw status=completed green Completado.
+    expect(popup).toContain("latest?.status === 'completed'");
+    expect(popup).toContain("? 'research_completed'");
+    expect(popup).not.toContain("$('#mission-state').dataset.status = latest?.status ?? 'idle'");
+    expect(css).toContain('data-status="research_completed"');
+    expect(css).toContain('.mission-card[data-status="research_completed"] .mission-results strong');
   });
 });
 
@@ -145,3 +162,25 @@ describe('popup command-center empty Find gate honesty', () => {
     expect(popupHtml).toContain('cargar hallazgos con Kernel SUPPORT');
   });
 });
+
+describe('popup Goal Surface Shared Truth chrome SUPPORT honesty', () => {
+  it('keeps Shared Goal Truth #mission-state chrome behind Kernel SUPPORT findCount', () => {
+    const binding = readFileSync(new URL('./goal-surface-popup-binding.js', import.meta.url), 'utf8');
+    expect(binding).toContain('chromeStatusForGoalSurfaceWork');
+    expect(binding).toContain("workState === 'forged'");
+    expect(binding).toContain("workState === 'completed'");
+    expect(binding).toContain("'research_completed'");
+    expect(binding).toContain("'completed'");
+    expect(binding).toContain('focused?.findCount');
+    expect(binding).not.toContain("const status = focused?.workState ?? 'idle'");
+  });
+});
+
+describe('popup Goal Surface completed-without-Evidence workLabel honesty', () => {
+  it('names Research ended without Evidence — never No research mission yet', () => {
+    const presentation = readFileSync(new URL('./goal-surface-presentation.js', import.meta.url), 'utf8');
+    expect(presentation).toContain("completed: 'Research ended without Evidence'");
+    expect(presentation).not.toContain("completed: 'No research mission yet'");
+  });
+});
+

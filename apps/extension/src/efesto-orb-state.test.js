@@ -74,7 +74,7 @@ describe('Efesto orb deterministic UI state', () => {
     });
     expect(promotedOnly.summary).toEqual({ received: 3, evidenceCreated: 2, opportunitiesForged: 0, obsidianNotesWritten: 0 });
     expect(promotedOnly).toMatchObject({
-      state: 'completed',
+      state: 'research_completed',
       label: 'Research completed',
       detail: 'No Find passed Kernel SUPPORT.',
     });
@@ -94,7 +94,7 @@ describe('Efesto orb deterministic UI state', () => {
     });
     expect(unsupported.summary.opportunitiesForged).toBe(0);
     expect(unsupported).toMatchObject({
-      state: 'completed',
+      state: 'research_completed',
       label: 'Research completed',
       detail: 'No Find passed Kernel SUPPORT.',
     });
@@ -141,7 +141,7 @@ describe('Efesto orb deterministic UI state', () => {
     expect(view.summary).toEqual({ received: 7, evidenceCreated: 2, opportunitiesForged: 0, obsidianNotesWritten: 0 });
     expect(view.summary).not.toHaveProperty('findingsReceived');
     expect(view).toMatchObject({
-      state: 'completed',
+      state: 'research_completed',
       label: 'Research completed',
       detail: 'No Find passed Kernel SUPPORT.',
     });
@@ -170,18 +170,38 @@ describe('Efesto orb deterministic UI state', () => {
   it('does not brand forged-without-SUPPORT as Forge complete', () => {
     const view = deriveEfestoOrbState({ enabled: true, kernel: 'ready', services, mission: { status: 'completed', workState: 'forged' }, now });
     expect(view).toMatchObject({
-      state: 'completed',
+      state: 'research_completed',
       label: 'Research completed',
       detail: 'No Find passed Kernel SUPPORT.',
     });
     expect(view.label).not.toMatch(/Forge complete/i);
   });
 
+  it('zero-SUPPORT forged does not paint green Completado orb chrome', () => {
+    // popup Central Forge Power data-state=completed is green Completado; research_completed stays neutral.
+    const view = deriveEfestoOrbState({
+      enabled: true,
+      kernel: 'ready',
+      services,
+      mission: { status: 'completed', executionPhase: 'forged', verificationResults: [] },
+      now,
+    });
+    expect(view.state).toBe('research_completed');
+    expect(view.state).not.toBe('completed');
+    expect(view.summary).toEqual({ received: 0, evidenceCreated: 0, opportunitiesForged: 0, obsidianNotesWritten: 0 });
+  });
+
   it('does not present completed-without-forged as Forge complete', () => {
     const view = deriveEfestoOrbState({ enabled: true, kernel: 'ready', services, mission: { status: 'completed' }, now });
     expect(view.state).not.toBe('completed');
+    expect(view.state).not.toBe('idle');
+    expect(view.state).toBe('completed_without_forge');
+    expect(view.label).toBe('Research ended without Evidence');
+    expect(view.label).not.toBe('START EFESTO');
     expect(view.label).not.toBe('Forge complete');
-    expect(view.label).not.toMatch(/completado|forged|Forge complete/i);
+    expect(view.label).not.toMatch(/completado|forged|Forge complete|START EFESTO/i);
+    expect(view.detail).toMatch(/No Kernel-sealed Evidence was forged/i);
+    expect(view.summary).toEqual({ received: 0, evidenceCreated: 0, opportunitiesForged: 0, obsidianNotesWritten: 0 });
   });
 
   it('selects the highest-priority unfinished Goal and prevents duplicate missions', () => {
