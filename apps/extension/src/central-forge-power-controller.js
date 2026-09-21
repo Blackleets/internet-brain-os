@@ -161,8 +161,9 @@ export function renderForgePowerView(elements = {}, view, overrideDetail) {
   powerLabel.textContent = view.action && view.state === 'failed' ? view.action : view.label;
   powerDetail.textContent = overrideDetail ?? view.detail;
   // Green Living Forge success only for Kernel SUPPORT Completado (state completed).
-  // research_completed (zero-SUPPORT forged) must stay idle — not celebrate.
-  const terminalLedger = view.state === 'completed' || view.state === 'research_completed';
+  // research_completed (zero-SUPPORT forged) and completed_without_forge (bare completed)
+  // must stay idle — not celebrate. Ledger may still show zeros.
+  const terminalLedger = view.state === 'completed' || view.state === 'research_completed' || view.state === 'completed_without_forge';
   applyLivingForgeActivity(livingForge, view.smithActive ? (view.state === 'verifying' ? 'verifying' : 'working') : view.state === 'completed' ? 'success' : view.state === 'failed' ? 'error' : 'idle');
   setText('#forge-orb-elapsed', view.elapsedLabel ?? 'No active mission');
   setText('#forge-orb-heartbeat', view.heartbeatLabel ?? 'No heartbeat yet');

@@ -58,7 +58,9 @@ describe('Efesto orb UI static contract', () => {
   it('never displays empty summaries or Obsidian receipts outside completed/research_completed ledger', () => {
     const source = readFileSync(resolve('apps/extension/src/central-forge-power-controller.js'), 'utf8');
     const css = readFileSync(resolve('apps/extension/src/central-forge-power.css'), 'utf8');
-    expect(source).toContain("const terminalLedger = view.state === 'completed' || view.state === 'research_completed'");
+    expect(source).toContain("const terminalLedger = view.state === 'completed' || view.state === 'research_completed' || view.state === 'completed_without_forge'");
+    expect(source).not.toContain("view.state === 'completed_without_forge' ? 'success'");
+    expect(css).not.toContain('data-state="completed_without_forge"');
     expect(source).toContain('renderObsidianReceipt(obsidianReceipt, terminalLedger ? view.obsidianReceipt : undefined)');
     expect(source).toContain("view.state === 'completed' ? 'success'");
     expect(source).not.toContain("view.state === 'research_completed' ? 'success'");

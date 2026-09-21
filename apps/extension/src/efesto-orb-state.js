@@ -40,7 +40,16 @@ export function deriveEfestoOrbState({ enabled = false, kernel = 'offline', serv
         };
     return base(forgedCopy.state, forgedCopy.label, forgedCopy.detail, { enabled, active: false, smithActive: false, services: { hermesReady, obsidian }, mission, summary: missionSummary(mission), obsidianReceipt: obsidianReceipt(mission, obsidian) });
   }
-  if (mission.status === 'completed') return base('idle', 'START EFESTO', 'No active mission is present.', { enabled, active: false, smithActive: false, services: { hermesReady, obsidian } });
+  // Fail-close Central Forge orb (#forge-power-label via renderForgePowerView):
+  // bare completed (no forged Evidence) must not keep START EFESTO / "No active mission"
+  // while Living Forge / #mission-state / Home already say Research ended without Evidence /
+  // Terminada sin Evidence. Neutral completed_without_forge chrome (not green completed).
+  if (mission.status === 'completed') {
+    return base('completed_without_forge', 'Research ended without Evidence', 'The bounded attempt finished. No Kernel-sealed Evidence was forged.', {
+      enabled, active: false, smithActive: false, services: { hermesReady, obsidian }, mission,
+      summary: missionSummary(mission), obsidianReceipt: obsidianReceipt(mission, obsidian),
+    });
+  }
   if (TERMINAL_STATUSES.has(mission.status) || ACTIVE_STATUSES.has(mission.status)) return base(String(mission.status), String(mission.status), 'Inspect the mission ledger.', { enabled, active: false, smithActive: false, services: { hermesReady, obsidian }, mission });
   return base('idle', 'START EFESTO', 'No active mission is present.', { enabled, active: false, smithActive: false, services: { hermesReady, obsidian } });
 }
