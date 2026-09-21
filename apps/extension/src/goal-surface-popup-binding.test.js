@@ -43,9 +43,14 @@ describe('Shared Goal Truth popup binding', () => {
     mount();
     const result = applyGoalTruthPresentation(document, {
       focused: { workState: 'completed', workLabel: 'Research ended without Evidence' },
-      forgeActivity: { label: 'The forge is ready', detail: 'Create a Goal or analyze a public page.', tone: 'idle' },
+      forgeActivity: {
+        label: 'Research ended without Evidence',
+        detail: 'The bounded attempt finished. No Kernel-sealed Evidence was forged.',
+        tone: 'idle',
+      },
     });
-    // completed-without-forge must not keep green Completado (data-status=completed).
+    // completed-without-forge must not keep green Completado (data-status=completed)
+    // and Living Forge must not keep forge-is-ready Forja lista beside that honesty.
     expect(result).toEqual({ status: 'research_completed', text: 'Research ended without Evidence' });
     expect(document.querySelector('#mission-state')?.dataset.status).toBe('research_completed');
     expect(document.querySelector('#mission-state')?.dataset.status).not.toBe('completed');
@@ -53,7 +58,8 @@ describe('Shared Goal Truth popup binding', () => {
     expect(document.querySelector('#living-forge')?.dataset.activity).toBe('idle');
     expect(document.querySelector('.live-badge-label')?.textContent).toBe('LISTA');
     expect(document.querySelector('.live-badge-label')?.textContent).not.toMatch(/EN VIVO/i);
-    expect(document.querySelector('#forge-activity-label')?.textContent).toBe('The forge is ready');
+    expect(document.querySelector('#forge-activity-label')?.textContent).toBe('Research ended without Evidence');
+    expect(document.querySelector('#forge-activity-label')?.textContent).not.toMatch(/forge is ready/i);
   });
 
   it('reads through the authenticated Shared Goal Truth transport and never needs a writer', async () => {

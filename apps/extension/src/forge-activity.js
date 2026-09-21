@@ -36,7 +36,17 @@ export function forgeActivityForMission(mission, opportunities = []) {
         }
       : { label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.', tone: 'idle' };
   }
-  if (mission.status === 'completed') return ACTIVITIES.idle;
+  // Fail-close Living Forge (#forge-activity-label via popup loadAgentHub):
+  // bare completed (no forged Evidence) must not keep "The forge is ready" / LISTA
+  // Forja lista lookalike while #mission-state / Home already say Research ended
+  // without Evidence / Terminada sin Evidence. Tone stays idle (no celebrate).
+  if (mission.status === 'completed') {
+    return {
+      label: 'Research ended without Evidence',
+      detail: 'The bounded attempt finished. No Kernel-sealed Evidence was forged.',
+      tone: 'idle',
+    };
+  }
   if (mission.status === 'failed') return ACTIVITIES.error;
   return ACTIVITIES.idle;
 }

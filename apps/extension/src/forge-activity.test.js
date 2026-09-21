@@ -84,11 +84,18 @@ it('reports Kernel-supported Find counts without inventing findings', () => {
     });
   });
 
-  it('does not present completed-without-forged as Forge complete', () => {
-    const idle = forgeActivityForMission({ status: 'completed', resultSummary: { opportunitiesPromoted: 1 } });
-    expect(idle.tone).toBe('idle');
-    expect(idle.label).not.toMatch(/completado|forged|Forge complete|Research completed/i);
-    expect(forgeActivityForMission({ status: 'completed' }).tone).toBe('idle');
+  it('names Research ended without Evidence for bare completed — never forge-is-ready Forja lista', () => {
+    // Home forge-state-action / #mission-state already say Terminada sin Evidence /
+    // Research ended without Evidence; Living Forge must not keep "The forge is ready".
+    const ended = forgeActivityForMission({ status: 'completed', resultSummary: { opportunitiesPromoted: 1 } });
+    expect(ended).toMatchObject({
+      tone: 'idle',
+      label: 'Research ended without Evidence',
+      detail: 'The bounded attempt finished. No Kernel-sealed Evidence was forged.',
+    });
+    expect(ended.label).not.toMatch(/forge is ready|completado|forged|Forge complete|Research completed|Find SUPPORT/i);
+    expect(ended.tone).not.toBe('success');
+    expect(forgeActivityForMission({ status: 'completed' }).label).toBe('Research ended without Evidence');
   });
 
   it('uses explicit temporary states for manual capture', () => {

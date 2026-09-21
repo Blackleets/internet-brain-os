@@ -31,7 +31,8 @@ export async function syncGoalSurfacePopup(options = {}) {
  * permanently undoes Agent Hub Completado honesty.
  * forged + findCount>0 → completed (green); zero/missing SUPPORT → research_completed.
  * workState=completed (Kernel completed-without-forge) must not keep data-status=completed
- * green Completado — mission-card / Living Forge already use research_completed / idle.
+ * green Completado — mission-card uses research_completed; Living Forge names
+ * Research ended without Evidence (not forge-is-ready Forja lista).
  */
 function chromeStatusForGoalSurfaceWork(workState, findCount) {
   if (workState === 'forged') {

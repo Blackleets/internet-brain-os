@@ -89,8 +89,11 @@ describe('extension Shared Goal Truth presentation', () => {
     expect(view.workLabel).toBe('Research ended without Evidence');
     expect(view.workLabel).not.toMatch(/completado|forged|Forge complete|Research completed|No research mission yet/i);
     expect(forgeActivityForGoalSurface(surface('completed'))).toEqual({
-      label: 'The forge is ready', detail: 'Create a Goal or analyze a public page.', tone: 'idle',
+      label: 'Research ended without Evidence',
+      detail: 'The bounded attempt finished. No Kernel-sealed Evidence was forged.',
+      tone: 'idle',
     });
+    expect(forgeActivityForGoalSurface(surface('completed')).label).not.toMatch(/forge is ready|Find SUPPORT|Research completed/i);
     expect(forgeActivityForGoalSurface(surface('forged', { mission: { findCount: 2 } }))).toEqual({
       label: 'Kernel SUPPORT Finds were forged', detail: '2 Finds passed Kernel SUPPORT and were forged.', tone: 'success',
     });

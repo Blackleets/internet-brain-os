@@ -63,7 +63,17 @@ export function forgeActivityForGoalSurface(surface) {
   const workState = surface?.mission?.workState;
   const blockedReason = surface?.mission?.blockedReason;
   if (blockedReason) return blockedActivity(blockedReason);
-  if (!workState || workState === 'idle' || workState === 'completed') return FORGE_ACTIVITY.idle;
+  if (!workState || workState === 'idle') return FORGE_ACTIVITY.idle;
+  // Fail-close Goal Surface Living Forge: workState=completed (no forged Evidence)
+  // must not keep "The forge is ready" while workLabel / Home say Research ended
+  // without Evidence / Terminada sin Evidence. Mirror forgeActivityForMission.
+  if (workState === 'completed') {
+    return {
+      label: 'Research ended without Evidence',
+      detail: 'The bounded attempt finished. No Kernel-sealed Evidence was forged.',
+      tone: 'idle',
+    };
+  }
   if (workState === 'waiting_for_agent') return FORGE_ACTIVITY.waiting;
   if (workState === 'queued') return FORGE_ACTIVITY.queued;
   if (workState === 'running' || workState === 'investigating') return FORGE_ACTIVITY.working;
