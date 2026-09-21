@@ -87,11 +87,14 @@ export function presentWatchtowerAviso(transition = {}, opportunities = [], miss
       message: `${n} ${n === 1 ? 'Find' : 'Finds'} passed Kernel SUPPORT. Open Efesto to inspect the Evidence.`,
     };
   }
+  // Fail-close zero-SUPPORT forged: must not brand Completado / "finished forging"
+  // (Home / Agent Hub / Living Forge already use research_completed). Keep notify + kind:forged
+  // so click still opens Forge Ledger; SUPPORT Find path above stays named.
   return {
     notify: true,
     kind: 'forged',
-    title: 'Efesto finished forging',
-    message: 'A local mission finished. Open Efesto to inspect the Evidence.',
+    title: 'Research completed',
+    message: 'No Kernel SUPPORT Find. Open Efesto to review the Forge Ledger.',
   };
 }
 
@@ -149,8 +152,13 @@ export function pendingWorkspaceViewForWatchtowerNotification(notificationId) {
 export function presentWatchtowerBanner(unread, event = {}) {
   const count = Number(unread) || 0;
   if (count <= 0) return '';
-  if (event.kind === 'find' || event.kind === 'forged' || isForgedComplete(event)) {
+  // Only Kernel SUPPORT Find avisos brand forge results (Completado honesty).
+  // kind:forged / forged-complete without Find kind must not look like Completado.
+  if (event.kind === 'find') {
     return `${count} new forge result${count === 1 ? '' : 's'} ready to inspect.`;
+  }
+  if (event.kind === 'forged' || isForgedComplete(event)) {
+    return `${count} research update${count === 1 ? '' : 's'} ready to inspect.`;
   }
   return `${count} mission update${count === 1 ? '' : 's'} needs attention.`;
 }

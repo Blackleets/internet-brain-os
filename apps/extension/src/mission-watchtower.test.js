@@ -72,9 +72,12 @@ describe('Watchtower Find aviso', () => {
       verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: false }],
     };
     const aviso = presentWatchtowerAviso(forgedTransition, [unverified], mission);
-    expect(aviso).toMatchObject({ notify: true, kind: 'forged', title: 'Efesto finished forging' });
-    expect(aviso.message).toContain('inspect the Evidence');
-    expect(aviso.message).not.toMatch(/useful lead|opportunit/i);
+    // Zero-SUPPORT forged must not brand Completado / finished forging.
+    expect(aviso).toMatchObject({ notify: true, kind: 'forged', title: 'Research completed' });
+    expect(aviso.message).toContain('No Kernel SUPPORT Find');
+    expect(aviso.message).toContain('Forge Ledger');
+    expect(aviso.message).not.toMatch(/finished forging|inspect the Evidence|useful lead|opportunit/i);
+    expect(aviso.title).not.toMatch(/finished forging/i);
   });
 
   it('fires Find aviso only when isKernelSupportedFind for this mission and names Kernel SUPPORT', () => {
@@ -98,7 +101,10 @@ describe('Watchtower Find aviso', () => {
     expect(presentWatchtowerAviso(forgedTransition, [], zeroSupport)).toMatchObject({
       notify: true,
       kind: 'forged',
+      title: 'Research completed',
     });
+    expect(presentWatchtowerAviso(forgedTransition, [], zeroSupport).message).toContain('No Kernel SUPPORT Find');
+    expect(presentWatchtowerAviso(forgedTransition, [], zeroSupport).title).not.toMatch(/finished forging/i);
   });
 
   it('does not understate Living Forge SUPPORT when opportunities list is partial', () => {
@@ -141,7 +147,9 @@ describe('Watchtower Find aviso', () => {
 
   it('Watchtower banner does not treat unsupported opportunity as Find', () => {
     expect(presentWatchtowerBanner(1, { status: 'completed', kind: 'find' })).toBe('1 new forge result ready to inspect.');
-    expect(presentWatchtowerBanner(2, { status: 'completed', executionPhase: 'forged', kind: 'forged' })).toBe('2 new forge results ready to inspect.');
+    // kind:forged / forged-complete without Find kind must not brand Completado forge results.
+    expect(presentWatchtowerBanner(2, { status: 'completed', executionPhase: 'forged', kind: 'forged' })).toBe('2 research updates ready to inspect.');
+    expect(presentWatchtowerBanner(1, { status: 'completed', executionPhase: 'forged' })).toBe('1 research update ready to inspect.');
     expect(presentWatchtowerBanner(1, { status: 'completed' })).toBe('1 mission update needs attention.');
     expect(presentWatchtowerBanner(1, { status: 'completed', kind: 'silent' })).toBe('1 mission update needs attention.');
     expect(presentWatchtowerBanner(1, { status: 'failed' })).toBe('1 mission update needs attention.');
