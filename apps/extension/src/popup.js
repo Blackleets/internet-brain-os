@@ -129,6 +129,7 @@ function startAgentHubRefresh(stored, initialMissions) {
   let observedRevision = missionRevision(initialMissions);
   agentHubRefresher = createAgentHubRefresher({
     isVisible: () => document.visibilityState === 'visible',
+    onKernelReachability: (online) => setKernelState(online),
     refresh: async () => {
       const missions = await loadAgentHub(stored);
       const nextRevision = missionRevision(missions);
@@ -466,14 +467,22 @@ function findSection(title, lines) {
 async function loadReadiness(stored) {
   try {
     const readiness = await getKernelStatus({ baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL });
-    $('#kernel-state').textContent = 'Kernel ready';
-    $('#kernel-state').classList.add('ready');
+    setKernelState(true);
     setService('model', false, readiness.ollama === 'configured' ? 'Model configured · checking runtime' : 'Choose a free local model');
     setService('memory', readiness.obsidian === 'configured', readiness.obsidian === 'configured' ? 'Private vault connected' : 'Vault not configured');
     setService('agent', readiness.hermes === 'ready', readiness.hermes === 'ready' ? 'Hermes bridge ready' : 'Connect an agent next');
   } catch {
     setStatus('Start your private Efesto Kernel, then pair the extension.', true);
   }
+}
+
+function setKernelState(online) {
+  const state = $('#kernel-state');
+  state.textContent = online ? 'Kernel ready' : 'Kernel offline';
+  state.classList.toggle('ready', online);
+  if (!online) setStatus('Private Kernel unreachable. Shown data may be stale until it is back.', true);
+  else if (status.dataset.kernelOffline === 'true') setStatus('Private Kernel reconnected.');
+  status.dataset.kernelOffline = String(!online);
 }
 
 async function loadCases(stored) {

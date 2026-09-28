@@ -55,4 +55,53 @@ describe('Agent Hub live refresh', () => {
     expect(refresh).toHaveBeenCalledTimes(2);
     controller.stop();
   });
+
+  // The popup kept a green "Kernel ready" and a running mission forever when the Kernel went
+  // away mid-session, polling a dead Kernel every second.
+  it('reports the Kernel unreachable after 2 consecutive failures and reachable again on recovery', async () => {
+    vi.useFakeTimers();
+    const reachability = [];
+    const refresh = vi.fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce([{ status: 'running', createdAt: '2026-07-22T10:00:00Z' }])
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue([{ status: 'running', createdAt: '2026-07-22T10:00:00Z' }]);
+    const controller = createAgentHubRefresher({ refresh, onKernelReachability: (online) => reachability.push(online) });
+    controller.start([{ status: 'running', createdAt: '2026-07-22T10:00:00Z' }]);
+    await vi.advanceTimersByTimeAsync(1000); // fail 1
+    await vi.advanceTimersByTimeAsync(1000); // success resets the streak
+    expect(reachability).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1000); // fail 1
+    await vi.advanceTimersByTimeAsync(1000); // fail 2 -> unreachable
+    expect(reachability).toEqual([false]);
+    expect(refresh).toHaveBeenCalledTimes(4);
+    await vi.advanceTimersByTimeAsync(10000); // fail 3: still unreachable, not re-announced
+    expect(reachability).toEqual([false]);
+    await vi.advanceTimersByTimeAsync(10000); // recovery
+    expect(reachability).toEqual([false, true]);
+    controller.stop();
+  });
+
+  it('backs off to the idle cadence while the Kernel is unreachable', async () => {
+    vi.useFakeTimers();
+    const refresh = vi.fn().mockRejectedValue(new Error('offline'));
+    const controller = createAgentHubRefresher({ refresh });
+    controller.start([{ status: 'running', createdAt: '2026-07-22T10:00:00Z' }]);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(refresh).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(9000);
+    expect(refresh).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(refresh).toHaveBeenCalledTimes(3);
+    controller.stop();
+  });
+
+  it('popup marks #kernel-state offline and ready from the refresher', async () => {
+    const { readFileSync } = await import('node:fs');
+    const popup = readFileSync(new URL('./popup.js', import.meta.url), 'utf8');
+    expect(popup).toMatch(/onKernelReachability: \(online\) => setKernelState\(online\)/);
+    expect(popup).toContain("'Kernel offline'");
+  });
 });
