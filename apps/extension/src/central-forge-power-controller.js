@@ -117,7 +117,16 @@ export function createForgePowerController({
       if (!shouldCreateMission({ enabled, kernel, goals, completedGoalIds: [...completed], mission: latest })) {
         if (!selectNextGoal(goals, [...completed])) {
           await storage.set({ efestoForgeEnabled: false, efestoForgeCompletedGoals: [] });
-          renderForgePowerView(elements, deriveEfestoOrbState({ enabled: false, kernel, services, mission: latest }), goals.length ? forgeCycleCompleteDetail(latest) : 'Create a Goal, then start the forge.');
+          // Fail-close end-of-cycle chrome: enabled:false short-circuits deriveEfestoOrbState to
+          // START EFESTO / idle and drops research_completed / completed_without_forge honesty
+          // (fc0442b) the moment the forge auto-pauses. Derive terminal state with enabled:true,
+          // then mark the control paused so zero-SUPPORT forged / bare completed stay off Completado.
+          const terminalView = deriveEfestoOrbState({ enabled: true, kernel, services, mission: latest });
+          renderForgePowerView(
+            elements,
+            { ...terminalView, enabled: false },
+            goals.length ? forgeCycleCompleteDetail(latest) : 'Create a Goal, then start the forge.',
+          );
           state.currentOrbState = elements.powerButton?.dataset.state ?? 'idle';
         }
         return;

@@ -55,6 +55,13 @@ describe('Efesto orb UI static contract', () => {
     expect(source).toContain('mission: restartedMission');
   });
 
+  it('end-of-cycle auto-disable derives terminal honesty before pausing (not START EFESTO)', () => {
+    const source = readFileSync(resolve('apps/extension/src/central-forge-power-controller.js'), 'utf8');
+    expect(source).toContain('const terminalView = deriveEfestoOrbState({ enabled: true, kernel, services, mission: latest })');
+    expect(source).toContain('{ ...terminalView, enabled: false }');
+    expect(source).not.toContain('deriveEfestoOrbState({ enabled: false, kernel, services, mission: latest })');
+  });
+
   it('never displays empty summaries or Obsidian receipts outside completed/research_completed ledger', () => {
     const source = readFileSync(resolve('apps/extension/src/central-forge-power-controller.js'), 'utf8');
     const css = readFileSync(resolve('apps/extension/src/central-forge-power.css'), 'utf8');
