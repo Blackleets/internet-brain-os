@@ -189,10 +189,12 @@ function isPublicAddress(address: string): boolean {
   if (!ipv4) return isIP(normalized) === 6;
   const parts = ipv4.split('.').map(Number);
   if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
-  const [a, b] = parts;
+  const [a, b, c] = parts;
   return !(a === 0 || a === 10 || a === 127 || a >= 224
     || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254)
-    || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168));
+    || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)
+    // Special-purpose (IANA): 192.0.0.0/24 IETF protocol, 198.18.0.0/15 benchmarking.
+    || (a === 192 && b === 0 && c === 0) || (a === 198 && (b === 18 || b === 19)));
 }
 
 function extractTitle(html: string): string {

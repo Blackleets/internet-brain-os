@@ -64,7 +64,14 @@ describe('agent mission executor SSRF hardening', () => {
     })).rejects.toMatchObject({ code: 'AGENT_FINDINGS_NOT_EVIDENCE' });
   });
 
+  // Special-purpose IPv4 from the acceptance HOSTILE_URLS contract: the BLOCKED list above
+  // only exercised the legacy findings path, which refuses everything since #238, so these
+  // were never checked against the real candidate intake.
   const PRIVATE_SEARCH_CANDIDATE_URLS = [
+    'http://198.18.0.1/benchmark',
+    'http://198.19.255.254/benchmark-top',
+    'http://192.0.0.1/ietf-protocol',
+    'http://[::ffff:198.18.0.1]/mapped-benchmark',
     'http://192.168.1.2/finding',
     'http://10.0.0.1/finding',
     'http://127.0.0.1/finding',
