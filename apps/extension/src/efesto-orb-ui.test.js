@@ -36,9 +36,11 @@ describe('Efesto orb UI static contract', () => {
   it('keeps protected Chrome pages guarded before the orb controller loads', () => {
     const html = readFileSync(resolve('apps/extension/src/popup.html'), 'utf8');
     const guard = readFileSync(resolve('apps/extension/src/unsupported-page-guard.js'), 'utf8');
+    const support = readFileSync(resolve('apps/extension/src/page-support.js'), 'utf8');
     expect(html.indexOf('central-forge-power.js')).toBeGreaterThan(html.indexOf('popup.js'));
-    expect(guard).toContain('Receiving end does not exist');
-    expect(guard).toContain("parsed.protocol === 'http:' || parsed.protocol === 'https:'");
+    expect(guard).toContain("from './page-support.js'");
+    expect(support).toContain('Receiving end does not exist');
+    expect(support).toContain("parsed.protocol === 'http:' || parsed.protocol === 'https:'");
   });
 
   it('renders the mission returned by the Kernel immediately after starting research', () => {

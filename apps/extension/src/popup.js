@@ -3,6 +3,7 @@ import { kernelSupportedFinds, kernelSupportedFindsForMission, presentFind } fro
 import { buildOpportunityCommandCenter } from './opportunity-command-center.js';
 import { buildOpportunityActionPlan, normalizeOpportunityReviewState, updateOpportunityReviewState } from './opportunity-action-workspace.js';
 import { normalizePublicOrigin } from './auto-capture-policy.js';
+import { captureFailureMessage } from './page-support.js';
 import { applyLivingForgeActivity, forgeActivityForMission, temporaryForgeActivity } from './forge-activity.js';
 import { normalizeWorkspaceView, workspaceVisibility } from './workspace-navigation.js';
 import { missionJourney, newestMission, onboardingJourney } from './product-journey.js';
@@ -660,8 +661,9 @@ async function capture() {
   captureButton.disabled = true;
   setForgeActivity(temporaryForgeActivity('capture'));
   setStatus('Efesto is analyzing this page…');
+  let tab;
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id) throw new Error('No active public page');
     const captured = await chrome.tabs.sendMessage(tab.id, { type: 'HEPHAESTUS_CAPTURE_PAGE_CONTEXT' });
     if (!captured?.ok) throw new Error('Unable to read this page');
@@ -674,7 +676,7 @@ async function capture() {
     setForgeActivity(temporaryForgeActivity('capture-success'));
     const stored = await chrome.storage.local.get(['kernelBaseUrl', 'kernelApiToken']);
     await loadOpportunities(stored);
-  } catch (error) { setForgeActivity(temporaryForgeActivity('capture-error')); setStatus(error instanceof Error ? error.message : 'Unable to analyze page', true); }
+  } catch (error) { setForgeActivity(temporaryForgeActivity('capture-error')); setStatus(captureFailureMessage(error, tab?.url), true); }
   finally { captureButton.disabled = false; }
 }
 
