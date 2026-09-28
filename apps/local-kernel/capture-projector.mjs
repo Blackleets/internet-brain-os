@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { createHash, randomUUID } from 'node:crypto';
+import { chmod, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { InboxError, validatePageContext } from './page-context-inbox.mjs';
 
@@ -41,10 +41,19 @@ export class LocalKnowledgeStore {
   }
 
   async write(data) {
-    await mkdir(dirname(this.filePath), { recursive: true });
-    const temporary = `${this.filePath}.tmp`;
-    await writeFile(temporary, `${JSON.stringify(data, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
-    await rename(temporary, this.filePath);
+    // Match chat/provider stores: owner-private dir, unique tmp + wx (no shared .tmp race),
+    // fsync-equivalent rename, cleanup on failure. Goals/Evidence/Missions live here.
+    await mkdir(dirname(this.filePath), { recursive: true, mode: 0o700 });
+    const temporary = `${this.filePath}.${randomUUID()}.tmp`;
+    try {
+      await writeFile(temporary, `${JSON.stringify(data, null, 2)}\n`, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+      await chmod(temporary, 0o600);
+      await rename(temporary, this.filePath);
+      await chmod(this.filePath, 0o600);
+    } catch (error) {
+      await rm(temporary, { force: true }).catch(() => undefined);
+      throw error;
+    }
   }
 }
 
