@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -32,5 +33,12 @@ describe('Hermes boundary-authority acceptance (pnpm hermes:acceptance)', () => 
     expect(failed).toEqual([]);
     expect(report.ok).toBe(true);
     expect(report.checks.map((check) => check.id)).toEqual(expect.arrayContaining(['A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A10']));
+
+    // Docs drift guard: the newest LLM_HANDOFF.md claim about this suite must match reality.
+    const handoff = readFileSync(new URL('../LLM_HANDOFF.md', import.meta.url), 'utf8');
+    const claims = [...handoff.matchAll(/`pnpm hermes:acceptance`[^\n]*?`?(\d+)\/(\d+)`?/g)];
+    const newest = claims.at(-1);
+    expect(newest, 'LLM_HANDOFF.md names the boundary result').toBeTruthy();
+    expect(`${newest[1]}/${newest[2]}`).toBe(`${report.passed}/${report.total}`);
   }, 60_000);
 });

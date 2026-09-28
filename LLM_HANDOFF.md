@@ -8,6 +8,8 @@ Every AI must update this file before ending a work session.
 
 ## Current project state
 
+> Superseded snapshot: the status block below is historical (2026-07-28). `PROJECT_STATE.md` is the live checkpoint; as of 2026-09-28 the active PR is #241 (OPEN, not merged) and `publicLaunchApproved` remains false.
+
 Status (verified 2026-07-28 from `main` = `4f81239`):
 - Foundation runtime, Replay Lab forensics, Internal Orchestrator v0, deterministic Hermes preflight, and local API token hardening are stable on `main`.
 - PR #103: authentic Efesto mission adapter merged (2026-07-22) — translates bounded Hermes output into Kernel execution events; it does NOT by itself prove a live external Hermes runtime.
@@ -601,3 +603,18 @@ This completes the web-first design slice. Responsive mobile use is included thr
 
 ### Risks / next
 - publicLaunchApproved remains false. No UAT or live Hermes L1-L7 claimed. Phase 2 Memory polish only after Phase 1 stays green.
+
+## Handoff 2026-09-28 - Grok (EFESTO) - PR #241 hardening
+
+### What I changed
+- PR #241 (branch `fix/extension-kernel-supported-find-notify`, OPEN, never merged by agents) gained tested hardening: extension sender gate, trusted-context token storage, single-flight watchtower, bounded Site Radar memory; Kernel 400 on malformed path ids, 503 on a full event stream, chat stream settles on disconnect, one-click proxy streams SSE/NDJSON, serialized chat/provider stores, 198.18.0.0/15 and 192.0.0.0/24 rejected at candidate intake and web.read; dashboard anti-framing headers, visible-only polling, offline marking after failed polls, Case re-read on open.
+- `pnpm hermes:acceptance` boundary probes were stale since #238 (they posted bare findings the Kernel now refuses). They now target `resultKind: 'search_candidates'` and a guard test runs the suite in `pnpm test`.
+- Live l1-l7 reports tag runs where only L5/L6 fail as `live-no-supported-find` (reporting only; still NOT PROVEN).
+
+### Tests or checks performed
+- `pnpm hermes:acceptance` — boundary-authority `15/15` passed (earlier `14/14` entries above predate #238 and the added A10 check).
+- `pnpm test`, `pnpm typecheck`, `pnpm dashboard:test`, `pnpm release:verify`, `pnpm architecture:check`, `pnpm build`, `pnpm build:extension` — passed.
+
+### Risks / next
+- Live L5/L6 (Kernel SUPPORT Find on the live web) still fails intermittently; not a pipeline failure and not weakened.
+- No UAT or live Hermes L1-L7 success is claimed. `publicLaunchApproved` remains false.
