@@ -1,5 +1,5 @@
 import { DEFAULT_KERNEL_BASE_URL, listAgentMissions, listNotifications, listOpportunities, markNotificationRead, sendPageContext } from './local-transport.js';
-import { evaluateAutoCapture } from './auto-capture-policy.js';
+import { autoCaptureKey, evaluateAutoCapture, rememberAutoCapture } from './auto-capture-policy.js';
 import { chromeNotificationIdForWatchtowerAviso, pendingWorkspaceViewForWatchtowerNotification, presentWatchtowerAviso, reconcileMissionWatchtower } from './mission-watchtower.js';
 import {
   chromeNotificationIdForKernelNotification,
@@ -166,9 +166,10 @@ async function autoCapture(tab) {
   }
   if (!captured?.ok) return;
   const previous = stored.lastAutoCaptureByUrl ?? {};
+  const captureKey = autoCaptureKey(captured.context.url);
   const decision = evaluateAutoCapture(captured.context, {
     allowedOrigins: stored.allowedOrigins ?? [],
-    lastCapturedAt: previous[captured.context.url],
+    lastCapturedAt: previous[captureKey],
   });
   if (!decision.allowed) return;
 
@@ -178,7 +179,7 @@ async function autoCapture(tab) {
       apiToken: stored.kernelApiToken,
     });
     await chrome.storage.local.set({
-      lastAutoCaptureByUrl: { ...previous, [captured.context.url]: Date.now() },
+      lastAutoCaptureByUrl: rememberAutoCapture(previous, captureKey),
       lastRadarEvent: { status: 'captured', title: captured.context.title, at: Date.now() },
     });
   } catch {
