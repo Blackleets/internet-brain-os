@@ -13,6 +13,7 @@ import { loadOverview, type OverviewSnapshot } from '../lib/kernel/overview';
 import { countMissionKernelSupportedFinds, kernelSupportedFinds } from '../lib/kernel/supported-find';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { connectionStore } from '../lib/session/connection-store';
+import { startVisiblePoller } from '../lib/ui/visible-poller';
 import { ProductValueScorecardPanel } from './overview/product-value-scorecard';
 import {
   ActivityView, AgentsView, EvidenceView, FindsView, GoalsView, HomeView, MemoryView, ModelsView, SettingsView,
@@ -126,10 +127,10 @@ export default function EfestoProductShell() {
         // The visible readiness state remains the last verified state until the next successful poll.
       }
     };
-    const timer = window.setInterval(() => { void poll(); }, 3_000);
+    const stopPolling = startVisiblePoller(poll, 3_000, document);
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      stopPolling();
     };
   }, [connection]);
 
