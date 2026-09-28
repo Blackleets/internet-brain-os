@@ -12,10 +12,13 @@ import {
 } from './kernel-supported-find-notify.js';
 import { AutoRadar, AUTO_RADAR_STATES } from './auto-radar.js';
 import { runtimeMessageDecision } from './runtime-message-policy.js';
+import { restrictLocalStorageToTrustedContexts } from './storage-access.js';
 
 const WATCHTOWER_ALARM = 'efesto-mission-watchtower';
 
 // Instancia global del Auto Radar
+// Kernel token lives in storage.local: keep it off content scripts (every page renderer).
+void restrictLocalStorageToTrustedContexts(chrome.storage);
 const autoRadar = new AutoRadar();
 
 chrome.runtime.onInstalled.addListener(() => void ensureWatchtower());

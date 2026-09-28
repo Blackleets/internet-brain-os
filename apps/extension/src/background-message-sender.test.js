@@ -19,6 +19,7 @@ function installChrome() {
           return Object.fromEntries(list.filter((k) => k in store).map((k) => [k, store[k]]));
         }),
         set: vi.fn(async (items) => { Object.assign(store, items); }),
+        setAccessLevel: vi.fn(async () => undefined),
       },
       onChanged: noopEvent,
     },
@@ -71,6 +72,10 @@ describe('extension background rejects privileged messages from content-script s
     await env.dispatch({ type: 'EFESTO_PUBLIC_PAGE_READY' }, CONTENT_SCRIPT);
     await new Promise((r) => setTimeout(r, 0));
     expect(globalThis.chrome.storage.local.get).toHaveBeenCalledWith(expect.arrayContaining(['radarEnabled', 'allowedOrigins']));
+  });
+
+  it('restricts storage.local (Kernel token) to trusted contexts on startup', () => {
+    expect(globalThis.chrome.storage.local.setAccessLevel).toHaveBeenCalledWith({ accessLevel: 'TRUSTED_CONTEXTS' });
   });
 
   it('still serves the popup (extension page) for toggle', async () => {
