@@ -142,3 +142,29 @@ function admitsLiveSharedGoalTruth(surface, mission, goalId) {
       || (surface?.mission?.workState === 'verifying' && isHonestBlockedMissionOutcome(mission))
     );
 }
+
+const SUPPORT_FIND_CHECK_IDS = Object.freeze(['L5', 'L6']);
+
+/**
+ * Reporting-only label for a failed acceptance run; never changes `ok` or any check.
+ * 'live-no-supported-find' is reserved for a live run where every other check passed
+ * (runtime, bounded attempts, discovery, Kernel web.read Evidence, shared Goal Truth) and
+ * only the SUPPORT-gated Find checks L5/L6 failed: the live web gave the Kernel nothing it
+ * would SUPPORT for the Goal. Anything else is a 'pipeline' failure (or 'blocked').
+ */
+export function classifyAcceptanceFailure(report) {
+  if (!report || report.ok) return undefined;
+  if (report.blocked) return { class: 'blocked', failedChecks: [], summary: `Acceptance blocked before completion: ${report.blocked}` };
+  const failedChecks = (Array.isArray(report.checks) ? report.checks : []).filter((check) => !check?.passed).map((check) => check.id);
+  const onlySupportFinds = report.mode === 'live-authentic-runtime'
+    && failedChecks.length === SUPPORT_FIND_CHECK_IDS.length
+    && SUPPORT_FIND_CHECK_IDS.every((id) => failedChecks.includes(id));
+  if (onlySupportFinds) {
+    return {
+      class: 'live-no-supported-find',
+      failedChecks,
+      summary: 'Live run produced Kernel-verified Evidence and honest Goal Truth, but no Find passed the Kernel SUPPORT gate (L5/L6). Acceptance stays NOT PROVEN.',
+    };
+  }
+  return { class: 'pipeline', failedChecks, summary: `Acceptance checks failed: ${failedChecks.join(', ') || 'none recorded'}` };
+}

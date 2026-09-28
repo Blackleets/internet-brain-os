@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { writeFile } from 'node:fs/promises';
+import { appendFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { detectHermesRuntime } from '../apps/local-kernel/hermes-runtime.mjs';
 import {
@@ -13,6 +13,7 @@ import {
   checkUnauthenticatedAccessRejected,
 } from './hermes-acceptance-checks.mjs';
 import { assessLivePublicWebJourney, isHonestBlockedMissionOutcome } from './hermes-live-journey-assessment.mjs';
+import { classifyAcceptanceFailure } from './hermes-live-journey-assessment.mjs';
 
 const PORT = Number(process.env.HEPHAESTUS_ACCEPTANCE_PORT ?? 4310);
 const INTERNAL_PORT = Number(process.env.HEPHAESTUS_ACCEPTANCE_INTERNAL_PORT ?? 4311);
@@ -175,6 +176,8 @@ export async function runAcceptance(options = {}) {
     checks: all.map((check) => ({ ...check, detail: redact(check.detail) })),
     kernelLogTail: (kernel?.logs ?? []).slice(-15),
   };
+  // Reporting only: labels why a run failed; ok / exit code above are unchanged.
+  report.failureClass = classifyAcceptanceFailure({ mode: report.mode, ok: report.ok, blocked, checks: report.checks });
   await writeFile(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8').catch(() => {});
   return report;
 }
@@ -250,5 +253,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   }
   if (report.blocked) console.log(`BLOCKED: ${report.blocked}`);
   console.log(`\n${report.ok ? 'ACCEPTANCE OK' : 'ACCEPTANCE NOT PROVEN'}: ${report.passed}/${report.total} checks in mode ${report.mode}.`);
+  if (report.failureClass) {
+    const line = `FAILURE CLASS: ${report.failureClass.class} — ${report.failureClass.summary}`;
+    console.log(line);
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      await appendFile(process.env.GITHUB_STEP_SUMMARY, `### Hermes acceptance: ${report.failureClass.class}\n\n${report.failureClass.summary}\n\nFailed checks: ${report.failureClass.failedChecks.join(', ') || 'n/a'}\n`, 'utf8').catch(() => {});
+    }
+  }
   process.exitCode = report.ok ? 0 : 1;
 }
