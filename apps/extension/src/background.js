@@ -11,6 +11,7 @@ import {
   undeliveredKernelSupportedFindNotifications,
 } from './kernel-supported-find-notify.js';
 import { AutoRadar, AUTO_RADAR_STATES } from './auto-radar.js';
+import { runtimeMessageDecision } from './runtime-message-policy.js';
 
 const WATCHTOWER_ALARM = 'efesto-mission-watchtower';
 
@@ -61,6 +62,14 @@ void ensureWatchtower();
 
 // Manejar mensajes de contenido y popup
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  // Sender gate: privileged commands only from this extension's pages; the content
+  // script (runs in every page renderer) may only announce readiness.
+  const decision = runtimeMessageDecision(message, _sender, chrome.runtime.id);
+  if (decision === 'ignore') return false;
+  if (decision === 'deny') {
+    sendResponse({ ok: false, code: 'FORBIDDEN_SENDER', error: 'Message not accepted from this sender' });
+    return false;
+  }
   // Mensaje del content script indicando que la página está lista
   if (message?.type === 'EFESTO_PUBLIC_PAGE_READY') {
     // Si el Auto Radar está habilitado, usar el análisis automático
