@@ -802,6 +802,10 @@ function sendHtml(response, status, html) {
   response.statusCode = status;
   response.setHeader('content-type', 'text/html; charset=utf-8');
   response.setHeader('cache-control', 'no-store');
+  // Replay Lab hosts a Kernel-token field and capture import: never frameable (clickjacking).
+  response.setHeader('x-frame-options', 'DENY');
+  response.setHeader('content-security-policy', "frame-ancestors 'none'");
+  response.setHeader('referrer-policy', 'no-referrer');
   response.end(html);
 }
 
