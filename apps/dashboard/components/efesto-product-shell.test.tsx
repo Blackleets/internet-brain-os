@@ -126,6 +126,32 @@ describe('Efesto goal-first product shell', () => {
     expect(requests.some((request) => new URL(request.url).pathname === '/api/browser/case/case-1')).toBe(true);
   });
 
+  it('re-reads a Case from the Kernel when reopened instead of serving a session-stale Evidence list', async () => {
+    render(<EfestoProductShell />);
+    await connect();
+    fireEvent.click(screen.getByRole('button', { name: /^Evidencia/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Supplier research/ }));
+    await screen.findByRole('link', { name: /Abrir fuente/ });
+    const healthy = globalThis.fetch;
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, { ...init, signal: undefined });
+      if (new URL(request.url).pathname === '/api/browser/case/case-1') {
+        requests.push(request);
+        return Response.json({ ok: true, case: { id: 'case-1', title: 'Supplier research' }, evidence: [
+          { id: 'ev-1', summary: 'Precio publicado por vendedor', sourceUrl: 'https://shop.example/drill', confidence: 0.91, capturedAt: '2026-08-09T08:03:00.000Z' },
+          { id: 'ev-2', summary: 'Stock confirmado en tienda', sourceUrl: 'https://shop.example/stock', confidence: 0.88, capturedAt: '2026-08-09T09:00:00.000Z' },
+        ] });
+      }
+      return (healthy as typeof fetch)(input, init);
+    }));
+    const before = requests.filter((request) => new URL(request.url).pathname === '/api/browser/case/case-1').length;
+    fireEvent.click(screen.getByRole('button', { name: /Supplier research/ }));
+    // Cached receipts stay visible while the fresh read is in flight (no blank flash).
+    expect(screen.getAllByRole('link', { name: /Abrir fuente/ }).length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.getAllByRole('link', { name: /Abrir fuente/ }).map((link) => link.getAttribute('href'))).toContain('https://shop.example/stock'));
+    expect(requests.filter((request) => new URL(request.url).pathname === '/api/browser/case/case-1').length).toBe(before + 1);
+  });
+
   it('uses a configured model for Chat while keeping model output outside Evidence', async () => {
     render(<EfestoProductShell />);
     await connect();

@@ -311,14 +311,22 @@ export default function EfestoProductShell() {
   async function openCase(record: CaseSummary) {
     if (!connection) return navigate('settings');
     setSelectedCaseId(record.id);
-    if (caseDetails[record.id]) return;
-    setLoadingCaseId(record.id);
+    // Missions keep adding Evidence to a Case: always re-read on open. Cached receipts stay
+    // visible meanwhile; the loading state is shown only when nothing was read yet.
+    const cached = Boolean(caseDetails[record.id]);
+    if (!cached) setLoadingCaseId(record.id);
     try {
       const client = new KernelClient(connection);
       const detail = await client.get(`/api/browser/case/${encodeURIComponent(record.id)}`, parseCaseDetail);
       setCaseDetails((current) => ({ ...current, [record.id]: detail }));
-    } catch { setToast('No se pudo abrir el Case o su Evidence. No se muestran datos de relleno.'); }
-    finally { setLoadingCaseId(''); }
+    } catch {
+      setToast(cached
+        ? 'No se pudo actualizar el Case; se muestra la última Evidence leída del Kernel.'
+        : 'No se pudo abrir el Case o su Evidence. No se muestran datos de relleno.');
+    } finally {
+      // Only clear the spinner this request owns (a later open may be loading another Case).
+      setLoadingCaseId((current) => (current === record.id ? '' : current));
+    }
   }
 
   function openEvidence(record?: CaseSummary) {
