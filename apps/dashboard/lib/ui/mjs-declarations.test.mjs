@@ -1,10 +1,12 @@
+import { fileURLToPath } from 'node:url';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 // Root `pnpm typecheck` (tsc -b) does not cover apps/dashboard; `next build` does, and fails
 // TS7016 when a relative .mjs import lacks a sibling .d.mts (a .d.ts is NOT picked up for .mjs).
-const dashboard = resolve('apps/dashboard');
+// Anchor on this file, not process.cwd(): `pnpm dashboard:test` runs from apps/dashboard.
+const dashboard = fileURLToPath(new URL('../..', import.meta.url));
 
 function* sources(dir) {
   for (const name of readdirSync(dir)) {

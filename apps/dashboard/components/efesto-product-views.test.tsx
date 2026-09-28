@@ -550,8 +550,8 @@ describe('brainState forged SUPPORT honesty', () => {
 
 describe('Home forge-state-action shell wiring contract', () => {
   it('shell feeds focused-mission SUPPORT count, never global supportedFinds.length', () => {
-    const shell = readFileSync(join(process.cwd(), 'apps/dashboard/components/efesto-product-shell.tsx'), 'utf8');
-    const views = readFileSync(join(process.cwd(), 'apps/dashboard/components/efesto-product-views.tsx'), 'utf8');
+    const shell = readFileSync(join(__dirname, 'efesto-product-shell.tsx'), 'utf8');
+    const views = readFileSync(join(__dirname, 'efesto-product-views.tsx'), 'utf8');
     expect(shell).toContain('countMissionKernelSupportedFinds(focusedGoalSurface?.mission)');
     expect(shell).toContain('forgeSupportedFindCount={forgeSupportedFindCount}');
     expect(shell).toContain("workState === 'completed'");

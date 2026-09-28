@@ -1,5 +1,4 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startVisiblePoller } from './visible-poller';
 
@@ -65,7 +64,7 @@ describe('startVisiblePoller (dashboard Kernel poll)', () => {
   });
 
   it('is what the mounted shell uses instead of a bare setInterval', () => {
-    const shell = readFileSync(join(process.cwd(), 'apps/dashboard/components/efesto-product-shell.tsx'), 'utf8');
+    const shell = readFileSync(new URL('../../components/efesto-product-shell.tsx', import.meta.url), 'utf8');
     expect(shell).toContain("import { startVisiblePoller } from '../lib/ui/visible-poller';");
     expect(shell).toContain('startVisiblePoller(poll, 3_000, document)');
     expect(shell).not.toContain('window.setInterval(() => { void poll(); }, 3_000)');

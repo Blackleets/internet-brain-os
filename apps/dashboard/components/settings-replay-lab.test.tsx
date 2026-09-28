@@ -26,7 +26,7 @@ describe('SettingsView Replay Lab link follows the connected Kernel', () => {
   });
 
   it('shell passes the live connection baseUrl to SettingsView', () => {
-    const shell = readFileSync(join(process.cwd(), 'apps/dashboard/components/efesto-product-shell.tsx'), 'utf8');
+    const shell = readFileSync(join(__dirname, 'efesto-product-shell.tsx'), 'utf8');
     expect(shell).toContain('kernelBaseUrl={connection?.baseUrl}');
   });
 });
