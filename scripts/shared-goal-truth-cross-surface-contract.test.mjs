@@ -55,9 +55,15 @@ describe('Shared Goal Truth cross-surface freeze', () => {
   });
 
   it('keeps dashboard StatePill Completado lookalike off completed-without-forged', async () => {
+    // StatePill tone/label moved to lib/ui/state-pill-label.mjs (ddb3fb0); views must import it.
     const views = await text('apps/dashboard/components/efesto-product-views.tsx');
-    expect(views).toContain("['ready', 'forged', 'available', 'new']");
-    expect(views).not.toContain("['ready', 'completed', 'forged', 'available', 'new']");
+    const pill = await text('apps/dashboard/lib/ui/state-pill-label.mjs');
+    expect(views).toContain("import { statePillLabel, statePillTone } from '../lib/ui/state-pill-label.mjs';");
+    expect(views).toContain('statePillTone(state)');
+    expect(pill).toContain("['ready', 'forged', 'available', 'new']");
+    expect(pill).not.toContain("['ready', 'completed', 'forged', 'available', 'new']");
+    expect(pill).not.toMatch(/\['ready',[^\]]*'research_completed'/);
+    expect(pill).not.toMatch(/\['ready',[^\]]*'completed_without_forge'/);
   });
 
   it('keeps mission card Commission forged behind Kernel forged', async () => {
@@ -73,7 +79,12 @@ describe('Shared Goal Truth cross-surface freeze', () => {
 
   it('keeps mission timeline Kernel verification completed behind forge', async () => {
     const presentation = await text('apps/extension/src/mission-presentation.js');
-    expect(presentation).toContain("addEvent(events, mission.forgedAt ?? mission.completedAt, 'Kernel verification completed'");
+    // fb14616: seal event names Kernel SUPPORT; zero-SUPPORT forged reads Research completed.
+    expect(presentation).toContain('addEvent(events, mission.forgedAt ?? mission.completedAt, sealLabel, counts)');
+    expect(presentation).toContain("'Kernel SUPPORT Find sealed'");
+    expect(presentation).toContain("'Kernel SUPPORT Finds sealed'");
+    expect(presentation).toContain(": 'Research completed'");
+    expect(presentation).not.toContain("'Kernel verification completed'");
     expect(presentation).toContain("addEvent(events, mission.completedAt, 'Research ended without Evidence'");
     expect(presentation).toContain("const forged = typeof mission.forgedAt === 'string'");
     expect(presentation).toContain("mission.executionPhase === 'forged'");
