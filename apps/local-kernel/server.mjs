@@ -542,6 +542,15 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       }
     }
     if (request.method === 'GET' && request.url === '/api/events') {
+      // Subscribe before the 200 head: a full bus throws, and throwing after writeHead
+      // escaped the handler (unhandled rejection, client hung on a headless stream).
+      let unsubscribe;
+      try {
+        unsubscribe = kernelEvents.subscribe((frame) => response.write(frame));
+      } catch {
+        return send(response, 503, { ok: false, code: 'EVENT_STREAM_FULL', error: 'Too many live event streams' });
+      }
+      request.on('close', () => unsubscribe());
       response.writeHead(200, {
         'content-type': 'text/event-stream; charset=utf-8',
         'cache-control': 'no-cache',
@@ -549,8 +558,6 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         'x-accel-buffering': 'no',
       });
       response.write(': connected\n\n');
-      const unsubscribe = kernelEvents.subscribe((frame) => response.write(frame));
-      request.on('close', () => unsubscribe());
       return undefined;
     }
     if (request.method === 'GET' && request.url?.startsWith('/api/replay-lab/cases/')) {
