@@ -42,4 +42,20 @@ describe('popup Auto Radar storage sync', () => {
     // popup.js is a strict ES module: the debounce timer must be declared or clearTimeout throws.
     expect(popup).toMatch(/let autoRadarUIUpdateTimeout;/);
   });
+
+  // pair() and saveToken() re-run initialize(); a listener registered inside it piled up one
+  // more chrome.storage.onChanged handler per re-pair, rendering every change several times.
+  it('registers the popup storage listener once, outside initialize()', () => {
+    const popup = readFileSync(new URL('./popup.js', import.meta.url), 'utf8');
+    const registrations = popup.match(/chrome\.storage\.onChanged\.addListener\(/g) ?? [];
+    expect(registrations).toHaveLength(1);
+    const start = popup.indexOf('async function initialize()');
+    let depth = 0; let end = popup.indexOf('{', start);
+    for (let i = end; i < popup.length; i += 1) {
+      if (popup[i] === '{') depth += 1;
+      if (popup[i] === '}') { depth -= 1; if (depth === 0) { end = i; break; } }
+    }
+    expect(popup.slice(start, end)).not.toContain('chrome.storage.onChanged.addListener(');
+    expect(popup).toMatch(/\bpair\(\)[\s\S]*await initialize\(\)/);
+  });
 });

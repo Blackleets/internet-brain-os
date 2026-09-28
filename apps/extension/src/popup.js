@@ -30,6 +30,9 @@ const autoRadarLastDomain = $('#auto-radar-last-domain');
 const autoRadarLastResult = $('#auto-radar-last-result');
 let currentOrigin;
 let agentHubRefresher;
+// Keeps the Auto Radar status in sync with background updates while the popup is open.
+let nextAutoRadarUpdate;
+let autoRadarUIUpdateTimeout;
 const productState = { connected: false, goalCount: 0, radarEnabled: false, findCount: 0, autoRadarEnabled: false, autoRadarState: 'paused' };
 
 void initialize();
@@ -44,6 +47,7 @@ $('#advanced').addEventListener('click', () => chrome.tabs.create({ url: `${DEFA
 $('#guide-action').addEventListener('click', () => setWorkspaceView(onboardingJourney(productState).next?.view ?? 'finds'));
 document.addEventListener('visibilitychange', () => agentHubRefresher?.visibilityChanged());
 window.addEventListener('pagehide', () => agentHubRefresher?.stop(), { once: true });
+chrome.storage.onChanged.addListener(onStorageChanged);
 
 function setWorkspaceView(requestedView) {
   const activeView = normalizeWorkspaceView(requestedView);
@@ -85,29 +89,26 @@ async function initialize() {
   const initialMissions = results[4].status === 'fulfilled' && Array.isArray(results[4].value) ? results[4].value : [];
   if (stored.kernelApiToken) startAgentHubRefresh(stored, initialMissions);
   
-  // Keep the Auto Radar status in sync with background updates while the popup is open.
-  const nextAutoRadarUpdate = createAutoRadarUiSync(productState.autoRadarState, stored.lastRadarEvent ?? null);
-  let autoRadarUIUpdateTimeout;
+  // Re-run by pair()/saveToken(): reset the sync baseline; the listener itself is registered once.
+  nextAutoRadarUpdate = createAutoRadarUiSync(productState.autoRadarState, stored.lastRadarEvent ?? null);
+}
 
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local') {
-      const update = nextAutoRadarUpdate(changes, productState.autoRadarState);
-      if (update) {
-        productState.autoRadarState = update.autoRadarState;
-        // Debounce UI updates to prevent flickering
-        clearTimeout(autoRadarUIUpdateTimeout);
-        autoRadarUIUpdateTimeout = setTimeout(() => {
-          updateAutoRadarUI(update.autoRadarState, update.lastRadarEvent);
-        }, 150);
-      }
-
-      if (changes.autoRadarEnabled) {
-        productState.autoRadarEnabled = changes.autoRadarEnabled?.newValue ?? false;
-        // Update toggle button text/icon based on enabled state
-        applyAutoRadarToggle(productState.autoRadarState ?? 'paused');
-      }
-    }
-  });
+function onStorageChanged(changes, area) {
+  if (area !== 'local') return;
+  const update = nextAutoRadarUpdate?.(changes, productState.autoRadarState);
+  if (update) {
+    productState.autoRadarState = update.autoRadarState;
+    // Debounce UI updates to prevent flickering
+    clearTimeout(autoRadarUIUpdateTimeout);
+    autoRadarUIUpdateTimeout = setTimeout(() => {
+      updateAutoRadarUI(update.autoRadarState, update.lastRadarEvent);
+    }, 150);
+  }
+  if (changes.autoRadarEnabled) {
+    productState.autoRadarEnabled = changes.autoRadarEnabled?.newValue ?? false;
+    // Update toggle button text/icon based on enabled state
+    applyAutoRadarToggle(productState.autoRadarState ?? 'paused');
+  }
 }
 
 function renderWatchtower(watchtower) {
