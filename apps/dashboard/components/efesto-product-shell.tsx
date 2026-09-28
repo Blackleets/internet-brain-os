@@ -14,6 +14,8 @@ import { countMissionKernelSupportedFinds, kernelSupportedFinds } from '../lib/k
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { connectionStore } from '../lib/session/connection-store';
 import { startVisiblePoller } from '../lib/ui/visible-poller';
+import { subscribeToKernelEvents } from '../lib/kernel/events';
+import { refreshOnKernelEvents } from '../lib/kernel/live-refresh';
 import { KERNEL_UNREACHABLE_AFTER_FAILURES, markKernelUnreachable } from '../lib/kernel/poll-health';
 import { ProductValueScorecardPanel } from './overview/product-value-scorecard';
 import {
@@ -133,10 +135,16 @@ export default function EfestoProductShell() {
         if (!cancelled && failures >= KERNEL_UNREACHABLE_AFTER_FAILURES) setSnapshot(markKernelUnreachable);
       }
     };
-    const stopPolling = startVisiblePoller(poll, 3_000, document);
+    const poller = startVisiblePoller(poll, 3_000, document);
+    // Mission events from the Kernel trigger an immediate re-read; the 3 s poll stays the fallback.
+    const stopEvents = refreshOnKernelEvents(
+      (onEvent) => subscribeToKernelEvents(connection, onEvent),
+      poller.now,
+    );
     return () => {
       cancelled = true;
-      stopPolling();
+      stopEvents();
+      poller();
     };
   }, [connection]);
 

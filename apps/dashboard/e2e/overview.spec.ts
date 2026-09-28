@@ -11,7 +11,9 @@ test.beforeEach(async ({ page }) => {
   page.on('requestfailed', (request) => {
     const failure = request.failure()?.errorText ?? 'unknown';
     const path = new URL(request.url()).pathname;
-    if (!(request.method() === 'GET' && path === '/health' && failure === 'net::ERR_ABORTED')) problems.push(`requestfailed: ${request.url()} (${failure})`);
+    // /health probes and the live /api/events stream are aborted on purpose (timeout, disconnect, unmount).
+    const expectedAbort = request.method() === 'GET' && (path === '/health' || path === '/api/events') && failure === 'net::ERR_ABORTED';
+    if (!expectedAbort) problems.push(`requestfailed: ${request.url()} (${failure})`);
   });
 });
 

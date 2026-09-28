@@ -10,23 +10,43 @@ type VisibilityDocument = {
  * interval in hidden tabs and stacked overlapping waves whenever the Kernel was slow.
  * Returning to the tab refreshes immediately. Returns a stop function.
  */
-export function startVisiblePoller(run: () => Promise<void>, intervalMs: number, doc: VisibilityDocument): () => void {
+export type VisiblePoller = (() => void) & {
+  /** Run a wave now (e.g. on a Kernel event); if one is in flight, run exactly one more after it. */
+  now(): void;
+};
+
+export function startVisiblePoller(run: () => Promise<void>, intervalMs: number, doc: VisibilityDocument): VisiblePoller {
   let inFlight = false;
   let stopped = false;
+  let rerunRequested = false;
   const tick = () => {
     if (stopped || inFlight || doc.visibilityState !== 'visible') return;
     inFlight = true;
     void Promise.resolve()
       .then(run)
       .catch(() => undefined)
-      .finally(() => { inFlight = false; });
+      .finally(() => {
+        inFlight = false;
+        if (rerunRequested) {
+          rerunRequested = false;
+          tick();
+        }
+      });
   };
   const onVisibility = () => { if (doc.visibilityState === 'visible') tick(); };
   const timer = setInterval(tick, intervalMs);
   doc.addEventListener('visibilitychange', onVisibility);
-  return () => {
+  const stop = () => {
     stopped = true;
+    rerunRequested = false;
     clearInterval(timer);
     doc.removeEventListener('visibilitychange', onVisibility);
   };
+  return Object.assign(stop, {
+    now: () => {
+      if (stopped || doc.visibilityState !== 'visible') return;
+      if (inFlight) rerunRequested = true;
+      else tick();
+    },
+  });
 }

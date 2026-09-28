@@ -17,6 +17,49 @@ describe('startVisiblePoller (dashboard Kernel poll)', () => {
   beforeEach(() => { vi.useFakeTimers(); });
   afterEach(() => { vi.useRealTimers(); });
 
+  it('now() runs a wave immediately without waiting for the interval', async () => {
+    const doc = fakeDocument();
+    const run = vi.fn(async () => {});
+    const poller = startVisiblePoller(run, 3_000, doc);
+    poller.now();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run).toHaveBeenCalledTimes(1);
+    poller();
+  });
+
+  it('now() during an in-flight wave queues exactly one follow-up wave (events are not lost)', async () => {
+    const doc = fakeDocument();
+    const releases: Array<() => void> = [];
+    const run = vi.fn(() => new Promise<void>((resolve) => { releases.push(resolve); }));
+    const poller = startVisiblePoller(run, 60_000, doc);
+    poller.now();
+    await vi.advanceTimersByTimeAsync(0);
+    poller.now(); poller.now(); poller.now();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run).toHaveBeenCalledTimes(1);
+    releases[0]();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run).toHaveBeenCalledTimes(2);
+    releases[1]();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run).toHaveBeenCalledTimes(2);
+    poller();
+  });
+
+  it('now() does nothing while hidden or after stop', async () => {
+    const doc = fakeDocument('hidden');
+    const run = vi.fn(async () => {});
+    const poller = startVisiblePoller(run, 60_000, doc);
+    poller.now();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run).not.toHaveBeenCalled();
+    poller();
+    doc.visibilityState = 'visible';
+    poller.now();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run).not.toHaveBeenCalled();
+  });
+
   it('polls on the interval while visible', async () => {
     const doc = fakeDocument();
     const run = vi.fn(async () => {});
