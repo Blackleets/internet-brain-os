@@ -8,7 +8,7 @@ import {
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { CaseSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
-import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportedFinds } from '../lib/kernel/supported-find';
+import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportProof, kernelSupportedFinds } from '../lib/kernel/supported-find';
 import { statePillLabel, statePillTone } from '../lib/ui/state-pill-label.mjs';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 
@@ -370,6 +370,7 @@ function FindCard({ item, onFeedback, onOpenCase, missions }: { item: Opportunit
   const sourceUrl = optionalText(item.sourceUrl);
   // Fail-close label: mission verificationResults SUPPORT must not render as Lead no verificado.
   const kernelSupported = isKernelSupportedFind(item, missions);
+  const supportProof = kernelSupported ? kernelSupportProof(item, missions) : null;
   const reasons = Array.isArray(item.reasons) ? item.reasons.filter((value): value is string => typeof value === 'string' && value.trim().length > 0) : [];
   const evidenceCount = evidenceId ? 1 : 0;
   return <article className="find-card">
@@ -381,6 +382,7 @@ function FindCard({ item, onFeedback, onOpenCase, missions }: { item: Opportunit
       <div><dt>Evidence</dt><dd>{evidenceCount > 0 ? `${evidenceCount} registro` : 'no vinculada'}</dd></div>
       {caseId ? <div><dt>Case</dt><dd>{onOpenCase ? <button type="button" className="provenance-link" onClick={() => onOpenCase(caseId)}>{caseId}</button> : caseId}</dd></div> : null}
       {kernelSupported ? <div><dt>Kernel</dt><dd>SUPPORT</dd></div> : null}
+      {supportProof ? <div className="find-support-why"><dt>Por qué SUPPORT</dt><dd>El Kernel leyó la fuente y comprobó que cubre los términos clave del Goal; el texto del agente no cuenta. Prueba: {supportProof.kind === 'stamp' ? 'sello SUPPORT del Kernel en este hallazgo' : `verificación de la misión ${supportProof.missionId}`}.</dd></div> : null}
       {evidenceId ? <div><dt>Procedencia</dt><dd>Hallazgo → {evidenceId}{caseId ? ` → ${caseId}` : ''}{sourceUrl ? ' → fuente' : ''}</dd></div> : <div><dt>Procedencia</dt><dd>no publicada</dd></div>}
     </dl>
     {sourceUrl ? <a className="find-source" href={sourceUrl} target="_blank" rel="noreferrer">Abrir fuente <ExternalLink /></a> : <span className="source-missing">Sin URL publicada</span>}

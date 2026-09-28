@@ -13,21 +13,41 @@ function hasHttpSourceUrl(sourceUrl: string): boolean {
   }
 }
 
-function missionSupportsEvidence(
+function missionSupportingEvidence(
   evidenceId: string,
   missions: readonly MissionSummary[] | undefined,
-): boolean {
-  if (!missions?.length || !evidenceId) return false;
+): MissionSummary | undefined {
+  if (!missions?.length || !evidenceId) return undefined;
   for (const mission of missions) {
     const results = mission.verificationResults;
     if (!Array.isArray(results)) continue;
     for (const entry of results) {
       if (!entry || typeof entry !== 'object') continue;
       const record = entry as Record<string, unknown>;
-      if (text(record.evidenceId) === evidenceId && record.supported === true) return true;
+      if (text(record.evidenceId) === evidenceId && record.supported === true) return mission;
     }
   }
-  return false;
+  return undefined;
+}
+
+function missionSupportsEvidence(evidenceId: string, missions: readonly MissionSummary[] | undefined): boolean {
+  return missionSupportingEvidence(evidenceId, missions) !== undefined;
+}
+
+export type KernelSupportProof = { kind: 'stamp' } | { kind: 'mission'; missionId: string };
+
+/**
+ * Which Kernel record proves a Find's SUPPORT (for display only; the gate is isKernelSupportedFind).
+ * null when the Find does not pass the gate.
+ */
+export function kernelSupportProof(
+  item: OpportunitySummary,
+  missions?: readonly MissionSummary[],
+): KernelSupportProof | null {
+  if (!isKernelSupportedFind(item, missions)) return null;
+  if (item.supported === true) return { kind: 'stamp' };
+  const mission = missionSupportingEvidence(text(item.evidenceId), missions);
+  return mission ? { kind: 'mission', missionId: mission.id } : null;
 }
 
 /**
