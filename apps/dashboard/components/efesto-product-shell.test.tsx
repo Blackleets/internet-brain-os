@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EfestoProductShell from './efesto-product-shell';
 
@@ -153,6 +153,29 @@ describe('Efesto goal-first product shell', () => {
     expect(await screen.findByText('Find SUPPORT descartado; Evidence objetiva no fue reescrita.')).toBeTruthy();
     expect(screen.queryByText('Find descartado; Evidence objetiva no fue reescrita.')).toBeNull();
     await waitFor(() => expect(requests.some((request) => request.method === 'POST' && new URL(request.url).pathname === '/api/opportunities/opp-1/feedback')).toBe(true));
+  });
+
+  it('stops claiming the Kernel is online after polls fail (Kernel stopped/restarting) and recovers', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      render(<EfestoProductShell />);
+      await connect();
+      const healthy = globalThis.fetch;
+      vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
+      await act(async () => { await vi.advanceTimersByTimeAsync(7_000); });
+      expect(screen.queryByRole('button', { name: /Kernel listo/ })).toBeNull();
+      expect(screen.getByRole('button', { name: /Kernel sin respuesta/ })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /Kernel online/ })).toBeNull();
+      const kernelRow = screen.getAllByText('Kernel').map((label) => label.closest('.readiness-row')).find(Boolean);
+      expect(kernelRow?.textContent).toContain('offline');
+      expect(kernelRow?.querySelector('strong')?.className).not.toContain('ready');
+      vi.stubGlobal('fetch', healthy);
+      await act(async () => { await vi.advanceTimersByTimeAsync(3_500); });
+      expect(screen.getByRole('button', { name: /Kernel listo/ })).toBeTruthy();
+      expect(screen.getByRole('button', { name: /Kernel online/ })).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('keeps Memory honest and never treats chat as durable memory', async () => {

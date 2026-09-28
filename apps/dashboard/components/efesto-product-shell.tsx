@@ -14,6 +14,7 @@ import { countMissionKernelSupportedFinds, kernelSupportedFinds } from '../lib/k
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { connectionStore } from '../lib/session/connection-store';
 import { startVisiblePoller } from '../lib/ui/visible-poller';
+import { KERNEL_UNREACHABLE_AFTER_FAILURES, markKernelUnreachable } from '../lib/kernel/poll-health';
 import { ProductValueScorecardPanel } from './overview/product-value-scorecard';
 import {
   ActivityView, AgentsView, EvidenceView, FindsView, GoalsView, HomeView, MemoryView, ModelsView, SettingsView,
@@ -113,6 +114,7 @@ export default function EfestoProductShell() {
   useEffect(() => {
     if (!connection) return;
     let cancelled = false;
+    let failures = 0;
     const poll = async () => {
       try {
         const client = new KernelClient(connection);
@@ -121,10 +123,14 @@ export default function EfestoProductShell() {
           loadGoalSurfaces(client),
         ]);
         if (cancelled) return;
+        failures = 0;
         setSnapshot(nextSnapshot);
         setGoalSurfaces(nextGoalSurfaces);
       } catch {
-        // The visible readiness state remains the last verified state until the next successful poll.
+        // Keep the last verified records, but after repeated failures (Kernel stopped,
+        // restarting or token rotated) stop claiming the Kernel is online.
+        failures += 1;
+        if (!cancelled && failures >= KERNEL_UNREACHABLE_AFTER_FAILURES) setSnapshot(markKernelUnreachable);
       }
     };
     const stopPolling = startVisiblePoller(poll, 3_000, document);
@@ -421,7 +427,7 @@ export default function EfestoProductShell() {
       <header className="efesto-topbar">
         <div><button type="button" className="menu-button" onClick={toggleNavigation} aria-label="Alternar navegación"><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view)}</button></div>
         <div className="top-context"><span className="local-first-status"><ShieldCheck /> Primero local</span><span className="private-status">Privado por diseño</span></div>
-        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? 'Kernel listo' : 'Conectar'}</button></div>
+        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection && snapshot?.readiness.kernel === 'online' ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{!connection ? 'Conectar' : snapshot?.readiness.kernel === 'online' ? 'Kernel listo' : 'Kernel sin respuesta'}</button></div>
       </header>
       <main className="efesto-main">
         {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} supportedFinds={supportedFinds} forgeSupportedFindCount={forgeSupportedFindCount} missions={snapshot?.missions} onFindFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
