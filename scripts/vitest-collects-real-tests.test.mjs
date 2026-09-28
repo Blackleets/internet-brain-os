@@ -16,4 +16,16 @@ describe('vitest-collected test files', () => {
     const offenders = files.filter((file) => /from\s+['"]node:test['"]|require\(\s*['"]node:test['"]\s*\)/.test(readFileSync(new URL(file, `file://${repoRoot}`), 'utf8')));
     expect(offenders).toEqual([]);
   });
+
+  // vitest.config.ts excludes the node:sqlite spec (Vite cannot resolve node:sqlite) and points at
+  // a dedicated runner that no script or workflow invoked, so its 7 tests never ran in CI either.
+  it('runs the vitest-excluded SQLite entity spec in CI through its dedicated runner', () => {
+    const vitestConfig = readFileSync(new URL('vitest.config.ts', `file://${repoRoot}`), 'utf8');
+    expect(vitestConfig).toContain("'packages/kernel/src/entity/sqlite-entity-repository.test.ts'");
+    const scripts = JSON.parse(readFileSync(new URL('package.json', `file://${repoRoot}`), 'utf8')).scripts;
+    expect(scripts['test:sqlite']).toContain('node --test packages/kernel/sqlite-entity-repository.nodetest.mjs');
+    expect(scripts['test:sqlite']).toContain('tsconfig.sqlite-test.json');
+    const ci = readFileSync(new URL('.github/workflows/ci.yml', `file://${repoRoot}`), 'utf8');
+    expect(ci).toMatch(/run: pnpm test:sqlite/);
+  });
 });

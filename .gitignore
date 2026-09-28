@@ -15,4 +15,5 @@ efesto-extension.zip
 # Runtime state + secrets (never commit)
 .hephaestus/
 .hermes/
-
+# tsc output of `pnpm test:sqlite`
+dist-sqlite-test/

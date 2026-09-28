@@ -35,6 +35,7 @@
     "constitution:check": "node scripts/constitution-check.mjs",
     "resume": "node scripts/project-resume.mjs",
     "test": "vitest run --passWithNoTests",
+    "test:sqlite": "tsc -p packages/kernel/tsconfig.sqlite-test.json --noCheck && node --test packages/kernel/sqlite-entity-repository.nodetest.mjs",
     "verify:first-run": "pnpm architecture:check && pnpm typecheck && pnpm test && pnpm build && pnpm hermes:validate-agent examples/hermes-agent-run-output.sample.json && pnpm hermes:validate-agent --native-jsonl examples/hermes-native-log.sample.jsonl && pnpm hermes:smoke && pnpm hermes:attack-smoke && pnpm replay-lab:api-smoke",
     "typecheck": "tsc -b --pretty false && pnpm --filter @internet-brain-os/dashboard exec tsc --noEmit --pretty false"
   },
