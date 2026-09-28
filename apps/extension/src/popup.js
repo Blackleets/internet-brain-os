@@ -13,6 +13,7 @@ import { markWatchtowerEventsRead, presentWatchtowerBanner, unreadWatchtowerCoun
 import { listGoalSurfaces } from './goal-surface-transport.js';
 import { renderGoalSurfaceList } from './goal-surface-goal-list.js';
 import { autoRadarLastResultLabel, autoRadarStatusCopy, autoRadarToggleCopy } from './auto-radar.js';
+import { createAutoRadarUiSync } from './auto-radar-ui-sync.js';
 
 const $ = (selector) => document.querySelector(selector);
 const select = $('#case-target');
@@ -84,38 +85,22 @@ async function initialize() {
   const initialMissions = results[4].status === 'fulfilled' && Array.isArray(results[4].value) ? results[4].value : [];
   if (stored.kernelApiToken) startAgentHubRefresh(stored, initialMissions);
   
-  // Add storage change listener to keep UI in sync
-  let lastAutoRadarState = productState.autoRadarState;
-  let lastRadarEvent = null;
-  
+  // Keep the Auto Radar status in sync with background updates while the popup is open.
+  const nextAutoRadarUpdate = createAutoRadarUiSync(productState.autoRadarState, stored.lastRadarEvent ?? null);
+  let autoRadarUIUpdateTimeout;
+
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local') {
-      const stateChanged = changes.autoRadarState;
-      const eventChanged = changes.lastRadarEvent;
-      
-      if (stateChanged || eventChanged) {
-        const autoRadarState = stateChanged ? stateChanged.newValue ?? productState.autoRadarState : productState.autoRadarState;
-        const lastRadarEvent = eventChanged ? eventChanged.newValue ?? null : null;
-        
-        // Skip if state and event haven't actually changed
-        if (autoRadarState === lastAutoRadarState && 
-            ((lastRadarEvent === null && lastRadarEvent === null) || 
-             (lastRadarEvent !== null && lastRadarEvent !== null && 
-              lastRadarEvent.status === lastRadarEvent.status && 
-              lastRadarEvent.title === lastRadarEvent.title))) {
-          return;
-        }
-        
-        lastAutoRadarState = autoRadarState;
-        lastRadarEvent = lastRadarEvent;
-        
+      const update = nextAutoRadarUpdate(changes, productState.autoRadarState);
+      if (update) {
+        productState.autoRadarState = update.autoRadarState;
         // Debounce UI updates to prevent flickering
         clearTimeout(autoRadarUIUpdateTimeout);
         autoRadarUIUpdateTimeout = setTimeout(() => {
-          updateAutoRadarUI(autoRadarState, lastRadarEvent);
-        }, 150); // Increased debounce time
+          updateAutoRadarUI(update.autoRadarState, update.lastRadarEvent);
+        }, 150);
       }
-      
+
       if (changes.autoRadarEnabled) {
         productState.autoRadarEnabled = changes.autoRadarEnabled?.newValue ?? false;
         // Update toggle button text/icon based on enabled state
