@@ -496,6 +496,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
           return send(response, 400, { ok: false, code: 'INVALID_MISSION_ID' });
         }
         const mission = await missionExecutor.claim('hermes', requestedId);
+        if (mission) publishMissionUpdated(kernelEvents, mission);
         return send(response, mission ? 200 : 204, mission ? { ok: true, mission } : undefined);
       } catch { return send(response, 500, { ok: false, code: 'AGENT_MISSION_CLAIM_FAILED' }); }
     }
@@ -515,6 +516,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         }
         const obsidianReceipt = await syncMissionObsidian(completed, obsidianProjector);
         const mission = await attachMissionObsidianReceipt(missionExecutor.store, missionId, obsidianReceipt);
+        publishMissionUpdated(kernelEvents, mission ?? completed.mission);
         return send(response, 202, { ok: true, ...completed, mission, obsidianReceipt });
       } catch (error) {
         if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
@@ -527,7 +529,9 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       try {
         const missionId = decodePathId(request.url.slice('/api/agent-missions/'.length, -'/failures'.length));
       if (missionId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
-        return send(response, 202, { ok: true, mission: await missionExecutor.fail(missionId, await readJson(request)) });
+        const failedMission = await missionExecutor.fail(missionId, await readJson(request));
+        publishMissionUpdated(kernelEvents, failedMission);
+        return send(response, 202, { ok: true, mission: failedMission });
       } catch (error) {
         if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
         return send(response, 500, { ok: false, code: 'AGENT_FAILURE_REPORT_FAILED' });
@@ -827,6 +831,20 @@ function sendHtml(response, status, html) {
   response.setHeader('content-security-policy', "frame-ancestors 'none'");
   response.setHeader('referrer-policy', 'no-referrer');
   response.end(html);
+}
+
+/**
+ * Notifies live /api/events clients that a mission changed through the agent HTTP contract
+ * (claim, results, failures). Ids and lifecycle fields only: no lease, findings or failure text.
+ * Clients must still re-read /api/agent-missions; the event is a refresh hint, not the record.
+ */
+function publishMissionUpdated(kernelEvents, mission) {
+  if (!mission || typeof mission.id !== 'string') return;
+  const payload = { missionId: mission.id };
+  for (const key of ['goalId', 'status', 'executionPhase']) {
+    if (typeof mission[key] === 'string') payload[key] = mission[key];
+  }
+  kernelEvents.publish('mission.updated', payload);
 }
 
 async function syncMissionObsidian(completed, obsidianProjector) {
