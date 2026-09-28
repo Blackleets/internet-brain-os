@@ -26,7 +26,7 @@ chrome.runtime.onStartup.addListener(() => void ensureWatchtower());
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === WATCHTOWER_ALARM) {
     try {
-      await inspectMissionTransitions();
+      await inspectMissionTransitionsOnce();
       await autoRadar.processQueue();
     } catch (error) {
       console.error('Error in watchtower alarm handler:', error);
@@ -187,8 +187,24 @@ async function autoCapture(tab) {
 }
 
 async function ensureWatchtower() {
-  await chrome.alarms.create(WATCHTOWER_ALARM, { periodInMinutes: 1 });
-  await inspectMissionTransitions();
+  // alarms.create() cancels and replaces a same-named alarm (Chrome docs), so re-creating
+  // it on every service-worker start kept pushing the next tick out. Create only if missing.
+  let existing;
+  try { existing = typeof chrome.alarms.get === 'function' ? await chrome.alarms.get(WATCHTOWER_ALARM) : undefined; }
+  catch { existing = undefined; }
+  if (!existing) await chrome.alarms.create(WATCHTOWER_ALARM, { periodInMinutes: 1 });
+  await inspectMissionTransitionsOnce();
+}
+
+// Top-level start, onStartup/onInstalled and onAlarm can all fire in one wake. Overlapping
+// inspections read the same missionWatchtower / deliveredKernelNotifications snapshot, so
+// they duplicated Kernel requests and re-created the same OS notifications. Single-flight.
+let watchtowerInspection;
+function inspectMissionTransitionsOnce() {
+  if (!watchtowerInspection) {
+    watchtowerInspection = inspectMissionTransitions().finally(() => { watchtowerInspection = undefined; });
+  }
+  return watchtowerInspection;
 }
 
 async function inspectMissionTransitions() {
