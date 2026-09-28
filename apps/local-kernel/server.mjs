@@ -233,7 +233,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       }
     }
     if (request.method === 'GET' && request.url?.startsWith('/api/browser/case/') && captureProjector) {
-      const caseId = decodeURIComponent(request.url.slice('/api/browser/case/'.length));
+      const caseId = decodePathId(request.url.slice('/api/browser/case/'.length));
+      if (caseId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
       try {
         const result = await captureProjector.getCaseById(caseId);
         return send(response, 200, { ok: true, ...result });
@@ -264,7 +265,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     if (request.method === 'DELETE' && request.url?.startsWith('/api/chat/providers/')) {
       if (!providers) return send(response, 404, { ok: false, code: 'MODEL_PROVIDERS_UNAVAILABLE' });
       try {
-        const providerId = decodeURIComponent(request.url.slice('/api/chat/providers/'.length));
+        const providerId = decodePathId(request.url.slice('/api/chat/providers/'.length));
+      if (providerId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
         await providers.remove(providerId);
         return send(response, 200, { ok: true });
       } catch (error) {
@@ -352,7 +354,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     }
     if ((request.method === 'GET' || request.method === 'DELETE') && request.url?.startsWith('/api/chat/conversations/')) {
       if (!conversations) return send(response, 404, { ok: false, code: 'CHAT_HISTORY_UNAVAILABLE' });
-      const conversationId = decodeURIComponent(request.url.slice('/api/chat/conversations/'.length));
+      const conversationId = decodePathId(request.url.slice('/api/chat/conversations/'.length));
+      if (conversationId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
       try {
         if (request.method === 'DELETE') {
           await conversations.remove(conversationId);
@@ -405,7 +408,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       if (!preferences) return send(response, 404, { ok: false, code: 'PREFERENCE_LEARNING_UNAVAILABLE' });
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
       try {
-        const opportunityId = decodeURIComponent(request.url.slice('/api/opportunities/'.length, -'/feedback'.length));
+        const opportunityId = decodePathId(request.url.slice('/api/opportunities/'.length, -'/feedback'.length));
+      if (opportunityId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
         return send(response, 201, { ok: true, feedback: await preferences.record(opportunityId, await readJson(request)) });
       } catch (error) {
         if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
@@ -430,7 +434,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     if (request.method === 'GET' && request.url?.startsWith('/api/goal-surfaces/')) {
       if (!goalSurfaces) return send(response, 404, { ok: false, code: 'GOAL_SURFACES_UNAVAILABLE' });
       try {
-        const goalId = decodeURIComponent(request.url.slice('/api/goal-surfaces/'.length));
+        const goalId = decodePathId(request.url.slice('/api/goal-surfaces/'.length));
+      if (goalId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
         const surface = await goalSurfaces.get(goalId);
         return surface
           ? send(response, 200, { ok: true, surface })
@@ -469,7 +474,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       if (!agentMissions) return send(response, 404, { ok: false, code: 'AGENT_MISSIONS_UNAVAILABLE' });
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
       try {
-        const goalId = decodeURIComponent(request.url.slice('/api/goals/'.length, -'/missions'.length));
+        const goalId = decodePathId(request.url.slice('/api/goals/'.length, -'/missions'.length));
+      if (goalId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
         const input = await readJson(request);
         const confirmationActor = interactiveMissionConfirmationActor(origin, allowedDashboardOrigins);
         const mission = await agentMissions.create(goalId, input, { confirmationActor });
@@ -497,7 +503,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       if (!missionExecutor) return send(response, 404, { ok: false, code: 'AGENT_EXECUTOR_UNAVAILABLE' });
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
       try {
-        const missionId = decodeURIComponent(request.url.slice('/api/agent-missions/'.length, -'/results'.length));
+        const missionId = decodePathId(request.url.slice('/api/agent-missions/'.length, -'/results'.length));
+      if (missionId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
         const completed = await missionExecutor.complete(missionId, await readJson(request));
         if (completed.idempotent === true) {
           return send(response, 202, {
@@ -518,7 +525,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       if (!missionExecutor) return send(response, 404, { ok: false, code: 'AGENT_EXECUTOR_UNAVAILABLE' });
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
       try {
-        const missionId = decodeURIComponent(request.url.slice('/api/agent-missions/'.length, -'/failures'.length));
+        const missionId = decodePathId(request.url.slice('/api/agent-missions/'.length, -'/failures'.length));
+      if (missionId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
         return send(response, 202, { ok: true, mission: await missionExecutor.fail(missionId, await readJson(request)) });
       } catch (error) {
         if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
@@ -548,7 +556,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     if (request.method === 'GET' && request.url?.startsWith('/api/replay-lab/cases/')) {
       if (!replayLabQuery) return send(response, 404, { ok: false, code: 'REPLAY_LAB_UNAVAILABLE' });
       try {
-        const caseId = decodeURIComponent(request.url.slice('/api/replay-lab/cases/'.length));
+        const caseId = decodePathId(request.url.slice('/api/replay-lab/cases/'.length));
+      if (caseId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
         return send(response, 200, { ok: true, case: await replayLabQuery.getCase(caseId) });
       } catch {
         return send(response, 404, { ok: false, code: 'REPLAY_LAB_CASE_NOT_FOUND' });
@@ -745,6 +754,12 @@ function parseNotificationsListQuery(url) {
     options.limit = limit;
   }
   return options;
+}
+
+/** Decode one path id; malformed percent-encoding must be a 400, never a thrown URIError. */
+function decodePathId(encoded) {
+  try { return decodeURIComponent(encoded); }
+  catch { return null; }
 }
 
 function matchNotificationActionPath(url, action) {
