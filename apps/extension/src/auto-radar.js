@@ -45,6 +45,13 @@ export function autoRadarStatusCopy(state) {
   return AUTO_RADAR_STATUS_COPY[state] ?? { text: 'Desconocido', className: 'unknown', icon: '❓', color: [0, 0, 0, 0] };
 }
 
+/** Popup toggle copy: paused → offer to activate (not pressed); otherwise offer to pause (pressed). */
+export function autoRadarToggleCopy(state) {
+  return state === 'paused'
+    ? { icon: '▶️', text: 'Activar Auto Radar', pressed: false }
+    : { icon: '⏸', text: 'Pausar Auto Radar', pressed: true };
+}
+
 export function autoRadarActionTitle(state) {
   const copy = autoRadarStatusCopy(state);
   return copy.text === 'Desconocido' ? 'Efesto Opportunity Radar' : `Efesto Opportunity Radar - ${copy.text}`;

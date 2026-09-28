@@ -12,7 +12,7 @@ import { createAgentHubRefresher, missionRevision } from './agent-hub-refresh.js
 import { markWatchtowerEventsRead, presentWatchtowerBanner, unreadWatchtowerCount } from './mission-watchtower.js';
 import { listGoalSurfaces } from './goal-surface-transport.js';
 import { renderGoalSurfaceList } from './goal-surface-goal-list.js';
-import { autoRadarLastResultLabel, autoRadarStatusCopy } from './auto-radar.js';
+import { autoRadarLastResultLabel, autoRadarStatusCopy, autoRadarToggleCopy } from './auto-radar.js';
 
 const $ = (selector) => document.querySelector(selector);
 const select = $('#case-target');
@@ -119,14 +119,7 @@ async function initialize() {
       if (changes.autoRadarEnabled) {
         productState.autoRadarEnabled = changes.autoRadarEnabled?.newValue ?? false;
         // Update toggle button text/icon based on enabled state
-        const state = productState.autoRadarState ?? 'paused';
-        if (state === 'paused') {
-          autoRadarToggleIcon.textContent = '▶️';
-          autoRadarToggleText.textContent = 'Activar Auto Radar';
-        } else {
-          autoRadarToggleIcon.textContent = '⏸';
-          autoRadarToggleText.textContent = 'Pausar Auto Radar';
-        }
+        applyAutoRadarToggle(productState.autoRadarState ?? 'paused');
       }
     }
   });
@@ -554,19 +547,19 @@ function updateRadarCopy() {
     : 'Authorize this public site to let Efesto work quietly while you browse.';
 }
 
+function applyAutoRadarToggle(state) {
+  const copy = autoRadarToggleCopy(state);
+  autoRadarToggleIcon.textContent = copy.icon;
+  autoRadarToggleText.textContent = copy.text;
+  autoRadarToggle.setAttribute('aria-pressed', String(copy.pressed));
+}
+
 function updateAutoRadarUI(state, lastEvent) {
   const copy = autoRadarStatusCopy(state);
   autoRadarStatusIndicator.textContent = `${copy.icon} ${copy.text}`;
   autoRadarStatusIndicator.className = `status-indicator ${copy.className}`;
   
-  // Update toggle button
-  if (state === 'paused') {
-    autoRadarToggleIcon.textContent = '▶️';
-    autoRadarToggleText.textContent = 'Activar Auto Radar';
-  } else {
-    autoRadarToggleIcon.textContent = '⏸';
-    autoRadarToggleText.textContent = 'Pausar Auto Radar';
-  }
+  applyAutoRadarToggle(state);
   
   // Update last domain and result from last event
     if (lastEvent && lastEvent.title) {

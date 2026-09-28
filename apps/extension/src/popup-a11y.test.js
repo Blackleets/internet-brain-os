@@ -40,3 +40,29 @@ describe('extension popup form controls (mounted popup.html)', () => {
     expect(unnamed).toEqual([]);
   });
 });
+
+describe('Auto Radar toggle (mounted popup.html)', async () => {
+  const { autoRadarToggleCopy } = await import('./auto-radar.js');
+  const popup = readFileSync(resolve('apps/extension/src/popup.js'), 'utf8');
+
+  it('exposes on/off state and hides the decorative icon from screen readers', () => {
+    expect(html).toMatch(/<button id="auto-radar-toggle"[^>]*aria-pressed="false"/);
+    expect(html).toContain('<span id="auto-radar-toggle-icon" aria-hidden="true">▶️</span>');
+  });
+
+  it('keeps icon, label and pressed state consistent per state', () => {
+    expect(autoRadarToggleCopy('paused')).toEqual({ icon: '▶️', text: 'Activar Auto Radar', pressed: false });
+    for (const state of ['idle', 'analyzing', 'captured']) {
+      expect(autoRadarToggleCopy(state)).toEqual({ icon: '⏸', text: 'Pausar Auto Radar', pressed: true });
+    }
+    // Initial markup must match the paused copy (was pause icon + "Activar").
+    const initial = autoRadarToggleCopy('paused');
+    expect(html).toContain(`<span id="auto-radar-toggle-text">${initial.text}</span>`);
+  });
+
+  it('popup routes every toggle update through one helper that sets aria-pressed', () => {
+    expect(popup).toContain('function applyAutoRadarToggle(state)');
+    expect(popup).toContain("autoRadarToggle.setAttribute('aria-pressed', String(copy.pressed))");
+    expect(popup.match(/autoRadarToggleIcon\.textContent = '/g) ?? []).toHaveLength(0);
+  });
+});
