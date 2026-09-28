@@ -7,7 +7,7 @@ import {
   sleep, startKernel, stopKernel, waitForHealth,
 } from './hermes-acceptance-lib.mjs';
 import {
-  checkAuthorityFieldsIgnored, checkConsentRequired, checkDeduplication,
+  checkAuthorityFieldsIgnored, checkConsentRequired, checkDeduplication, checkLegacyFindingsRefused,
   checkHostileUrlsRejected, checkInvalidLeaseRejected, checkOversizedPayloadRejected,
   checkReplayIdempotentAfterCompletion, checkTerminalStateOwnedByKernel,
   checkUnauthenticatedAccessRejected,
@@ -143,6 +143,7 @@ export async function runAcceptance(options = {}) {
         ].includes(key)),
         detail: `fields=${Object.keys(boundary.claim).join(',')}`,
       });
+      checks.push(await checkLegacyFindingsRefused(boundary));
       checks.push(await checkHostileUrlsRejected(boundary));
       checks.push(await checkInvalidLeaseRejected(boundary));
       checks.push(await checkOversizedPayloadRejected(boundary));
