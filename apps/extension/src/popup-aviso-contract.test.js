@@ -94,6 +94,28 @@ describe('popup Agent Hub zero-SUPPORT forged chrome', () => {
   });
 });
 
+describe('popup Living Forge update survives absent Agent Hub DOM', () => {
+  it('null-guards optional #mission-state so setForgeActivity still paints Research completed honesty', () => {
+    // Shipped popup.html mounts Living Forge but may omit #mission-state /
+    // #mission-progress / #mission-history-list. Unguarded writes threw before
+    // setForgeActivity, leaving HTML "La forja está lista" (Forja lista Completado
+    // lookalike) while forgeActivityForMission already fail-closes zero-SUPPORT /
+    // completed-without-Evidence. Optional Agent Hub DOM; Living Forge must update.
+    expect(popupHtml).toContain('id="forge-activity-label"');
+    expect(popupHtml).toContain('id="living-forge"');
+    expect(popupHtml).not.toContain('id="mission-state"');
+    expect(popup).toContain("const missionState = $('#mission-state')");
+    expect(popup).toContain('if (missionState)');
+    expect(popup).toContain("if (!list) return;");
+    expect(popup).toContain('if (!list || !count) return;');
+    const forgeCall = popup.indexOf('setForgeActivity(forgeActivityForMission(latest, opportunities))');
+    const missionStateWrite = popup.indexOf("const missionState = $('#mission-state')");
+    expect(missionStateWrite).toBeGreaterThan(-1);
+    expect(forgeCall).toBeGreaterThan(missionStateWrite);
+    expect(popup).not.toContain("$('#mission-state').textContent = latest?.executionPhase === 'verifying'");
+  });
+});
+
 describe('popup Goal Surface workLabel SUPPORT honesty', () => {
   it('names Kernel SUPPORT Finds on #mission-state via Goal Surface workLabel — never bare Evidence-backed findings', () => {
     const presentation = readFileSync(new URL('./goal-surface-presentation.js', import.meta.url), 'utf8');

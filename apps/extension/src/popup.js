@@ -222,8 +222,17 @@ async function loadAgentHub(stored) {
     : latest?.status === 'completed'
       ? 'research_completed'
       : (latest?.status ?? 'idle');
-  $('#mission-state').textContent = latest?.executionPhase === 'verifying' ? 'Efesto is verifying Evidence' : copy;
-  $('#mission-state').dataset.status = chromeStatus;
+  // Fail-close Living Forge honesty: shipped popup.html may omit #mission-state /
+  // #mission-progress / #mission-history-list. Unguarded writes throw before
+  // setForgeActivity, leaving HTML default "La forja está lista" (Forja lista
+  // Completado lookalike) while forgeActivityForMission already says Research
+  // completed / Research ended without Evidence. Optional Agent Hub DOM; Living
+  // Forge update must still run.
+  const missionState = $('#mission-state');
+  if (missionState) {
+    missionState.textContent = latest?.executionPhase === 'verifying' ? 'Efesto is verifying Evidence' : copy;
+    missionState.dataset.status = chromeStatus;
+  }
   renderMissionProgress(latest);
   renderMissionHistory(missions);
   setForgeActivity(forgeActivityForMission(latest, opportunities));
@@ -232,7 +241,9 @@ async function loadAgentHub(stored) {
 
 function renderMissionHistory(missions) {
   const list = $('#mission-history-list');
-  $('#mission-history-count').textContent = String(missions.length);
+  const count = $('#mission-history-count');
+  if (!list || !count) return;
+  count.textContent = String(missions.length);
   list.replaceChildren();
   if (!missions.length) { const empty = document.createElement('p'); empty.className = 'empty'; empty.textContent = 'No authorized research activity yet.'; list.append(empty); return; }
   for (const mission of missions.slice(0, 5)) list.append(renderMissionCard(presentMission(mission)));
@@ -276,6 +287,7 @@ function formatMissionTime(value) { return new Intl.DateTimeFormat(undefined, { 
 
 function renderMissionProgress(mission) {
   const list = $('#mission-progress');
+  if (!list) return;
   list.replaceChildren();
   for (const stage of missionJourney(mission).stages) {
     const item = document.createElement('li'); item.dataset.state = stage.state;
