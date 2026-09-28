@@ -802,7 +802,20 @@ function send(response, status, body) {
 async function writeStreamEvent(response, event) {
   if (response.destroyed || response.writableEnded) return;
   if (response.write(`${JSON.stringify(event)}\n`)) return;
-  await new Promise((resolve) => response.once('drain', resolve));
+  // A client that disconnects while backpressured never emits 'drain': also settle on
+  // close/error so the stream handler and chat.stream cannot stay pending forever.
+  await new Promise((resolve) => {
+    const done = () => {
+      response.off('drain', done);
+      response.off('close', done);
+      response.off('error', done);
+      resolve();
+    };
+    response.once('drain', done);
+    response.once('close', done);
+    response.once('error', done);
+    if (response.destroyed) done();
+  });
 }
 
 function sendHtml(response, status, html) {
