@@ -17,3 +17,5 @@
 @media(max-width:420px){.efesto-topbar .top-title span{display:none}.connection-pill{max-width:112px}.brain-stage{width:104vw;margin-left:-2vw}.home-copy h1{font-size:27px}.starter-goals span{font-size:11px}.proposed-plan h2{font-size:13px}.find-actions button{flex:1;justify-content:center}.agent-contract{grid-template-columns:1fr 1fr}.goal-dock>p{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.efesto-product *{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}.brain-aura{filter:none}.efesto-sidebar{transition:none}}
 .empty-state-action{margin-top:14px;padding:8px 14px;border:1px solid #53301e;border-radius:999px;color:#f0c29f;background:#22150e;font:inherit;font-size:11px;cursor:pointer}.empty-state-action:hover{border-color:var(--ef-forge-2)}.empty-state-action:focus-visible{outline:2px solid var(--ef-forge-2);outline-offset:2px}
+/* Focus target for view changes from the mobile drawer; the region itself needs no ring. */
+.efesto-main:focus{outline:none}

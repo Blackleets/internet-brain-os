@@ -29,6 +29,8 @@ type StreamEvent = { type?: 'conversation' | 'delta' | 'done' | 'error'; delta?:
 
 const SESSION_CONNECTION_KEY = 'hephaestus.owner.connection.session.v1';
 const DEFAULT_BASE_URL = 'http://127.0.0.1:4000';
+// Must match the drawer breakpoint in efesto-forge-redesign.css.
+const MOBILE_NAV_QUERY = '(max-width: 720px)';
 type NavItem = { id: View; label: string; icon: typeof Home };
 const workspaceNav: NavItem[] = [
   { id: 'home', label: 'Inicio', icon: Home },
@@ -72,6 +74,11 @@ export default function EfestoProductShell() {
   const [connecting, setConnecting] = useState(false);
   const [rememberSession, setRememberSession] = useState(false);
   const chatAbortRef = useRef<AbortController | undefined>(undefined);
+  const [mobileViewport, setMobileViewport] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const navOpenerRef = useRef<HTMLElement | null>(null);
+  const drawerCloseRef = useRef<HTMLButtonElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
 
   const selectedProvider = providers.find((item) => item.id === selectedProviderId);
   const focusedGoalSurface = goalSurfaces[0];
@@ -148,9 +155,48 @@ export default function EfestoProductShell() {
     };
   }, [connection]);
 
-  function navigate(next: View) { setView(next); setNavOpen(false); }
-  function toggleNavigation() {
-    if (window.matchMedia('(max-width: 720px)').matches) {
+  // Mobile drawer keyboard contract: the off-canvas sidebar is inert while closed (no Tab stops
+  // into invisible links), focus moves into it on open, Escape closes it and returns focus to the
+  // menu button, and choosing a destination moves focus to the new view.
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia(MOBILE_NAV_QUERY);
+    const sync = () => {
+      setMobileViewport(query.matches);
+      if (!query.matches) setNavOpen(false);
+    };
+    sync();
+    query.addEventListener?.('change', sync);
+    return () => query.removeEventListener?.('change', sync);
+  }, []);
+
+  useEffect(() => {
+    if (!navOpen) return;
+    drawerCloseRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      closeNavigation();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [navOpen]);
+
+  function navigate(next: View) {
+    const drawerWasOpen = navOpen;
+    setView(next);
+    setNavOpen(false);
+    if (drawerWasOpen) mainRef.current?.focus();
+  }
+  function closeNavigation() {
+    setNavOpen(false);
+    // Home hides the topbar and opens the drawer from its own menu button: return focus there.
+    const opener = navOpenerRef.current;
+    (opener?.isConnected ? opener : menuButtonRef.current)?.focus();
+  }
+  function toggleNavigation(opener?: HTMLElement) {
+    if (typeof window.matchMedia === 'function' && window.matchMedia(MOBILE_NAV_QUERY).matches) {
+      navOpenerRef.current = opener ?? null;
       setNavOpen(true);
       return;
     }
@@ -398,18 +444,19 @@ export default function EfestoProductShell() {
   }
 
   const supportedFinds = kernelSupportedFinds(snapshot?.opportunities, snapshot?.missions);
+  const navExpanded = mobileViewport ? navOpen : !sidebarCollapsed;
   // Focused GoalSurface mission: findCount is Kernel SUPPORT (verificationResults stripped).
   // Must not use global inbox length; countMissionKernelSupportedFinds reads findCount.
   const forgeSupportedFindCount = countMissionKernelSupportedFinds(focusedGoalSurface?.mission);
 
   return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''}`}>
-    <aside className="efesto-sidebar" aria-label="Navegación principal">
+    <aside id="efesto-sidebar" className="efesto-sidebar" aria-label="Navegación principal" inert={mobileViewport && !navOpen ? true : undefined}>
       <div className="efesto-brand">
         <button type="button" onClick={() => navigate('home')} aria-label="Efesto, inicio">
           <span className="brand-mark"><Image src="/efesto-smith.svg" alt="" width={36} height={36} /></span>
           <span><strong>EFESTO</strong><small>The Intelligence Forge</small></span>
         </button>
-        <button type="button" className="mobile-close" onClick={() => setNavOpen(false)} aria-label="Cerrar menú"><X /></button>
+        <button type="button" ref={drawerCloseRef} className="mobile-close" onClick={closeNavigation} aria-label="Cerrar menú"><X /></button>
       </div>
 
       <div className="sidebar-actions" aria-label="Crear">
@@ -438,16 +485,16 @@ export default function EfestoProductShell() {
       </button>
       <button type="button" className="kernel-summary" onClick={() => navigate('settings')}><span className={`kernel-dot ${snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} /><span><strong>{snapshot?.readiness.kernel === 'online' ? 'Kernel online' : 'Kernel local'}</strong><small>{snapshot?.readiness.bootstrap?.pairing === 'paired' ? 'Emparejado' : snapshot?.readiness.bootstrap?.pairing === 'required' ? 'Pairing requerido' : 'Sin conexión'}</small></span><ChevronRight /></button>
     </aside>
-    {navOpen ? <button type="button" className="nav-scrim" onClick={() => setNavOpen(false)} aria-label="Cerrar menú" /> : null}
+    {navOpen ? <button type="button" className="nav-scrim" onClick={closeNavigation} aria-label="Cerrar menú" tabIndex={-1} /> : null}
 
     <section className="efesto-stage">
       <header className="efesto-topbar">
-        <div><button type="button" className="menu-button" onClick={toggleNavigation} aria-label="Alternar navegación"><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view)}</button></div>
+        <div><button type="button" ref={menuButtonRef} className="menu-button" onClick={(event) => toggleNavigation(event.currentTarget)} aria-label="Alternar navegación" aria-controls="efesto-sidebar" aria-expanded={navExpanded}><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view)}</button></div>
         <div className="top-context"><span className="local-first-status"><ShieldCheck /> Primero local</span><span className="private-status">Privado por diseño</span></div>
         <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection && snapshot?.readiness.kernel === 'online' ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{!connection ? 'Conectar' : snapshot?.readiness.kernel === 'online' ? 'Kernel listo' : 'Kernel sin respuesta'}</button></div>
       </header>
-      <main className="efesto-main">
-        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} supportedFinds={supportedFinds} forgeSupportedFindCount={forgeSupportedFindCount} missions={snapshot?.missions} onFindFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
+      <main id="efesto-main" ref={mainRef} tabIndex={-1} className="efesto-main">
+        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} navExpanded={navExpanded} supportedFinds={supportedFinds} forgeSupportedFindCount={forgeSupportedFindCount} missions={snapshot?.missions} onFindFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
         {view === 'goals' ? <div className="missions-route"><GoalsView snapshot={snapshot} onNew={newGoal} onConnect={openSettings} /><ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot?.productScorecard} /></div> : null}
         {view === 'finds' ? <FindsView opportunities={supportedFinds} missions={snapshot?.missions} connected={Boolean(connection)} onNewGoal={newGoal} onConnect={openSettings} onFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
         {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} onOpen={(record) => void openCase(record)} onNewGoal={newGoal} onConnect={openSettings} /> : null}
