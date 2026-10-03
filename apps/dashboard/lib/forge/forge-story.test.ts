@@ -24,7 +24,7 @@ const results = [
   { candidateId: 'c-dns', status: 'verification_failed', reason: 'getaddrinfo ENOTFOUND es.nodns.example' },
 ];
 const row = (extra: Record<string, unknown> = {}) => ({ id: MISSION, goalId: 'goal:story', goalTitle: 'empleo de conductor', status: 'completed', executionPhase: 'forged', createdAt: '2026-10-03T09:00:00.000Z', searchCandidates: candidates, verificationResults: results, ...extra }) as MissionSummary;
-const find = { id: 'opp', title: 'Trabajos de conductor en Barcelona: determina tus horas | Drive', category: 'job', categoryLabel: 'Empleo', benefitType: 'income', sourceHost: 'drive.example', relevance: 80, nextAction: 'Leer', status: 'new', detectedAt: '2026-10-03T09:02:00.000Z', evidenceId: 'e-drive', sourceUrl: candidates[0].url, supported: true };
+const find = { id: 'opp', title: 'Trabajos de conductor en Barcelona: determina tus horas | Drive', category: 'job', categoryLabel: 'Empleo', benefitType: 'income', sourceHost: 'drive.example', relevance: 80, nextAction: 'Leer', status: 'new' as const, detectedAt: '2026-10-03T09:02:00.000Z', evidenceId: 'e-drive', sourceUrl: candidates[0].url, supported: true };
 
 function mission(workState: NonNullable<GoalSurface['mission']>['workState'], extra: Record<string, unknown> = {}, withFind = true): ForgeMissionModel {
   const model = buildForgeModel({ connected: true, kernelOnline: true, surface: surface(workState), mission: row(extra), ...(withFind ? { opportunities: [find] } : {}) });

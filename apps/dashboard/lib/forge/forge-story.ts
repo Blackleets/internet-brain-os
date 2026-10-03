@@ -171,7 +171,9 @@ export function storyTimeline(story: Pick<ForgeStory, 'nodes'>): StoryTimeline {
   const end = find + 2.2;
   return {
     q0, q1, crawl0, spider0, pick, pull, read, strike, strikeNode, verdict, find, end,
-    hold: { idle: q1 + 0.05, searching: spider0, candidates: read0 - 0.15, final: end },
+    // idle holds before the query is typed (no search yet); searching holds before the crawl reaches any
+    // real node (the spider roams the decorative graph meanwhile).
+    hold: { idle: q0 - 0.3, searching: crawl0 - 0.05, candidates: read0 - 0.15, final: end },
   };
 }
 
