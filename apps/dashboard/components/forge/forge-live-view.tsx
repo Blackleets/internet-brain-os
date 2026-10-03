@@ -1,15 +1,16 @@
 'use client';
 
-import { Check, ChevronDown, ExternalLink, Plug, RefreshCw, RotateCcw, Search, Sparkles, X } from 'lucide-react';
+import { Check, ChevronDown, Plug, RefreshCw, RotateCcw } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ForgeMissionModel, ForgeModel, ForgeSource, ForgeStepState } from '../../lib/forge/forge-model';
-import { buildForgeScene } from '../../lib/forge/forge-scene';
-import { displayKeywords, goalTermSegments } from '../../lib/forge/goal-terms';
-import { ForgeRenderer, type CardStage, type SceneSpec } from './forge-renderer';
+import { buildForgeStory, MAX_GRAPH_NODES, readFailureCode } from '../../lib/forge/forge-story';
+import { goalTermSegments } from '../../lib/forge/goal-terms';
+import { ForgeCrawlerRenderer, type CrawlerStage } from './forge-crawler-renderer';
 
 const NARROW_MAX = 760;
 const VISIBLE_WIDE = 12;
 const VISIBLE_NARROW = 6;
+const STEP_SHORT = ['Goal', 'Búsqueda', 'Evidence', 'SUPPORT', 'Find'];
 
 type Props = {
   model: ForgeModel;
@@ -24,216 +25,215 @@ type Props = {
 
 export function ForgeLiveView({ model, onConnect, onOpenFinds, onRelaunch, relaunchPending = false, headingId = 'forge-live-title' }: Props) {
   const rootRef = useRef<HTMLElement>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const anvilRef = useRef<HTMLDivElement>(null);
-  const trayRef = useRef<HTMLDivElement>(null);
-  const cardRefs = useRef(new Map<string, HTMLElement>());
-  const stagesRef = useRef(new Map<string, CardStage>());
-  const rendererRef = useRef<ForgeRenderer | undefined>(undefined);
-  const measureRef = useRef<() => void>(() => undefined);
-  // Mobile-first: start narrow; a wide container flips this before first paint (layout effect).
   const [narrow, setNarrow] = useState(true);
-  const [expanded, setExpanded] = useState(false);
-  const [legendOpen, setLegendOpen] = useState<boolean | undefined>(undefined);
-  const [replay, setReplay] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  // True only for a play-through that re-tells an already settled mission (first paint of a settled
-  // mission, or "Repetir la forja"); live Kernel updates never get the reconstruction caption.
-  const [reconstructing, setReconstructing] = useState(false);
   const reducedMotion = useReducedMotion();
+  const mission = model.kind === 'mission' ? model : undefined;
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const sync = () => { const width = root.clientWidth; setNarrow(width > 0 ? width < NARROW_MAX : true); };
+    sync();
+    if (typeof ResizeObserver !== 'function') return;
+    const observer = new ResizeObserver(sync);
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, []);
+
+  const [playing, setPlaying] = useState(false);
+  const [reconstructing, setReconstructing] = useState(false);
+  const phaseKey = model.kind === 'mission' ? model.phase : model.kind;
+  return <section
+    ref={rootRef}
+    className="forge-live"
+    data-kind={model.kind}
+    data-phase={phaseKey}
+    data-layout={narrow ? 'narrow' : 'wide'}
+    data-playing={playing ? 'true' : undefined}
+    data-reduced-motion={reducedMotion ? 'true' : undefined}
+    aria-labelledby={headingId}
+  >
+    <ForgeHeader model={model} headingId={headingId} onConnect={onConnect} onRelaunch={onRelaunch} relaunchPending={relaunchPending} replaying={Boolean(mission && playing && reconstructing && mission.motion === 'settled')} />
+    {mission
+      ? <ForgeBody key={mission.missionId} model={mission} narrow={narrow} reducedMotion={reducedMotion} onOpenFinds={onOpenFinds} onPlaying={setPlaying} onReconstructing={setReconstructing} />
+      : <div className="forge-live-cold" aria-hidden="true"><div className="forge-live-stage is-cold"><p className="forge-slabel">La web · índice del buscador<span>fondo decorativo · no se cuenta</span></p></div></div>}
+    <p className="forge-sr-only" aria-live="polite" aria-atomic="true">{model.summary}</p>
+  </section>;
+}
+
+function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onPlaying, onReconstructing }: {
+  model: ForgeMissionModel; narrow: boolean; reducedMotion: boolean; onOpenFinds?: () => void;
+  onPlaying: (value: boolean) => void; onReconstructing: (value: boolean) => void;
+}) {
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const fxRef = useRef<HTMLCanvasElement>(null);
+  const bgRef = useRef<HTMLCanvasElement>(null);
+  const chipRef = useRef<HTMLParagraphElement>(null);
+  const queryRef = useRef<HTMLSpanElement>(null);
+  const caretRef = useRef<HTMLElement>(null);
+  const tickerRef = useRef<HTMLDivElement>(null);
+  const funnelRef = useRef<HTMLDListElement>(null);
+  const countRef = useRef<HTMLSpanElement>(null);
+  const cardRefs = useRef(new Map<string, HTMLElement>());
+  const stagesRef = useRef(new Map<string, CrawlerStage>());
+  const rendererRef = useRef<ForgeCrawlerRenderer | undefined>(undefined);
   const reducedRef = useRef(reducedMotion);
   reducedRef.current = reducedMotion;
+  const [expanded, setExpanded] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(true);
+  const [playing, setPlaying] = useState(false);
+  const [replayTick, setReplayTick] = useState(0);
 
-  const mission = model.kind === 'mission' ? model : undefined;
-  const scene = useMemo(() => buildForgeScene(model), [model]);
-  const sources = useMemo(() => mission?.sources ?? [], [mission]);
+  const story = useMemo(() => buildForgeStory(model), [model]);
+  const sources = model.sources;
   const limit = narrow ? VISIBLE_NARROW : VISIBLE_WIDE;
   const visibleSources = useMemo(() => (expanded ? sources : sources.slice(0, limit)), [expanded, limit, sources]);
   const hiddenCount = sources.length - visibleSources.length;
-  // Phones: the gold Find card is the hero, so no ingot tray competes with it under the anvil.
-  const showTray = Boolean(mission && !narrow && (mission.counts.supported > 0 || mission.phase === 'forged'));
-  const missionKey = mission?.missionId ?? model.kind;
+  const waiting = model.phase === 'queued' || model.phase === 'waiting_agent';
+  const searching = model.phase === 'searching';
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    let renderer: ForgeRenderer;
+  useLayoutEffect(() => {
+    const fx = fxRef.current, bg = bgRef.current, body = bodyRef.current, stage = stageRef.current;
+    if (!fx || !bg || !body || !stage) return;
+    let renderer: ForgeCrawlerRenderer;
     try {
-      renderer = new ForgeRenderer(canvas, {
+      renderer = new ForgeCrawlerRenderer(fx, bg, {
+        body, stage,
+        chip: chipRef.current,
+        funnel: funnelRef.current,
+        card: (id) => cardRefs.current.get(id),
+        queryText: queryRef.current,
+        caret: caretRef.current,
+        ticker: tickerRef.current,
+        cells: () => new Map([...(funnelRef.current?.querySelectorAll<HTMLElement>('[data-k] dd') ?? [])].map((dd) => [(dd.parentElement as HTMLElement).dataset.k ?? '', dd])),
+        panelCount: countRef.current,
+        steps: () => [...(body.closest('.forge-live')?.querySelectorAll<HTMLElement>('.forge-live-steps > li') ?? [])],
+      }, {
         reducedMotion: () => reducedRef.current,
-        onStage: (id, stage) => {
-          stagesRef.current.set(id, stage);
+        onStage: (id, value) => {
+          stagesRef.current.set(id, value);
           const el = cardRefs.current.get(id);
-          if (el) el.dataset.stage = stage;
+          if (el) el.dataset.stage = value;
         },
-        onPlaying: (value) => { setPlaying(value); if (!value) setReconstructing(false); },
-        onTray: (landed) => { if (trayRef.current) trayRef.current.dataset.landed = String(landed); },
+        onPlaying: (value) => { setPlaying(value); onPlaying(value); if (!value) onReconstructing(false); },
       });
     } catch { return; }
     rendererRef.current = renderer;
-    measureRef.current();
     const onVisibility = () => renderer.setVisibility(document.visibilityState !== 'hidden');
     document.addEventListener('visibilitychange', onVisibility);
     onVisibility();
     let observer: IntersectionObserver | undefined;
     if (typeof IntersectionObserver === 'function') {
       observer = new IntersectionObserver((entries) => renderer.setOnScreen(entries.some((entry) => entry.isIntersecting)));
-      observer.observe(canvas);
+      observer.observe(body);
     }
+    let resize: ResizeObserver | undefined;
+    let frame = 0;
+    if (typeof ResizeObserver === 'function') {
+      resize = new ResizeObserver(() => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => renderer.measure()); });
+      resize.observe(body);
+      const list = body.querySelector('.forge-live-panel');
+      if (list) resize.observe(list);
+    }
+    const panel = body.querySelector('.forge-live-panel');
+    const onScroll = () => renderer.measure();
+    panel?.addEventListener('scroll', onScroll, { passive: true });
+    void document.fonts?.ready.then(() => renderer.measure());
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
       observer?.disconnect();
+      resize?.disconnect();
+      cancelAnimationFrame(frame);
+      panel?.removeEventListener('scroll', onScroll);
       renderer.destroy();
       rendererRef.current = undefined;
     };
+  // The renderer lives as long as this mission's body (keyed by mission id).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // A different mission replays from scratch; stale card stages never leak across missions.
-  const settledAtMount = mission?.motion === 'settled';
-  const settledRef = useRef(settledAtMount);
-  settledRef.current = settledAtMount;
-  useEffect(() => { stagesRef.current.clear(); setReconstructing(settledRef.current); setReplay((value) => value + 1); }, [missionKey]);
+  // First paint of a settled mission re-tells it ("Reconstrucción"); live data animates as it lands.
+  const firstRef = useRef(true);
+  useLayoutEffect(() => {
+    if (firstRef.current) { firstRef.current = false; onReconstructing(model.motion === 'settled' && !reducedMotion); }
+    rendererRef.current?.setStory(story, false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story, reducedMotion]);
+  useLayoutEffect(() => {
+    if (!replayTick) return;
+    stagesRef.current.clear();
+    onReconstructing(true);
+    rendererRef.current?.setStory(story, true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replayTick]);
+  useLayoutEffect(() => { rendererRef.current?.measure(); }, [narrow, visibleSources, legendOpen]);
 
-  const measure = useCallback(() => {
-    const root = rootRef.current;
-    const stage = stageRef.current;
-    const anvil = anvilRef.current;
-    if (!root || !stage || !anvil) return;
-    const width = root.clientWidth;
-    const isNarrow = width > 0 ? width < NARROW_MAX : true;
-    if (isNarrow !== narrow) { setNarrow(isNarrow); return; }
-    const renderer = rendererRef.current;
-    if (!renderer) return;
-    const box = stage.getBoundingClientRect();
-    if (box.width < 1 || box.height < 1) return;
-    const anvilBox = anvil.getBoundingClientRect();
-    const scale = isNarrow ? Math.min(0.76, anvilBox.width / 420) : Math.min(1, Math.max(0.62, anvilBox.width / 340));
-    // Phones: the anvil sits on the bottom of its zone (body + floor shadow ≈ 134 units under the bar),
-    // the space above it is where the sparks fly.
-    const anvilSpec = {
-      x: anvilBox.left - box.left + anvilBox.width / 2,
-      y: isNarrow ? anvilBox.bottom - box.top - 136 * scale : anvilBox.top - box.top + anvilBox.height * 0.56,
-      scale,
-    };
-    const trayBox = showTray ? trayRef.current?.getBoundingClientRect() : undefined;
-    const centerX = box.width / 2;
-    const byId = new Map(scene.elements.map((item) => [item.id, item]));
-    const threads: SceneSpec['threads'] = [];
-    let laneLeft = 0;
-    let laneRight = 0;
-    let laneDown = 0;
-    for (const source of visibleSources) {
-      const el = cardRefs.current.get(source.id);
-      const element = byId.get(source.id);
-      if (!el || !element) continue;
-      const card = el.getBoundingClientRect();
-      const left = card.left - box.left;
-      const top = card.top - box.top;
-      const base = { id: source.id, kind: element.kind, ...(element.readFailed ? { readFailed: true } : {}) };
-      if (isNarrow) threads.push({ ...base, ax: left + 24, ay: top, side: 'down', lane: laneDown++ });
-      else if (left + card.width / 2 < centerX) threads.push({ ...base, ax: left + card.width, ay: top + Math.min(card.height / 2, 34), side: 'left', lane: laneLeft++ });
-      else threads.push({ ...base, ax: left, ay: top + Math.min(card.height / 2, 34), side: 'right', lane: laneRight++ });
-    }
-    renderer.update({
-      width: box.width,
-      height: box.height,
-      layout: isNarrow ? 'narrow' : 'wide',
-      anvil: anvilSpec,
-      tray: trayBox ? { x: trayBox.left - box.left, y: trayBox.top - box.top + trayBox.height - 24, w: trayBox.width } : null,
-      threads,
-      mood: scene.mood,
-      motion: scene.motion,
-      searchPulse: scene.searchPulse,
-      replay,
-    });
-  }, [narrow, replay, scene, showTray, visibleSources]);
-
-  measureRef.current = measure;
-  useLayoutEffect(() => { measure(); }, [measure, reducedMotion]);
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root || typeof ResizeObserver !== 'function') return;
-    let frame = 0;
-    const observer = new ResizeObserver(() => { cancelAnimationFrame(frame); frame = requestAnimationFrame(measure); });
-    observer.observe(root);
-    if (stageRef.current) observer.observe(stageRef.current);
-    return () => { cancelAnimationFrame(frame); observer.disconnect(); };
-  }, [measure]);
-
-  useEffect(() => {
-    if (legendOpen !== undefined || typeof window.matchMedia !== 'function') return;
-    setLegendOpen(!window.matchMedia('(max-width: 720px)').matches);
-  }, [legendOpen]);
-
-  const setCardRef = useCallback((id: string) => (el: HTMLElement | null) => {
+  const setCardRef = useCallback((id: string, fallback: CrawlerStage) => (el: HTMLElement | null) => {
     if (!el) { cardRefs.current.delete(id); return; }
     cardRefs.current.set(id, el);
-    const stage = stagesRef.current.get(id);
-    if (stage) el.dataset.stage = stage;
+    el.dataset.stage = stagesRef.current.get(id) ?? fallback;
   }, []);
 
-  const phaseKey = model.kind === 'mission' ? model.phase : model.kind;
-  const canReplay = Boolean(mission && sources.length > 0 && !reducedMotion && mission.motion === 'settled');
-  return <section
-    ref={rootRef}
-    className="forge-live"
-    data-kind={model.kind}
-    data-phase={phaseKey}
-    data-mood={scene.mood}
-    data-layout={narrow ? 'narrow' : 'wide'}
-    data-playing={playing ? 'true' : undefined}
-    data-reduced-motion={reducedMotion ? 'true' : undefined}
-    aria-labelledby={headingId}
-  >
-    <ForgeHeader model={model} headingId={headingId} onConnect={onConnect} onRelaunch={onRelaunch} relaunchPending={relaunchPending} />
+  const canReplay = Boolean(sources.length > 0 && !reducedMotion && model.motion === 'settled');
+  const exact = story.query.exact;
+  return <div ref={bodyRef} className="forge-live-body">
+    <canvas ref={fxRef} className="forge-live-fx" aria-hidden="true" />
     <div ref={stageRef} className="forge-live-stage">
-      <canvas ref={canvasRef} className="forge-live-canvas" aria-hidden="true" />
-      {mission && narrow ? <ForgeWorkbench model={mission} replaying={playing && reconstructing && mission.motion === 'settled'} /> : null}
-      <div ref={anvilRef} className="forge-live-anvil">
-        {mission && !narrow ? <ForgeWorkbench model={mission} replaying={playing && reconstructing && mission.motion === 'settled'} /> : null}
+      <canvas ref={bgRef} className="forge-live-bg" aria-hidden="true" />
+      <p className="forge-slabel" aria-hidden="true">La web · índice del buscador<span>fondo decorativo · no se cuenta</span></p>
+      <div className="forge-bench" data-mode={waiting ? 'waiting' : searching ? 'searching' : 'searched'}>
+        <p ref={chipRef} className="forge-chip" title={exact ? 'Consulta publicada por el Kernel' : 'Hermes busca a partir del Goal; la consulta exacta no la publica el Kernel'}>
+          <span className="fn" aria-hidden="true">hermes.search(</span>
+          <span ref={queryRef} className="forge-bench-q">{waiting ? '' : `«${story.query.text}»`}</span>
+          <i ref={caretRef} className="forge-caret" aria-hidden="true" />
+          <span className="fn" aria-hidden="true">)</span>
+          {waiting ? null : exact ? null : <em className="forge-chip-tag">desde el Goal</em>}
+        </p>
+        {waiting ? <div className="forge-bench-wait">
+          <p className="forge-bench-title"><span className="forge-bench-embers" aria-hidden="true"><i /><i /><i /></span>{model.phase === 'queued' ? 'Esperando turno del agente' : 'Esperando a que Hermes se conecte'}</p>
+          {model.nextStep ? <p className="forge-bench-next">{model.nextStep}</p> : null}
+        </div> : null}
       </div>
-      {mission ? <>
-        {visibleSources.length ? <ul className="forge-live-sources" aria-label={`Fuentes de la misión (${sources.length})`}>
-          {visibleSources.map((source) => <li key={source.id} ref={setCardRef(source.id)} className="forge-source" data-state={source.state}>
-            <SourceCard source={source} goalTerms={mission.goalTerms} onOpenFinds={onOpenFinds} />
-          </li>)}
-        </ul> : noSourcesCopy(mission) ? <p className="forge-live-nosources">{noSourcesCopy(mission)}</p> : null}
-        {hiddenCount > 0 || expanded ? <button type="button" className="forge-live-more" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
-          {expanded ? 'Mostrar menos fuentes' : `Ver ${hiddenCount} ${hiddenCount === 1 ? 'fuente más' : 'fuentes más'}`}<ChevronDown />
-        </button> : null}
-        {showTray ? <div ref={trayRef} className="forge-live-tray" aria-hidden="true"><span>{mission.counts.supported} {mission.counts.supported === 1 ? 'FIND' : 'FINDS'}</span></div> : null}
-      </> : null}
+      <div className="forge-ticker" aria-hidden="true"><div className="forge-ticker-ttl"><i /><i /><i />&nbsp;forge.log</div><div ref={tickerRef} className="forge-ticker-lines" /></div>
+      <div className="forge-live-anvil" aria-hidden="true" />
     </div>
-    {mission ? <footer className="forge-live-foot">
-      <dl className="forge-live-counters" aria-label="Contadores de la misión">
-        <div><dt>fuentes</dt><dd>{mission.counts.sources}</dd></div>
-        <div><dt>leídas</dt><dd>{mission.counts.read}</dd></div>
-        <div><dt>Evidence</dt><dd>{mission.counts.evidence}</dd></div>
-        <div className="is-support"><dt>con SUPPORT</dt><dd>{mission.counts.supported}</dd></div>
-      </dl>
-      {canReplay ? <button type="button" className="forge-live-replay" disabled={playing} onClick={() => { stagesRef.current.clear(); setReconstructing(true); setReplay((value) => value + 1); }}>
-        <RotateCcw aria-hidden="true" />{playing ? 'Reproduciendo…' : 'Repetir la forja'}<span className="forge-sr-only"> (animación con los mismos datos del Kernel)</span>
+    <dl ref={funnelRef} className="forge-live-counters" aria-label="Contadores de la misión" data-cells={story.resultCount !== undefined ? 4 : 3}>
+      {story.resultCount !== undefined ? <div data-k="results" data-on="true"><dt>resultados del buscador</dt><dd>{story.resultCount}</dd></div> : null}
+      <div data-k="candidates" data-on="true"><dt>candidatos</dt><dd>{model.counts.sources}</dd></div>
+      <div data-k="evidence" data-on="true"><dt>Evidence</dt><dd>{model.counts.evidence}</dd></div>
+      <div data-k="support" data-on="true" className="is-support"><dt>SUPPORT</dt><dd>{model.counts.supported}</dd></div>
+    </dl>
+    <aside className="forge-live-panel" aria-label="Candidatos → Evidence">
+      <header className="forge-panel-head"><h3>Candidatos → Evidence</h3><span ref={countRef} className="forge-panel-count">{model.counts.sources} de {model.counts.sources}</span></header>
+      {visibleSources.length ? <ul className="forge-live-sources" aria-label={`Fuentes de la misión (${sources.length})`}>
+        {visibleSources.map((source) => <li key={source.id} ref={setCardRef(source.id, finalStage(source))} className="forge-source" data-state={source.state}>
+          <SourceCard source={source} goalTerms={model.goalTerms} onOpenFinds={onOpenFinds} />
+        </li>)}
+      </ul> : noSourcesCopy(model) ? <p className="forge-live-nosources">{noSourcesCopy(model)}</p> : null}
+      {hiddenCount > 0 || expanded ? <button type="button" className="forge-live-more" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
+        {expanded ? 'Mostrar menos fuentes' : `Ver ${hiddenCount} ${hiddenCount === 1 ? 'fuente más' : 'fuentes más'}`}<ChevronDown aria-hidden="true" />
       </button> : null}
-      <details className="forge-live-legend" open={legendOpen ?? false} onToggle={(event) => setLegendOpen(event.currentTarget.open)}>
+      <details className="forge-live-legend" open={legendOpen} onToggle={(event) => setLegendOpen(event.currentTarget.open)}>
         <summary>Leyenda</summary>
         <ul>
-          <li><i className="lg-spark" />Chispa = candidato real de la búsqueda (no es Evidence)</li>
-          <li><i className="lg-ember" />Brasa = página leída por el Kernel</li>
-          <li><i className="lg-molten" />Hilo fundido = Evidence guardada</li>
-          <li><i className="lg-gold" />Acero-oro = Kernel SUPPORT → Find</li>
-          <li><i className="lg-term" />Dorado en el texto = términos del Goal en el extracto</li>
-          <li><i className="lg-ash" />Ceniza = sin SUPPORT o no se pudo leer (con su motivo)</li>
+          <li><i className="lg-spark" />Chispa = candidato que eligió Hermes</li>
+          <li><i className="lg-molten" />Hilo fundido = página leída → Evidence</li>
+          <li><i className="lg-gold" />Oro = Kernel SUPPORT → Find</li>
+          <li><i className="lg-steel" />Acero = leída, sin SUPPORT</li>
+          <li><i className="lg-ash" />Ceniza = no leída, con su motivo</li>
         </ul>
+        <p>Datos reales de la misión ({countWord(model.counts.sources, 'candidato', 'candidatos')}, {model.counts.evidence} Evidence, {model.counts.supported} SUPPORT){story.nodes.length < sources.length ? ` · el grafo dibuja ${MAX_GRAPH_NODES}` : ''}. El grafo de fondo es decorativo.</p>
         {reducedMotion ? <p className="forge-live-rm">Movimiento reducido: se muestra el estado final, sin animación.</p> : null}
       </details>
-    </footer> : null}
-    <p className="forge-sr-only" aria-live="polite" aria-atomic="true">{model.summary}</p>
-  </section>;
+      {canReplay ? <button type="button" className="forge-live-replay" disabled={playing} onClick={() => setReplayTick((value) => value + 1)}>
+        <RotateCcw aria-hidden="true" />{playing ? 'Reproduciendo…' : 'Repetir la forja'}<span className="forge-sr-only"> (animación con los mismos datos del Kernel)</span>
+      </button> : null}
+    </aside>
+  </div>;
 }
 
-function ForgeHeader({ model, headingId, onConnect, onRelaunch, relaunchPending }: { model: ForgeModel; headingId: string; onConnect?: () => void; onRelaunch?: (goalId: string) => void; relaunchPending?: boolean }) {
+function ForgeHeader({ model, headingId, onConnect, onRelaunch, relaunchPending, replaying }: { model: ForgeModel; headingId: string; onConnect?: () => void; onRelaunch?: (goalId: string) => void; relaunchPending?: boolean; replaying: boolean }) {
   if (model.kind === 'offline') {
     return <header className="forge-live-head">
       <div className="forge-live-goal">
@@ -241,7 +241,7 @@ function ForgeHeader({ model, headingId, onConnect, onRelaunch, relaunchPending 
         <h2 id={headingId}>{OFFLINE_COPY[model.reason].title}</h2>
         <p className="forge-live-phase"><i data-tone={model.reason === 'connecting' ? 'hot' : 'off'} /><span>{OFFLINE_COPY[model.reason].detail}</span></p>
       </div>
-      {onConnect && model.reason !== 'connecting' ? <button type="button" className="forge-live-connect" onClick={onConnect}><Plug />Conectar Kernel</button> : null}
+      {onConnect && model.reason !== 'connecting' ? <button type="button" className="forge-live-connect" onClick={onConnect}><Plug aria-hidden="true" />Conectar Kernel</button> : null}
     </header>;
   }
   if (model.kind === 'empty') {
@@ -255,62 +255,58 @@ function ForgeHeader({ model, headingId, onConnect, onRelaunch, relaunchPending 
   }
   const current = model.steps.findIndex((step) => step.state === 'active');
   const activeIndex = current >= 0 ? current : lastIndex(model.steps, (step) => step.state !== 'pending' && step.state !== 'skipped');
+  const meta = metaPill(model, replaying);
   return <header className="forge-live-head">
     <div className="forge-live-goal">
-      <small className="forge-live-eyebrow">GOAL · MISIÓN DEL KERNEL</small>
+      <p className="forge-live-kick"><small className="forge-live-eyebrow">GOAL · MISIÓN DEL KERNEL</small><span className="forge-live-id" title={model.missionId}>{shortId(model.missionId)}</span>{meta ? <span className="forge-bench-meta" data-replaying={replaying ? 'true' : undefined} title={meta.join('')}>{meta[0]}<span className="forge-meta-more">{meta[1]}</span></span> : null}</p>
       <h2 id={headingId}>{model.goalTitle || 'Goal sin título'}</h2>
       <p className="forge-live-phase"><i data-tone={phaseTone(model)} /><span><strong>{model.phaseLabel}<PhaseClock since={model.phaseSince} live={model.motion === 'active'} /></strong> {model.phaseDetail}</span></p>
+      {model.relaunch && onRelaunch ? <div className="forge-live-relaunch">
+        <button type="button" className="forge-live-relaunch-btn" disabled={relaunchPending} onClick={() => { if (model.relaunch) onRelaunch(model.relaunch.goalId); }}>
+          <RefreshCw aria-hidden="true" />{relaunchPending ? 'Relanzando…' : 'Relanzar misión'}
+        </button>
+        <p>El Kernel la dejó leída sin SUPPORT y nadie la está trabajando. Relanzar la vuelve a poner en cola para Hermes con el mismo Goal.</p>
+      </div> : null}
+      <div className="forge-live-stepbar">
+        <ol className="forge-live-steps" aria-label="Progreso de la misión">
+          {model.steps.map((step, index) => <li key={step.id} data-state={step.state} data-gold={index >= 3 ? 'true' : undefined} aria-current={index === activeIndex ? 'step' : undefined}>
+            <em aria-hidden="true">{step.state === 'failed' ? '×' : index + 1}</em>
+            <span className="forge-step-label">{STEP_SHORT[index] ?? step.label}</span>
+            <span className="forge-sr-only">: {step.label}, {stepStateLabel(step.state)}</span>
+          </li>)}
+        </ol>
+        <p className="forge-live-stepnow" aria-hidden="true"><span className="forge-stepnow-word">Paso </span>{activeIndex + 1} de 5<span className="forge-stepnow-label"> · {model.steps[activeIndex]?.label}</span></p>
+      </div>
     </div>
-    {model.relaunch && onRelaunch ? <div className="forge-live-relaunch">
-      <button type="button" className="forge-live-relaunch-btn" disabled={relaunchPending} onClick={() => { if (model.relaunch) onRelaunch(model.relaunch.goalId); }}>
-        <RefreshCw aria-hidden="true" />{relaunchPending ? 'Relanzando…' : 'Relanzar misión'}
-      </button>
-      <p>El Kernel la dejó leída sin SUPPORT y nadie la está trabajando. Relanzar la vuelve a poner en cola para Hermes con el mismo Goal.</p>
-    </div> : null}
-    <ol className="forge-live-steps" aria-label="Progreso de la misión">
-      {model.steps.map((step, index) => <li key={step.id} data-state={step.state} aria-current={index === activeIndex ? 'step' : undefined}>
-        <b aria-hidden="true">{step.state === 'done' || step.state === 'gold' ? <Check /> : step.state === 'failed' ? <X /> : index + 1}</b>
-        <span>{step.label}</span>
-        <span className="forge-sr-only">: {stepStateLabel(step.state)}</span>
-      </li>)}
-    </ol>
-    <p className="forge-live-stepnow" aria-hidden="true"><span className="forge-stepnow-word">Paso </span>{activeIndex + 1} de 5<span className="forge-stepnow-label"> · {model.steps[activeIndex]?.label}</span></p>
   </header>;
 }
 
-/**
- * What the anvil is working on, in words: the search Hermes runs from the Goal (the Kernel does not
- * publish the exact query string unless a row carries it), the mission keywords, and for waiting
- * states the honest next step.
- */
-function ForgeWorkbench({ model, replaying }: { model: ForgeMissionModel; replaying: boolean }) {
-  const waiting = model.phase === 'queued' || model.phase === 'waiting_agent';
-  const searching = model.phase === 'searching';
-  const searched = model.counts.sources > 0;
-  if (waiting) {
-    return <div className="forge-bench" data-mode="waiting">
-      <p className="forge-bench-title"><span className="forge-bench-embers" aria-hidden="true"><i /><i /><i /></span>{model.phase === 'queued' ? 'Esperando turno del agente' : 'Esperando a que Hermes se conecte'}</p>
-      {model.nextStep ? <p className="forge-bench-next">{model.nextStep}</p> : null}
-    </div>;
+/** Dashed pill next to the kick (the mockup's tag slot): [short head, rest]. */
+function metaPill(model: ForgeMissionModel, replaying: boolean): [string, string] | undefined {
+  if (model.phase === 'queued' || model.phase === 'waiting_agent') return undefined;
+  if (replaying) return ['Reconstrucción', ' · datos reales del Kernel'];
+  if (model.phase === 'searching') return model.search.exactQueries.length ? ['Consultas de Hermes', ' publicadas por el Kernel'] : ['Hermes busca desde el Goal', ' · la consulta exacta no la publica el Kernel'];
+  if (model.counts.sources > 0) return ['Búsqueda web terminada', ` · ${model.counts.sources} ${model.counts.sources === 1 ? 'candidato real' : 'candidatos reales'}`];
+  return undefined;
+}
+
+function shortId(id: string): string {
+  return id.length > 22 ? `${id.slice(0, 16)}…${id.slice(-4)}` : id;
+}
+
+function countWord(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+/** Final visual stage of a card when no play-through runs (reduced motion, no canvas, beyond the graph). */
+function finalStage(source: ForgeSource): CrawlerStage {
+  switch (source.state) {
+    case 'supported': return 'gold';
+    case 'unsupported': return 'steel';
+    case 'read_failed': return 'ash';
+    case 'evidence': return 'evidence';
+    default: return 'candidate';
   }
-  if (!searching && !searched) return null;
-  const queries = model.search.exactQueries;
-  const keywords = displayKeywords(model.search.keywords);
-  return <div className="forge-bench" data-mode={searching ? 'searching' : 'searched'}>
-    <p className="forge-bench-query">
-      <Search aria-hidden="true" />
-      <span className="forge-bench-q">{queries.length ? queries.map((query) => `«${query}»`).join(' · ') : `«${model.search.goal}»`}</span>
-      {searching ? <span className="forge-bench-caret" aria-hidden="true" /> : null}
-    </p>
-    <p className="forge-bench-meta" data-replaying={replaying ? 'true' : undefined}>
-      {replaying && !searching ? 'Reconstrucción · datos reales del Kernel' : searching
-        ? (queries.length ? 'Consultas de Hermes publicadas por el Kernel' : 'Hermes busca en la web pública a partir del Goal · la consulta exacta no la publica el Kernel')
-        : `Búsqueda web terminada · ${model.counts.sources} ${model.counts.sources === 1 ? 'candidato real' : 'candidatos reales'}`}
-    </p>
-    {keywords.length ? <ul className="forge-bench-keywords" aria-label="Palabras clave de la misión">
-      {keywords.map((keyword) => <li key={keyword}>{keyword}</li>)}
-    </ul> : null}
-  </div>;
 }
 
 function PhaseClock({ since, live }: { since?: string; live: boolean }) {
@@ -318,37 +314,62 @@ function PhaseClock({ since, live }: { since?: string; live: boolean }) {
   if (!since || !now) return null;
   const elapsed = Math.max(0, Math.floor((now - Date.parse(since)) / 1000));
   if (!Number.isFinite(elapsed)) return null;
-  // Live phases show how long the Kernel has been in this phase; settled ones when it ended.
   return <time className="forge-live-clock" dateTime={since} title={new Date(since).toLocaleString('es-ES')}> · {live ? '' : 'hace '}{formatElapsed(elapsed)}</time>;
 }
 
 function SourceCard({ source, goalTerms, onOpenFinds }: { source: ForgeSource; goalTerms: string[]; onOpenFinds?: () => void }) {
-  const badge = BADGES[source.state];
-  const interim = INTERIM[source.state];
   const highlight = source.state === 'supported' || source.state === 'evidence' || source.state === 'unsupported';
-  return <article aria-label={sourceAria(source)}>
-    <header>
+  const read = source.state !== 'candidate';
+  const code = source.state === 'read_failed' ? readFailureCode(source.reasonCode) : read ? 'leída' : undefined;
+  const hasBody = Boolean(source.findTitle || source.quote || (source.evidenceTitle && source.evidenceTitle !== source.findTitle));
+  // The mockup card shows the Find quote at a glance (≈3 lines) and steel cards only their reason;
+  // the full quote stays in Evidence/Find and in the blockquote title.
+  const quote = source.quote && source.state !== 'unsupported' ? clipQuote(source.quote, QUOTE_GLANCE) : undefined;
+  const candidateTitle = source.candidateTitle && !GENERIC_CANDIDATE_TITLE.test(source.candidateTitle) ? source.candidateTitle : undefined;
+  return <article aria-label={sourceAria(source)} className={source.findTitle ? 'is-find' : undefined}>
+    <div className="forge-source-row">
       <span className="forge-source-badge">
-        <span className="forge-badge-final">{source.state === 'supported' ? <Check aria-hidden="true" /> : null}{badge}</span>
-        {source.state !== 'candidate' ? <span className="forge-badge-interim" data-at="landed" aria-hidden="true">CANDIDATO</span> : null}
-        {interim === 'EVIDENCE' ? <span className="forge-badge-interim" data-at="evidence" aria-hidden="true">EVIDENCE</span> : null}
+        <span className="forge-badge-final">{source.state === 'supported' ? <Check aria-hidden="true" /> : null}{BADGES[source.state]}</span>
+        {read ? <span className="forge-badge-interim" data-at="candidate" aria-hidden="true">CANDIDATO</span> : null}
+        {read ? <span className="forge-badge-interim" data-at="reading" aria-hidden="true">LEYENDO</span> : null}
+        {source.state === 'supported' || source.state === 'unsupported' ? <span className="forge-badge-interim" data-at="evidence" aria-hidden="true">EVIDENCE</span> : null}
       </span>
-      <span className="forge-source-host" title={source.url}>{source.host}{source.path ? <small>{source.path}</small> : null}</span>
-    </header>
-    {source.findTitle ? <h3 className="forge-source-findtitle">{source.findTitle}</h3> : null}
-    {source.quote ? <blockquote cite={source.url}>
-      <p>«{source.quoteTruncatedStart ? '… ' : ''}<Highlighted text={source.quote} terms={highlight ? goalTerms : []} />{source.quoteTruncatedEnd ? ' …' : ''}»</p>
-    </blockquote> : source.evidenceTitle && source.evidenceTitle !== source.findTitle ? <p className="forge-source-title"><Highlighted text={source.evidenceTitle} terms={highlight ? goalTerms : []} /></p>
-      : source.candidateTitle && !GENERIC_CANDIDATE_TITLE.test(source.candidateTitle) ? <p className="forge-source-title is-candidate">{source.candidateTitle}</p> : null}
-    {source.state === 'supported' && source.goalTerms?.length ? <ul className="forge-source-terms" aria-label="Términos del Goal presentes en la Evidence">
-      {source.goalTerms.map((term) => <li key={term}><Check aria-hidden="true" />{term}</li>)}
-    </ul> : null}
-    {source.findTitle ? null : <p className="forge-source-meta">{metaLine(source)}</p>}
-    <div className="forge-source-actions">
-      {source.findTitle && onOpenFinds ? <button type="button" className="forge-source-find" onClick={onOpenFinds}><Sparkles aria-hidden="true" />Ver Find</button> : null}
-      <a href={source.url} target="_blank" rel="noreferrer noopener" className="forge-source-link">Abrir fuente<ExternalLink aria-hidden="true" /><span className="forge-sr-only"> {source.host} (se abre en otra pestaña)</span></a>
+      <a href={source.url} target="_blank" rel="noreferrer noopener" className="forge-source-link" title={source.url} aria-label={`Abrir fuente ${source.host} (se abre en otra pestaña)`}>{source.host}</a>
+      {code ? <span className="forge-source-code" data-tone={source.state === 'read_failed' ? 'bad' : 'ok'} aria-hidden="true">{code}</span> : null}
+    </div>
+    {source.path ? <p className="forge-source-path">{source.host}{source.path}</p> : null}
+    <div className="forge-source-content">
+      {hasBody ? <div className="forge-source-pending" aria-hidden="true"><s /><s /></div> : null}
+      <div className="forge-source-body">
+        {source.findTitle ? <h3 className="forge-source-findtitle">{onOpenFinds
+          ? <button type="button" className="forge-source-find" onClick={onOpenFinds}><span className="forge-sr-only">Ver Find: </span>{source.findTitle}</button>
+          : source.findTitle}</h3> : null}
+        {quote ? <blockquote cite={source.url} title={quote.clipped ? source.quote : undefined}>
+          <p>«{source.quoteTruncatedStart ? '… ' : ''}<Highlighted text={quote.text} terms={highlight ? goalTerms : []} />{source.quoteTruncatedEnd || quote.clipped ? ' …' : ''}»</p>
+        </blockquote> : source.state !== 'unsupported' && source.evidenceTitle && source.evidenceTitle !== source.findTitle ? <p className="forge-source-title"><Highlighted text={source.evidenceTitle} terms={highlight ? goalTerms : []} /></p>
+          : candidateTitle ? <p className="forge-source-title is-candidate">{candidateTitle}</p> : null}
+        {source.findTitle ? null : <p className="forge-source-meta">
+          <span className="forge-meta-final">{metaLine(source)}</span>
+          {read && !hasBody ? <span className="forge-meta-interim" data-at="pending" aria-hidden="true">Pendiente de lectura del Kernel</span> : null}
+          {source.state === 'unsupported' ? <span className="forge-meta-interim" data-at="evidence" aria-hidden="true">Leída: Evidence guardada · esperando veredicto</span> : null}
+        </p>}
+      </div>
     </div>
   </article>;
+}
+
+const QUOTE_GLANCE = 150;
+
+export function clipQuote(text: string, max: number): { text: string; clipped: boolean } {
+  const clean = text.trim();
+  if (clean.length <= max) return { text: clean, clipped: false };
+  const cut = clean.slice(0, max + 1);
+  // Prefer ending on a sentence so the glance reads as a whole thought.
+  const sentence = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+  if (sentence > max * 0.5) return { text: cut.slice(0, sentence), clipped: true };
+  const space = cut.lastIndexOf(' ');
+  const head = (space > max * 0.6 ? cut.slice(0, space) : clean.slice(0, max)).replace(/[\s,;:.\-–—]+$/u, '');
+  return { text: head, clipped: true };
 }
 
 function Highlighted({ text, terms }: { text: string; terms: string[] }) {
@@ -367,15 +388,7 @@ const BADGES: Record<ForgeSource['state'], string> = {
   read_failed: 'NO LEÍDA',
   evidence: 'EVIDENCE',
   supported: 'KERNEL SUPPORT',
-  unsupported: 'SIN SUPPORT',
-};
-
-/** The earlier real stage of the same record, shown while its own transition is still playing. */
-const INTERIM: Record<ForgeSource['state'], string | undefined> = {
-  candidate: undefined,
-  read_failed: 'CANDIDATO',
-  evidence: 'CANDIDATO',
-  supported: 'EVIDENCE',
+  // Read and stored as Evidence; the Kernel verdict (no SUPPORT) is the line under it, as in the mockup.
   unsupported: 'EVIDENCE',
 };
 
@@ -383,10 +396,14 @@ function metaLine(source: ForgeSource): string {
   switch (source.state) {
     case 'candidate': return 'Candidato de Hermes · pendiente de lectura del Kernel';
     case 'read_failed': return `× ${source.reason ?? 'El Kernel no pudo leer la página'}`;
-    case 'evidence': return quoteNote(source, 'Evidence guardada · el Kernel no publicó veredicto');
+    case 'evidence': return quoteNote(source, 'Leída: Evidence guardada · el Kernel no publicó veredicto');
     case 'supported': return source.findTitle ? `Find forjado: ${source.findTitle}` : quoteNote(source, 'Kernel SUPPORT · la página cubre los términos del Goal');
-    case 'unsupported': return `× ${source.reason ?? 'Sin Kernel SUPPORT'}`;
+    case 'unsupported': return source.reason ? `× Leída, sin SUPPORT: ${lowerFirst(source.reason)}` : '× Leída, sin Kernel SUPPORT';
   }
+}
+
+function lowerFirst(text: string): string {
+  return text ? text[0].toLocaleLowerCase('es') + text.slice(1) : text;
 }
 
 function quoteNote(source: ForgeSource, fallback: string): string {
@@ -404,9 +421,8 @@ function sourceAria(source: ForgeSource): string {
 const GENERIC_CANDIDATE_TITLE = /^public source:\s*\S+$/i;
 
 function noSourcesCopy(model: ForgeMissionModel): string {
-  if (model.phase === 'searching') return 'Aún no hay candidatos: Hermes los está buscando. La forja no dibuja chispas sin URLs reales.';
-  // Waiting/queued: the workbench already says what comes next; no second copy of it.
-  if (model.phase === 'waiting_agent' || model.phase === 'queued') return '';
+  if (model.phase === 'searching') return 'Aún no hay candidatos: Hermes los está buscando. El grafo no dibuja nodos sin URLs reales.';
+  if (model.phase === 'waiting_agent' || model.phase === 'queued') return 'Sin candidatos todavía: la misión espera a Hermes.';
   if (model.phase === 'completed_empty') return 'La búsqueda terminó sin candidatos que verificar.';
   return 'El Kernel no publicó fuentes para esta misión.';
 }

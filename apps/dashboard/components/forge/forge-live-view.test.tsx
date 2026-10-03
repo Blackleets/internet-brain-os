@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MissionSummary } from '../../lib/kernel/contracts';
 import type { GoalSurface } from '../../lib/kernel/goal-surfaces';
 import { buildForgeModel } from '../../lib/forge/forge-model';
-import { ForgeLiveView } from './forge-live-view';
+import { clipQuote, ForgeLiveView } from './forge-live-view';
 
 // Kernel-shaped TEST FIXTURES (not product data).
 const MISSION_ID = 'mission:view-test';
@@ -67,15 +67,18 @@ describe('ForgeLiveView', () => {
     const { container } = render(<ForgeLiveView model={model} onOpenFinds={onOpenFinds} />);
     const supported = container.querySelector('.forge-source[data-state="supported"]') as HTMLElement;
     expect(supported.querySelector('blockquote')?.textContent).toBe('«Ownership is a set of rules.»');
-    // The Goal term in the Kernel excerpt is marked, and listed under the SUPPORT card.
+    // The Goal term in the Kernel excerpt is marked.
     expect([...supported.querySelectorAll('mark.forge-term')].map((mark) => mark.textContent)).toEqual(['Ownership']);
-    expect(within(within(supported).getByRole('list', { name: 'Términos del Goal presentes en la Evidence' })).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['ownership']);
     expect(within(supported).getByText('KERNEL SUPPORT')).toBeTruthy();
-    fireEvent.click(within(supported).getByRole('button', { name: 'Ver Find' }));
+    // The Find title opens the Find.
+    fireEvent.click(within(supported).getByRole('button', { name: /^Ver Find:\s*Ownership/ }));
     expect(onOpenFinds).toHaveBeenCalledTimes(1);
     const unsupported = container.querySelector('.forge-source[data-state="unsupported"]') as HTMLElement;
-    expect(within(unsupported).queryByRole('button', { name: 'Ver Find' })).toBeNull();
-    expect(within(unsupported).getByText(/La página no cubre suficientes términos del Goal/)).toBeTruthy();
+    expect(within(unsupported).queryByRole('button', { name: /Ver Find/ })).toBeNull();
+    expect(within(unsupported).getByText('EVIDENCE', { selector: '.forge-badge-final' })).toBeTruthy();
+    expect(within(unsupported).getByText(/no cubre suficientes términos del Goal/i)).toBeTruthy();
+    // Steel cards show only their reason, never a quote.
+    expect(unsupported.querySelector('blockquote')).toBeNull();
     expect(within(supported).getByRole('link', { name: /Abrir fuente/ }).getAttribute('href')).toBe(candidates[0].url);
     expect(screen.getByLabelText('Contadores de la misión').textContent).toContain('1');
     expect(container.querySelector('[aria-live="polite"]')?.textContent).toBeTruthy();
@@ -92,32 +95,38 @@ describe('ForgeLiveView', () => {
     expect(container.querySelector('.forge-bench-query')).toBeNull();
   });
 
-  it('shows the Goal the agent searches from while investigating, says the exact query is not published, and lists Kernel keywords', () => {
+  it('shows the Goal the agent searches from while investigating and says the exact query is not published', () => {
     const { container } = render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('investigating'), mission: row({ executionPhase: 'investigating', searchCandidates: undefined, scope: { keywords: ['rust', 'ownership'] } }) })} />);
     const bench = container.querySelector('.forge-bench') as HTMLElement;
     expect(bench.dataset.mode).toBe('searching');
     expect(bench.querySelector('.forge-bench-q')?.textContent).toBe('«Rust ownership guide»');
-    expect(within(bench).getByText(/la consulta exacta no la publica el Kernel/)).toBeTruthy();
-    expect(within(within(bench).getByRole('list', { name: 'Palabras clave de la misión' })).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['rust', 'ownership']);
+    expect(within(bench).getByText('desde el Goal')).toBeTruthy();
+    expect(container.querySelector('.forge-bench-meta')?.textContent).toMatch(/la consulta exacta no la publica el Kernel/);
   });
 
   it('shows the exact search queries only when the Kernel publishes them', () => {
     const { container } = render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('investigating'), mission: row({ executionPhase: 'investigating', searchCandidates: undefined, searchQueries: ['rust ownership rules'] }) })} />);
     expect(container.querySelector('.forge-bench-q')?.textContent).toBe('«rust ownership rules»');
-    expect(screen.getByText('Consultas de Hermes publicadas por el Kernel')).toBeTruthy();
+    expect(container.querySelector('.forge-bench-meta')?.textContent).toBe('Consultas de Hermes publicadas por el Kernel');
+    expect(container.querySelector('.forge-chip-tag')).toBeNull();
   });
 
   it('reports how many real candidates the search returned once the Kernel verifies them', () => {
     const { container } = render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row() })} />);
     const bench = container.querySelector('.forge-bench') as HTMLElement;
     expect(bench.dataset.mode).toBe('searched');
-    expect(within(bench).getByText('Búsqueda web terminada · 8 candidatos reales')).toBeTruthy();
+    expect(container.querySelector('.forge-bench-meta')?.textContent).toBe('Búsqueda web terminada · 8 candidatos reales');
   });
 
-  it('shows mission keyword chips without stopwords or intent-verb typos (display only)', () => {
-    const { container } = render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ scope: { keywords: ['quiero', 'budcar', 'empleo', 'ryder', 'en', 'delivery'] } }) })} />);
-    const chips = within(container.querySelector('.forge-bench') as HTMLElement).getByRole('list', { name: 'Palabras clave de la misión' });
-    expect(within(chips).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['empleo', 'ryder', 'delivery']);
+  it('clips long Kernel quotes for the card glance, preferring a sentence end', () => {
+    expect(clipQuote('short quote', 150)).toEqual({ text: 'short quote', clipped: false });
+    const long = 'Es una gran alternativa a los trabajos de conductor a tiempo completo y parcial o a otros empleos a tiempo parcial, temporales o estacionales. O tal vez ya seas conductor y quieras completar tus ganancias.';
+    expect(clipQuote(long, 150)).toEqual({ text: long.slice(0, long.indexOf('. ')), clipped: true });
+    const words = 'palabra '.repeat(40);
+    const clipped = clipQuote(words, 50);
+    expect(clipped.clipped).toBe(true);
+    expect(clipped.text.length).toBeLessThanOrEqual(50);
+    expect(clipped.text.endsWith('palabra')).toBe(true);
   });
 
   it('offers "Relanzar misión" only for a mission read without SUPPORT and no live lease', () => {
