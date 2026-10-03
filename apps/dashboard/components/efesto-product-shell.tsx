@@ -1,12 +1,12 @@
 'use client';
 
 import {
-  Activity, Bot, BrainCircuit, ChevronRight, Database, Home, Menu, RefreshCw, Settings,
+  Activity, Bot, BrainCircuit, ChevronRight, Database, Home, Menu, MoreHorizontal, Plus, RefreshCw, Settings,
   ShieldCheck, Sparkles, SquarePen, Target, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { KernelClient, KernelClientError } from '../lib/kernel/client';
-import type { CaseSummary } from '../lib/kernel/contracts';
+import type { CaseSummary, MissionSummary } from '../lib/kernel/contracts';
 import { loadGoalSurfaces, type GoalSurface, type GoalSurfaceWorkState } from '../lib/kernel/goal-surfaces';
 import { loadOverview, type OverviewSnapshot } from '../lib/kernel/overview';
 import { countMissionKernelSupportedFinds, kernelSupportedFinds, missionVerifiedWithoutSupport } from '../lib/kernel/supported-find';
@@ -49,11 +49,10 @@ const systemNav: NavItem[] = [
   { id: 'agents', label: 'Agentes', icon: Bot },
 ];
 const settingsNav: NavItem = { id: 'settings', label: 'Ajustes', icon: Settings };
-const navGroups = [
-  { label: 'Producto', items: workspaceNav },
-  { label: 'Interno', items: systemNav },
-];
 const nav = [...workspaceNav, ...systemNav, settingsNav];
+// Phone bottom tabs (v3): the four main areas + "Más", which opens the full navigation drawer.
+const tabNav = workspaceNav.filter((item) => item.id === 'home' || item.id === 'goals' || item.id === 'finds' || item.id === 'evidence');
+const ACTIVE_GOALS_MAX = 5;
 
 export default function EfestoProductShell() {
   const [view, setView] = useState<View>('home');
@@ -85,9 +84,15 @@ export default function EfestoProductShell() {
   const drawerCloseRef = useRef<HTMLButtonElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const [missionEvidence, setMissionEvidence] = useState<{ key: string; missionId: string; load: ForgeEvidenceLoad }>();
+  // "Objetivos activos" in the sidebar can pin the Goal the forge shows; otherwise the forge follows
+  // the mission the agent is working on (focusGoalSurface).
+  const [pinnedGoalId, setPinnedGoalId] = useState('');
 
   const selectedProvider = providers.find((item) => item.id === selectedProviderId);
-  const focusedGoalSurface = useMemo(() => focusGoalSurface(goalSurfaces), [goalSurfaces]);
+  const focusedGoalSurface = useMemo(
+    () => (pinnedGoalId ? goalSurfaces.find((surface) => surface.goal.id === pinnedGoalId) : undefined) ?? focusGoalSurface(goalSurfaces),
+    [goalSurfaces, pinnedGoalId],
+  );
   const brainPhase = useMemo<BrainPhase>(() => {
     if (!connection || snapshot?.readiness.kernel !== 'online') return 'offline';
     if (chatPending) return 'thinking';
@@ -265,6 +270,19 @@ export default function EfestoProductShell() {
     setPreparedGoal('');
     setInput('');
     navigate('home');
+    // With a live forge the composer sits below it: bring it into view and focus it.
+    window.requestAnimationFrame?.(() => {
+      const field = document.querySelector<HTMLTextAreaElement>('.forge-composer textarea');
+      if (!field) return;
+      field.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+      field.focus({ preventScroll: true });
+    });
+  }
+  function openGoal(goalId: string) {
+    setPinnedGoalId(goalId);
+    setChatMode(false);
+    setPreparedGoal('');
+    navigate('home');
   }
 
   async function connect(event: FormEvent<HTMLFormElement>) {
@@ -392,7 +410,7 @@ export default function EfestoProductShell() {
       await client.request(`/api/goals/${encodeURIComponent(goal.id)}/missions`, {
         method: 'POST', body: JSON.stringify({ confirmed: true, agent: 'hermes', cadence: 'manual' }),
       }, parseOk);
-      setInput(''); setPreparedGoal(''); await refresh(); navigate('home');
+      setInput(''); setPreparedGoal(''); setPinnedGoalId(''); await refresh(); navigate('home');
       setToast('Goal persistido y misión confirmada para Hermes.');
     } catch { setToast('El Kernel rechazó la misión. No se creó actividad falsa ni trabajo parcial.'); }
     finally { setGoalPending(false); }
@@ -516,7 +534,8 @@ export default function EfestoProductShell() {
     countMissionKernelSupportedFinds(focusedMissionRow),
   );
 
-  return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''}`}>
+  const activeGoals = goalSurfaces.slice(0, ACTIVE_GOALS_MAX);
+  return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''} ${mobileViewport ? 'has-tabbar' : ''}`}>
     <aside id="efesto-sidebar" className="efesto-sidebar" aria-label="Navegación principal" inert={mobileViewport && !navOpen ? true : undefined}>
       <div className="efesto-brand">
         <button type="button" onClick={() => navigate('home')} aria-label="Efesto, inicio">
@@ -526,30 +545,48 @@ export default function EfestoProductShell() {
       </div>
 
       <div className="sidebar-actions" aria-label="Crear">
+        <button type="button" className="new-goal" onClick={newGoal} title="Nuevo Goal">
+          <Plus /><span>Nuevo Goal</span>
+        </button>
         <button type="button" className="new-chat" onClick={newChat} title="Nueva conversación">
           <SquarePen /><span>Nuevo chat</span>
-        </button>
-        <button type="button" className="new-goal" onClick={newGoal} title="Nuevo Goal">
-          <Target /><span>Nuevo Goal</span>
         </button>
       </div>
 
       <nav aria-label="Áreas de Efesto">
-        {navGroups.map((group) => <div className="nav-group" key={group.label}>
-          <span className="nav-label">{group.label}</span>
-          {group.items.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} title={label}>
+        <div className="nav-group">
+          <span className="nav-label">Producto</span>
+          {workspaceNav.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} title={label}>
             <Icon /><span>{label}</span>
             {id === 'goals' && snapshot ? <b>{snapshot.goals.length}</b> : null}
             {id === 'finds' ? <b>{supportedFinds.length}</b> : null}
           </button>)}
-        </div>)}
+        </div>
       </nav>
 
+      {activeGoals.length ? <section className="sidebar-goals" aria-label="Objetivos activos">
+        <span className="nav-label">Objetivos activos</span>
+        <ul>
+          {activeGoals.map((surface) => {
+            const focused = surface.goal.id === focusedGoalSurface?.goal.id;
+            const status = goalStatusLabel(surface, snapshot?.missions);
+            return <li key={surface.goal.id}>
+              <button type="button" className={focused ? 'active' : ''} aria-current={focused ? 'true' : undefined} onClick={() => openGoal(surface.goal.id)} title={surface.goal.title}>
+                <i data-tone={status.tone} aria-hidden="true" />
+                <span><strong>{surface.goal.title}</strong><small>{status.label}</small></span>
+              </button>
+            </li>;
+          })}
+        </ul>
+      </section> : null}
+
       <div className="sidebar-spacer" />
-      <button type="button" className={'sidebar-settings ' + (view === 'settings' ? 'active' : '')} onClick={() => navigate('settings')} aria-current={view === 'settings' ? 'page' : undefined} title="Ajustes">
-        <Settings /><span>Ajustes</span>
-      </button>
-      <button type="button" className="kernel-summary" onClick={() => navigate('settings')}><span className={`kernel-dot ${snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} /><span><strong>{snapshot?.readiness.kernel === 'online' ? 'Kernel online' : 'Kernel local'}</strong><small>{snapshot?.readiness.bootstrap?.pairing === 'paired' ? 'Emparejado' : snapshot?.readiness.bootstrap?.pairing === 'required' ? 'Pairing requerido' : 'Sin conexión'}</small></span><ChevronRight /></button>
+      <nav className="sidebar-system" aria-label="Sistema">
+        {[...systemNav, settingsNav].map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} title={label}>
+          <Icon /><span>{label}</span>
+        </button>)}
+      </nav>
+      <button type="button" className="kernel-summary" onClick={() => navigate('settings')}><span className={`kernel-dot ${snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} /><span><strong>Kernel local</strong><small>{kernelChipDetail(connection?.baseUrl, snapshot)}</small></span><ChevronRight /></button>
     </aside>
     {navOpen ? <button type="button" className="nav-scrim" onClick={closeNavigation} aria-label="Cerrar menú" tabIndex={-1} /> : null}
 
@@ -573,6 +610,12 @@ export default function EfestoProductShell() {
 
       {toast ? <div className="efesto-toast" role="status"><ShieldCheck /><span>{toast}</span><button type="button" onClick={() => setToast('')} aria-label="Cerrar aviso"><X /></button></div> : null}
     </section>
+    {mobileViewport ? <nav className="efesto-tabbar" aria-label="Navegación rápida" aria-hidden={navOpen ? true : undefined} inert={navOpen ? true : undefined}>
+      {tabNav.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} aria-current={view === id ? 'page' : undefined} onClick={() => navigate(id)}>
+        <Icon aria-hidden="true" /><span>{label}</span>
+      </button>)}
+      <button type="button" onClick={(event) => toggleNavigation(event.currentTarget)} aria-controls="efesto-sidebar" aria-expanded={navOpen}><MoreHorizontal aria-hidden="true" /><span>Más</span></button>
+    </nav> : null}
   </div>;
 }
 
@@ -585,6 +628,33 @@ function brainPhaseFromWorkState(workState: GoalSurfaceWorkState | undefined): B
   if (workState === 'completed') return 'completed';
   if (workState === 'failed') return 'failed';
   return 'ready';
+}
+/** Sidebar "Objetivos activos" sub-label: the Kernel work state of the Goal's mission, in words. */
+function goalStatusLabel(surface: GoalSurface, missions?: readonly MissionSummary[]): { label: string; tone: 'gold' | 'hot' | 'idle' | 'alert' } {
+  const mission = surface.mission;
+  if (!mission) return { label: 'sin misión', tone: 'idle' };
+  // GoalSurface may omit findCount; the raw Mission rows carry Kernel SUPPORT verdicts.
+  const raw = missions?.find((item) => item.id === mission.id);
+  const finds = mission.findCount ?? (raw ? countMissionKernelSupportedFinds(raw) : 0);
+  switch (mission.workState) {
+    case 'forged': return finds > 0 ? { label: `${finds} ${finds === 1 ? 'Find' : 'Finds'} · forjado`, tone: 'gold' } : { label: 'investigación terminada', tone: 'idle' };
+    case 'verifying': return { label: 'Kernel leyendo', tone: 'hot' };
+    case 'investigating':
+    case 'running': return { label: 'Hermes buscando', tone: 'hot' };
+    case 'queued': return { label: 'en cola', tone: 'idle' };
+    case 'waiting_for_agent': return { label: 'esperando a Hermes', tone: 'idle' };
+    case 'completed': return { label: 'terminada sin Evidence', tone: 'idle' };
+    case 'failed': return { label: 'falló', tone: 'alert' };
+    default: return { label: 'en espera', tone: 'idle' };
+  }
+}
+/** Kernel chip: the local Kernel address it talks to and whether it answers. */
+function kernelChipDetail(baseUrl: string | undefined, snapshot: OverviewSnapshot | undefined): string {
+  if (!baseUrl) return 'Sin conexión';
+  let host = baseUrl;
+  try { host = new URL(baseUrl).host; } catch { /* keep the raw value */ }
+  if (!snapshot) return `${host} · conectando`;
+  return `${host} · ${snapshot.readiness.kernel === 'online' ? 'online' : 'sin respuesta'}`;
 }
 function slug(value: string) { return value.toLocaleLowerCase('en').replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || `provider-${Date.now()}`; }
 function viewLabel(view: View) { return nav.find((item) => item.id === view)?.label ?? 'Inicio'; }

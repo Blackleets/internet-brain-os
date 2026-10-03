@@ -90,13 +90,39 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
     ? 'Conversación con Efesto'
     : (preparedGoal ? 'Goal preparado' : showForge ? 'Misión del Kernel' : (supportedFinds.length || focusedMissionHasSupport) ? 'Hallazgos Kernel SUPPORT' : 'Nuevo Goal');
 
+  // With a live forge the composer follows the forge in the scroll (the forge fills the first
+  // viewport, as in the approved v3 mockup); otherwise it stays docked under the conversation.
+  const composer = <ComposerForm
+    input={input}
+    chatMode={chatMode}
+    chatAvailable={chatAvailable}
+    chatPending={chatPending}
+    submitDisabled={submitDisabled}
+    suggestions={showSuggestions ? starterGoals : []}
+    onSuggestion={chatMode ? onStarterChat : onStarterGoal}
+    onInputChange={onInputChange}
+    onSubmit={onSubmit}
+    onStopChat={onStopChat}
+    onOpenModels={onOpenModels}
+    modelLabel={modelLabel}
+    providers={providers}
+    selectedProviderId={selectedProviderId}
+    selectedModel={selectedModel}
+    connected={connected}
+    onSelectModel={onSelectModel}
+    onOpenSettings={onOpenSettings}
+  />;
+
   return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal') + (showForge ? ' has-forge' : '')} aria-label={surfaceAria}>
     <header className="forge-surface-bar">
       <div className="forge-surface-leading">
-        <button type="button" className="forge-menu-button" onClick={(event) => onOpenNav(event.currentTarget)} aria-label="Alternar navegación" aria-controls="efesto-sidebar" aria-expanded={navExpanded}><Menu /></button>
+        <button type="button" className="forge-menu-button" onClick={(event) => onOpenNav(event.currentTarget)} aria-label="Alternar navegación" aria-controls="efesto-sidebar" aria-expanded={navExpanded}>
+          <Menu className="forge-menu-icon" aria-hidden="true" />
+          <span className="forge-menu-brand" aria-hidden="true"><EfestoMark size={30} /><b>EFESTO</b></span>
+        </button>
         <div className="forge-product-title">
           <span className="forge-agent-mark"><EfestoMark size={28} /></span>
-          <span><strong>{surfaceTitle}</strong><small>Efesto · {chatMode ? (chatAvailable ? modelLabel : 'modelo sin configurar') : 'misión controlada'}</small></span>
+          <span className="forge-crumb">{chatMode ? 'Chat' : 'Inicio'}<i aria-hidden="true">/</i><strong>{surfaceTitle}</strong></span>
         </div>
       </div>
 
@@ -105,7 +131,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
       <button type="button" className={'forge-state-action phase-' + chromePhase} onClick={onOpenSettings} aria-label={connected ? 'Kernel conectado' : 'Conectar Kernel'}>
         <i />
         <span>{connected ? state.label : 'Conectar Kernel'}</span>
-        <Plug />
+        <Plug aria-hidden="true" />
       </button>
     </header>
 
@@ -161,29 +187,11 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
         <p>Un Goal en una línea. Preparar no autoriza red ni misiones.</p>
         <div className="forge-empty-meta"><span><ShieldCheck /> Controlado por el Kernel</span><span><i /> Confirmación humana</span></div>
       </section>}
+      {showForge ? composer : null}
       </>}
     </div>
 
-    <ComposerForm
-      input={input}
-      chatMode={chatMode}
-      chatAvailable={chatAvailable}
-      chatPending={chatPending}
-      submitDisabled={submitDisabled}
-      suggestions={showSuggestions ? starterGoals : []}
-      onSuggestion={chatMode ? onStarterChat : onStarterGoal}
-      onInputChange={onInputChange}
-      onSubmit={onSubmit}
-      onStopChat={onStopChat}
-      onOpenModels={onOpenModels}
-      modelLabel={modelLabel}
-      providers={providers}
-      selectedProviderId={selectedProviderId}
-      selectedModel={selectedModel}
-      connected={connected}
-      onSelectModel={onSelectModel}
-      onOpenSettings={onOpenSettings}
-    />
+    {showForge ? null : composer}
   </section>;
 }
 

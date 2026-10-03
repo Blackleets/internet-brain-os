@@ -191,14 +191,14 @@ describe('Efesto goal-first product shell', () => {
       await act(async () => { await vi.advanceTimersByTimeAsync(7_000); });
       expect(screen.queryByRole('button', { name: /Kernel listo/ })).toBeNull();
       expect(screen.getByRole('button', { name: /Kernel sin respuesta/ })).toBeTruthy();
-      expect(screen.queryByRole('button', { name: /Kernel online/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: /Kernel local.*· online/ })).toBeNull();
       const kernelRow = screen.getAllByText('Kernel').map((label) => label.closest('.readiness-row')).find(Boolean);
       expect(kernelRow?.textContent).toContain('offline');
       expect(kernelRow?.querySelector('strong')?.className).not.toContain('ready');
       vi.stubGlobal('fetch', healthy);
       await act(async () => { await vi.advanceTimersByTimeAsync(3_500); });
       expect(screen.getByRole('button', { name: /Kernel listo/ })).toBeTruthy();
-      expect(screen.getByRole('button', { name: /Kernel online/ })).toBeTruthy();
+      expect(screen.getByRole('button', { name: /Kernel local.*· online/ })).toBeTruthy();
     } finally {
       vi.useRealTimers();
     }
