@@ -148,6 +148,47 @@ export function classifyOpportunity(input, references = {}) {
   };
 }
 
+/**
+ * Goal -> Evidence -> Kernel SUPPORT -> Find. When Kernel SUPPORT (evidenceSupportsGoal on the
+ * fetched page) already proved a mission page covers the user's Goal, the generic opportunity
+ * classifier must not silently drop it: it only recognises lead-shaped pages (offers, jobs,
+ * grants...), so factual or documentation Goals ("Is Tesla listed?", "official Git docs") forged
+ * a Mission with zero Finds. Callers must only use this after SUPPORT passed; it never runs or
+ * relaxes the SUPPORT gate. Nothing is invented: relevance stays the classifier's own (possibly
+ * zero) score, reasons stay the classifier's own signals, and promotedBy records why it exists.
+ */
+export function classifySupportedGoalFind(input, references = {}, { scopeCategories = [] } = {}) {
+  const classified = classifyOpportunity(input, references);
+  if (classified.status === 'opportunity') return classified;
+  const context = validatePageContext(input);
+  const searchable = `${context.title}\n${context.description ?? ''}\n${context.visibleText}`;
+  const scoped = OPPORTUNITY_CATEGORIES.find((category) => Array.isArray(scopeCategories) && scopeCategories.includes(category.id));
+  const signal = scoped ? scoreCategory(scoped, searchable) : undefined;
+  const sourceUrl = context.canonicalUrl ?? context.url;
+  const fingerprint = createHash('sha256').update(`${references.evidenceId ?? ''}\n${sourceUrl}`).digest('hex');
+  return {
+    status: 'opportunity',
+    opportunity: {
+      id: `opportunity:${fingerprint}`,
+      evidenceId: references.evidenceId,
+      caseId: references.caseId,
+      category: scoped?.id ?? 'goal',
+      categoryLabel: scoped?.label ?? 'Goal match',
+      benefitType: scoped?.benefitType ?? 'information',
+      title: context.title,
+      sourceUrl,
+      sourceHost: new URL(sourceUrl).hostname,
+      relevance: signal?.score ?? classified.score ?? 0,
+      reasons: signal?.reasons ?? [],
+      deadlineText: extractDeadline(searchable),
+      nextAction: 'Open the source and confirm it answers your Goal',
+      promotedBy: 'kernel_support',
+      status: 'new',
+      detectedAt: context.capturedAt,
+    },
+  };
+}
+
 export class OpportunityProjector {
   constructor(store) { this.store = store; }
 
@@ -160,18 +201,13 @@ export class OpportunityProjector {
    * a larger Kernel transaction. No persistence occurs here.
    */
   projectInto(data, input, references = {}) {
-    const classified = classifyOpportunity(input, references);
-    if (classified.status !== 'opportunity') return { changed: false, data, result: classified };
-    const opportunities = Array.isArray(data.opportunities) ? data.opportunities : [];
-    const existing = opportunities.find((item) => item.id === classified.opportunity.id || item.evidenceId === references.evidenceId);
-    if (existing) return { changed: false, data, result: { status: 'opportunity', opportunity: existing, duplicate: true } };
-    return {
-      changed: true,
-      data: { ...data, opportunities: [...opportunities, classified.opportunity] },
-      result: { ...classified, duplicate: false },
-    };
+    return projectClassified(data, classifyOpportunity(input, references), references);
   }
 
+  /** Same transaction-safe projection for a page that already passed Kernel SUPPORT. */
+  projectSupportedInto(data, input, references = {}, options = {}) {
+    return projectClassified(data, classifySupportedGoalFind(input, references, options), references);
+  }
   async list({ limit = 20, now = new Date().toISOString() } = {}) {
     const data = await this.store.read();
     const missions = data.agentMissions ?? [];
@@ -216,6 +252,18 @@ export function isKernelSupportedInboxFind(item, missions) {
     }
   }
   return false;
+}
+
+function projectClassified(data, classified, references) {
+  if (classified.status !== 'opportunity') return { changed: false, data, result: classified };
+  const opportunities = Array.isArray(data.opportunities) ? data.opportunities : [];
+  const existing = opportunities.find((item) => item.id === classified.opportunity.id || item.evidenceId === references.evidenceId);
+  if (existing) return { changed: false, data, result: { status: 'opportunity', opportunity: existing, duplicate: true } };
+  return {
+    changed: true,
+    data: { ...data, opportunities: [...opportunities, classified.opportunity] },
+    result: { ...classified, duplicate: false },
+  };
 }
 
 function scoreCategory(category, text) {
