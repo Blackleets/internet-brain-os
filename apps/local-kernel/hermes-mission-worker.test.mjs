@@ -53,6 +53,32 @@ describe('Hermes mission worker', () => {
     });
   });
 
+  it('bounds a stalled Kernel request instead of awaiting forever, then reports the timeout', async () => {
+    // A Kernel that accepts the connection but never answers used to leave the worker (and the
+    // one-click activeRuns entry for this Mission) pending forever, so it was never retried.
+    const stalled = (_url, init) => new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true });
+    });
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockImplementationOnce(stalled)
+      .mockImplementationOnce(stalled)
+      .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true }) });
+    const execute = vi.fn(async () => ({ findings: [{ url: 'https://example.com/job', title: 'Job', text: 'Search snippet' }] }));
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute, requestTimeoutMs: 50 }))
+      .resolves.toMatchObject({ status: 'failed', reported: true, reason: 'Kernel request timed out after 50 ms' });
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    expect(fetchImpl.mock.calls.every(([, init]) => init.signal instanceof AbortSignal)).toBe(true);
+  }, 5_000);
+
+  it('a stalled claim rejects with a bounded timeout rather than hanging', async () => {
+    const fetchImpl = vi.fn((_url, init) => new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true });
+    }));
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, requestTimeoutMs: 50 }))
+      .rejects.toThrow('Kernel request timed out after 50 ms');
+  }, 5_000);
+
   it('does not report a timeout until the adapter process has actually stopped', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'efesto-worker-timeout-test-'));
     const fixture = join(directory, 'ignore-term.mjs');
