@@ -12,6 +12,8 @@ import { loadGoalSurfaces, type GoalSurface, type GoalSurfaceWorkState } from '.
 import { loadOverview, type OverviewSnapshot } from '../lib/kernel/overview';
 import { countMissionKernelSupportedFinds, kernelSupportedFinds, missionVerifiedWithoutSupport } from '../lib/kernel/supported-find';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
+import { loadMissionEvidence } from '../lib/kernel/mission-evidence';
+import { buildForgeModel, type ForgeEvidenceLoad } from '../lib/forge/forge-model';
 import { connectionStore } from '../lib/session/connection-store';
 import { startVisiblePoller } from '../lib/ui/visible-poller';
 import { subscribeToKernelEvents } from '../lib/kernel/events';
@@ -79,6 +81,7 @@ export default function EfestoProductShell() {
   const navOpenerRef = useRef<HTMLElement | null>(null);
   const drawerCloseRef = useRef<HTMLButtonElement>(null);
   const mainRef = useRef<HTMLElement>(null);
+  const [missionEvidence, setMissionEvidence] = useState<{ key: string; missionId: string; load: ForgeEvidenceLoad }>();
 
   const selectedProvider = providers.find((item) => item.id === selectedProviderId);
   const focusedGoalSurface = goalSurfaces[0];
@@ -102,6 +105,37 @@ export default function EfestoProductShell() {
     }
     return brainPhaseFromWorkState(mission?.workState);
   }, [chatPending, connection, focusedGoalSurface?.mission, snapshot?.missions, snapshot?.readiness.bootstrap?.hermes, snapshot?.readiness.kernel]);
+
+  // Forge live view: the focused mission's full row (searchCandidates + verificationResults) and
+  // the Kernel Evidence excerpts for its verified rows. Excerpts are re-read only when the set of
+  // verified Evidence ids changes; any failure is shown as "extracto no disponible", never faked.
+  const focusedMissionRow = focusedGoalSurface?.mission ? snapshot?.missions.find((item) => item.id === focusedGoalSurface.mission?.id) : undefined;
+  const verifiedEvidenceIds = (Array.isArray(focusedMissionRow?.verificationResults) ? focusedMissionRow.verificationResults : [])
+    .map((row) => (row && typeof row === 'object' && (row as { status?: unknown }).status === 'verified' ? (row as { evidenceId?: unknown }).evidenceId : undefined))
+    .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    .sort();
+  const evidenceKey = focusedMissionRow && verifiedEvidenceIds.length ? `${focusedMissionRow.id}|${verifiedEvidenceIds.join(',')}` : '';
+  const evidenceMissionId = focusedMissionRow?.id ?? '';
+  useEffect(() => {
+    if (!connection || !evidenceKey) { setMissionEvidence(undefined); return; }
+    const controller = new AbortController();
+    setMissionEvidence((current) => (current?.missionId === evidenceMissionId && current.load.status === 'available'
+      ? { ...current, key: evidenceKey }
+      : { key: evidenceKey, missionId: evidenceMissionId, load: { status: 'loading' } }));
+    loadMissionEvidence(new KernelClient(connection), evidenceMissionId, controller.signal)
+      .then((result) => { if (!controller.signal.aborted) setMissionEvidence({ key: evidenceKey, missionId: evidenceMissionId, load: { status: 'available', records: result.evidence } }); })
+      .catch(() => { if (!controller.signal.aborted) setMissionEvidence({ key: evidenceKey, missionId: evidenceMissionId, load: { status: 'unavailable' } }); });
+    return () => controller.abort();
+  }, [connection, evidenceKey, evidenceMissionId]);
+  const forgeModel = useMemo(() => buildForgeModel({
+    connected: Boolean(connection),
+    connecting: Boolean(connection) && !snapshot,
+    kernelOnline: snapshot?.readiness.kernel === 'online',
+    surface: focusedGoalSurface,
+    mission: focusedMissionRow,
+    evidence: missionEvidence && missionEvidence.missionId === evidenceMissionId ? missionEvidence.load : { status: 'idle' },
+    opportunities: snapshot?.opportunities,
+  }), [connection, evidenceMissionId, focusedGoalSurface, focusedMissionRow, missionEvidence, snapshot, snapshot?.opportunities, snapshot?.readiness.kernel]);
 
   useEffect(() => {
     try {
@@ -456,7 +490,12 @@ export default function EfestoProductShell() {
   const navExpanded = mobileViewport ? navOpen : !sidebarCollapsed;
   // Focused GoalSurface mission: findCount is Kernel SUPPORT (verificationResults stripped).
   // Must not use global inbox length; countMissionKernelSupportedFinds reads findCount.
-  const forgeSupportedFindCount = countMissionKernelSupportedFinds(focusedGoalSurface?.mission);
+  // The GoalSurface projection may omit findCount; the full Mission row of the SAME mission id
+  // carries the Kernel verificationResults, so either proof of SUPPORT counts (never inbox length).
+  const forgeSupportedFindCount = Math.max(
+    countMissionKernelSupportedFinds(focusedGoalSurface?.mission),
+    countMissionKernelSupportedFinds(focusedMissionRow),
+  );
 
   return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''}`}>
     <aside id="efesto-sidebar" className="efesto-sidebar" aria-label="Navegación principal" inert={mobileViewport && !navOpen ? true : undefined}>
@@ -503,8 +542,8 @@ export default function EfestoProductShell() {
         <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection && snapshot?.readiness.kernel === 'online' ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{!connection ? 'Conectar' : snapshot?.readiness.kernel === 'online' ? 'Kernel listo' : 'Kernel sin respuesta'}</button></div>
       </header>
       <main id="efesto-main" ref={mainRef} tabIndex={-1} className="efesto-main">
-        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} navExpanded={navExpanded} supportedFinds={supportedFinds} forgeSupportedFindCount={forgeSupportedFindCount} missions={snapshot?.missions} onFindFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
-        {view === 'goals' ? <div className="missions-route"><GoalsView snapshot={snapshot} onNew={newGoal} onConnect={openSettings} /><ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot?.productScorecard} /></div> : null}
+        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} navExpanded={navExpanded} supportedFinds={supportedFinds} forgeSupportedFindCount={forgeSupportedFindCount} missions={snapshot?.missions} forgeModel={forgeModel} onOpenFinds={() => navigate('finds')} onFindFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
+        {view === 'goals' ? <div className="missions-route"><GoalsView snapshot={snapshot} onNew={newGoal} onConnect={openSettings} forgeModel={forgeModel} onOpenFinds={() => navigate('finds')} /><ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot?.productScorecard} /></div> : null}
         {view === 'finds' ? <FindsView opportunities={supportedFinds} missions={snapshot?.missions} connected={Boolean(connection)} onNewGoal={newGoal} onConnect={openSettings} onFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
         {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} onOpen={(record) => void openCase(record)} onNewGoal={newGoal} onConnect={openSettings} /> : null}
         {view === 'memory' ? <MemoryView connected={Boolean(connection)} /> : null}

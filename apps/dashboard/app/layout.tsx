@@ -6,6 +6,7 @@ import './efesto-product.css';
 import './efesto-product-compat.css';
 import './efesto-forge-visual.css';
 import './efesto-forge-redesign.css';
+import './efesto-forge-live.css';
 
 export const metadata: Metadata = {
   title: 'Efesto · The Intelligence Forge',
