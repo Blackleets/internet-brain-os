@@ -113,4 +113,10 @@ describe('ForgeLiveView', () => {
     expect(bench.dataset.mode).toBe('searched');
     expect(within(bench).getByText('Búsqueda web terminada · 8 candidatos reales')).toBeTruthy();
   });
+
+  it('shows mission keyword chips without stopwords or intent-verb typos (display only)', () => {
+    const { container } = render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ scope: { keywords: ['quiero', 'budcar', 'empleo', 'ryder', 'en', 'delivery'] } }) })} />);
+    const chips = within(container.querySelector('.forge-bench') as HTMLElement).getByRole('list', { name: 'Palabras clave de la misión' });
+    expect(within(chips).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['empleo', 'ryder', 'delivery']);
+  });
 });

@@ -14,6 +14,7 @@ import { countMissionKernelSupportedFinds, kernelSupportedFinds, missionVerified
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { loadMissionEvidence } from '../lib/kernel/mission-evidence';
 import { buildForgeModel, type ForgeEvidenceLoad } from '../lib/forge/forge-model';
+import { keywordsFromGoal } from '../lib/kernel/goal-keywords';
 import { focusGoalSurface } from '../lib/forge/forge-focus';
 import { connectionStore } from '../lib/session/connection-store';
 import { startVisiblePoller } from '../lib/ui/visible-poller';
@@ -569,7 +570,6 @@ function brainPhaseFromWorkState(workState: GoalSurfaceWorkState | undefined): B
   if (workState === 'failed') return 'failed';
   return 'ready';
 }
-function keywordsFromGoal(value: string) { return Array.from(new Set(value.toLocaleLowerCase('es').replace(/[^\p{L}\p{N}]+/gu, ' ').split(/\s+/).filter((word) => word.length > 2))).slice(0, 8); }
 function slug(value: string) { return value.toLocaleLowerCase('en').replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || `provider-${Date.now()}`; }
 function viewLabel(view: View) { return nav.find((item) => item.id === view)?.label ?? 'Inicio'; }
 function connectionMessage(error: unknown) { if (error instanceof KernelClientError && error.code === 'UNAUTHORIZED') return 'El Kernel rechazó el token. No se guardó la credencial.'; if (error instanceof KernelClientError && error.code === 'TIMEOUT') return 'El Kernel tardó demasiado en responder.'; if (error instanceof KernelClientError && error.code === 'OFFLINE') return 'No se alcanzó el Kernel local. Comprueba que el Launcher esté activo.'; return 'No se pudo conectar. Revisa la URL local y el token.'; }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { foldTerm, goalSubjectTerms, goalTermSegments, goalTermsPresent } from './goal-terms';
+import { displayKeywords, foldTerm, goalSubjectTerms, goalTermSegments, goalTermsPresent, isGoalStopword } from './goal-terms';
 
 describe('goal terms (display-only mirror of the Kernel tokenization)', () => {
   it('keeps subject terms and drops stopwords and generic filler', () => {
@@ -25,5 +25,19 @@ describe('goal terms (display-only mirror of the Kernel tokenization)', () => {
     expect(goalTermSegments(text, ['rust', 'ownership']).map((segment) => segment.text).join('')).toBe(text);
     expect(goalTermSegments('', ['rust'])).toEqual([]);
     expect(goalTermSegments('plain', [])).toEqual([{ text: 'plain' }]);
+  });
+
+  it('shows mission keyword chips without stopwords, filler or typos of intent verbs', () => {
+    // Real Kernel scope keywords of Lewis's rider Goal ("quiero budcar empleo de ryder o delivery en españa").
+    expect(displayKeywords(['quiero', 'budcar', 'empleo', 'ryder', 'delivery', 'españa'])).toEqual(['empleo', 'ryder', 'delivery', 'españa']);
+    expect(displayKeywords(['en', 'de', 'the', 'guide', 'Rust', 'rust', 'ownership'])).toEqual(['Rust', 'ownership']);
+    expect(displayKeywords(['bucar', 'necesitp', 'encontar', 'mercadona'])).toEqual(['mercadona']);
+    // A real subject word close to nothing on the list stays, and so do multi-word keywords with a subject.
+    expect(displayKeywords(['busca empleo', 'barcelona', 'uber eats'])).toEqual(['busca empleo', 'barcelona', 'uber eats']);
+  });
+
+  it('flags the same stopwords the Kernel ignores', () => {
+    expect(['quiero', 'en', 'de', 'Busca', 'explained'].every(isGoalStopword)).toBe(true);
+    expect(['empleo', 'rider', 'rust'].some(isGoalStopword)).toBe(false);
   });
 });

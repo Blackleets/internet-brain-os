@@ -4,7 +4,7 @@ import { Check, ChevronDown, ExternalLink, Plug, RotateCcw, Search, Sparkles, X 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ForgeMissionModel, ForgeModel, ForgeSource, ForgeStepState } from '../../lib/forge/forge-model';
 import { buildForgeScene } from '../../lib/forge/forge-scene';
-import { goalTermSegments } from '../../lib/forge/goal-terms';
+import { displayKeywords, goalTermSegments } from '../../lib/forge/goal-terms';
 import { ForgeRenderer, type CardStage, type SceneSpec } from './forge-renderer';
 
 const NARROW_MAX = 760;
@@ -283,6 +283,7 @@ function ForgeWorkbench({ model, replaying }: { model: ForgeMissionModel; replay
   }
   if (!searching && !searched) return null;
   const queries = model.search.exactQueries;
+  const keywords = displayKeywords(model.search.keywords);
   return <div className="forge-bench" data-mode={searching ? 'searching' : 'searched'}>
     <p className="forge-bench-query">
       <Search aria-hidden="true" />
@@ -294,8 +295,8 @@ function ForgeWorkbench({ model, replaying }: { model: ForgeMissionModel; replay
         ? (queries.length ? 'Consultas de Hermes publicadas por el Kernel' : 'Hermes busca en la web pública a partir del Goal · la consulta exacta no la publica el Kernel')
         : `Búsqueda web terminada · ${model.counts.sources} ${model.counts.sources === 1 ? 'candidato real' : 'candidatos reales'}`}
     </p>
-    {model.search.keywords.length ? <ul className="forge-bench-keywords" aria-label="Palabras clave de la misión">
-      {model.search.keywords.map((keyword) => <li key={keyword}>{keyword}</li>)}
+    {keywords.length ? <ul className="forge-bench-keywords" aria-label="Palabras clave de la misión">
+      {keywords.map((keyword) => <li key={keyword}>{keyword}</li>)}
     </ul> : null}
   </div>;
 }

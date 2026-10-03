@@ -34,6 +34,60 @@ const GENERIC_TERMS = new Set([
 
 const MAX_TERMS = 12;
 
+/**
+ * Intent verbs a Goal often starts with ("quiero buscar empleo…"). A one-letter typo of one of them
+ * ("budcar") is noise, not a subject term, when shown as a mission keyword chip.
+ */
+const INTENT_VERBS = ['buscar', 'busco', 'quiero', 'necesito', 'encontrar', 'encuentra', 'investigar', 'conseguir', 'looking', 'search'];
+
+/** True for a stopword or generic filler the Kernel never counts as a Goal subject term. */
+export function isGoalStopword(token: string): boolean {
+  const folded = foldTerm(token);
+  return folded.length < 2 || STOPWORDS.has(folded) || GENERIC_TERMS.has(folded);
+}
+
+/**
+ * Mission keywords worth showing as chips: the Kernel scope keywords minus stopwords, filler and
+ * one-letter typos of intent verbs. Display only: the Kernel keeps and judges its own keywords.
+ */
+export function displayKeywords(keywords: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const keyword of keywords) {
+    const folded = foldTerm(keyword);
+    const words = folded.match(/[a-z0-9]+/g) ?? [];
+    if (!words.length || words.every((word) => isGoalStopword(word) || isIntentTypo(word)) || seen.has(folded)) continue;
+    seen.add(folded);
+    out.push(keyword.trim());
+  }
+  return out;
+}
+
+function isIntentTypo(word: string): boolean {
+  if (word.length < 5) return false;
+  return INTENT_VERBS.some((verb) => verb !== word && Math.abs(verb.length - word.length) <= 1 && editDistanceAtMostOne(verb, word));
+}
+
+function editDistanceAtMostOne(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (a.length === b.length) {
+    let diff = 0;
+    for (let index = 0; index < a.length; index += 1) if (a[index] !== b[index] && ++diff > 1) return false;
+    return true;
+  }
+  const [short, long] = a.length < b.length ? [a, b] : [b, a];
+  let i = 0;
+  let j = 0;
+  let skipped = false;
+  while (i < short.length && j < long.length) {
+    if (short[i] === long[j]) { i += 1; j += 1; continue; }
+    if (skipped) return false;
+    skipped = true;
+    j += 1;
+  }
+  return true;
+}
+
 export function foldTerm(value: string): string {
   return value.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').trim();
 }
