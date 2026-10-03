@@ -11,6 +11,13 @@ const MAX_TIMEOUT_MS = 25 * 60_000;
 const FORCE_KILL_DELAY_MS = 500;
 const MAX_AGENT_TURNS = 8;
 const DEFAULT_AGENT_TURNS = 8;
+// Discovery breadth: 2–3 phrasings × 10 results, 5–10 findings from varied domains.
+const MIN_SEARCHES = 2;
+const MAX_SEARCH_CALLS = 3;
+const SEARCH_LIMIT = 10;
+const MIN_FINDINGS = 5;
+const MAX_FINDINGS = 10;
+const MAX_PER_HOST = 2;
 // Search telemetry (display-only): Hermes web_tools debug log, read from the isolated home before cleanup.
 const WEB_TOOLS_DEBUG_PREFIX = 'web_tools_debug_';
 const MAX_DEBUG_LOG_BYTES = 256 * 1024;
@@ -30,8 +37,8 @@ export function buildHermesPrompt(payload) {
     'Do not access local files, private networks, credentials, messaging history, private sessions, browser automation or computer-use.',
     'Do not perform purchases, submissions, logins, outreach, downloads or destructive actions.',
     'Prefer canonical, directly readable public pages with substantive content; avoid login walls, paywalls, redirectors, search-result pages and JavaScript-only shells.',
-    'Make exactly one public search call using the Goal, then return the final JSON. Do not call another tool after the search result.',
-    'Return 3 to 5 relevant findings when public search supports them, using diverse source hosts where practical.',
+    `Make ${MIN_SEARCHES} or ${MAX_SEARCH_CALLS} public web_search calls, each with "limit": ${SEARCH_LIMIT}, using different phrasings of the Goal; one phrasing must include the location (the Location line when it is set, otherwise the place named in the Goal). Then return the final JSON. Do not call any other tool.`,
+    `Return ${MIN_FINDINGS} to ${MAX_FINDINGS} relevant findings when public search supports them, from varied source domains (at most ${MAX_PER_HOST} per domain).`,
     'Return ONLY one valid JSON object with this exact shape: {"findings":[{"url":"https://public.example/path"}]}.',
     'Each finding must contain exactly one field: url. Do not copy titles, snippets, summaries, dates, or other prose from the search result. Keep every URL on one line, escape it as JSON, and do not use trailing commas.',
     'Use at most 20 findings. URLs must be public http or https. Do not include markdown fences or commentary.',
@@ -136,6 +143,29 @@ export function parseHermesFindings(text) {
     throw new Error('Hermes must return { findings: [...] } with at most 20 findings');
   }
   return { findings: parsed.findings.map((finding, index) => normalizeFinding(finding, index)) };
+}
+
+/**
+ * Keeps the agent's order but drops repeated URLs, keeps at most MAX_PER_HOST findings per domain
+ * (www. ignored) and at most MAX_FINDINGS overall. It only removes candidates, never adds one.
+ */
+export function diversifyFindings(findings, { maxPerHost = MAX_PER_HOST, max = MAX_FINDINGS } = {}) {
+  if (!Array.isArray(findings)) return [];
+  const perHost = new Map();
+  const seen = new Set();
+  const kept = [];
+  for (const finding of findings) {
+    if (kept.length >= max) break;
+    let host;
+    try { host = new URL(finding.url).hostname.toLowerCase().replace(/^www\./, ''); } catch { continue; }
+    if (seen.has(finding.url)) continue;
+    const count = perHost.get(host) ?? 0;
+    if (count >= maxPerHost) continue;
+    seen.add(finding.url);
+    perHost.set(host, count + 1);
+    kept.push(finding);
+  }
+  return kept;
 }
 
 function extractLiteralWebUrls(text) {
@@ -353,7 +383,8 @@ export async function runHermesOneShot(payload, options = {}) {
       cwd: hermesHome,
     });
     const searches = await collectHermesSearchTelemetry(hermesHome);
-    return searches.length ? { ...result, searches } : result;
+    const diverse = { ...result, findings: diversifyFindings(result.findings) };
+    return searches.length ? { ...diverse, searches } : diverse;
   } finally {
     await wipeCopiedHermesCredentials(hermesHome, copied);
     if (ownsHermesHome) {

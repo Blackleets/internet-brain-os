@@ -17,6 +17,7 @@ import {
   applySourceHermesModelRoute,
   parseTopLevelHermesModelRoute,
   collectHermesSearchTelemetry,
+  diversifyFindings,
   parseHermesSearchCalls,
 } from './hermes-efesto-adapter.mjs';
 
@@ -41,9 +42,14 @@ describe('Hermes Efesto adapter', () => {
     expect(prompt).toContain('public-source discovery mission');
     expect(prompt).toContain('candidates, not verified Evidence');
     expect(prompt).toContain('canonical, directly readable public pages');
-    expect(prompt).toContain('Make exactly one public search call');
-    expect(prompt).toContain('Do not call another tool after the search result.');
-    expect(prompt).toContain('Return 3 to 5 relevant findings');
+    // Contract (deliberately changed from one search / 3–5 findings): 2–3 phrasings, one with the
+    // location, limit 10 each, 5–10 findings from varied domains, and still no other tool.
+    expect(prompt).toContain('Make 2 or 3 public web_search calls, each with "limit": 10, using different phrasings of the Goal');
+    expect(prompt).toContain('one phrasing must include the location (the Location line when it is set, otherwise the place named in the Goal)');
+    expect(prompt).toContain('Do not call any other tool.');
+    expect(prompt).toContain('Return 5 to 10 relevant findings when public search supports them, from varied source domains (at most 2 per domain).');
+    expect(prompt).not.toContain('exactly one public search call');
+    expect(prompt).toContain('Location: Madrid');
     expect(prompt.startsWith('/no_think\n')).toBe(true);
     expect(prompt).toContain('{"findings":[{"url":"https://public.example/path"}]}');
     expect(prompt).toContain('Each finding must contain exactly one field: url.');
@@ -78,6 +84,20 @@ describe('Hermes Efesto adapter', () => {
     expect(env).not.toHaveProperty('HERMES_ENABLE_PROJECT_PLUGINS');
     expect(env).not.toHaveProperty('HERMES_IGNORE_USER_CONFIG');
     expect(env.WEB_TOOLS_DEBUG).toBe('true');
+  });
+
+  it('keeps findings from varied domains: drops repeated URLs, at most 2 per domain, at most 10, never adds any', () => {
+    const urls = [
+      'https://www.jobs.example/a', 'https://jobs.example/b', 'https://jobs.example/c',
+      'https://www.jobs.example/a', 'https://news.example/1', 'not a url',
+      ...Array.from({ length: 12 }, (_, index) => `https://site${index}.example/`),
+    ];
+    const kept = diversifyFindings(urls.map((url) => ({ url })));
+    expect(kept.map((item) => item.url)).toEqual([
+      'https://www.jobs.example/a', 'https://jobs.example/b', 'https://news.example/1',
+      ...Array.from({ length: 7 }, (_, index) => `https://site${index}.example/`),
+    ]);
+    expect(diversifyFindings(undefined)).toEqual([]);
   });
 
   it('turns a Hermes web_tools debug log into search telemetry without guessing missing fields', async () => {
