@@ -24,12 +24,37 @@ const MAX_DEBUG_LOG_BYTES = 256 * 1024;
 const MAX_SEARCHES = 8;
 const MAX_QUERY_CHARS = 300;
 
+// Filler words that carry no topic; they are never required in a search phrasing.
+const GOAL_STOPWORDS = new Set([
+  'a', 'al', 'an', 'and', 'ayuda', 'busco', 'buscar', 'como', 'con', 'de', 'del', 'el', 'en', 'encontrar', 'find', 'for',
+  'help', 'i', 'in', 'la', 'las', 'lo', 'los', 'looking', 'me', 'mi', 'my', 'necesito', 'need', 'o', 'of', 'or', 'para',
+  'please', 'por', 'que', 'quiero', 'some', 'the', 'to', 'un', 'una', 'unos', 'unas', 'want', 'with', 'y',
+]);
+const MAX_CORE_TERMS = 8;
+
+/** Topic terms of the Goal (scope keywords, else Goal title words) minus filler, for query anchoring. */
+export function goalCoreTerms(mission) {
+  const scope = mission?.scope ?? {};
+  const keywords = Array.isArray(scope.keywords) ? scope.keywords.filter((value) => typeof value === 'string') : [];
+  const source = keywords.length ? keywords : String(mission?.goalTitle ?? '').split(/[^\p{L}\p{N}]+/u);
+  const terms = [];
+  for (const raw of source.slice(0, 40)) {
+    const term = raw.trim().toLowerCase().slice(0, 60);
+    if (term.length < 2 || GOAL_STOPWORDS.has(term) || terms.includes(term)) continue;
+    terms.push(term);
+    if (terms.length === MAX_CORE_TERMS) break;
+  }
+  return terms;
+}
+
 export function buildHermesPrompt(payload) {
   if (!payload || payload.schemaVersion !== 'efesto.hermes-mission.v1' || !payload.mission) {
     throw new Error('Expected one efesto.hermes-mission.v1 mission object');
   }
   const mission = payload.mission;
   const scope = mission.scope ?? {};
+  const coreTerms = goalCoreTerms(mission);
+  const required = Math.min(2, coreTerms.length);
   return [
     '/no_think',
     'You are executing one bounded public-source discovery mission for Efesto.',
@@ -38,6 +63,8 @@ export function buildHermesPrompt(payload) {
     'Do not perform purchases, submissions, logins, outreach, downloads or destructive actions.',
     'Prefer canonical, directly readable public pages with substantive content; avoid login walls, paywalls, redirectors, search-result pages and JavaScript-only shells.',
     `Make ${MIN_SEARCHES} or ${MAX_SEARCH_CALLS} public web_search calls, each with "limit": ${SEARCH_LIMIT}, using different phrasings of the Goal; one phrasing must include the location (the Location line when it is set, otherwise the place named in the Goal). Then return the final JSON. Do not call any other tool.`,
+    ...(required > 0 ? [`Stay on the Goal: every web_search query must contain at least ${required} of the Core Goal terms (an obvious misspelling may be corrected). Do not add company names, brands, products or topics that are not in the Goal, and return only findings about the Goal itself.`] : []),
+    'Write each query as plain words: do not append numbers, years, dates, IDs or codes unless they appear in the Goal.',
     `Return ${MIN_FINDINGS} to ${MAX_FINDINGS} relevant findings when public search supports them, from varied source domains (at most ${MAX_PER_HOST} per domain).`,
     'Return ONLY one valid JSON object with this exact shape: {"findings":[{"url":"https://public.example/path"}]}.',
     'Each finding must contain exactly one field: url. Do not copy titles, snippets, summaries, dates, or other prose from the search result. Keep every URL on one line, escape it as JSON, and do not use trailing commas.',
@@ -47,6 +74,7 @@ export function buildHermesPrompt(payload) {
     `Goal: ${String(mission.goalTitle ?? '').slice(0, 500)}`,
     `Categories: ${JSON.stringify(Array.isArray(scope.categories) ? scope.categories.slice(0, 20) : [])}`,
     `Keywords: ${JSON.stringify(Array.isArray(scope.keywords) ? scope.keywords.slice(0, 40) : [])}`,
+    `Core Goal terms: ${JSON.stringify(coreTerms)}`,
     `Location: ${String(scope.location ?? '').slice(0, 240)}`,
     `Cadence: ${String(mission.cadence ?? '').slice(0, 80)}`,
   ].join('\n');

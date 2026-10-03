@@ -6,6 +6,7 @@ import {
   buildHermesArgs,
   buildHermesEnvironment,
   buildHermesPrompt,
+  goalCoreTerms,
   normalizeHermesExecutable,
   parseHermesFindings,
   prepareHermesHome,
@@ -56,6 +57,25 @@ describe('Hermes Efesto adapter', () => {
     expect(prompt).toContain('{"findings":[{"url":"https://public.example/path"}]}');
     expect(prompt).toContain('Each finding must contain exactly one field: url.');
     expect(prompt).toContain('Do not copy titles, snippets, summaries, dates, or other prose');
+  });
+
+  it('anchors every phrasing to the core Goal terms and forbids off-Goal brands and numeric noise', () => {
+    // Live rider mission: run 2 drifted to McDonald's and appended "2024-1953"-style noise.
+    const mission = { id: 'm', goalTitle: 'quiero empleo ryder budcar delivery en España', cadence: 'once', scope: { categories: ['job'], keywords: ['quiero', 'budcar', 'empleo', 'ryder', 'delivery', 'españa'] } };
+    expect(goalCoreTerms(mission)).toEqual(['budcar', 'empleo', 'ryder', 'delivery', 'españa']);
+    const prompt = buildHermesPrompt({ schemaVersion: 'efesto.hermes-mission.v1', mission });
+    expect(prompt).toContain('Core Goal terms: ["budcar","empleo","ryder","delivery","españa"]');
+    expect(prompt).toContain('every web_search query must contain at least 2 of the Core Goal terms');
+    expect(prompt).toContain('Do not add company names, brands, products or topics that are not in the Goal');
+    expect(prompt).toContain('do not append numbers, years, dates, IDs or codes unless they appear in the Goal');
+    // without keywords the Goal title words are used; one usable term means "at least 1"
+    expect(goalCoreTerms({ goalTitle: 'Quiero encontrar subvenciones para mi startup', scope: {} })).toEqual(['subvenciones', 'startup']);
+    const single = buildHermesPrompt({ schemaVersion: 'efesto.hermes-mission.v1', mission: { goalTitle: 'grants', scope: { keywords: ['quiero', 'grants'] } } });
+    expect(single).toContain('at least 1 of the Core Goal terms');
+    const none = buildHermesPrompt({ schemaVersion: 'efesto.hermes-mission.v1', mission: { goalTitle: 'quiero', scope: { keywords: ['quiero'] } } });
+    expect(none).toContain('Core Goal terms: []');
+    expect(none).not.toContain('Stay on the Goal');
+    expect(goalCoreTerms({ scope: { keywords: Array.from({ length: 20 }, (_, i) => `k${i}`) } })).toHaveLength(8);
   });
 
   it('isolates user customizations while keeping the official search backend available', () => {
