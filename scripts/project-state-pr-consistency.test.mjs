@@ -22,4 +22,11 @@ describe('PROJECT_STATE.md PR status consistency', () => {
     expect(state).not.toContain('PR #238 OPEN');
     expect(state).toMatch(/PR #241 OPEN/);
   });
+
+  it('records #243 on main and does not describe only the stale live-no-supported-find labelling', () => {
+    expect(state).toContain('squash-merge PR #243 `f225af0`');
+    expect(state).not.toContain('PR #243 OPEN');
+    // d276e37 split L5/L6-only failures; the checkpoint must name the pipeline-bug class too.
+    expect(state).toContain('live-supported-find-dropped');
+  });
 });

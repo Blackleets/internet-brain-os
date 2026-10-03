@@ -618,3 +618,18 @@ This completes the web-first design slice. Responsive mobile use is included thr
 ### Risks / next
 - Live L5/L6 (Kernel SUPPORT Find on the live web) still fails intermittently; not a pipeline failure and not weakened.
 - No UAT or live Hermes L1-L7 success is claimed. `publicLaunchApproved` remains false.
+
+## Handoff 2026-10-03 - Grok (EFESTO) - PR #241 after #243
+
+### What I changed
+- Root cause of the intermittent live L5/L6 failure: a page that passed Kernel SUPPORT was dropped by the lead classifier (score/regex), so the Mission forged with zero Finds. SUPPORT-passing Mission pages now always become a Find (`promotedBy: 'kernel_support'`); pages that fail SUPPORT still create no Find. Shipped to `main` via PR #243 (`f225af0`) and merged into PR #241 with a normal merge commit.
+- Live l1-l7 reports print VERIFY lines and use `live-supported-find-dropped` (SUPPORT passed, Find missing: pipeline bug) vs `live-no-supported-find` (nothing passed SUPPORT: live-web variance).
+- Hermes worker: every Kernel request has a timeout (`requestTimeoutMs`, default 60 s); a failed failure-report POST keeps the original cause (`reported: false`, `reportError`).
+- Dashboard: a verifying Mission whose verification finished with zero Kernel SUPPORT shows `Sin SUPPORT` (neutral) instead of `Verificando Evidence` forever; all-fetch-failed batches keep `Verificando`. Kernel state unchanged.
+
+### Tests or checks performed
+- `pnpm typecheck`, `pnpm test`, `pnpm dashboard:test`, dashboard build, `pnpm audit --prod` passed before each push. Live l1-l7 CI runs `37127265497` and `37128263854` passed 14/14 (CI evidence only).
+
+### Risks / next
+- Live search variance can still make L5/L6 fail honestly; the failure class now says which kind.
+- No UAT is claimed. `publicLaunchApproved` remains false. PR #241 stays OPEN for owner review.
