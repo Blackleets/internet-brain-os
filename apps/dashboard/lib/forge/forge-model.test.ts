@@ -177,4 +177,30 @@ describe('displayText', () => {
     expect(displayText('A &amp; B &lt;script&gt;')).toBe('A & B <script>');
     expect(displayText('&#xD800; &unknown; &#0;')).toBe('&#xD800; &unknown; &#0;');
   });
+
+  it('exposes the search honestly: Goal + Kernel keywords, exact queries only when the Kernel publishes them', () => {
+    const searching = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('investigating'), mission: row({ executionPhase: 'investigating', searchCandidates: undefined, investigatingAt: '2026-10-03T09:00:30.000Z', scope: { keywords: ['taladro', 'Taladro', 'percutor', ''] } }) }));
+    expect(searching.search).toEqual({ goal: 'Taladro percutor 18 V', keywords: ['taladro', 'percutor'], exactQueries: [] });
+    expect(searching.searchKeywords).toEqual(['taladro', 'percutor']);
+    expect(searching.phaseSince).toBe('2026-10-03T09:00:30.000Z');
+    expect(searching.nextStep).toMatch(/web\.read/);
+    const published = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('investigating'), mission: row({ executionPhase: 'investigating', searchCandidates: undefined, searchQueries: ['taladro percutor 18v oferta', 42] }) }));
+    expect(published.search.exactQueries).toEqual(['taladro percutor 18v oferta']);
+  });
+
+  it('gives queued missions a next step and the time they have been waiting, never a search claim', () => {
+    const queued = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('queued'), mission: row({ status: 'queued', executionPhase: 'queued', searchCandidates: undefined }) }));
+    expect(queued.phase).toBe('queued');
+    expect(queued.nextStep).toMatch(/^Siguiente: Hermes toma la misión/);
+    expect(queued.phaseSince).toBe('2026-10-03T09:00:00.000Z');
+    expect(queued.sources).toEqual([]);
+  });
+
+  it('marks the Goal terms present in each Kernel Evidence excerpt (display only; SUPPORT stays the Kernel verdict)', () => {
+    const model = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('forged', { findCount: 1 }), mission: row({ status: 'completed', executionPhase: 'forged', verificationResults: forgedResults }), evidence: { status: 'available', records }, opportunities: [find] }));
+    expect(model.goalTerms).toEqual(['taladro', 'percutor', '18']);
+    expect(model.sources.find((item) => item.id === 'c1')?.goalTerms).toEqual(['taladro', 'percutor', '18']);
+    expect(model.sources.find((item) => item.id === 'c3')?.goalTerms).toBeUndefined();
+    expect(model.sources.find((item) => item.id === 'c1')?.state).toBe('supported');
+  });
 });

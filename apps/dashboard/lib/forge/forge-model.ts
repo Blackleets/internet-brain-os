@@ -2,6 +2,7 @@ import type { MissionSummary, OpportunitySummary } from '../kernel/contracts';
 import type { GoalSurface } from '../kernel/goal-surfaces';
 import type { MissionEvidenceRecord } from '../kernel/mission-evidence';
 import { isKernelSupportedFind } from '../kernel/supported-find';
+import { goalSubjectTerms, goalTermsPresent } from './goal-terms';
 
 /**
  * Pure mapping from Kernel read models to the Forge live view.
@@ -54,6 +55,8 @@ export type ForgeSource = {
   reasonCode?: string;
   reason?: string;
   findTitle?: string;
+  /** Goal subject terms present in the Kernel Evidence excerpt/title (display mirror, not the verdict). */
+  goalTerms?: string[];
 };
 
 export type ForgePhase =
@@ -90,6 +93,20 @@ export type ForgeMissionModel = {
   sources: ForgeSource[];
   evidenceStatus: ForgeEvidenceLoad['status'];
   summary: string;
+  /** Goal subject terms (Goal title + Mission keywords) used for gold highlights. */
+  goalTerms: string[];
+  /** Mission keywords exactly as the Kernel stored them (scope.keywords). */
+  searchKeywords: string[];
+  /**
+   * What the forge can honestly say about the web search: Hermes searches from the Goal, but the
+   * Kernel does not publish the exact query string, so `exactQuery` is only set if a Kernel row
+   * ever carries one (`searchQueries` / `searchQuery`).
+   */
+  search: { goal: string; keywords: string[]; exactQueries: string[] };
+  /** Kernel timestamp of the moment the current phase started (ISO), when the row has it. */
+  phaseSince?: string;
+  /** Honest next step for waiting/queued states. */
+  nextStep?: string;
 };
 
 export type ForgeModel =
@@ -134,6 +151,15 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
   const phase = derivePhase(surfaceMission.workState, Boolean(surfaceMission.blockedReason || blockedOnRow(row)), counts, sources);
   const { label, detail } = phaseCopy(phase, counts, row);
   const goalTitle = input.surface.goal.title || (typeof row?.goalTitle === 'string' ? row.goalTitle : '');
+  const searchKeywords = missionKeywords(row);
+  const goalTerms = goalSubjectTerms(goalTitle, searchKeywords);
+  for (const source of sources) {
+    if (source.state !== 'supported' && source.state !== 'unsupported' && source.state !== 'evidence') continue;
+    const present = goalTermsPresent([source.quote, source.evidenceTitle], goalTerms);
+    if (present.length) source.goalTerms = present;
+  }
+  const phaseSince = phaseTimestamp(phase, row, surfaceMission);
+  const nextStep = NEXT_STEPS[phase];
   return {
     kind: 'mission',
     missionId: surfaceMission.id,
@@ -146,11 +172,67 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
     counts,
     sources,
     evidenceStatus: evidence.status,
+    goalTerms,
+    searchKeywords,
+    search: { goal: goalTitle, keywords: searchKeywords, exactQueries: exactQueries(row) },
+    ...(phaseSince ? { phaseSince } : {}),
+    ...(nextStep ? { nextStep } : {}),
     summary: `${label}. ${counts.sources} ${plural(counts.sources, 'fuente', 'fuentes')}, ${counts.read} ${plural(counts.read, 'leída', 'leídas')}, ${counts.evidence} Evidence, ${counts.supported} con Kernel SUPPORT.`,
   };
 }
 
 const ACTIVE_PHASES = new Set<ForgePhase>(['waiting_agent', 'queued', 'searching', 'verifying']);
+
+const NEXT_STEPS: Partial<Record<ForgePhase, string>> = {
+  waiting_agent: 'Siguiente: arranca Hermes; tomará la misión y buscará en la web pública.',
+  queued: 'Siguiente: Hermes toma la misión y busca en la web pública. Cada candidato real saldrá como una chispa.',
+  searching: 'Siguiente: el Kernel lee cada candidato con web.read y guarda la Evidence.',
+  verifying: 'Siguiente: el Kernel decide SUPPORT; lo que respalda el Goal se forja como Find.',
+};
+
+function missionKeywords(row?: MissionSummary): string[] {
+  const scope = asRow(row?.scope);
+  const raw = Array.isArray(scope?.keywords) ? scope.keywords : [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of raw) {
+    const value = str(item);
+    if (!value || value.length > 60 || seen.has(value.toLowerCase())) continue;
+    seen.add(value.toLowerCase());
+    out.push(value);
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
+function exactQueries(row?: MissionSummary): string[] {
+  if (!row) return [];
+  const raw = Array.isArray(row.searchQueries) ? row.searchQueries : [row.searchQuery];
+  return raw.map((item) => str(item)).filter((item) => item.length > 0 && item.length <= 200).slice(0, 6);
+}
+
+function phaseTimestamp(phase: ForgePhase, row: MissionSummary | undefined, mission: NonNullable<GoalSurface['mission']>): string | undefined {
+  const pick = (...keys: string[]) => {
+    for (const key of keys) {
+      const value = str(row?.[key]);
+      if (value && Number.isFinite(Date.parse(value))) return value;
+    }
+    return undefined;
+  };
+  switch (phase) {
+    case 'waiting_agent':
+    case 'queued': return pick('createdAt') ?? mission.createdAt;
+    case 'searching': return pick('investigatingAt', 'claimedAt');
+    case 'verifying':
+    case 'verified_unsupported':
+    case 'read_failed_all': return pick('verifyingAt');
+    case 'forged':
+    case 'research_completed':
+    case 'completed_empty':
+    case 'completed_without_evidence': return pick('forgedAt', 'completedAt');
+    default: return undefined;
+  }
+}
 
 type Row = Record<string, unknown>;
 
