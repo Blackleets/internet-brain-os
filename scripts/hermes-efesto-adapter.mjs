@@ -135,7 +135,62 @@ export function parseHermesFindings(text) {
   if (!parsed || !Array.isArray(parsed.findings) || parsed.findings.length > 20) {
     throw new Error('Hermes must return { findings: [...] } with at most 20 findings');
   }
-  return { findings: parsed.findings.map((finding, index) => normalizeFinding(finding, index)) };
+  // A finding whose http(s) URL is malformed and cannot be recovered unambiguously is dropped, not
+  // guessed; the Kernel rejects any URL that is not well-formed, so it would otherwise fail the batch.
+  return { findings: parsed.findings.map((finding, index) => normalizeFinding(finding, index)).filter(Boolean) };
+}
+
+/**
+ * True for a well-formed absolute http(s) URL as written (mirrors the Kernel's candidate check):
+ * no whitespace, controls or RFC 3986-excluded characters, valid percent escapes, no `](` and no
+ * square brackets in the path. Non-ASCII characters and bracketed query keys stay allowed.
+ */
+export function isWellFormedWebUrl(raw) {
+  if (typeof raw !== 'string' || !/^https?:\/\//i.test(raw)) return false;
+  if (/[\s"<>\\^`{|}\u0000-\u001f\u007f]/.test(raw) || /%(?![0-9a-f]{2})/i.test(raw) || raw.includes('](')) return false;
+  const afterScheme = raw.slice(raw.indexOf('//') + 2);
+  const authorityEnd = afterScheme.search(/[/?#]/);
+  const authority = authorityEnd < 0 ? afterScheme : afterScheme.slice(0, authorityEnd);
+  const rest = authorityEnd < 0 ? '' : afterScheme.slice(authorityEnd);
+  const pathEnd = rest.search(/[?#]/);
+  if (/[[\]]/.test(pathEnd < 0 ? rest : rest.slice(0, pathEnd))) return false;
+  if (/[[\]]/.test(authority) && !/^(?:[^@]*@)?\[[0-9a-f:.]+\](?::\d+)?$/i.test(authority)) return false;
+  try {
+    const parsed = new URL(raw);
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && Boolean(parsed.hostname);
+  } catch { return false; }
+}
+
+/**
+ * Recovers the one URL a malformed agent string unambiguously points at, e.g. markdown debris
+ * `https://a.example/](https://a.example/page` → `https://a.example/page` (the link target).
+ * Every http(s) URL inside the string is collected; all of them must be on the same host (www.
+ * ignored). The markdown target (right after `](`) wins; otherwise one URL that every other one is a
+ * prefix of. Anything else is ambiguous and yields undefined; nothing is ever invented.
+ */
+export function recoverWebUrl(raw) {
+  if (typeof raw !== 'string') return undefined;
+  const value = raw.trim().replace(/^<(.*)>$/s, '$1');
+  if (isWellFormedWebUrl(value)) return value;
+  const found = [];
+  for (const match of value.matchAll(/https?:\/\/[^\s<>"'`\\[\]()]+/gi)) {
+    // It must end where markup ends (string end, `)`, `]` or `>`): a URL cut short by a space or
+    // a stray character would be a guess.
+    const next = value[match.index + match[0].length];
+    if (next !== undefined && !/[)\]>]/.test(next)) continue;
+    const url = match[0].replace(/[.,;:!?]+$/, '');
+    if (!isWellFormedWebUrl(url)) continue;
+    found.push({ url, target: value.slice(Math.max(0, match.index - 2), match.index) === '](' });
+  }
+  if (found.length === 0) return undefined;
+  const hosts = new Set(found.map(({ url }) => new URL(url).hostname.toLowerCase().replace(/^www\./, '')));
+  if (hosts.size !== 1) return undefined;
+  const targets = [...new Set(found.filter((item) => item.target).map((item) => item.url))];
+  if (targets.length === 1) return targets[0];
+  if (targets.length > 1) return undefined;
+  const distinct = [...new Set(found.map((item) => item.url))];
+  const longest = distinct.reduce((a, b) => (b.length > a.length ? b : a));
+  return distinct.every((url) => longest.startsWith(url)) ? longest : undefined;
 }
 
 function extractLiteralWebUrls(text) {
@@ -199,13 +254,15 @@ function normalizeFinding(value, index) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`finding ${index} must be an object`);
   const allowed = new Set(['url', 'title', 'text', 'summary', 'discoveredAt']);
   for (const key of Object.keys(value)) if (!allowed.has(key)) throw new Error(`finding ${index} contains unsupported field ${key}`);
-  const url = bounded(value.url, 2048, `finding ${index} url`);
-  let parsedUrl;
-  try { parsedUrl = new URL(url); }
-  catch { throw new Error(`finding ${index} url must be public http or https`); }
-  if (!['http:', 'https:'].includes(parsedUrl.protocol) || !parsedUrl.hostname) {
-    throw new Error(`finding ${index} url must be public http or https`);
+  const rawUrl = bounded(value.url, 2048, `finding ${index} url`);
+  const url = recoverWebUrl(rawUrl);
+  if (!url) {
+    // Not even a recoverable http(s) URL: a non-web scheme stays a hard error (security contract);
+    // malformed http(s) text is dropped from the batch.
+    if (!/https?:\/\//i.test(rawUrl)) throw new Error(`finding ${index} url must be public http or https`);
+    return undefined;
   }
+  const parsedUrl = new URL(url);
   return {
     url,
     title: value.title === undefined ? `Public source: ${parsedUrl.hostname}` : bounded(value.title, 240, `finding ${index} title`),
