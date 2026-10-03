@@ -1,0 +1,22 @@
+{
+  "protocol": "efesto-agent/v1",
+  "product": "Efesto",
+  "name": "Efesto Kernel",
+  "packet": "efesto-kernel-packet/v1",
+  "mcp": "/api/agent",
+  "tools": [
+    "efesto.contract",
+    "efesto.forge",
+    "efesto.verify_packet",
+    "efesto.inspect_packet"
+  ],
+  "contract": {
+    "modelAdmits": false,
+    "chatIsEvidence": false,
+    "memoryIsEvidence": false,
+    "inventedSources": false,
+    "httpsOnly": true,
+    "kernelAdmits": true
+  },
+  "note": "Efesto is not a search engine. Agents consult the Kernel. The model interprets; the Kernel admits."
+}
