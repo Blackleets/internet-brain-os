@@ -71,10 +71,10 @@ describe('ForgeLiveView', () => {
     expect([...supported.querySelectorAll('mark.forge-term')].map((mark) => mark.textContent)).toEqual(['Ownership']);
     expect(within(supported).getByText('KERNEL SUPPORT')).toBeTruthy();
     // The Find title opens the Find.
-    fireEvent.click(within(supported).getByRole('button', { name: /^Ver Find:\s*Ownership/ }));
+    fireEvent.click(within(supported).getByRole('button', { name: /^Ownership\s*· ver Find$/ }));
     expect(onOpenFinds).toHaveBeenCalledTimes(1);
     const unsupported = container.querySelector('.forge-source[data-state="unsupported"]') as HTMLElement;
-    expect(within(unsupported).queryByRole('button', { name: /Ver Find/ })).toBeNull();
+    expect(within(unsupported).queryByRole('button', { name: /ver Find/ })).toBeNull();
     expect(within(unsupported).getByText('EVIDENCE', { selector: '.forge-badge-final' })).toBeTruthy();
     expect(within(unsupported).getByText(/no cubre suficientes términos del Goal/i)).toBeTruthy();
     // Steel cards show only their reason, never a quote.

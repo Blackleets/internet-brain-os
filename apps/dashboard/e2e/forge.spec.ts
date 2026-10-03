@@ -250,7 +250,7 @@ test('forge live view on desktop: wide forge stage with the Candidatos → Evide
   await expect(page.locator('.forge-live-panel')).toContainText('Candidatos → Evidence');
   await expect(page.locator('.efesto-sidebar .sidebar-goals')).toContainText('Fixture ownership guide');
   await expect(page.locator('.efesto-sidebar .kernel-summary')).toContainText('127.0.0.1:4100');
-  await page.locator('.forge-live').getByRole('button', { name: /^Ver Find/ }).click();
+  await page.locator('.forge-live').getByRole('button', { name: /ver Find$/ }).click();
   await expect(page.getByRole('heading', { name: 'Hallazgos', exact: true })).toBeVisible();
   await expect(page.getByText('Ownership (fixture Find)', { exact: true })).toBeVisible();
   await openHome(page, false);

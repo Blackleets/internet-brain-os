@@ -342,7 +342,7 @@ function SourceCard({ source, goalTerms, onOpenFinds }: { source: ForgeSource; g
       {hasBody ? <div className="forge-source-pending" aria-hidden="true"><s /><s /></div> : null}
       <div className="forge-source-body">
         {source.findTitle ? <h3 className="forge-source-findtitle">{onOpenFinds
-          ? <button type="button" className="forge-source-find" onClick={onOpenFinds}><span className="forge-sr-only">Ver Find: </span>{source.findTitle}</button>
+          ? <button type="button" className="forge-source-find" onClick={onOpenFinds}>{source.findTitle}<span className="forge-sr-only"> · ver Find</span></button>
           : source.findTitle}</h3> : null}
         {quote ? <blockquote cite={source.url} title={quote.clipped ? source.quote : undefined}>
           <p>«{source.quoteTruncatedStart ? '… ' : ''}<Highlighted text={quote.text} terms={highlight ? goalTerms : []} />{source.quoteTruncatedEnd || quote.clipped ? ' …' : ''}»</p>
