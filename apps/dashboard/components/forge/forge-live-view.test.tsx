@@ -66,7 +66,10 @@ describe('ForgeLiveView', () => {
     });
     const { container } = render(<ForgeLiveView model={model} onOpenFinds={onOpenFinds} />);
     const supported = container.querySelector('.forge-source[data-state="supported"]') as HTMLElement;
-    expect(within(supported).getByText('«Ownership is a set of rules.»')).toBeTruthy();
+    expect(supported.querySelector('blockquote')?.textContent).toBe('«Ownership is a set of rules.»');
+    // The Goal term in the Kernel excerpt is marked, and listed under the SUPPORT card.
+    expect([...supported.querySelectorAll('mark.forge-term')].map((mark) => mark.textContent)).toEqual(['Ownership']);
+    expect(within(within(supported).getByRole('list', { name: 'Términos del Goal presentes en la Evidence' })).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['ownership']);
     expect(within(supported).getByText('KERNEL SUPPORT')).toBeTruthy();
     fireEvent.click(within(supported).getByRole('button', { name: 'Ver Find' }));
     expect(onOpenFinds).toHaveBeenCalledTimes(1);
@@ -76,5 +79,37 @@ describe('ForgeLiveView', () => {
     expect(within(supported).getByRole('link', { name: /Abrir fuente/ }).getAttribute('href')).toBe(candidates[0].url);
     expect(screen.getByLabelText('Contadores de la misión').textContent).toContain('1');
     expect(container.querySelector('[aria-live="polite"]')?.textContent).toBeTruthy();
+  });
+
+  it('keeps a queued mission alive but honest: waiting copy, next step, no sources and no search claim', () => {
+    const { container } = render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('queued'), mission: row({ status: 'queued', executionPhase: 'queued', searchCandidates: undefined }) })} />);
+    const bench = container.querySelector('.forge-bench') as HTMLElement;
+    expect(bench.dataset.mode).toBe('waiting');
+    expect(within(bench).getByText('Esperando turno del agente')).toBeTruthy();
+    expect(within(bench).getByText(/Siguiente: Hermes toma la misión/)).toBeTruthy();
+    expect(screen.queryByRole('list', { name: /Fuentes de la misión/ })).toBeNull();
+    expect(container.querySelector('.forge-bench-query')).toBeNull();
+  });
+
+  it('shows the Goal the agent searches from while investigating, says the exact query is not published, and lists Kernel keywords', () => {
+    const { container } = render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('investigating'), mission: row({ executionPhase: 'investigating', searchCandidates: undefined, scope: { keywords: ['rust', 'ownership'] } }) })} />);
+    const bench = container.querySelector('.forge-bench') as HTMLElement;
+    expect(bench.dataset.mode).toBe('searching');
+    expect(bench.querySelector('.forge-bench-q')?.textContent).toBe('«Rust ownership guide»');
+    expect(within(bench).getByText(/la consulta exacta no la publica el Kernel/)).toBeTruthy();
+    expect(within(within(bench).getByRole('list', { name: 'Palabras clave de la misión' })).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['rust', 'ownership']);
+  });
+
+  it('shows the exact search queries only when the Kernel publishes them', () => {
+    const { container } = render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('investigating'), mission: row({ executionPhase: 'investigating', searchCandidates: undefined, searchQueries: ['rust ownership rules'] }) })} />);
+    expect(container.querySelector('.forge-bench-q')?.textContent).toBe('«rust ownership rules»');
+    expect(screen.getByText('Consultas de Hermes publicadas por el Kernel')).toBeTruthy();
+  });
+
+  it('reports how many real candidates the search returned once the Kernel verifies them', () => {
+    const { container } = render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row() })} />);
+    const bench = container.querySelector('.forge-bench') as HTMLElement;
+    expect(bench.dataset.mode).toBe('searched');
+    expect(within(bench).getByText('Búsqueda web terminada · 8 candidatos reales')).toBeTruthy();
   });
 });
