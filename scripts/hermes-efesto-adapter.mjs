@@ -129,6 +129,9 @@ export async function prepareHermesHome(hermesHome, maxTurns = DEFAULT_AGENT_TUR
   };
   const config = {
     agent: { max_turns: maxTurns },
+    // Never let an auxiliary task (compression, vision, titles…) fall back to a paid OpenRouter
+    // model, and skip session-title generation, which only costs an extra model call per run.
+    auxiliary: { free_only: true, title_generation: { enabled: false } },
     ...(Object.keys(route).length > 0 ? { model: route } : {}),
   };
   await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, { encoding: 'utf8', mode: 0o600, flag: 'wx' });

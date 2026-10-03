@@ -27,7 +27,7 @@ The Kernel still owns URL validation, Evidence creation, deduplication, Goal-sco
 1. reads exactly one mission JSON object from stdin;
 2. validates `efesto.hermes-mission.v1`;
 3. builds a bounded public-research prompt;
-4. creates one exclusive private config in the ephemeral home with `agent.max_turns: 8` and the already-configured provider/model route, then invokes the authentic CLI from that empty home/working directory with `chat --query <prompt> --quiet --max-turns <bounded> --provider <configured> --model <configured> --ignore-rules --toolsets search`;
+4. creates one exclusive private config in the ephemeral home with `agent.max_turns: 8`, `auxiliary.free_only: true` (auxiliary tasks never fall back to a paid OpenRouter model), `auxiliary.title_generation.enabled: false` (no extra session-title model call) and the already-configured provider/model route, then invokes the authentic CLI from that empty home/working directory with `chat --query <prompt> --quiet --max-turns <bounded> --provider <configured> --model <configured> --ignore-rules --toolsets search`;
 5. accepts strict JSON containing at most 20 findings, or discards all non-URL prose from an invalid response and admits only at most 20 deduplicated literal HTTP(S) URLs as neutral candidates;
 6. rejects unsupported authority fields, oversized values, invalid output, timeouts, and non-zero exits;
 7. writes only `{ "findings": [...] }` to stdout.

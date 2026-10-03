@@ -34,6 +34,9 @@ const SAMPLE_SEARCHES = [
   { query: 'repartidor autónomo requisitos' },
 ];
 
+// Isolated runs never fall back to paid auxiliary models and skip title generation.
+const AUXILIARY = { free_only: true, title_generation: { enabled: false } };
+
 describe('Hermes Efesto adapter', () => {
   it('builds a bounded public discovery prompt from an authorized mission', () => {
     const prompt = buildHermesPrompt({
@@ -297,6 +300,7 @@ process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/a' 
       expect(route).toEqual({ default: 'nvidia/nemotron-test', provider: 'nvidia', base_url: 'https://example.invalid/v1' });
       expect(JSON.parse(await readFile(isolatedConfig, 'utf8'))).toEqual({
         agent: { max_turns: 4 },
+        auxiliary: AUXILIARY,
         model: { default: 'nvidia/nemotron-test', provider: 'nvidia', base_url: 'https://example.invalid/v1' },
       });
       expect(parseTopLevelHermesModelRoute('not-model: true\n')).toBeUndefined();
@@ -310,7 +314,7 @@ process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/a' 
     const directory = await mkdtemp(join(tmpdir(), 'efesto-hermes-config-test-'));
     try {
       const configPath = await prepareHermesHome(directory);
-      expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({ agent: { max_turns: 8 } });
+      expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({ agent: { max_turns: 8 }, auxiliary: AUXILIARY });
       await expect(prepareHermesHome(directory)).rejects.toMatchObject({ code: 'EEXIST' });
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -322,7 +326,7 @@ process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/a' 
     const invalidDirectory = await mkdtemp(join(tmpdir(), 'efesto-hermes-invalid-cap-test-'));
     try {
       const configPath = await prepareHermesHome(directory, 4);
-      expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({ agent: { max_turns: 4 } });
+      expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({ agent: { max_turns: 4 }, auxiliary: AUXILIARY });
       await expect(prepareHermesHome(invalidDirectory, 9)).rejects.toThrow('between 1 and 8');
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -336,6 +340,7 @@ process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/a' 
       const configPath = await prepareHermesHome(directory, 4, 'custom', 'qwen3.5:2b');
       expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({
         agent: { max_turns: 4 },
+        auxiliary: AUXILIARY,
         model: { default: 'qwen3.5:2b', provider: 'custom' },
       });
     } finally {
