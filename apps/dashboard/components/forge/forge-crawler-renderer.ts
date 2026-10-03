@@ -45,7 +45,7 @@ type P = { x: number; y: number };
 type R = { x: number; y: number; w: number; h: number; cx: number; cy: number };
 type RGB = [number, number, number];
 type BgNode = { x: number; y: number; p: number; z: number; hub: boolean };
-type GNode = P & { k: number; via: BgNode; delay: number; side: 1 | -1; leaf?: { dx: number; dy: number } };
+type GNode = P & { k: number; via: BgNode; crawl: P[]; delay: number; side: 1 | -1; leaf?: { dx: number; dy: number } };
 type Geo = {
   W: number; H: number; S: R; mob: boolean; chip: R; bar: P; s: number; floorY: number; q: P;
   band: { x0: number; x1: number; y0: number; y1: number };
@@ -53,6 +53,8 @@ type Geo = {
   nodes: GNode[]; rest: P;
 };
 
+const EM_SCALE = 0.25;
+const CRAWL_N = 24;
 const EMBER: RGB = [238, 135, 72], MOLTEN: RGB = [255, 122, 42], HOT: RGB = [255, 214, 160], WHITE: RGB = [255, 248, 232];
 const GOLD: RGB = [245, 196, 81], STEEL: RGB = [196, 205, 216], ASH: RGB = [122, 115, 109];
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -75,7 +77,16 @@ function bez(p: P[], u: number): P {
   const v = 1 - u;
   return { x: v * v * v * p[0].x + 3 * v * v * u * p[1].x + 3 * v * u * u * p[2].x + u * u * u * p[3].x, y: v * v * v * p[0].y + 3 * v * v * u * p[1].y + 3 * v * u * u * p[2].y + u * u * u * p[3].y };
 }
-function samp(p: P[], u0: number, u1: number, n = 36): P[] { const o: P[] = []; for (let i = 0; i <= n; i += 1) o.push(bez(p, lerp(u0, u1, i / n))); return o; }
+/** Samples a cubic into a reusable buffer (no per-frame allocation); returns the buffer trimmed to n + 1 points. */
+function samp(p: P[], u0: number, u1: number, n = 36, out: P[] = []): P[] {
+  for (let i = 0; i <= n; i += 1) {
+    const u = lerp(u0, u1, i / n), a = 1 - u, b0 = a * a * a, b1 = 3 * a * a * u, b2 = 3 * a * u * u, b3 = u * u * u;
+    const o = out[i] ?? (out[i] = { x: 0, y: 0 });
+    o.x = b0 * p[0].x + b1 * p[1].x + b2 * p[2].x + b3 * p[3].x; o.y = b0 * p[0].y + b1 * p[1].y + b2 * p[2].y + b3 * p[3].y;
+  }
+  out.length = n + 1;
+  return out;
+}
 
 // Node placements inside the crawl band (u, v in 0..1); the 4-node set is the approved mockup's.
 const PLACES_WIDE: Record<number, number[][]> = {
@@ -102,9 +113,19 @@ function resolveMonoFont() {
 export class ForgeCrawlerRenderer {
   private fx: CanvasRenderingContext2D;
   private bg: CanvasRenderingContext2D;
-  private bloomA?: HTMLCanvasElement;
-  private bloomB?: HTMLCanvasElement;
-  private bloomOk: boolean;
+  /** Emissive layer: a quarter-resolution canvas under the crisp fx layer, blended additively by CSS.
+   *  It replaces a read-back bloom (drawImage of the fx canvas + ctx.filter blur every frame), which
+   *  stalled the main thread on every frame; glows and lines are mirrored into it as they are drawn. */
+  private em?: CanvasRenderingContext2D;
+  private emCanvas?: HTMLCanvasElement;
+  /** Cached background layers: the decorative web graph and two depth layers of dust. */
+  private bgGraph?: HTMLCanvasElement;
+  private bgDust: HTMLCanvasElement[] = [];
+  private grid = new Map<number, BgNode[]>();
+  private gridCell = 40;
+  private sprites = new Map<number, HTMLCanvasElement>();
+  private buf: P[][] = [[], [], [], []];
+  private dpr = 1;
   private G?: Geo;
   private BGN: BgNode[] = [];
   private BGE: [number, number][] = [];
@@ -127,7 +148,15 @@ export class ForgeCrawlerRenderer {
     const bg = bgCanvas.getContext('2d');
     if (!fx || !bg) throw new Error('canvas 2d unavailable');
     this.fx = fx; this.bg = bg;
-    this.bloomOk = typeof fx.filter === 'string';
+    if (typeof document !== 'undefined' && fxCanvas.parentElement) {
+      const emCanvas = document.createElement('canvas');
+      const em = emCanvas.getContext('2d');
+      if (em) {
+        emCanvas.className = 'forge-live-glow'; emCanvas.setAttribute('aria-hidden', 'true');
+        fxCanvas.parentElement.insertBefore(emCanvas, fxCanvas);
+        this.emCanvas = emCanvas; this.em = em;
+      }
+    }
     resolveMonoFont();
   }
 
@@ -162,6 +191,7 @@ export class ForgeCrawlerRenderer {
     }
     const W = F.width;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
+    this.dpr = dpr;
     const size = (c: HTMLCanvasElement, w: number, h: number) => {
       const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
       if (c.width !== pw) c.width = pw;
@@ -172,11 +202,12 @@ export class ForgeCrawlerRenderer {
     size(this.bgCanvas, S.w, S.h);
     this.fx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.bg.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (this.bloomOk) {
-      const bw = Math.max(1, Math.round((W * dpr) / 4)), bh = Math.max(1, Math.round((H * dpr) / 4));
-      this.bloomA = this.bloomA ?? document.createElement('canvas');
-      this.bloomB = this.bloomB ?? document.createElement('canvas');
-      this.bloomA.width = bw; this.bloomA.height = bh; this.bloomB.width = bw; this.bloomB.height = bh;
+    if (this.emCanvas && this.em) {
+      const k = EM_SCALE * dpr, ew = Math.max(1, Math.round(W * k)), eh = Math.max(1, Math.round(H * k));
+      if (this.emCanvas.width !== ew) this.emCanvas.width = ew;
+      if (this.emCanvas.height !== eh) this.emCanvas.height = eh;
+      this.emCanvas.style.width = `${W}px`; this.emCanvas.style.height = `${H}px`;
+      this.em.setTransform(k, 0, 0, k, 0, 0);
     }
     const chip = this.el.chip ? rel(this.el.chip) : { x: S.cx - 60, y: S.y + 20, w: 120, h: 34, cx: S.cx, cy: S.y + 37 };
     const funnel = this.el.funnel ? rel(this.el.funnel) : undefined;
@@ -185,8 +216,8 @@ export class ForgeCrawlerRenderer {
     const bar = { x: S.cx + (mob ? 0 : 50 * (s / 0.96)), y: floorY - 160 * s };
     const q = { x: chip.cx, y: chip.y + chip.h + (mob ? 36 : 20) };
     const band = mob ? { x0: S.x + 18, x1: S.x + S.w - 18, y0: q.y + 34, y1: bar.y - 52 } : { x0: S.x + 46, x1: S.x + S.w - 46, y0: q.y + 46, y1: bar.y - 92 };
-    const sig = `${Math.round(S.x)}:${Math.round(S.y)}:${Math.round(S.w)}:${Math.round(S.h)}:${mob}`;
-    if (sig !== this.bgSig) { this.bgSig = sig; this.buildBackground(S, mob); }
+    const sig = `${Math.round(S.x)}:${Math.round(S.y)}:${Math.round(S.w)}:${Math.round(S.h)}:${mob}:${dpr}:${Math.round(bar.y)}`;
+    if (sig !== this.bgSig) { this.bgSig = sig; this.buildBackground(S, mob, bar.y); }
     const n = this.story.nodes.length;
     const table = (mob ? PLACES_NARROW : PLACES_WIDE)[n] ?? (mob ? PLACES_NARROW : PLACES_WIDE)[8];
     const nodes: GNode[] = this.story.nodes.map((node, k) => {
@@ -201,7 +232,9 @@ export class ForgeCrawlerRenderer {
       else if (side < 0 && x - 12 - w < S.x + 6) side = 1;
       const hasLeaf = n <= 4 && node.path && node.path !== '/';
       const lf = (mob ? LEAVES_NARROW : LEAVES_WIDE)[k];
-      return { x, y, k, via, delay: (Math.abs(x - q.x) / (S.w / 2)) * 0.9 + k * 0.03, side, ...(hasLeaf ? { leaf: { dx: lf[0], dy: lf[1] } } : {}) };
+      const crawl: P[] = [];
+      for (let i = 0; i <= CRAWL_N; i += 1) { const w2 = i / CRAWL_N, a2 = 1 - w2; crawl.push({ x: a2 * a2 * q.x + 2 * a2 * w2 * via.x + w2 * w2 * x, y: a2 * a2 * q.y + 2 * a2 * w2 * via.y + w2 * w2 * y }); }
+      return { x, y, k, via, crawl, delay: (Math.abs(x - q.x) / (S.w / 2)) * 0.9 + k * 0.03, side, ...(hasLeaf ? { leaf: { dx: lf[0], dy: lf[1] } } : {}) };
     });
     this.G = {
       W, H, S, mob, chip, bar, s, floorY, q, band, cells, cards, nodes,
@@ -215,13 +248,13 @@ export class ForgeCrawlerRenderer {
 
   setVisibility(visible: boolean) { this.visible = visible; this.kick(); }
   setOnScreen(onScreen: boolean) { this.onScreen = onScreen; this.kick(); }
-  destroy() { cancelAnimationFrame(this.raf); this.raf = 0; }
+  destroy() { cancelAnimationFrame(this.raf); this.raf = 0; this.emCanvas?.remove(); }
 
   private textWidth(text: string, size: number): number {
     this.fx.save(); this.fx.font = `550 ${size}px ${FONT_MONO}`; const w = this.fx.measureText(text).width; this.fx.restore(); return w;
   }
 
-  private buildBackground(S: R, mob: boolean) {
+  private buildBackground(S: R, mob: boolean, barY: number) {
     const r = rng(11);
     this.BGN = [];
     const sp = mob ? 27 : 34;
@@ -243,7 +276,33 @@ export class ForgeCrawlerRenderer {
     this.DUST = [];
     const count = Math.round((S.w * S.h) / (mob ? 200 : 280));
     for (let i = 0; i < Math.min(count, mob ? 700 : 1800); i += 1) this.DUST.push({ x: S.x + rd() * S.w, y: S.y + rd() * S.h, z: 0.2 + 0.8 * rd(), p: rd() * 6.28 });
+    // spatial grid for nearest-node lookups (spider feet, roam points)
+    this.gridCell = sp * 1.2; this.grid.clear();
+    for (const n of this.BGN) { const key = this.gridKey(n.x, n.y); const cell = this.grid.get(key); if (cell) cell.push(n); else this.grid.set(key, [n]); }
+    // Static layers, drawn once: the decorative graph and two depth layers of dust that scroll.
+    const dpr = this.dpr, mk = (w: number, h: number) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * dpr)); c.height = Math.max(1, Math.round(h * dpr)); const x = c.getContext('2d'); x?.setTransform(dpr, 0, 0, dpr, 0, 0); return [c, x] as const; };
+    const fade = (y: number) => clamp((barY + 20 - y) / 120) * 0.85 + 0.15;
+    const [gc, gx] = mk(S.w, S.h);
+    if (gx) {
+      gx.translate(-S.x, -S.y); gx.lineWidth = 0.6;
+      // batch edges by quantised alpha: a handful of strokes instead of one per edge
+      const buckets = new Map<number, [BgNode, BgNode][]>();
+      for (const [i, j] of this.BGE) { const a = N[i], b = N[j]; const al = Math.round(0.055 * fade((a.y + b.y) / 2) * 400); const list = buckets.get(al); if (list) list.push([a, b]); else buckets.set(al, [[a, b]]); }
+      for (const [al, list] of buckets) { gx.strokeStyle = rgba([235, 190, 150], al / 400); gx.beginPath(); for (const [a, b] of list) { gx.moveTo(a.x, a.y); gx.lineTo(b.x, b.y); } gx.stroke(); }
+      for (const n of N) { gx.fillStyle = rgba([240, 200, 165], (n.hub ? 0.32 : 0.16) * n.z * fade(n.y)); const r = n.hub ? 1.6 : 1; gx.fillRect(n.x - r / 2, n.y - r / 2, r, r); }
+    }
+    this.bgGraph = gc;
+    this.bgDust = [0, 1].map((layer) => {
+      const [dc, dx] = mk(S.w, S.h);
+      if (dx) for (const d of this.DUST) {
+        if ((d.z >= 0.6 ? 1 : 0) !== layer) continue;
+        dx.fillStyle = rgba([210, 190, 175], (0.05 + 0.1 * d.z) * 0.8);
+        dx.fillRect(d.x - S.x, d.y - S.y, d.z * 1.1, d.z * 1.1);
+      }
+      return dc;
+    });
   }
+  private gridKey(x: number, y: number) { return Math.floor(x / this.gridCell) * 4096 + Math.floor(y / this.gridCell); }
 
   // ------------------------------------------------------------------ loop
   private kick() {
@@ -274,15 +333,31 @@ export class ForgeCrawlerRenderer {
     const dt = this.last ? Math.min(0.05, (now - this.last) / 1000) : 0;
     const hold = this.tl.hold[this.story.reach];
     const atHold = this.t >= hold;
-    // At a hold the forge only breathes: 30 fps is plenty for embers and pulses.
-    if (atHold && this.last && now - this.last < 30) { this.raf = requestAnimationFrame(this.frame); return; }
+    // At a hold the forge only breathes. It keeps the display rate while frames are cheap and drops to
+    // ~30 fps on a device where a frame costs more than a third of a 60 Hz budget.
+    if (atHold && this.costMs > 5.5 && this.last && now - this.last < 30) { this.raf = requestAnimationFrame(this.frame); return; }
     this.last = now;
     this.ambient += dt;
     if (this.t < hold) this.t = Math.min(hold, this.t + dt);
     this.setPlaying(this.t < hold);
+    const c0 = performance.now();
+    this.animating = true;
     this.draw();
+    this.animating = false;
+    this.noteCost(performance.now() - c0);
     if (this.visible && this.onScreen && !this.hooks.reducedMotion()) this.raf = requestAnimationFrame(this.frame);
   };
+
+  /** Exponential average of the main-thread cost of one frame (ms), exposed for profiling. */
+  private costMs = 0;
+  private animating = false;
+  private bgTick = 0;
+  private costFrames = 0;
+  private noteCost(ms: number) {
+    this.costMs = this.costFrames ? this.costMs * 0.92 + ms * 0.08 : ms;
+    this.costFrames += 1;
+    if (this.costFrames % 30 === 0) this.fxCanvas.dataset.frameMs = this.costMs.toFixed(2);
+  }
 
   private setPlaying(value: boolean) {
     if (value === this.playing) return;
@@ -300,33 +375,47 @@ export class ForgeCrawlerRenderer {
     const holdSearch = reach === 'searching' && t >= T.hold.searching - 0.01;
 
     // ======== background: dust + decorative web graph (never counted)
-    bg.clearRect(0, 0, S.w, S.h); bg.save(); bg.translate(-S.x, -S.y);
-    const intro = 1;
-    for (const d of this.DUST) {
-      const x = d.x + Math.sin(A * 0.2 * d.z + d.p) * 6 * d.z;
-      let y = d.y - ((A * 3 * d.z) % S.h); if (y < S.y) y += S.h;
-      bg.fillStyle = rgba([210, 190, 175], (0.05 + 0.1 * d.z) * (0.6 + 0.4 * Math.sin(A * 1.3 + d.p * 3)) * intro);
-      bg.fillRect(x, y, d.z * 1.1, d.z * 1.1);
-    }
-    // scan pulse: once when the crawl starts; it repeats while Hermes is still searching
+    // The background drifts at a few px/s: repainting it every third frame is invisible and saves a
+    // canvas upload per frame. The scan pulse (fast) and any static redraw always repaint it.
     let scanR = clamp((t - T.crawl0) / 2.2) * Math.hypot(S.w, S.h) * 0.9;
     let scanA = t > T.crawl0 ? 1 - clamp((t - T.crawl0 - 1.8) / 1.2) : 0;
     if (holdSearch) { const ph = (A % 3.2) / 3.2; scanR = ph * Math.hypot(S.w, S.h) * 0.9; scanA = 1 - clamp((ph - 0.6) / 0.4); }
-    const nodePos = (n: BgNode) => ({ x: n.x + Math.sin(A * 0.5 + n.p) * 1.6 * n.z, y: n.y + Math.cos(A * 0.4 + n.p) * 1.6 * n.z });
-    const bottomFade = (y: number) => clamp((G.bar.y + 20 - y) / 120) * 0.85 + 0.15;
-    bg.lineWidth = 0.6;
-    for (const [i, j] of this.BGE) {
-      const a = nodePos(this.BGN[i]), b = nodePos(this.BGN[j]);
-      const my = (a.y + b.y) / 2, mx = (a.x + b.x) / 2;
-      let al = 0.055 * bottomFade(my);
-      if (scanA > 0) { const d = Math.hypot(mx - q.x, my - q.y); al += 0.22 * Math.exp(-(((d - scanR) / 40) ** 2)) * scanA; }
-      bg.strokeStyle = rgba([235, 190, 150], al); bg.beginPath(); bg.moveTo(a.x, a.y); bg.lineTo(b.x, b.y); bg.stroke();
+    this.bgTick = (this.bgTick + 1) % 3;
+    if (!this.animating || scanA > 0.004 || this.bgTick === 0) {
+    bg.clearRect(0, 0, S.w, S.h);
+    // dust: two cached depth layers drifting up at their own speed (wrapping), with a slow sway and shimmer
+    this.bgDust.forEach((layer, i) => {
+      const speed = i ? 2.4 : 1.2, off = (A * speed) % S.h, sway = Math.sin(A * (i ? 0.17 : 0.11) + i) * (i ? 3 : 2);
+      bg.globalAlpha = 0.8 + 0.2 * Math.sin(A * (i ? 1.3 : 0.9) + i * 2);
+      bg.drawImage(layer, sway, -off, S.w, S.h); bg.drawImage(layer, sway, S.h - off, S.w, S.h);
+    });
+    bg.globalAlpha = 0.92 + 0.08 * Math.sin(A * 0.6);
+    if (this.bgGraph) bg.drawImage(this.bgGraph, 0, 0, S.w, S.h);
+    bg.globalAlpha = 1;
+    bg.save(); bg.translate(-S.x, -S.y);
+    // scan pulse: once when the crawl starts; it repeats while Hermes is still searching
+    // scan pulse: only the edges inside the moving ring are drawn live, batched by alpha
+    if (scanA > 0.004) {
+      bg.lineWidth = 0.6;
+      const N = this.BGN, levels: number[] = [];
+      for (const [i, j] of this.BGE) {
+        const a = N[i], b = N[j], d = Math.hypot((a.x + b.x) / 2 - q.x, (a.y + b.y) / 2 - q.y) - scanR;
+        if (d < -100 || d > 100) continue;
+        const al = 0.22 * Math.exp(-((d / 40) ** 2)) * scanA; if (al < 0.01) continue;
+        levels.push(Math.min(15, Math.round(al * 60)), i, j);
+      }
+      for (let lv = 1; lv <= 15; lv += 1) {
+        let any = false;
+        for (let m = 0; m < levels.length; m += 3) { if (levels[m] !== lv) continue; if (!any) { bg.beginPath(); any = true; } const a = N[levels[m + 1]], b = N[levels[m + 2]]; bg.moveTo(a.x, a.y); bg.lineTo(b.x, b.y); }
+        if (any) { bg.strokeStyle = rgba([235, 190, 150], lv / 60); bg.stroke(); }
+      }
     }
-    for (const n of this.BGN) { const p = nodePos(n); bg.fillStyle = rgba([240, 200, 165], (n.hub ? 0.32 : 0.16) * n.z * bottomFade(p.y)); const r = n.hub ? 1.6 : 1; bg.fillRect(p.x - r / 2, p.y - r / 2, r, r); }
     bg.restore();
+    }
 
     // ======== fx
     fx.clearRect(0, 0, G.W, G.H);
+    if (this.em) this.em.clearRect(0, 0, G.W, G.H);
     fx.save();
     const qOn = clamp((t - T.q0 + 0.2) / 0.5);
     this.glow(q.x, q.y, (mob ? 26 : 38) * (1 + 0.08 * Math.sin(A * 3)), MOLTEN, 0.55 * qOn);
@@ -341,12 +430,9 @@ export class ForgeCrawlerRenderer {
       const t0 = T.crawl0 + r.delay, u = clamp((t - t0) / 0.75);
       if (u <= 0) continue;
       const picked = t > T.pick[r.k];
-      const v = r.via, path = [q, { x: v.x, y: v.y }, r];
-      const pts: P[] = []; const N = 24;
-      for (let i = 0; i <= N; i += 1) { const w = i / N, a = 1 - w; pts.push({ x: a * a * path[0].x + 2 * a * w * path[1].x + w * w * path[2].x, y: a * a * path[0].y + 2 * a * w * path[1].y + w * w * path[2].y }); }
-      const shown = pts.slice(0, Math.max(2, Math.round(u * N) + 1));
-      this.line(shown, EMBER, 0.55 * (picked ? 0.45 : 1), 1.1, 3);
-      if (u < 1) { const h = shown[shown.length - 1]; this.glow(h.x, h.y, 10, HOT, 0.9); fx.fillStyle = rgba(WHITE, 1); fx.fillRect(h.x - 1.2, h.y - 1.2, 2.4, 2.4); }
+      const v = r.via, shownN = Math.max(2, Math.round(u * CRAWL_N) + 1);
+      this.line(r.crawl, EMBER, 0.55 * (picked ? 0.45 : 1), 1.1, 3, shownN);
+      if (u < 1) { const h = r.crawl[shownN - 1]; this.glow(h.x, h.y, 10, HOT, 0.9); fx.fillStyle = rgba(WHITE, 1); fx.fillRect(h.x - 1.2, h.y - 1.2, 2.4, 2.4); }
       const vb = Math.exp(-(((u - 0.5) / 0.12) ** 2)); if (vb > 0.02) this.glow(v.x, v.y, 8, EMBER, 0.7 * vb);
     }
     // candidate nodes
@@ -378,10 +464,10 @@ export class ForgeCrawlerRenderer {
     for (const r of nodes) {
       const k = r.k, p = this.pullPath(r), g0 = T.pull[k] - 0.3, land = T.pull[k] + 0.85;
       const ga = clamp((t - g0) / 0.3) * (1 - clamp((t - land - 0.2) / 0.6));
-      if (ga > 0) this.line(samp(p, 0, clamp((t - g0) / 0.35), 30), EMBER, 0.28 * ga, 0.8, 2);
+      if (ga > 0) this.line(samp(p, 0, clamp((t - g0) / 0.35), 30, this.buf[0]), EMBER, 0.28 * ga, 0.8, 2);
       if (t > T.pull[k] && t < land + 0.02) {
         const u = easeIn(clamp((t - T.pull[k]) / 0.85)) * 0.82 + clamp((t - T.pull[k]) / 0.85) * 0.18;
-        const trail: P[] = []; for (let i = 0; i < 14; i += 1) trail.push(bez(p, Math.max(0, u - i * 0.022)));
+        const trail = samp(p, u, Math.max(0, u - 13 * 0.022), 13, this.buf[1]);
         this.line(trail, HOT, 0.8, 1.6, 8);
         const h = trail[0]; this.glow(h.x, h.y, mob ? 18 : 24, HOT, 1); fx.fillStyle = '#fffaf0'; fx.beginPath(); fx.arc(h.x, h.y, 2.4, 0, 7); fx.fill();
       }
@@ -426,7 +512,7 @@ export class ForgeCrawlerRenderer {
       const toGold = sj >= 0 ? clamp((t - strikeAt) / 0.6) : 0;
       const cool = node.outcome !== 'support' ? clamp((t - T.verdict - 0.5) / 1.2) : 0;
       const col = toGold ? mixc(MOLTEN, GOLD, toGold) : mixc(MOLTEN, STEEL, cool * 0.8);
-      const pts = samp(p, 0, u, 48);
+      const pts = samp(p, 0, u, 48, this.buf[2]);
       this.molten(pts, col, (1 - cool * 0.45) * (0.9 + 0.1 * Math.sin(A * 7 + k)), mob ? 1 : 1.3);
       for (let j = 0; j < 3; j += 1) { const w = ((A * 0.55 + j / 3 + k * 0.2) % 1) * u; const pp = bez(p, w); this.glow(pp.x, pp.y, 7, toGold ? GOLD : HOT, 0.5 - cool * 0.35); }
       const h = pts[pts.length - 1]; this.glow(h.x, h.y, 14 + 6 * toGold, toGold ? GOLD : HOT, 0.95); fx.fillStyle = '#fffaf0'; fx.beginPath(); fx.arc(h.x, h.y, 2.2, 0, 7); fx.fill();
@@ -477,7 +563,7 @@ export class ForgeCrawlerRenderer {
         for (let i = 0; i < 12; i += 1) {
           const tt = tau - i * 0.03; if (tt < 0 || tt > 1.5) continue; const k2 = tt / 1.5;
           const px = G.bar.x + (i - 6) * 3 * easeOut(k2) * G.s * 4 + Math.sin(i * 2.1 + tt * 2) * 9 * k2, py = G.bar.y - easeOut(k2) * 90 * G.s; const rr = (6 + 26 * k2) * G.s * 1.4;
-          const gg = fx.createRadialGradient(px, py, 0, px, py, rr); gg.addColorStop(0, rgba([236, 232, 228], 0.18 * (1 - k2) ** 1.4)); gg.addColorStop(1, 'rgba(236,232,228,0)'); fx.fillStyle = gg; fx.fillRect(px - rr, py - rr, rr * 2, rr * 2);
+          this.puff(px, py, rr, 0.18 * (1 - k2) ** 1.4);
         }
         fx.restore();
       }
@@ -493,8 +579,6 @@ export class ForgeCrawlerRenderer {
       }
     }
     fx.restore();
-
-    this.bloom();
 
     // crisp labels after bloom
     fx.save();
@@ -575,7 +659,11 @@ export class ForgeCrawlerRenderer {
   }
   private nearestNode(px: number, py: number, maxD: number): P | undefined {
     let best: P | undefined, bd = maxD * maxD;
-    for (const n of this.BGN) { const d = (n.x - px) ** 2 + (n.y - py) ** 2; if (d < bd) { bd = d; best = n; } }
+    const c = this.gridCell, r = Math.ceil(maxD / c), cx = Math.floor(px / c), cy = Math.floor(py / c);
+    for (let gx = cx - r; gx <= cx + r; gx += 1) for (let gy = cy - r; gy <= cy + r; gy += 1) {
+      const cell = this.grid.get(gx * 4096 + gy); if (!cell) continue;
+      for (const n of cell) { const d = (n.x - px) ** 2 + (n.y - py) ** 2; if (d < bd) { bd = d; best = n; } }
+    }
     return best;
   }
   private drawSpider(p: P & { dx: number; dy: number }, a: number, walk: number) {
@@ -639,7 +727,7 @@ export class ForgeCrawlerRenderer {
     const p0 = { x: b.x - 50 * s, y: b.y - 2 };
     const p = [p0, { x: p0.x - (mob ? 30 : 70), y: p0.y - (mob ? 50 : 110) }, { x: end.x + (mob ? 30 : 60) * (end.x < p0.x ? 1 : -1), y: end.y - (mob ? 60 : 90) }, end];
     const u = easeOut(clamp((t - st) / 0.8)), h = bez(p, u), cool = clamp((t - st - 0.35) / 0.5);
-    this.line(samp(p, Math.max(0, u - 0.2), u, 14), mixc(HOT, ASH, cool), 0.6 * (1 - clamp((t - st - 0.9) / 0.6)), 1, 4);
+    this.line(samp(p, Math.max(0, u - 0.2), u, 14, this.buf[3]), mixc(HOT, ASH, cool), 0.6 * (1 - clamp((t - st - 0.9) / 0.6)), 1, 4);
     this.glow(h.x, h.y, 9, mixc(HOT, ASH, cool), 0.8 * (1 - cool * 0.6));
     const d = t - st - 0.8;
     if (d > 0 && d < 2.2) { const r = rng(70 + k); for (let i = 0; i < 18; i += 1) { const vx = (r() - 0.5) * 30, vy = -10 - r() * 18; const x = h.x + vx * d, y = h.y + vy * d + 22 * d * d; fx.fillStyle = rgba(ASH, (1 - clamp(d / 2.2)) * 0.7); fx.fillRect(x, y, 1.6, 1.6); } }
@@ -647,20 +735,44 @@ export class ForgeCrawlerRenderer {
   }
 
   // ------------------------------------------------------------------ primitives
-  private glow(x: number, y: number, r: number, c: RGB, a: number) {
-    if (a <= 0.004 || r <= 0) return;
-    const fx = this.fx, g = fx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, rgba(c, a)); g.addColorStop(0.3, rgba(c, a * 0.4)); g.addColorStop(1, rgba(c, 0));
-    fx.fillStyle = g; fx.fillRect(x - r, y - r, r * 2, r * 2);
+  /** Radial glow sprite per (quantised) colour, drawn with globalAlpha: no gradient object per glow. */
+  private sprite(c: RGB, soft = false): HTMLCanvasElement | undefined {
+    const key = ((c[0] >> 3) << 12) | ((c[1] >> 3) << 6) | (c[2] >> 3) | (soft ? 1 << 20 : 0);
+    let sp = this.sprites.get(key);
+    if (sp) return sp;
+    if (typeof document === 'undefined') return undefined;
+    if (this.sprites.size > 64) this.sprites.clear();
+    sp = document.createElement('canvas'); sp.width = sp.height = 64;
+    const x = sp.getContext('2d'); if (!x) return undefined;
+    const g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+    if (soft) { g.addColorStop(0, rgba(c, 1)); g.addColorStop(1, rgba(c, 0)); } else { g.addColorStop(0, rgba(c, 1)); g.addColorStop(0.3, rgba(c, 0.4)); g.addColorStop(1, rgba(c, 0)); }
+    x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+    this.sprites.set(key, sp);
+    return sp;
   }
-  private line(pts: P[], c: RGB, a: number, w: number, blur = 0) {
-    if (pts.length < 2 || a <= 0.004) return;
+  private glow(x: number, y: number, r: number, c: RGB, a: number, emissive = 0.4) {
+    if (a <= 0.004 || r <= 0) return;
+    const sp = this.sprite(c);
+    if (!sp) return;
+    const fx = this.fx, ga = fx.globalAlpha;
+    fx.globalAlpha = ga * clamp(a); fx.drawImage(sp, x - r, y - r, r * 2, r * 2); fx.globalAlpha = ga;
+    const em = this.em;
+    if (em && emissive > 0) { const R = r * 1.8; em.globalAlpha = clamp(a * emissive); em.drawImage(sp, x - R, y - R, R * 2, R * 2); em.globalAlpha = 1; }
+  }
+  private puff(x: number, y: number, r: number, a: number) {
+    const sp = this.sprite([236, 232, 228], true);
+    if (!sp || a <= 0.004) return;
+    const fx = this.fx, ga = fx.globalAlpha; fx.globalAlpha = ga * a; fx.drawImage(sp, x - r, y - r, r * 2, r * 2); fx.globalAlpha = ga;
+  }
+  /** Crisp stroke on the fx layer; its halo (formerly shadowBlur, a per-stroke blur) goes to the emissive layer. */
+  private line(pts: P[], c: RGB, a: number, w: number, blur = 0, count = pts.length) {
+    if (count < 2 || a <= 0.004) return;
+    const trace = (ctx: CanvasRenderingContext2D) => { ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < count; i += 1) ctx.lineTo(pts[i].x, pts[i].y); };
     const fx = this.fx;
-    fx.save(); fx.lineCap = 'round'; fx.lineJoin = 'round';
-    if (blur) { fx.shadowColor = rgba(c, a); fx.shadowBlur = blur; }
-    fx.strokeStyle = rgba(c, a); fx.lineWidth = w; fx.beginPath(); fx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i += 1) fx.lineTo(pts[i].x, pts[i].y);
-    fx.stroke(); fx.restore();
+    fx.lineCap = 'round'; fx.lineJoin = 'round';
+    fx.strokeStyle = rgba(c, a); fx.lineWidth = w; trace(fx); fx.stroke();
+    const em = this.em;
+    if (em) { em.lineCap = 'round'; em.lineJoin = 'round'; em.strokeStyle = rgba(c, a * Math.min(0.5, 0.12 + blur * 0.05)); em.lineWidth = w * 2 + blur * 1.5 + 2; trace(em); em.stroke(); }
   }
   private molten(pts: P[], c: RGB, a: number, w: number) {
     this.line(pts, c, a * 0.18, w * 5); this.line(pts, c, a * 0.45, w * 2.2); this.line(pts, mixc(c, WHITE, 0.55), a, w * 0.8);
@@ -688,18 +800,6 @@ export class ForgeCrawlerRenderer {
     fx.fillStyle = rgba(col, 1); fx.textAlign = 'left'; fx.fillText(text, px, y + 0.5);
     fx.restore();
   }
-  private bloom() {
-    const a = this.bloomA, b = this.bloomB;
-    if (!this.bloomOk || !a || !b) return;
-    const ax = a.getContext('2d'), bx = b.getContext('2d'), fx = this.fx;
-    if (!ax || !bx) return;
-    ax.setTransform(1, 0, 0, 1, 0, 0); ax.globalCompositeOperation = 'copy'; ax.filter = 'brightness(1.05) contrast(2.2) saturate(1.2)'; ax.drawImage(this.fxCanvas, 0, 0, a.width, a.height); ax.filter = 'none';
-    fx.save(); fx.setTransform(1, 0, 0, 1, 0, 0); fx.globalCompositeOperation = 'lighter';
-    bx.globalCompositeOperation = 'copy'; bx.filter = 'blur(2px)'; bx.drawImage(a, 0, 0); fx.globalAlpha = 0.55; fx.drawImage(b, 0, 0, this.fxCanvas.width, this.fxCanvas.height);
-    bx.filter = 'blur(7px)'; bx.drawImage(a, 0, 0); bx.filter = 'none'; fx.globalAlpha = 0.45; fx.drawImage(b, 0, 0, this.fxCanvas.width, this.fxCanvas.height);
-    fx.restore();
-  }
-
   // ------------------------------------------------------------------ anvil, hammer, ingot
   private anvilBody(c: CanvasRenderingContext2D) { c.beginPath(); c.moveTo(466, 505); c.bezierCurveTo(492, 499, 512, 497, 536, 497); c.lineTo(784, 497); c.lineTo(784, 521); c.lineTo(772, 527); c.bezierCurveTo(726, 530, 700, 537, 694, 557); c.lineTo(692, 580); c.bezierCurveTo(700, 592, 724, 598, 742, 600); c.lineTo(742, 612); c.lineTo(538, 612); c.lineTo(538, 600); c.bezierCurveTo(556, 598, 580, 592, 588, 580); c.lineTo(586, 557); c.bezierCurveTo(580, 538, 560, 531, 530, 528); c.bezierCurveTo(504, 525, 482, 516, 466, 505); c.closePath(); }
   private anvilTop(c: CanvasRenderingContext2D) { c.beginPath(); c.moveTo(466, 505); c.bezierCurveTo(490, 495, 512, 489, 538, 489); c.lineTo(778, 489); c.lineTo(784, 497); c.lineTo(536, 497); c.bezierCurveTo(512, 497, 492, 499, 466, 505); c.closePath(); }
@@ -730,13 +830,21 @@ export class ForgeCrawlerRenderer {
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
     g = ctx.createLinearGradient(-280, 0, 280, 0); g.addColorStop(0, 'rgba(255,150,70,0)'); g.addColorStop(0.5, rgba([255, 210, 150], 0.2 + 0.3 * heat + 0.5 * strike)); g.addColorStop(1, 'rgba(255,150,70,0)'); ctx.fillStyle = g; ctx.fillRect(-280, -1, 560, 2);
     ctx.globalCompositeOperation = 'source-over';
-    ctx.shadowColor = gold ? 'rgba(255,200,90,.95)' : 'rgba(255,140,50,.95)'; ctx.shadowBlur = (12 + heat * 22) * s;
+    if (this.em) {
+      // the halo the old bloom pass gave the hot bar: a wide flat glow plus a round one above the face
+      const em = this.em, sp = this.sprite(gold ? [255, 200, 90] : [255, 140, 50]), core = this.sprite(gold ? [255, 230, 170] : [255, 190, 120]);
+      if (sp && core) {
+        const R = (110 + heat * 90 + strike * 140) * s; em.globalAlpha = clamp(0.5 + 0.45 * heat + 0.4 * strike); em.drawImage(sp, x - R * 1.4, y - R * 0.5, R * 2.8, R);
+        const C = (75 + heat * 65 + strike * 100) * s; em.globalAlpha = clamp(0.45 + 0.5 * heat + 0.5 * strike); em.drawImage(core, x - C, y - C, C * 2, C * 2);
+        em.globalAlpha = 1;
+      }
+    }
     g = ctx.createLinearGradient(-56, 0, 56, 0); const edge = gold ? '#a8741c' : '#b8400e', mid = gold ? '#ffc861' : '#ff7a2a';
     g.addColorStop(0, edge); g.addColorStop(0.22, mid); g.addColorStop(0.5, '#fff3dc'); g.addColorStop(0.78, mid); g.addColorStop(1, edge);
     ctx.globalAlpha = 0.5 + 0.5 * clamp(heat + 0.25); ctx.fillStyle = g; ctx.beginPath();
     if (typeof ctx.roundRect === 'function') ctx.roundRect(-56, -5, 112, 10, 4); else ctx.rect(-56, -5, 112, 10);
     ctx.fill();
-    ctx.shadowBlur = 0; ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(255,255,240,.75)'; ctx.fillRect(-40, -4, 80, 1);
+    ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(255,255,240,.75)'; ctx.fillRect(-40, -4, 80, 1);
     ctx.restore();
   }
   private hammerTheta(t: number, strikes: number[]): number {

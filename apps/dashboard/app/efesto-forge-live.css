@@ -114,6 +114,9 @@
   min-height: 0;
 }
 .forge-live-fx { position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none; }
+/* Emissive halo layer (quarter resolution, drawn by the renderer): additive, under the crisp fx strokes. */
+.forge-live-glow { position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none; mix-blend-mode: screen; }
+@supports (mix-blend-mode: plus-lighter) { .forge-live-glow { mix-blend-mode: plus-lighter; } }
 .forge-live-stage {
   position: relative;
   grid-area: 1 / 1;
