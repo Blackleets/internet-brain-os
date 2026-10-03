@@ -64,18 +64,20 @@ async function expectNoHorizontalOverflow(page: Page, width: number): Promise<vo
   expect(sizes.forgeScroll).toBeLessThanOrEqual(sizes.forgeClient);
 }
 
-// Phone: the forge scrolls in its own row; its end (cards, counters, legend) reaches a spot fully above
-// the composer, and the scroll area itself never runs under the composer.
-async function expectForgeClearOfComposer(page: Page): Promise<void> {
+// Phone: the forge scrolls in its own row above the bottom tab bar; its end (cards, legend, the Goal
+// composer below the forge) can always be scrolled fully above the tab bar, which never covers it.
+async function expectForgeClearOfTabbar(page: Page): Promise<void> {
   await page.locator('.forge-live-legend').evaluate((el) => el.scrollIntoView({ block: 'end' }));
   const layout = await page.evaluate(() => {
     const bottom = (selector: string) => document.querySelector(selector)?.getBoundingClientRect().bottom ?? Number.NaN;
-    const composer = document.querySelector('.forge-composer')?.getBoundingClientRect();
-    return { scroll: bottom('.forge-scroll'), forge: bottom('.forge-live'), lastCard: Math.max(...[...document.querySelectorAll('.forge-source')].map((el) => el.getBoundingClientRect().bottom)), composerTop: composer?.top ?? Number.NaN };
+    return { scroll: bottom('.forge-scroll'), legend: bottom('.forge-live-legend'), lastCard: Math.max(...[...document.querySelectorAll('.forge-source')].map((el) => el.getBoundingClientRect().bottom)), tabbarTop: document.querySelector('.efesto-tabbar')?.getBoundingClientRect().top ?? Number.NaN };
   });
-  expect(layout.scroll).toBeLessThanOrEqual(layout.composerTop);
-  expect(layout.forge).toBeLessThanOrEqual(layout.composerTop - 8);
-  expect(layout.lastCard).toBeLessThanOrEqual(layout.composerTop);
+  expect(layout.scroll).toBeLessThanOrEqual(layout.tabbarTop + 1);
+  expect(layout.legend).toBeLessThanOrEqual(layout.tabbarTop);
+  expect(layout.lastCard).toBeLessThanOrEqual(layout.tabbarTop);
+  await page.locator('.forge-composer').evaluate((el) => el.scrollIntoView({ block: 'end' }));
+  const composer = await page.evaluate(() => ({ bottom: document.querySelector('.forge-composer')?.getBoundingClientRect().bottom ?? Number.NaN, tabbarTop: document.querySelector('.efesto-tabbar')?.getBoundingClientRect().top ?? Number.NaN }));
+  expect(composer.bottom).toBeLessThanOrEqual(composer.tabbarTop + 1);
   await page.locator('.forge-live-anvil').evaluate((el) => el.scrollIntoView({ block: 'start' }));
 }
 
@@ -85,13 +87,17 @@ async function expectHonestSources(page: Page): Promise<void> {
   await expect(forge.locator('.forge-source[data-state="supported"]')).toHaveCount(1);
   await expect(forge.locator('.forge-source[data-state="unsupported"]')).toHaveCount(1);
   await expect(forge.locator('.forge-source[data-state="read_failed"]')).toHaveCount(1);
+  // The replay reveals each card as the Kernel reached it; the verdicts are on screen once it settles.
+  await expect(forge.locator('.forge-source[data-state="supported"]')).toHaveAttribute('data-stage', 'gold', { timeout: 15_000 });
   await expect(forge.getByText(/Fixture excerpt: ownership is a set of rules/)).toBeVisible();
   await expect(forge.getByText(/HERMES SNIPPET FIXTURE/)).toHaveCount(0);
-  await expect(forge.getByText(/La página no cubre suficientes términos del Goal/)).toBeVisible();
-  await expect(forge.getByLabel('Contadores de la misión')).toContainText('con SUPPORT');
+  await expect(forge.getByText(/no cubre suficientes términos del Goal/i)).toBeVisible();
+  await expect(forge.getByLabel('Contadores de la misión')).toContainText('SUPPORT');
 }
 
 test('forge live view on a 390×844 phone: real Kernel states, readable cards, no overflow', async ({ page }, testInfo) => {
+  // Two full play-throughs of the real records (first view + replay) run in this test.
+  test.setTimeout(60_000);
   await page.setViewportSize({ width: 390, height: 844 });
   await useForgeFixture(page);
   await page.goto('/');
@@ -108,11 +114,10 @@ test('forge live view on a 390×844 phone: real Kernel states, readable cards, n
   const link = page.locator('.forge-source[data-state="supported"] .forge-source-link');
   expect((await link.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(36);
   await expect(page.locator('.forge-source[data-state="supported"] mark.forge-term')).toHaveText(['Fixture', 'ownership']);
-  await expect(page.getByRole('list', { name: 'Términos del Goal presentes en la Evidence' }).getByRole('listitem')).toHaveText(['fixture', 'ownership']);
   await expect(page.locator('.forge-bench')).toHaveAttribute('data-mode', 'searched');
   await expect(page.locator('.forge-bench-meta')).toHaveText('Búsqueda web terminada · 3 candidatos reales');
   await page.screenshot({ path: testInfo.outputPath('forge-mobile-390x844.png') });
-  await expectForgeClearOfComposer(page);
+  await expectForgeClearOfTabbar(page);
   // Replay re-runs the same Kernel records from the start, then settles on the same verdicts.
   await page.getByRole('button', { name: /Repetir la forja/ }).click();
   await expect(page.locator('.forge-bench-meta')).toHaveText('Reconstrucción · datos reales del Kernel');
@@ -135,8 +140,10 @@ test('forge on a phone while the agent works: focuses the active mission, shows 
   await expect(forge.getByRole('heading', { name: 'Fixture ownership guide' })).toBeVisible();
   await expect(forge.locator('.forge-bench')).toHaveAttribute('data-mode', 'searching');
   await expect(forge.locator('.forge-bench-q')).toHaveText('«Fixture ownership guide»');
-  await expect(forge.getByText(/la consulta exacta no la publica el Kernel/)).toBeVisible();
-  await expect(forge.getByRole('list', { name: 'Palabras clave de la misión' }).getByRole('listitem')).toHaveText(['ownership', 'rust']);
+  // The exact query is not published: the chip says it searches from the Goal.
+  await expect(forge.locator('.forge-chip-tag')).toHaveText(/desde el Goal/i);
+  await expect(forge.locator('.forge-chip-tag')).toBeVisible();
+  await expect(forge.locator('.forge-bench-meta')).toContainText('la consulta exacta no la publica el Kernel');
   await expect(forge.locator('.forge-source')).toHaveCount(0);
   await expectNoHorizontalOverflow(page, 390);
 });
@@ -189,7 +196,7 @@ test('a mission the Kernel left read without SUPPORT and without a lease can be 
 });
 
 for (const size of [{ width: 360, height: 780 }, { width: 390, height: 844 }, { width: 430, height: 932 }]) {
-  test(`forge phone polish at ${size.width}×${size.height}: anvil, steps and the gold Find in the first viewport, full-text cards, 44px targets`, async ({ page }, testInfo) => {
+  test(`forge phone polish at ${size.width}×${size.height}: steps, anvil, funnel and the gold Find in the first viewport, full-text cards, 44px targets`, async ({ page }, testInfo) => {
     await page.setViewportSize(size);
     await useForgeFixture(page);
     await page.goto('/');
@@ -203,18 +210,18 @@ for (const size of [{ width: 360, height: 780 }, { width: 390, height: 844 }, { 
         steps: rect('.forge-live-steps')?.bottom ?? Number.NaN,
         anvil: rect('.forge-live-anvil')?.bottom ?? Number.NaN,
         find: rect('.forge-source[data-state="supported"] .forge-source-findtitle')?.bottom ?? Number.NaN,
-        composerTop: rect('.forge-composer')?.top ?? Number.NaN,
-        composerHeight: rect('.forge-composer')?.height ?? Number.NaN,
+        funnel: rect('.forge-live-counters')?.bottom ?? Number.NaN,
+        tabbarTop: rect('.efesto-tabbar')?.top ?? Number.NaN,
       };
     });
-    // Track, the whole anvil zone (sparks) and the gold Find (badge + title) are visible before any scroll.
-    expect(first.steps).toBeLessThan(first.composerTop);
-    expect(first.anvil).toBeLessThanOrEqual(first.composerTop);
-    expect(first.find).toBeLessThanOrEqual(first.composerTop - 24);
-    // The Goal tab's composer is one compact row while the forge is shown.
-    expect(first.composerHeight).toBeLessThanOrEqual(56);
-    // No truncated bar title and no anvil caption clutter on a phone.
-    await expect(page.locator('.forge-product-title strong')).toBeHidden();
+    // Step bar, the whole anvil zone, the funnel and the gold Find (badge + title) are visible before any scroll.
+    expect(first.steps).toBeLessThan(first.tabbarTop);
+    expect(first.anvil).toBeLessThanOrEqual(first.tabbarTop);
+    expect(first.funnel).toBeLessThanOrEqual(first.tabbarTop);
+    expect(first.find).toBeLessThanOrEqual(first.tabbarTop);
+    // The phone header is the brand lockup (no truncated crumb) and there is no anvil caption clutter.
+    await expect(page.locator('.forge-product-title')).toBeHidden();
+    await expect(page.locator('.forge-menu-brand')).toBeVisible();
     await expect(page.locator('.forge-live').getByText('KERNEL · GOAL')).toHaveCount(0);
     // Kernel excerpts and titles are never clamped on a phone.
     const clipped = await page.locator('.forge-source blockquote p, .forge-source-title').evaluateAll((items) => items.filter((item) => item.scrollHeight > item.clientHeight + 1).length);
@@ -222,11 +229,11 @@ for (const size of [{ width: 360, height: 780 }, { width: 390, height: 844 }, { 
     const small = await page.locator('.forge-live button:visible, .forge-live a:visible, .forge-live summary:visible').evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height).filter((height) => height > 0 && height < 44));
     expect(small).toEqual([]);
     await page.screenshot({ path: testInfo.outputPath(`forge-phone-${size.width}x${size.height}.png`) });
-    await expectForgeClearOfComposer(page);
+    await expectForgeClearOfTabbar(page);
   });
 }
 
-test('forge live view on desktop: wide anvil composition with sources on both sides', async ({ page }, testInfo) => {
+test('forge live view on desktop: wide forge stage with the Candidatos → Evidence panel on its right', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await useForgeFixture(page);
   await page.goto('/');
@@ -238,9 +245,12 @@ test('forge live view on desktop: wide anvil composition with sources on both si
   const cards = await page.locator('.forge-source').evaluateAll((items) => items.map((item) => { const box = item.getBoundingClientRect(); return box.left + box.width / 2; }));
   expect(anvil).not.toBeNull();
   const anvilCenter = (anvil?.x ?? 0) + (anvil?.width ?? 0) / 2;
-  expect(cards.some((x) => x < anvilCenter)).toBe(true);
-  expect(cards.some((x) => x > anvilCenter)).toBe(true);
-  await page.locator('.forge-live').getByRole('button', { name: 'Ver Find' }).click();
+  expect(cards.length).toBe(3);
+  expect(cards.every((x) => x > anvilCenter)).toBe(true);
+  await expect(page.locator('.forge-live-panel')).toContainText('Candidatos → Evidence');
+  await expect(page.locator('.efesto-sidebar .sidebar-goals')).toContainText('Fixture ownership guide');
+  await expect(page.locator('.efesto-sidebar .kernel-summary')).toContainText('127.0.0.1:4100');
+  await page.locator('.forge-live').getByRole('button', { name: /^Ver Find/ }).click();
   await expect(page.getByRole('heading', { name: 'Hallazgos', exact: true })).toBeVisible();
   await expect(page.getByText('Ownership (fixture Find)', { exact: true })).toBeVisible();
   await openHome(page, false);
