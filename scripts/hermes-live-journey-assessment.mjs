@@ -160,11 +160,52 @@ export function classifyAcceptanceFailure(report) {
     && failedChecks.length === SUPPORT_FIND_CHECK_IDS.length
     && SUPPORT_FIND_CHECK_IDS.every((id) => failedChecks.includes(id));
   if (onlySupportFinds) {
+    // A forged Mission means evidenceSupportsGoal passed for at least one fetched page. If L5/L6
+    // still found no Find, the loss happened after SUPPORT (this hid the lead-classifier drop for
+    // weeks under 'live-no-supported-find'), so it must never be reported as honest live variance.
+    const verification = Array.isArray(report.verification) ? report.verification : [];
+    const supported = verification.filter((item) => item?.supported === true).length;
+    if (supported > 0) {
+      return {
+        class: 'live-supported-find-dropped',
+        failedChecks,
+        summary: `Kernel SUPPORT passed for ${supported} fetched page(s) but no Goal-linked Find reached the inbox (L5/L6): a pipeline bug between SUPPORT and Find. Acceptance stays NOT PROVEN.`,
+      };
+    }
     return {
       class: 'live-no-supported-find',
       failedChecks,
-      summary: 'Live run produced Kernel-verified Evidence and honest Goal Truth, but no Find passed the Kernel SUPPORT gate (L5/L6). Acceptance stays NOT PROVEN.',
+      summary: `Live run produced Kernel-verified Evidence and honest Goal Truth, but no Find passed the Kernel SUPPORT gate (L5/L6; ${verification.length} fetched page(s), 0 SUPPORT). Acceptance stays NOT PROVEN.`,
     };
   }
   return { class: 'pipeline', failedChecks, summary: `Acceptance checks failed: ${failedChecks.join(', ') || 'none recorded'}` };
+}
+
+/**
+ * Reporting-only per-candidate verification digest for the live report: what Kernel web.read
+ * fetched and why SUPPORT accepted or refused it. Public source is host + path only (no query or
+ * fragment, bounded); no page text, snippet or model output is included.
+ */
+export function summarizeLiveVerification(mission) {
+  const results = Array.isArray(mission?.verificationResults) ? mission.verificationResults : [];
+  const candidates = Array.isArray(mission?.searchCandidates) ? mission.searchCandidates : [];
+  return results.filter((item) => item && typeof item === 'object').slice(0, 20).map((item) => {
+    const candidate = candidates.find((entry) => entry?.id === item.candidateId);
+    return {
+      status: typeof item.status === 'string' ? item.status.slice(0, 40) : 'unknown',
+      source: publicSource(item.sourceUrl ?? candidate?.url),
+      supported: item.supported === true,
+      reason: String(item.supportReason ?? item.reason ?? 'none').slice(0, 120),
+    };
+  });
+}
+
+function publicSource(value) {
+  try {
+    const url = new URL(String(value ?? ''));
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return 'non-http-source';
+    return `${url.host}${url.pathname}`.slice(0, 120);
+  } catch {
+    return 'invalid-source';
+  }
 }
