@@ -86,6 +86,7 @@ describe('ForgeLiveView', () => {
     const bench = container.querySelector('.forge-bench') as HTMLElement;
     expect(bench.dataset.mode).toBe('waiting');
     expect(within(bench).getByText('Esperando turno del agente')).toBeTruthy();
+    expect(screen.getAllByText(/esperando turno del agente/i)).toHaveLength(1);
     expect(within(bench).getByText(/Siguiente: Hermes toma la misión/)).toBeTruthy();
     expect(screen.queryByRole('list', { name: /Fuentes de la misión/ })).toBeNull();
     expect(container.querySelector('.forge-bench-query')).toBeNull();

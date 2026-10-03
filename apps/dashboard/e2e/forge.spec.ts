@@ -152,6 +152,8 @@ test('a queued mission breathes honestly: waiting for the agent, clear next step
   const forge = page.locator('.forge-live');
   await expect(forge.locator('.forge-bench')).toHaveAttribute('data-mode', 'waiting');
   await expect(forge.getByText('Esperando turno del agente', { exact: true })).toBeVisible();
+  // Said once: the header detail does not repeat the workbench title.
+  await expect(forge.getByText(/esperando turno del agente/i)).toHaveCount(1);
   await expect(forge.getByText(/Siguiente: Hermes toma la misión/)).toBeVisible();
   await expect(forge.locator('.forge-bench-query')).toHaveCount(0);
   await expect(forge.locator('.forge-source')).toHaveCount(0);

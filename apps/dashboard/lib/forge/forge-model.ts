@@ -356,7 +356,7 @@ function derivePhase(workState: string, blocked: boolean, counts: ForgeCounts, s
 function phaseCopy(phase: ForgePhase, counts: ForgeCounts, row?: MissionSummary): { label: string; detail: string } {
   switch (phase) {
     case 'waiting_agent': return { label: 'Esperando a Hermes', detail: 'La misión está confirmada; el agente aún no está conectado.' };
-    case 'queued': return { label: 'Misión en cola', detail: 'Confirmada y esperando turno del agente.' };
+    case 'queued': return { label: 'Misión en cola', detail: 'Confirmada por ti; el Kernel la guarda en cola para Hermes.' };
     case 'searching': return { label: 'Buscando candidatos', detail: 'Hermes explora la web pública. Un candidato no es Evidence.' };
     case 'verifying': return {
       label: 'Verificando fuentes',
