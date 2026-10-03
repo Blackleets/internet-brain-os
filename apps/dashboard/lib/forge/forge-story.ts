@@ -99,8 +99,9 @@ export function buildForgeStory(model: ForgeMissionModel): ForgeStory {
 
 function storyReach(model: ForgeMissionModel): StoryReach {
   if (model.phase === 'waiting_agent' || model.phase === 'queued') return 'idle';
-  if (model.phase === 'searching') return model.sources.length ? 'candidates' : 'searching';
-  if (model.phase === 'verifying') return model.sources.some((item) => item.state !== 'candidate') ? 'final' : 'candidates';
+  if (model.phase === 'searching' && !model.sources.length) return 'searching';
+  // Searching or verifying: play through to the verdicts the Kernel already published, else hold on the candidates.
+  if (model.phase === 'searching' || model.phase === 'verifying') return model.sources.some((item) => item.state !== 'candidate') ? 'final' : 'candidates';
   return 'final';
 }
 

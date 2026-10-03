@@ -87,6 +87,14 @@ describe('forge story (spider graph + forge.log)', () => {
     expect(text(story.log.find((line) => line.cue.kind === 'reading')?.segs ?? [])).toBe('kernel.read 4 candidatos · en curso');
   });
 
+  it('a mission the surface still calls investigating plays through to the verdicts the Kernel already published', () => {
+    const story = buildForgeStory(mission('investigating', { status: 'running', executionPhase: 'investigating' }));
+    expect(story.reach).toBe('final');
+    expect(story.nodes.map((node) => node.outcome)).toEqual(['support', 'unsupported', 'unread', 'unread']);
+    const pending = buildForgeStory(mission('investigating', { status: 'running', executionPhase: 'investigating', verificationResults: [] }));
+    expect(pending.reach).toBe('candidates');
+  });
+
   it('queued and searching missions have no nodes and nothing read', () => {
     const queued = buildForgeStory(mission('queued', { status: 'queued', executionPhase: 'queued', searchCandidates: [], verificationResults: [] }));
     expect(queued.reach).toBe('idle');
