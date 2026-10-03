@@ -10,7 +10,7 @@ import { KernelClient, KernelClientError } from '../lib/kernel/client';
 import type { CaseSummary } from '../lib/kernel/contracts';
 import { loadGoalSurfaces, type GoalSurface, type GoalSurfaceWorkState } from '../lib/kernel/goal-surfaces';
 import { loadOverview, type OverviewSnapshot } from '../lib/kernel/overview';
-import { countMissionKernelSupportedFinds, kernelSupportedFinds } from '../lib/kernel/supported-find';
+import { countMissionKernelSupportedFinds, kernelSupportedFinds, missionVerifiedWithoutSupport } from '../lib/kernel/supported-find';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { connectionStore } from '../lib/session/connection-store';
 import { startVisiblePoller } from '../lib/ui/visible-poller';
@@ -91,8 +91,17 @@ export default function EfestoProductShell() {
     const hermesUnavailable = hermes === 'missing' || hermes === 'invalid' || hermes === 'failed';
     const waiting = mission?.workState === 'waiting_for_agent' || mission?.workState === 'queued';
     if (hermesUnavailable && waiting) return 'unavailable';
+    if (mission?.workState === 'verifying') {
+      // GoalSurface strips verificationResults; prefer the full Mission row when loaded so
+      // an all-fetch-failed batch (retry still possible) keeps Verificando.
+      const fullMission = snapshot?.missions.find((item) => item.id === mission.id);
+      const proof = fullMission && Array.isArray(fullMission.verificationResults)
+        ? { workState: mission.workState, verificationResults: fullMission.verificationResults }
+        : mission;
+      if (missionVerifiedWithoutSupport(proof)) return 'verified_unsupported';
+    }
     return brainPhaseFromWorkState(mission?.workState);
-  }, [chatPending, connection, focusedGoalSurface?.mission, snapshot?.readiness.bootstrap?.hermes, snapshot?.readiness.kernel]);
+  }, [chatPending, connection, focusedGoalSurface?.mission, snapshot?.missions, snapshot?.readiness.bootstrap?.hermes, snapshot?.readiness.kernel]);
 
   useEffect(() => {
     try {

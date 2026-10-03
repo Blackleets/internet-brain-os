@@ -20,7 +20,7 @@ import {
   parseOpportunities,
   parseStatus,
 } from './parse';
-import { countMissionKernelSupportedFinds, isKernelSupportedFind } from './supported-find';
+import { countMissionKernelSupportedFinds, isKernelSupportedFind, missionVerifiedWithoutSupport } from './supported-find';
 
 type OverviewEndpoint = 'health' | 'status' | 'bootstrap' | 'cases' | 'goals' | 'missions' | 'opportunities' | 'activity' | 'modelForge' | 'scorecard';
 type OverviewIssueCode = KernelClientErrorCode | 'UNAVAILABLE' | 'UNKNOWN';
@@ -182,6 +182,7 @@ function missionActivityState(mission: MissionSummary): string {
   if (mission.executionPhase === 'forged') {
     return countMissionKernelSupportedFinds(mission) > 0 ? 'forged' : 'research_completed';
   }
+  if (missionVerifiedWithoutSupport(mission)) return 'verified_unsupported';
   if (mission.executionPhase) return mission.executionPhase;
   // Bare status completed (e.g. zero Hermes candidates, no Evidence) is not Completado.
   if (mission.status === 'completed') return 'completed_without_forge';

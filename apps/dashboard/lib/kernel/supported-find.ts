@@ -77,6 +77,36 @@ export function kernelSupportedFinds(
 }
 
 /**
+ * Honest-blocked verification: the Mission still reports `verifying`, but the Kernel
+ * already finished verifying fetched pages and none passed Kernel SUPPORT. The Kernel
+ * intentionally keeps the phase (L7 admits it), so UI must not keep animating
+ * "Verificando Evidence — Kernel aplicando gates" forever.
+ *
+ * With verificationResults: true only when at least one row is `verified` and no row is
+ * supported (all-fetch-failed batches stay `verifying`: retry remains possible).
+ * Without them (GoalSurface strips rows): findCount === 0 is only projected once
+ * verificationResults exist, so it is the same zero-SUPPORT signal.
+ */
+export function missionVerifiedWithoutSupport(mission?: unknown): boolean {
+  if (!mission || typeof mission !== 'object') return false;
+  const record = mission as Record<string, unknown>;
+  const phase = record.workState ?? record.executionPhase;
+  if (phase !== 'verifying') return false;
+  const results = record.verificationResults;
+  if (Array.isArray(results)) {
+    let verified = 0;
+    for (const entry of results) {
+      if (!entry || typeof entry !== 'object') continue;
+      const row = entry as Record<string, unknown>;
+      if (row.supported === true) return false;
+      if (row.status === 'verified') verified += 1;
+    }
+    return verified > 0;
+  }
+  return record.findCount === 0;
+}
+
+/**
  * Mission-scoped Kernel SUPPORT Find count for Home forge-state-action.
  * Prefer verificationResults supported === true when present (raw Mission rows).
  * GoalSurface missions strip verificationResults and expose the same Kernel

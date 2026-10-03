@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportedFinds } from './supported-find';
+import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportedFinds, missionVerifiedWithoutSupport } from './supported-find';
 import type { MissionSummary, OpportunitySummary } from './contracts';
 
 const evidenceBacked: OpportunitySummary = {
@@ -109,5 +109,35 @@ describe('countMissionKernelSupportedFinds', () => {
       findCount: 99,
       verificationResults: [{ supported: true }, { supported: false }],
     })).toBe(1);
+  });
+});
+
+describe('missionVerifiedWithoutSupport (honest-blocked verifying)', () => {
+  const verifying = { id: 'm', goalId: 'g', status: 'running', executionPhase: 'verifying', createdAt: '2026-09-02T00:00:00.000Z' } as const;
+
+  it('is true once a verified page failed SUPPORT and none passed', () => {
+    expect(missionVerifiedWithoutSupport({ ...verifying, verificationResults: [
+      { candidateId: 'c1', status: 'verified', evidenceId: 'ev-1', supported: false },
+      { candidateId: 'c2', status: 'verification_failed', reason: 'fetch_failed' },
+    ] })).toBe(true);
+    // GoalSurface strips rows; findCount 0 is only projected after verification.
+    expect(missionVerifiedWithoutSupport({ workState: 'verifying', findCount: 0 })).toBe(true);
+  });
+
+  it('stays false while verification is pending, retryable, supported or not verifying', () => {
+    expect(missionVerifiedWithoutSupport({ ...verifying })).toBe(false);
+    expect(missionVerifiedWithoutSupport({ workState: 'verifying' })).toBe(false);
+    expect(missionVerifiedWithoutSupport({ ...verifying, verificationResults: [] })).toBe(false);
+    expect(missionVerifiedWithoutSupport({ ...verifying, verificationResults: [
+      { candidateId: 'c1', status: 'verification_failed', reason: 'fetch_failed' },
+    ] })).toBe(false);
+    expect(missionVerifiedWithoutSupport({ ...verifying, verificationResults: [
+      { candidateId: 'c1', status: 'verified', supported: false },
+      { candidateId: 'c2', status: 'verified', supported: true },
+    ] })).toBe(false);
+    expect(missionVerifiedWithoutSupport({ workState: 'verifying', findCount: 1 })).toBe(false);
+    expect(missionVerifiedWithoutSupport({ workState: 'forged', findCount: 0 })).toBe(false);
+    expect(missionVerifiedWithoutSupport({ workState: 'investigating', verificationResults: [{ status: 'verified', supported: false }] })).toBe(false);
+    expect(missionVerifiedWithoutSupport(undefined)).toBe(false);
   });
 });

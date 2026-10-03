@@ -15,6 +15,7 @@ const STATE_PILL_LABELS = Object.freeze({
   running: 'En ejecucion',
   investigating: 'Investigando',
   verifying: 'Verificando',
+  verified_unsupported: 'Sin SUPPORT',
   failed: 'Fallida',
   active: 'Activa',
   new: 'Nueva',

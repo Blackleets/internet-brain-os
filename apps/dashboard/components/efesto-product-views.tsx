@@ -8,7 +8,7 @@ import {
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { CaseSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
-import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportProof, kernelSupportedFinds } from '../lib/kernel/supported-find';
+import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportProof, kernelSupportedFinds, missionVerifiedWithoutSupport } from '../lib/kernel/supported-find';
 import { statePillLabel, statePillTone } from '../lib/ui/state-pill-label.mjs';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 
@@ -27,7 +27,7 @@ export type EvidenceRecord = {
   tags?: string[]; entityIds?: string[]; relationshipIds?: string[];
 };
 export type CaseDetail = { case: Record<string, unknown>; evidence: EvidenceRecord[] };
-export type BrainPhase = 'offline' | 'ready' | 'queued' | 'investigating' | 'verifying' | 'forged' | 'completed' | 'thinking' | 'failed' | 'blocked' | 'unavailable';
+export type BrainPhase = 'offline' | 'ready' | 'queued' | 'investigating' | 'verifying' | 'verified_unsupported' | 'forged' | 'completed' | 'thinking' | 'failed' | 'blocked' | 'unavailable';
 
 const starterGoals = [
   'Encuentra las mejores herramientas para mi negocio',
@@ -63,7 +63,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   // research_completed neutral chrome; SUPPORT forged keeps phase-forged green.
   // workState=completed (completed-without-Evidence) must not keep phase-ready green
   // "Forja lista" Completado lookalike — Actividad already uses Terminada sin Evidence.
-  const chromePhase = (phase === 'forged' && forgeSupportedFindCount === 0) || phase === 'completed'
+  const chromePhase = (phase === 'forged' && forgeSupportedFindCount === 0) || phase === 'completed' || phase === 'verified_unsupported'
     ? 'research_completed'
     : phase;
   // GoalSurface findCount can prove SUPPORT while inbox is empty (dismissed / not loaded).
@@ -471,6 +471,7 @@ function missionPillState(mission: MissionSummary): string {
   if (mission.executionPhase === 'forged') {
     return countMissionKernelSupportedFinds(mission) > 0 ? 'forged' : 'research_completed';
   }
+  if (missionVerifiedWithoutSupport(mission)) return 'verified_unsupported';
   if (mission.executionPhase) return mission.executionPhase;
   if (mission.status === 'completed') return 'completed_without_forge';
   return mission.status;
@@ -491,6 +492,9 @@ export function brainState(phase: BrainPhase, supportedFindCount = 0) {
   if (phase === 'thinking') return { label: 'Conversando', detail: 'Modelo transmitiendo' };
   if (phase === 'investigating') return { label: 'Investigando', detail: 'Hermes ejecutando una misión' };
   if (phase === 'verifying') return { label: 'Verificando Evidence', detail: 'Kernel aplicando gates' };
+  // Verification finished with zero Kernel SUPPORT while the Mission honestly stays
+  // verifying: must not keep claiming gates are still running.
+  if (phase === 'verified_unsupported') return { label: 'Sin SUPPORT', detail: 'Ninguna página verificada respalda el Goal' };
   if (phase === 'queued') return { label: 'Misión preparada', detail: 'Esperando agente' };
   if (phase === 'forged') {
     // Fail-close Home forge-state-action (page.tsx → EfestoProductShell → HomeView):
