@@ -315,12 +315,16 @@ function finalStage(source: ForgeSource): CrawlerStage {
   }
 }
 
+// A settled phase shows a coarse "hace N min" that keeps advancing; it used to read the clock once,
+// so a run that ended while the page was open stayed at "hace 2 s" indefinitely.
+const SETTLED_CLOCK_MS = 15_000;
+
 function PhaseClock({ since, live }: { since?: string; live: boolean }) {
-  const now = useNow(live && Boolean(since) ? 1000 : 0);
+  const now = useNow(since ? (live ? 1000 : SETTLED_CLOCK_MS) : 0);
   if (!since || !now) return null;
   const elapsed = Math.max(0, Math.floor((now - Date.parse(since)) / 1000));
   if (!Number.isFinite(elapsed)) return null;
-  return <time className="forge-live-clock" dateTime={since} title={new Date(since).toLocaleString('es-ES')}> · {live ? '' : 'hace '}{formatElapsed(elapsed)}</time>;
+  return <time className="forge-live-clock" dateTime={since} title={new Date(since).toLocaleString('es-ES')}> · {live ? formatElapsed(elapsed) : `hace ${formatAgo(elapsed)}`}</time>;
 }
 
 function SourceCard({ source, goalTerms, onOpenFinds }: { source: ForgeSource; goalTerms: string[]; onOpenFinds?: () => void }) {
@@ -455,6 +459,16 @@ export function formatElapsed(seconds: number): string {
   if (minutes < 60) return `${minutes} min ${String(seconds % 60).padStart(2, '0')} s`;
   const hours = Math.floor(minutes / 60);
   if (hours < 48) return `${hours} h ${String(minutes % 60).padStart(2, '0')} min`;
+  return `${Math.floor(hours / 24)} días`;
+}
+
+/** Coarse elapsed time for a settled phase; precise to the minute, never to a stale second. */
+export function formatAgo(seconds: number): string {
+  if (seconds < 60) return 'menos de 1 min';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `${hours} h`;
   return `${Math.floor(hours / 24)} días`;
 }
 

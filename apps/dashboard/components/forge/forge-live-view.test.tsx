@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MissionSummary } from '../../lib/kernel/contracts';
 import type { GoalSurface } from '../../lib/kernel/goal-surfaces';
 import { buildForgeModel } from '../../lib/forge/forge-model';
-import { clipQuote, ForgeLiveView } from './forge-live-view';
+import { act } from 'react';
+import { clipQuote, ForgeLiveView, formatAgo } from './forge-live-view';
 
 // Kernel-shaped TEST FIXTURES (not product data).
 const MISSION_ID = 'mission:view-test';
@@ -131,6 +132,31 @@ describe('ForgeLiveView', () => {
     const bench = container.querySelector('.forge-bench') as HTMLElement;
     expect(bench.dataset.mode).toBe('searched');
     expect(container.querySelector('.forge-bench-meta')?.textContent).toBe('Búsqueda web terminada · 8 candidatos reales');
+  });
+
+  it('keeps the settled "hace …" clock advancing after the run ends instead of freezing at "hace 2 s"', () => {
+    vi.useFakeTimers();
+    try {
+      const forgedAt = '2026-10-03T22:54:58.280Z';
+      vi.setSystemTime(Date.parse(forgedAt) + 2_000);
+      const model = buildForgeModel({ connected: true, kernelOnline: true, surface: surface('forged'), mission: row({ status: 'completed', executionPhase: 'forged', forgedAt, completedAt: forgedAt }) });
+      if (model.kind !== 'mission') throw new Error('expected a mission model');
+      expect(model.phaseSince).toBe(forgedAt);
+      expect(model.motion).toBe('settled');
+      const { container } = render(<ForgeLiveView model={model} />);
+      const clock = () => container.querySelector('.forge-live-clock')?.textContent;
+      expect(clock()).toBe(' · hace menos de 1 min');
+      act(() => { vi.advanceTimersByTime(3 * 60_000); });
+      expect(clock()).toBe(' · hace 3 min');
+      act(() => { vi.advanceTimersByTime(2 * 3_600_000); });
+      expect(clock()).toBe(' · hace 2 h');
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(formatAgo(0)).toBe('menos de 1 min');
+    expect(formatAgo(59 * 60 + 59)).toBe('59 min');
+    expect(formatAgo(47 * 3600)).toBe('47 h');
+    expect(formatAgo(72 * 3600)).toBe('3 días');
   });
 
   it('clips long Kernel quotes for the card glance, preferring a sentence end', () => {
