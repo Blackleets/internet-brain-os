@@ -14,6 +14,7 @@ import { countMissionKernelSupportedFinds, kernelSupportedFinds, missionVerified
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { loadMissionEvidence } from '../lib/kernel/mission-evidence';
 import { buildForgeModel, type ForgeEvidenceLoad } from '../lib/forge/forge-model';
+import { focusGoalSurface } from '../lib/forge/forge-focus';
 import { connectionStore } from '../lib/session/connection-store';
 import { startVisiblePoller } from '../lib/ui/visible-poller';
 import { subscribeToKernelEvents } from '../lib/kernel/events';
@@ -84,7 +85,7 @@ export default function EfestoProductShell() {
   const [missionEvidence, setMissionEvidence] = useState<{ key: string; missionId: string; load: ForgeEvidenceLoad }>();
 
   const selectedProvider = providers.find((item) => item.id === selectedProviderId);
-  const focusedGoalSurface = goalSurfaces[0];
+  const focusedGoalSurface = useMemo(() => focusGoalSurface(goalSurfaces), [goalSurfaces]);
   const brainPhase = useMemo<BrainPhase>(() => {
     if (!connection || snapshot?.readiness.kernel !== 'online') return 'offline';
     if (chatPending) return 'thinking';
