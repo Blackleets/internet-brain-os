@@ -105,6 +105,11 @@ export type ForgeMissionModel = {
    * ever carries one (`searchQueries` / `searchQuery`).
    */
   search: { goal: string; keywords: string[]; exactQueries: string[] };
+  /**
+   * How many results the web search returned, only when a Kernel row publishes it
+   * (`searchResultCount` or `searchTelemetry.resultsCount`). Never inferred from the candidates.
+   */
+  searchResultCount?: number;
   /** Kernel timestamp of the moment the current phase started (ISO), when the row has it. */
   phaseSince?: string;
   /** Honest next step for waiting/queued states. */
@@ -168,6 +173,7 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
   }
   const phaseSince = phaseTimestamp(phase, row, surfaceMission);
   const nextStep = NEXT_STEPS[phase];
+  const resultCount = searchResultCount(row);
   const relaunch = canRelaunch(phase, surfaceMission.status, row, input.now ?? Date.now()) && input.surface.goal.id ? { goalId: input.surface.goal.id } : undefined;
   return {
     kind: 'mission',
@@ -184,6 +190,7 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
     goalTerms,
     searchKeywords,
     search: { goal: goalTitle, keywords: searchKeywords, exactQueries: exactQueries(row) },
+    ...(resultCount !== undefined ? { searchResultCount: resultCount } : {}),
     ...(phaseSince ? { phaseSince } : {}),
     ...(nextStep ? { nextStep } : {}),
     ...(relaunch ? { relaunch } : {}),
@@ -227,6 +234,15 @@ function exactQueries(row?: MissionSummary): string[] {
   if (!row) return [];
   const raw = Array.isArray(row.searchQueries) ? row.searchQueries : [row.searchQuery];
   return raw.map((item) => str(item)).filter((item) => item.length > 0 && item.length <= 200).slice(0, 6);
+}
+
+function searchResultCount(row?: MissionSummary): number | undefined {
+  if (!row) return undefined;
+  const telemetry = asRow(row.searchTelemetry);
+  for (const value of [row.searchResultCount, telemetry?.resultsCount, telemetry?.results_count]) {
+    if (typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 10_000) return value;
+  }
+  return undefined;
 }
 
 function phaseTimestamp(phase: ForgePhase, row: MissionSummary | undefined, mission: NonNullable<GoalSurface['mission']>): string | undefined {
