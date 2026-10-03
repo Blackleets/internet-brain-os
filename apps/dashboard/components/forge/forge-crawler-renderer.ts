@@ -168,6 +168,11 @@ export class ForgeCrawlerRenderer {
     this.story = story;
     this.tl = storyTimeline(story);
     if (restart || back || !prev) { this.t = 0; this.stages.clear(); this.replaying = restart; }
+    else if (!prev.query.exact && story.query.exact && this.t >= this.tl.q0 && this.t < this.tl.crawl0) {
+      // Live: Hermes' real queries (Kernel search telemetry) arrive while the chip still shows the Goal.
+      // Rewind to the start of the typing so the chip types the real query instead of swapping it in.
+      this.t = this.tl.q0 - 0.05;
+    }
     if (this.hooks.reducedMotion()) this.t = this.tl.hold[story.reach];
     this.measure();
     this.kick();
