@@ -23,10 +23,11 @@ export async function runHermesMissionWorker(options = {}) {
     const timeoutMs = options.timeoutMs ?? configuredTimeout(process.env.HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
     const result = await execute(command, args, mission, { timeoutMs });
     const findings = validateAdapterResult(result);
+    const searchTelemetry = adapterSearchTelemetry(result);
     let completed;
     try {
       completed = await request(fetchImpl, `${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, apiToken, {
-        method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, resultKind: 'search_candidates', findings }),
+        method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, resultKind: 'search_candidates', findings, ...(searchTelemetry ? { searchTelemetry } : {}) }),
       });
     } catch (error) {
       const reconciled = await reconcileSettledMission(fetchImpl, baseUrl, apiToken, mission.id);
@@ -110,6 +111,17 @@ function missionWorkerStatus(mission) {
 function validateAdapterResult(value) {
   if (!value || !Array.isArray(value.findings) || value.findings.length > 20) throw new Error('Hermes adapter must return { findings: [...] } with at most 20 items');
   return value.findings;
+}
+/**
+ * Display-only search telemetry from the adapter ({ searches: [{ query, limit?, resultCount? }] }).
+ * Passed through for the Kernel to validate and store; a malformed shape is dropped here and
+ * never fails the mission. It is not Evidence and plays no part in SUPPORT.
+ */
+export function adapterSearchTelemetry(value) {
+  const searches = value?.searches;
+  if (!Array.isArray(searches) || searches.length === 0 || searches.length > 8) return undefined;
+  if (!searches.every((item) => item && typeof item === 'object' && !Array.isArray(item) && typeof item.query === 'string')) return undefined;
+  return { searches };
 }
 function parseArgs(value) {
   if (!value) return [];

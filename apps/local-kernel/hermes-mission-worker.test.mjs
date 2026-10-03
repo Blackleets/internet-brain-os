@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { executeAdapter, runHermesMissionWorker } from './hermes-mission-worker.mjs';
+import { adapterSearchTelemetry, executeAdapter, runHermesMissionWorker } from './hermes-mission-worker.mjs';
 
 const token = 'worker-token-that-is-longer-than-thirty-two-characters';
 const mission = { id: 'mission:1', leaseId: 'lease:1', scope: { categories: ['job'] } };
@@ -18,6 +18,32 @@ describe('Hermes mission worker', () => {
     expect(JSON.parse(fetchImpl.mock.calls[1][1].body)).toMatchObject({
       leaseId: 'lease:1', resultKind: 'search_candidates', findings: [{ title: 'Job' }],
     });
+  });
+
+  it('passes the searches Hermes reported through to the Kernel as display-only search telemetry', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true, mission: { ...mission, status: 'running', executionPhase: 'verifying' } }) });
+    const searches = [{ query: 'empleo rider España', limit: 10, resultCount: 10 }, { query: 'trabajo delivery Barcelona', limit: 10 }];
+    const execute = vi.fn(async () => ({ findings: [{ url: 'https://example.com/job', title: 'Job', text: 'Search snippet' }], searches }));
+    await runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute });
+    const body = JSON.parse(fetchImpl.mock.calls[1][1].body);
+    expect(body.searchTelemetry).toEqual({ searches });
+    expect(body.findings).toHaveLength(1);
+  });
+
+  it('omits search telemetry the adapter did not report or reported malformed, without failing the mission', async () => {
+    expect(adapterSearchTelemetry({ findings: [] })).toBeUndefined();
+    expect(adapterSearchTelemetry({ searches: [] })).toBeUndefined();
+    expect(adapterSearchTelemetry({ searches: 'empleo' })).toBeUndefined();
+    expect(adapterSearchTelemetry({ searches: [{ limit: 10 }] })).toBeUndefined();
+    expect(adapterSearchTelemetry({ searches: Array.from({ length: 9 }, () => ({ query: 'q' })) })).toBeUndefined();
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true, mission: { ...mission, status: 'running', executionPhase: 'verifying' } }) });
+    const execute = vi.fn(async () => ({ findings: [{ url: 'https://example.com/job', title: 'Job', text: 'Search snippet' }], searches: [{ nope: true }] }));
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({ status: 'verifying' });
+    expect(JSON.parse(fetchImpl.mock.calls[1][1].body)).not.toHaveProperty('searchTelemetry');
   });
 
   it('stays idle when no authorized mission is claimable', async () => {
