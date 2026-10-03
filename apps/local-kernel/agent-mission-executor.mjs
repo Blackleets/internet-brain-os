@@ -137,11 +137,37 @@ function onlyKeys(value, allowed) {
   return Object.keys(value).every((key) => allowed.includes(key));
 }
 
+/**
+ * A candidate URL must be a well-formed absolute http(s) URL as written, not merely something the
+ * lenient WHATWG parser accepts. WHATWG happily parses markdown debris such as
+ * `https://a.example/](https://a.example/page` into a path, so the raw string is checked first:
+ * no whitespace, controls or RFC 3986-excluded characters, valid percent escapes, no `](`, and no
+ * square brackets in the path (brackets are only legal in an IPv6 host literal). Non-ASCII
+ * characters (IRIs) stay allowed; brackets stay allowed in the query, where real sites use them.
+ */
+export function isWellFormedAbsoluteHttpUrl(raw) {
+  if (typeof raw !== 'string' || !/^https?:\/\//i.test(raw)) return false;
+  if (/[\s"<>\\^`{|}\u0000-\u001f\u007f]/.test(raw) || /%(?![0-9a-f]{2})/i.test(raw) || raw.includes('](')) return false;
+  const afterScheme = raw.slice(raw.indexOf('//') + 2);
+  const authorityEnd = afterScheme.search(/[/?#]/);
+  const authority = authorityEnd < 0 ? afterScheme : afterScheme.slice(0, authorityEnd);
+  const rest = authorityEnd < 0 ? '' : afterScheme.slice(authorityEnd);
+  const pathEnd = rest.search(/[?#]/);
+  const path = pathEnd < 0 ? rest : rest.slice(0, pathEnd);
+  if (/[[\]]/.test(path)) return false;
+  if (/[[\]]/.test(authority) && !/^(?:[^@]*@)?\[[0-9a-f:.]+\](?::\d+)?$/i.test(authority)) return false;
+  try {
+    const parsed = new URL(raw);
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && Boolean(parsed.hostname);
+  } catch { return false; }
+}
+
 function normalizeCandidate(value, index) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw invalid(`finding ${index} must be an object`);
   const rawUrl = clean(value.url, 2048, `finding ${index} url`);
   let parsed;
   try { parsed = new URL(rawUrl); } catch { throw invalid(`finding ${index} URL is invalid`); }
+  if (['http:', 'https:'].includes(parsed.protocol) && !isWellFormedAbsoluteHttpUrl(rawUrl)) throw invalid(`finding ${index} URL is not a well-formed absolute HTTP(S) URL`);
   if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) throw invalid(`finding ${index} URL must be public HTTP(S)`);
   if (isPrivateLiteralHost(parsed.hostname)
     || [...parsed.searchParams.keys()].some((key) => /^(?:token|access_token|auth|authorization|api[_-]?key|code|session|signature|sig)$/i.test(key))) {

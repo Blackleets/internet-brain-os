@@ -19,6 +19,8 @@ import {
   collectHermesSearchTelemetry,
   diversifyFindings,
   parseHermesSearchCalls,
+  isWellFormedWebUrl,
+  recoverWebUrl,
 } from './hermes-efesto-adapter.mjs';
 
 const SAMPLE_DEBUG_LOG = new URL('./fixtures/hermes-web-tools-debug.sample.json', import.meta.url);
@@ -112,6 +114,18 @@ describe('Hermes Efesto adapter', () => {
     ])).toEqual([{ query: 'ok' }]);
     const many = Array.from({ length: 12 }, (_, index) => ({ tool_name: 'web_search_tool', parameters: { query: `q${index}`, limit: 10 }, error: null, results_count: 1 }));
     expect(parseHermesSearchCalls(many)).toHaveLength(8);
+  });
+
+  it('records the query exactly as Hermes sent it to the search engine, numeric noise included', () => {
+    // Live run 2026-10-04: Hermes appended noise such as "2024-1953". The search engine received it,
+    // so telemetry must show it; cleaning it here would misrepresent what was actually searched.
+    expect(parseHermesSearchCalls([
+      { tool_name: 'web_search_tool', parameters: { query: 'empleo rider courier trabajo en España 2024-1953', limit: 10 }, error: null, results_count: 10 },
+      { tool_name: 'web_search_tool', parameters: { query: 'trabajo delivery courier en España 2026-8765', limit: 10 }, error: null, results_count: 10 },
+    ])).toEqual([
+      { query: 'empleo rider courier trabajo en España 2024-1953', limit: 10, resultCount: 10 },
+      { query: 'trabajo delivery courier en España 2026-8765', limit: 10, resultCount: 10 },
+    ]);
   });
 
   it('reads the debug logs from the isolated Hermes home, removes them, and tolerates a missing or broken log', async () => {
@@ -419,6 +433,30 @@ process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/a' 
         { url: 'https://second.example/path?q=1', title: 'Public source: second.example', text: 'Public source candidate pending Kernel verification.' },
       ],
     });
+  });
+
+  it('recovers the link target from markdown-mangled URLs and drops ambiguous ones instead of guessing', () => {
+    // Exact shape a live Hermes run returned (2026-10-04).
+    const mangled = 'https://www.opcionempleo.com/](https://www.opcionempleo.com/compania/McDonald%27s';
+    expect(isWellFormedWebUrl(mangled)).toBe(false);
+    expect(recoverWebUrl(mangled)).toBe('https://www.opcionempleo.com/compania/McDonald%27s');
+    expect(recoverWebUrl('[Ofertas](https://jobs.example/rider)')).toBe('https://jobs.example/rider');
+    expect(recoverWebUrl('<https://jobs.example/rider>')).toBe('https://jobs.example/rider');
+    expect(recoverWebUrl('https://jobs.example/rider')).toBe('https://jobs.example/rider');
+    expect(recoverWebUrl('https://es.wikipedia.org/wiki/España')).toBe('https://es.wikipedia.org/wiki/España');
+    expect(recoverWebUrl('https://jobs.example/a?f[0]=rider')).toBe('https://jobs.example/a?f[0]=rider');
+    // two different hosts, or two different targets: ambiguous, nothing is picked
+    expect(recoverWebUrl('https://a.example/](https://b.example/page')).toBeUndefined();
+    expect(recoverWebUrl('[x](https://a.example/one) [y](https://a.example/two)')).toBeUndefined();
+    expect(recoverWebUrl('https://a.example/pa th')).toBeUndefined();
+    expect(recoverWebUrl('not a url')).toBeUndefined();
+    const parsed = parseHermesFindings(JSON.stringify({ findings: [
+      { url: mangled },
+      { url: 'https://a.example/](https://b.example/page' },
+      { url: 'https://jobs.example/rider' },
+    ] }));
+    expect(parsed.findings.map((finding) => finding.url)).toEqual(['https://www.opcionempleo.com/compania/McDonald%27s', 'https://jobs.example/rider']);
+    expect(parsed.findings[0].title).toBe('Public source: www.opcionempleo.com');
   });
 
   it('rejects non-web URL-only findings', () => {
