@@ -151,7 +151,7 @@
 .forge-bench-embers i:nth-child(3) { animation-delay: .4s; }
 
 .forge-ticker {
-  position: absolute; left: 16px; bottom: 88px; z-index: 7; width: 336px; max-width: calc(100% - 32px); padding: 10px 12px; border-radius: 12px;
+  position: absolute; left: 16px; bottom: 88px; z-index: 7; width: 364px; max-width: calc(100% - 32px); padding: 10px 12px; border-radius: 12px;
   background: rgba(10, 8, 7, .78); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: inset 0 0 0 1px var(--v3-line);
   font: 500 11px/17px var(--v3-mono); color: #8e857d; pointer-events: none;
 }
