@@ -335,7 +335,11 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
   if (options.promoteOpportunity === true) {
     const classified = classifyOpportunity(context, references);
     if (!(classified.status === 'opportunity' && mission.scope?.categories?.length && !mission.scope.categories.includes(classified.opportunity.category))) {
-      const projected = opportunityProjector.projectInto(nextData, context, references);
+      // SUPPORT already passed: a page the lead classifier does not recognise still becomes the
+      // Goal's Find instead of forging a Mission with zero Finds.
+      const projected = typeof opportunityProjector.projectSupportedInto === 'function'
+        ? opportunityProjector.projectSupportedInto(nextData, context, references, { scopeCategories: mission.scope?.categories ?? [] })
+        : opportunityProjector.projectInto(nextData, context, references);
       nextData = projected.data;
       opportunity = projected.result;
       if (opportunity?.status === 'opportunity' && opportunity.opportunity?.id) {
