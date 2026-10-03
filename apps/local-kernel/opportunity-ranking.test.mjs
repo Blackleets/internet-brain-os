@@ -44,6 +44,14 @@ describe('rankOpportunity', () => {
     expect(negative.score).toBeLessThan(neutral.score);
   });
 
+  test('orderingScore is the unclamped sum and agrees with the bounded score', () => {
+    const ranked = rankOpportunity(base, { now, goalMatches: [{ score: 80 }] });
+    expect(ranked.score).toBe(99);
+    expect(ranked.orderingScore).toBeGreaterThan(99);
+    const low = rankOpportunity({ ...base, relevance: 40 }, { now });
+    expect(low.orderingScore).toBe(low.score);
+  });
+
   test('ranking never mutates raw classifier relevance', () => {
     const opportunity = { ...base };
     rankOpportunity(opportunity, { now, goalMatches: [{ score: 99 }] });
@@ -129,5 +137,19 @@ describe('OpportunityProjector ranking integration', () => {
     expect(ranked[0].ranking.components.evidenceStrength).toBe(99);
     // Unsupported jwt.io Evidence+URL stays filtered by inbox SUPPORT gate (no ranking credit).
     expect(ranked.find((item) => item.id === 'opportunity:jwt')).toBeUndefined();
+  });
+  test('saturated supported Finds keep their Goal-fit order instead of collapsing onto 99', async () => {
+    // Offline bench (PR #242): every supported drill Find scored the 99 cap, so the Inbox fell
+    // back to detectedAt and a newer, weaker Goal match outranked the better one.
+    const goal = { id: 'goal:drill', title: 'Find a quality drill', categories: ['offer'], keywords: ['drill', 'cordless', 'quality'], priority: 3, status: 'active', createdAt: now };
+    const strong = { ...base, id: 'opportunity:strong', evidenceId: 'evidence:strong', title: 'Quality cordless drill deal', detectedAt: '2026-08-08T13:00:00.000Z' };
+    const weak = { ...base, id: 'opportunity:weak', evidenceId: 'evidence:weak', title: 'Drill deal', detectedAt: '2026-08-08T14:30:00.000Z' };
+    const data = { opportunities: [weak, strong], goals: [goal], preferenceFeedback: [], agentMissions: [] };
+    const projector = new OpportunityProjector({ read: async () => structuredClone(data) });
+    const ranked = await projector.list({ now });
+    expect(ranked.map((item) => item.personalizedRelevance)).toEqual([99, 99]);
+    expect(ranked[0].goalMatches[0].score).toBeGreaterThan(ranked[1].goalMatches[0].score);
+    expect(ranked.map((item) => item.id)).toEqual(['opportunity:strong', 'opportunity:weak']);
+    expect(ranked[0].ranking.orderingScore).toBeGreaterThan(ranked[1].ranking.orderingScore);
   });
 });

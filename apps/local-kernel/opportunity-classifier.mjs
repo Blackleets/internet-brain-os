@@ -184,7 +184,7 @@ export class OpportunityProjector {
         const ranking = rankOpportunity(item, { goalMatches, learnedAdjustment, now, missions });
         return { ...item, goalMatches, learnedAdjustment, ranking, personalizedRelevance: ranking.score };
       })
-      .sort((left, right) => right.personalizedRelevance - left.personalizedRelevance || right.detectedAt.localeCompare(left.detectedAt))
+      .sort((left, right) => right.ranking.orderingScore - left.ranking.orderingScore || right.detectedAt.localeCompare(left.detectedAt))
       .slice(0, Math.max(1, Math.min(Number(limit) || 20, 100)));
   }
 }
