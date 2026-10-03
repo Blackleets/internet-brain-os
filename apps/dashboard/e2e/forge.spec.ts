@@ -64,6 +64,21 @@ async function expectNoHorizontalOverflow(page: Page, width: number): Promise<vo
   expect(sizes.forgeScroll).toBeLessThanOrEqual(sizes.forgeClient);
 }
 
+// Phone: the forge scrolls in its own row; its end (cards, counters, legend) reaches a spot fully above
+// the composer, and the scroll area itself never runs under the composer.
+async function expectForgeClearOfComposer(page: Page): Promise<void> {
+  await page.locator('.forge-live-legend').evaluate((el) => el.scrollIntoView({ block: 'end' }));
+  const layout = await page.evaluate(() => {
+    const bottom = (selector: string) => document.querySelector(selector)?.getBoundingClientRect().bottom ?? Number.NaN;
+    const composer = document.querySelector('.forge-composer')?.getBoundingClientRect();
+    return { scroll: bottom('.forge-scroll'), forge: bottom('.forge-live'), lastCard: Math.max(...[...document.querySelectorAll('.forge-source')].map((el) => el.getBoundingClientRect().bottom)), composerTop: composer?.top ?? Number.NaN };
+  });
+  expect(layout.scroll).toBeLessThanOrEqual(layout.composerTop);
+  expect(layout.forge).toBeLessThanOrEqual(layout.composerTop - 8);
+  expect(layout.lastCard).toBeLessThanOrEqual(layout.composerTop);
+  await page.locator('.forge-live-anvil').evaluate((el) => el.scrollIntoView({ block: 'start' }));
+}
+
 async function expectHonestSources(page: Page): Promise<void> {
   const forge = page.locator('.forge-live');
   await expect(forge.getByRole('heading', { name: 'Fixture ownership guide' })).toBeVisible();
@@ -97,6 +112,7 @@ test('forge live view on a 390×844 phone: real Kernel states, readable cards, n
   await expect(page.locator('.forge-bench')).toHaveAttribute('data-mode', 'searched');
   await expect(page.locator('.forge-bench-meta')).toHaveText('Búsqueda web terminada · 3 candidatos reales');
   await page.screenshot({ path: testInfo.outputPath('forge-mobile-390x844.png') });
+  await expectForgeClearOfComposer(page);
   // Replay re-runs the same Kernel records from the start, then settles on the same verdicts.
   await page.getByRole('button', { name: /Repetir la forja/ }).click();
   await expect(page.locator('.forge-bench-meta')).toHaveText('Reconstrucción · datos reales del Kernel');

@@ -711,6 +711,9 @@
 @media (max-width: 720px) {
   .forge-home-live { padding: 10px 10px 4px; }
   .forge-home-live .forge-live { border-radius: 18px; }
+  /* The forge scrolls in its own grid row above the composer row (never under it); keep room so
+     the last card and the legend end clearly above the composer, also when scrolled into view. */
+  .forge-surface .forge-scroll { padding-bottom: 18px; scroll-padding-bottom: 18px; }
 }
 
 /* `.efesto-product button { font: inherit }` outranks single-class rules: restate forge button type. */
