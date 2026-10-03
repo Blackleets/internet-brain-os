@@ -4,6 +4,11 @@ import { MissionSearchCandidateVerifier } from './mission-search-candidate-verif
 import { InboxError } from './page-context-inbox.mjs';
 
 const MAX_SEARCH_CANDIDATES = 20;
+export const SEARCH_TELEMETRY_SCHEMA = 'efesto.mission-search-telemetry.v1';
+const MAX_TELEMETRY_SEARCHES = 8;
+const MAX_TELEMETRY_QUERY_CHARS = 300;
+const MAX_TELEMETRY_LIMIT = 100;
+const MAX_TELEMETRY_RESULT_COUNT = 1000;
 
 export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
   constructor(store, opportunityProjector, options = {}) {
@@ -30,7 +35,9 @@ export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
       throw invalid(`findings must be an array with at most ${MAX_SEARCH_CANDIDATES} items`);
     }
     const normalized = dedupeByUrl(input.findings.map(normalizeCandidate));
+    // The digest (duplicate/idempotency check) covers the candidates only: telemetry is display-only.
     const digest = createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
+    const searchTelemetry = normalizeSearchTelemetry(input?.searchTelemetry);
 
     return this.store.project(async (data) => {
       const missions = data.agentMissions ?? [];
@@ -41,10 +48,12 @@ export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
       }
       requireActiveLease(current, leaseId, this.now());
       const now = this.now().toISOString();
+      const telemetry = searchTelemetry ? { searchTelemetry: { ...searchTelemetry, recordedAt: now } } : {};
 
       if (normalized.length === 0) {
         const completed = {
-          ...current,
+          ...withoutSearchTelemetry(current),
+          ...telemetry,
           status: 'completed',
           completedAt: now,
           limitation: 'Public discovery completed with no candidates',
@@ -66,7 +75,8 @@ export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
         status: 'pending_verification',
       }));
       const verifying = {
-        ...current,
+        ...withoutSearchTelemetry(current),
+        ...telemetry,
         status: 'running',
         executionPhase: 'verifying',
         verifyingAt: now,
@@ -82,6 +92,49 @@ export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
       return { changed: true, data: { ...data, agentMissions: updated }, result: { mission: verifying, findings: candidates } };
     });
   }
+}
+
+/**
+ * Optional, display-only record of the public searches the agent reported making
+ * ({ searches: [{ query, limit?, resultCount? }] }). Bounded and validated; anything invalid drops
+ * the whole record (never the results). It never feeds Evidence, web.read or SUPPORT.
+ */
+export function normalizeSearchTelemetry(value) {
+  if (!isPlainObject(value) || !onlyKeys(value, ['searches'])) return undefined;
+  const { searches } = value;
+  if (!Array.isArray(searches) || searches.length === 0 || searches.length > MAX_TELEMETRY_SEARCHES) return undefined;
+  const normalized = [];
+  for (const search of searches) {
+    if (!isPlainObject(search) || !onlyKeys(search, ['query', 'limit', 'resultCount'])) return undefined;
+    if (typeof search.query !== 'string') return undefined;
+    const query = search.query.replace(/\s+/g, ' ').trim();
+    if (!query || query.length > MAX_TELEMETRY_QUERY_CHARS || /[\u0000-\u001f\u007f]/.test(query)) return undefined;
+    const entry = { query };
+    if (search.limit !== undefined) {
+      if (!Number.isInteger(search.limit) || search.limit < 1 || search.limit > MAX_TELEMETRY_LIMIT) return undefined;
+      entry.limit = search.limit;
+    }
+    if (search.resultCount !== undefined) {
+      if (!Number.isInteger(search.resultCount) || search.resultCount < 0 || search.resultCount > MAX_TELEMETRY_RESULT_COUNT) return undefined;
+      entry.resultCount = search.resultCount;
+    }
+    normalized.push(entry);
+  }
+  return { schemaVersion: SEARCH_TELEMETRY_SCHEMA, displayOnly: true, searches: normalized };
+}
+
+function withoutSearchTelemetry(mission) {
+  if (!mission || !('searchTelemetry' in mission)) return mission;
+  const { searchTelemetry: _previous, ...rest } = mission;
+  return rest;
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function onlyKeys(value, allowed) {
+  return Object.keys(value).every((key) => allowed.includes(key));
 }
 
 function normalizeCandidate(value, index) {
