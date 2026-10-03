@@ -172,10 +172,12 @@ export function storyTimeline(story: Pick<ForgeStory, 'nodes'> & { query?: { all
   const q1 = 1.9;
   const crawl0 = 2.0;
   const spider0 = 4.25;
-  // The first query types before the crawl; further queries (2–3 phrasings) type while it crawls.
-  const queries = Math.max(1, Math.min(3, story.query?.all.length ?? 1));
+  // The first query types before the crawl; every further query Hermes recorded (up to the telemetry
+  // cap of 8) types while it crawls, faster when there are many, and all are typed before the spider.
+  const queries = Math.max(1, Math.min(8, story.query?.all.length ?? 1));
+  const step = queries > 1 ? Math.min(0.85, 1.9 / (queries - 1)) : 0;
   const qa = [q0], qb = [q1];
-  for (let i = 1; i < queries; i += 1) { qa.push(crawl0 + 0.1 + (i - 1) * 0.85); qb.push(crawl0 + 0.65 + (i - 1) * 0.85); }
+  for (let i = 1; i < queries; i += 1) { qa.push(crawl0 + 0.1 + (i - 1) * step); qb.push(crawl0 + 0.1 + (i - 1) * step + step * 0.65); }
   const ra = qb.map((end) => end + 0.35);
   const pickStep = n ? clampNum(2.4 / n, 0.3, 0.6) : 0;
   const pick = story.nodes.map((_, k) => spider0 + pickStep * (k + 1));

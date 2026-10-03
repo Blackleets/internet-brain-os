@@ -92,6 +92,14 @@ describe('forge story (spider graph + forge.log)', () => {
     expect(timeline.qa[1]).toBeGreaterThanOrEqual(timeline.crawl0);
     expect(timeline.qb[1]).toBeLessThan(timeline.spider0);
     expect(timeline.ra[1]).toBeGreaterThan(timeline.qb[1]);
+    // Hermes may make more searches than asked (a live run made 7): every one is typed, the last one
+    // before the spider, so the settled chip shows the last query the Kernel recorded.
+    const seven = buildForgeStory(mission('forged', { searchTelemetry: { ...searchTelemetry, searches: Array.from({ length: 7 }, (_, i) => ({ query: `consulta ${i + 1}`, limit: 10, resultCount: 10 })) } }));
+    const t7 = storyTimeline(seven);
+    expect(seven.resultCount).toBe(70);
+    expect(t7.qa).toHaveLength(7);
+    expect(t7.qb[6]).toBeLessThan(t7.spider0);
+    for (let i = 1; i < 7; i += 1) expect(t7.qa[i]).toBeGreaterThanOrEqual(t7.qb[i - 1] - 1e-9);
   });
 
   it('while the Kernel verifies, holds after the candidates fell in and says the batch is in progress, with no per-page claim', () => {
