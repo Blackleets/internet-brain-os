@@ -18,15 +18,14 @@ describe('Efesto living forge visual system', () => {
     expect(forge).toBeGreaterThan(product);
   });
 
-  it('uses the pixel smith and orange-blue intelligence palette without adding fake product state', async () => {
+  it('uses the node-flame mark (logo C) and the ember palette without adding fake product state', async () => {
     const css = await text('app/efesto-forge-visual.css');
-    const smith = await text('public/efesto-smith.svg');
-    expect(css).toContain("url('/efesto-smith.svg')");
-    expect(css).toContain('--ef-blue: #4fc3f7');
+    const mark = await text('public/brand/efesto-mark.svg');
+    expect(css).toContain("url('/brand/efesto-mark.svg')");
+    expect(css).not.toContain('efesto-smith');
     expect(css).toContain('--ef-ember: #e87732');
-    expect(smith).toContain('Efesto pixel smith');
-    expect(smith).toContain('#68e5ff');
-    expect(smith).toContain('#e87732');
+    expect(mark).toContain('#F5C451');
+    expect(mark).toContain('#EE8748');
   });
 
   it('animates work only for observable active phases and fails closed visually when offline or failed', async () => {

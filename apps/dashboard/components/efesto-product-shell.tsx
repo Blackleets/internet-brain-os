@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import {
   Activity, Bot, BrainCircuit, ChevronRight, Database, Home, Menu, RefreshCw, Settings,
   ShieldCheck, Sparkles, SquarePen, Target, X,
@@ -21,6 +20,7 @@ import { startVisiblePoller } from '../lib/ui/visible-poller';
 import { subscribeToKernelEvents } from '../lib/kernel/events';
 import { refreshOnKernelEvents } from '../lib/kernel/live-refresh';
 import { KERNEL_UNREACHABLE_AFTER_FAILURES, markKernelUnreachable } from '../lib/kernel/poll-health';
+import { EfestoLockup } from './brand/efesto-mark';
 import { ProductValueScorecardPanel } from './overview/product-value-scorecard';
 import {
   ActivityView, AgentsView, EvidenceView, FindsView, GoalsView, HomeView, MemoryView, ModelsView, SettingsView,
@@ -520,8 +520,7 @@ export default function EfestoProductShell() {
     <aside id="efesto-sidebar" className="efesto-sidebar" aria-label="Navegación principal" inert={mobileViewport && !navOpen ? true : undefined}>
       <div className="efesto-brand">
         <button type="button" onClick={() => navigate('home')} aria-label="Efesto, inicio">
-          <span className="brand-mark"><Image src="/efesto-smith.svg" alt="" width={36} height={36} /></span>
-          <span><strong>EFESTO</strong><small>The Intelligence Forge</small></span>
+          <EfestoLockup size={38} />
         </button>
         <button type="button" ref={drawerCloseRef} className="mobile-close" onClick={closeNavigation} aria-label="Cerrar menú"><X /></button>
       </div>

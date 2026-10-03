@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { EfestoMark } from './brand/efesto-mark';
 import {
   Activity, Bot, BrainCircuit, Check, ChevronDown, ChevronRight, CircleOff, Database, ExternalLink, FileSearch,
   History, Menu, MessageSquare, Pause, Plug, RefreshCw, Search, Send, Settings, ShieldCheck, Sparkles, Target, Workflow, X,
@@ -95,7 +95,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
       <div className="forge-surface-leading">
         <button type="button" className="forge-menu-button" onClick={(event) => onOpenNav(event.currentTarget)} aria-label="Alternar navegación" aria-controls="efesto-sidebar" aria-expanded={navExpanded}><Menu /></button>
         <div className="forge-product-title">
-          <span className="forge-agent-mark"><Image src="/efesto-smith.svg" alt="" width={28} height={28} /></span>
+          <span className="forge-agent-mark"><EfestoMark size={28} /></span>
           <span><strong>{surfaceTitle}</strong><small>Efesto · {chatMode ? (chatAvailable ? modelLabel : 'modelo sin configurar') : 'misión controlada'}</small></span>
         </div>
       </div>
@@ -112,14 +112,14 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
     <div className="forge-scroll">
       {chatMode ? messages.length ? <section className="forge-thread" aria-label="Mensajes">
         {messages.map((message, index) => <article className={'forge-message ' + message.role} key={message.role + '-' + index}>
-          <div className="forge-message-avatar">{message.role === 'user' ? 'Tú' : <Image src="/efesto-smith.svg" alt="" width={24} height={24} />}</div>
+          <div className="forge-message-avatar">{message.role === 'user' ? 'Tú' : <EfestoMark size={24} simple />}</div>
           <div className="forge-message-body">
             <header><strong>{message.role === 'user' ? 'Tú' : message.model ?? 'Efesto'}</strong>{message.role === 'assistant' ? <span><ShieldCheck /> Privado</span> : null}</header>
             <p>{message.content || (chatPending && index === messages.length - 1 ? <span className="forge-generating"><i />Pensando…</span> : null)}</p>
           </div>
         </article>)}
       </section> : <section className="forge-empty" aria-label="Nueva conversación">
-        <span className="forge-empty-mark"><Image src="/efesto-smith.svg" alt="" width={52} height={52} /></span>
+        <span className="forge-empty-mark"><EfestoMark size={52} /></span>
         <small>EFESTO · INTELLIGENCE FORGE</small>
         <h1>¿En qué trabajamos?</h1>
         <p>Pregunta, analiza o convierte una intención en un Goal cuando necesites una misión controlada.</p>

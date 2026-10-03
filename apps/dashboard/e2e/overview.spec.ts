@@ -151,7 +151,7 @@ test.describe('mobile Efesto product shell', () => {
     expect(manifest.short_name).toBe('Efesto');
     expect(manifest.display).toBe('standalone');
     expect(manifest.start_url).toBe('/');
-    expect(manifest.icons).toEqual(expect.arrayContaining([expect.objectContaining({ src: '/efesto-smith.svg' })]));
+    expect(manifest.icons).toEqual(expect.arrayContaining([expect.objectContaining({ src: '/brand/efesto-icon.svg' })]));
   });
 
   test('uses a drawer, single-column Goal surface and safe composer without horizontal overflow', async ({ page }) => {
