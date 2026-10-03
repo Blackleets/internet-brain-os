@@ -57,7 +57,10 @@ test('runs the Goal-first journey only after explicit confirmation', async ({ pa
   await expect(page.getByText('Investigando', { exact: true })).toBeVisible();
   await expect(page.getByText('AI automation project', { exact: true })).toBeVisible();
   await expect(page.getByText('Kernel SUPPORT', { exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Abrir fuente/ })).toHaveAttribute('href', 'https://clients.example/projects/ai-automation');
+  await expect(page.locator('.forge-home-finds').getByRole('link', { name: /Abrir fuente/ })).toHaveAttribute('href', 'https://clients.example/projects/ai-automation');
+  // The forge live view sits above the Finds and quotes only Kernel Evidence excerpts.
+  await expect(page.locator('.forge-live .forge-source[data-state="supported"]')).toHaveCount(1);
+  await expect(page.locator('.forge-live').getByText(/Fixture excerpt: we are looking for an AI automation partner/)).toBeVisible();
   await expect(page.getByText('Hermes snippet drill')).toHaveCount(0);
   // The product scorecard lives on the Missions route (G5.2 contract).
   await page.locator('.efesto-sidebar nav').getByRole('button', { name: /^Objetivos/ }).click();
