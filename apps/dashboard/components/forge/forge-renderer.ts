@@ -103,6 +103,8 @@ export class ForgeRenderer {
   private dpr = 1;
   private playing = false;
   private trayLanded = -1;
+  /** Thread line weight: fine filaments on phones, fuller on the wide composition. */
+  private lw = 1;
   private cursor = { launch: -Infinity, evidence: -Infinity, ash: -Infinity, strike: -Infinity };
   private readonly ambient = makeAmbient(90);
   private readonly bokeh = makeBokeh();
@@ -127,6 +129,7 @@ export class ForgeRenderer {
   update(spec: SceneSpec) {
     const t = this.now();
     const narrow = spec.layout === 'narrow';
+    this.lw = narrow ? 0.55 : 1;
     const rawDpr = Math.min(window.devicePixelRatio || 1, 2);
     // Keep the backing store bounded on tall phone stages.
     this.dpr = Math.max(1, Math.min(rawDpr, Math.sqrt(5_000_000 / Math.max(1, spec.width * spec.height))));
@@ -251,14 +254,11 @@ export class ForgeRenderer {
       const sag = Math.max(-80, Math.min(70, 0.37 * (AY - ny) - 50));
       sampleQuad(pts, [nx, ny], [mx - dir * 8, my + sag], [ex, ey], 48);
     } else {
-      const laneX = 9 + Math.min(thread.lane, 7) * 3.2;
-      const ex = AX - 12 * scale + (thread.lane % 4) * 6 * scale; const ey = AY + 4 * scale;
-      const turnY = AY + 64 * scale;
-      const hookY = Math.max(turnY + 1, ny - 18);
-      sampleQuad(pts, [nx, ny], [laneX, ny], [laneX, hookY], 10);
-      const steps = Math.max(2, Math.ceil((hookY - turnY) / 18));
-      for (let k = 1; k <= steps; k += 1) pts.push([laneX, hookY - ((hookY - turnY) * k) / steps]);
-      sampleCubic(pts, [laneX, turnY], [laneX, turnY - 40 * scale], [ex, ey + 40 * scale], [ex, ey], 22);
+      // Phones: a fine filament leaves from under the anvil foot and curves onto the card's top-left
+      // node; the opaque cards above it hide the rest, so it reads as one thin spine, never a pipe.
+      const ex = AX - 26 * scale + (thread.lane % 3) * 14 * scale; const ey = AY + 112 * scale;
+      const dy = Math.max(24, ny - ey);
+      sampleCubic(pts, [nx, ny], [nx, ny - dy * 0.55], [ex, ey + Math.min(dy, 160) * 0.7], [ex, ey], 48);
     }
     const cum = [0];
     for (let k = 1; k < pts.length; k += 1) cum.push(cum[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
@@ -608,14 +608,14 @@ export class ForgeRenderer {
     if (pts.length < 2 || k <= 0) return;
     const ctx = this.ctx;
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    this.stroke(pts); ctx.strokeStyle = rgba(255, 92, 24, 0.2 * k); ctx.lineWidth = 10; ctx.stroke();
-    this.stroke(pts); ctx.strokeStyle = rgba(255, 110, 36, 0.28 * k); ctx.lineWidth = 5; ctx.stroke();
+    this.stroke(pts); ctx.strokeStyle = rgba(255, 92, 24, 0.2 * k); ctx.lineWidth = 10 * this.lw; ctx.stroke();
+    this.stroke(pts); ctx.strokeStyle = rgba(255, 110, 36, 0.28 * k); ctx.lineWidth = 5 * this.lw; ctx.stroke();
     const a = pts[0]; const b = pts.at(-1) ?? a;
     const g = ctx.createLinearGradient(a[0], a[1], b[0], b[1]);
     g.addColorStop(0, rgba(210, 70, 18, 0.9 * k)); g.addColorStop(0.6, rgba(255, 140, 52, 0.95 * k)); g.addColorStop(1, rgba(255, 200, 120, k));
-    this.stroke(pts); ctx.strokeStyle = g; ctx.lineWidth = 2.4; ctx.stroke();
-    ctx.setLineDash([2, 9]); ctx.lineDashOffset = -(t * 95 + rt.ph * 60); this.stroke(pts); ctx.strokeStyle = rgba(255, 246, 214, 0.8 * k); ctx.lineWidth = 1.7; ctx.stroke();
-    ctx.setLineDash([11, 27]); ctx.lineDashOffset = -(t * 58 + rt.ph * 110); this.stroke(pts); ctx.strokeStyle = rgba(255, 196, 110, 0.45 * k); ctx.lineWidth = 3.4; ctx.stroke();
+    this.stroke(pts); ctx.strokeStyle = g; ctx.lineWidth = 2.4 * this.lw; ctx.stroke();
+    ctx.setLineDash([2, 9]); ctx.lineDashOffset = -(t * 95 + rt.ph * 60); this.stroke(pts); ctx.strokeStyle = rgba(255, 246, 214, 0.8 * k); ctx.lineWidth = 1.7 * this.lw; ctx.stroke();
+    ctx.setLineDash([11, 27]); ctx.lineDashOffset = -(t * 58 + rt.ph * 110); this.stroke(pts); ctx.strokeStyle = rgba(255, 196, 110, 0.45 * k); ctx.lineWidth = 3.4 * this.lw; ctx.stroke();
     ctx.setLineDash([]);
     this.stroke(pts); ctx.strokeStyle = rgba(255, 232, 186, 0.5 * k); ctx.lineWidth = 0.8; ctx.stroke();
     ctx.restore();
@@ -625,13 +625,13 @@ export class ForgeRenderer {
     if (pts.length < 2) return;
     const ctx = this.ctx;
     ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.globalCompositeOperation = 'lighter';
-    this.stroke(pts); ctx.strokeStyle = rgba(245, 196, 81, 0.17 + flashK * 0.3); ctx.lineWidth = 11 + flashK * 8; ctx.stroke();
-    this.stroke(pts); ctx.strokeStyle = 'rgba(255,214,120,0.22)'; ctx.lineWidth = 4.5; ctx.stroke();
+    this.stroke(pts); ctx.strokeStyle = rgba(245, 196, 81, 0.17 + flashK * 0.3); ctx.lineWidth = (11 + flashK * 8) * this.lw; ctx.stroke();
+    this.stroke(pts); ctx.strokeStyle = 'rgba(255,214,120,0.22)'; ctx.lineWidth = 4.5 * this.lw; ctx.stroke();
     ctx.globalCompositeOperation = 'source-over';
     const a = pts[0]; const b = pts.at(-1) ?? a;
     const g = ctx.createLinearGradient(a[0], a[1], b[0], b[1]);
     g.addColorStop(0, 'rgb(196,146,58)'); g.addColorStop(0.5, 'rgb(246,204,110)'); g.addColorStop(1, 'rgb(255,226,150)');
-    this.stroke(pts); ctx.strokeStyle = g; ctx.lineWidth = 2.6; ctx.stroke();
+    this.stroke(pts); ctx.strokeStyle = g; ctx.lineWidth = Math.max(1.3, 2.6 * this.lw); ctx.stroke();
     ctx.globalCompositeOperation = 'lighter';
     this.stroke(pts); ctx.strokeStyle = 'rgba(255,250,232,0.85)'; ctx.lineWidth = 0.9; ctx.stroke();
     if (!settled) {
@@ -647,7 +647,7 @@ export class ForgeRenderer {
     if (pts.length < 2 || a <= 0) return;
     const ctx = this.ctx;
     ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    this.stroke(pts); ctx.strokeStyle = rgba(70, 66, 63, 0.85 * a); ctx.lineWidth = 2.6; ctx.stroke();
+    this.stroke(pts); ctx.strokeStyle = rgba(70, 66, 63, 0.85 * a); ctx.lineWidth = 2.6 * this.lw; ctx.stroke();
     this.stroke(pts); ctx.strokeStyle = rgba(150, 143, 137, 0.75 * a); ctx.lineWidth = 1; ctx.stroke();
     ctx.restore();
   }

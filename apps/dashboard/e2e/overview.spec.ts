@@ -55,7 +55,9 @@ test('runs the Goal-first journey only after explicit confirmation', async ({ pa
   // the legacy agent-mission record says forged; the visible phase must
   // follow the goal surface, not the legacy record.
   await expect(page.getByText('Investigando', { exact: true })).toBeVisible();
-  await expect(page.getByText('AI automation project', { exact: true })).toBeVisible();
+  // The Find title shows on the Home Finds card and on the forge's gold SUPPORT card.
+  await expect(page.locator('.forge-home-finds').getByText('AI automation project', { exact: true })).toBeVisible();
+  await expect(page.locator('.forge-live .forge-source[data-state="supported"]').getByRole('heading', { name: 'AI automation project' })).toBeVisible();
   await expect(page.getByText('Kernel SUPPORT', { exact: true })).toBeVisible();
   await expect(page.locator('.forge-home-finds').getByRole('link', { name: /Abrir fuente/ })).toHaveAttribute('href', 'https://clients.example/projects/ai-automation');
   // The forge live view sits above the Finds and quotes only Kernel Evidence excerpts.

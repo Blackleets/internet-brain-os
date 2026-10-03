@@ -51,7 +51,8 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, onRelaunch, relau
   const limit = narrow ? VISIBLE_NARROW : VISIBLE_WIDE;
   const visibleSources = useMemo(() => (expanded ? sources : sources.slice(0, limit)), [expanded, limit, sources]);
   const hiddenCount = sources.length - visibleSources.length;
-  const showTray = Boolean(mission && (mission.counts.supported > 0 || mission.phase === 'forged'));
+  // Phones: the gold Find card is the hero, so no ingot tray competes with it under the anvil.
+  const showTray = Boolean(mission && !narrow && (mission.counts.supported > 0 || mission.phase === 'forged'));
   const missionKey = mission?.missionId ?? model.kind;
 
   useEffect(() => {
@@ -107,10 +108,12 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, onRelaunch, relau
     const box = stage.getBoundingClientRect();
     if (box.width < 1 || box.height < 1) return;
     const anvilBox = anvil.getBoundingClientRect();
-    const scale = isNarrow ? Math.min(0.86, anvilBox.width / 330) : Math.min(1, Math.max(0.62, anvilBox.width / 340));
+    const scale = isNarrow ? Math.min(0.76, anvilBox.width / 420) : Math.min(1, Math.max(0.62, anvilBox.width / 340));
+    // Phones: the anvil sits on the bottom of its zone (body + floor shadow ≈ 134 units under the bar),
+    // the space above it is where the sparks fly.
     const anvilSpec = {
       x: anvilBox.left - box.left + anvilBox.width / 2,
-      y: anvilBox.top - box.top + anvilBox.height * (isNarrow ? 0.66 : 0.56),
+      y: isNarrow ? anvilBox.bottom - box.top - 136 * scale : anvilBox.top - box.top + anvilBox.height * 0.56,
       scale,
     };
     const trayBox = showTray ? trayRef.current?.getBoundingClientRect() : undefined;
@@ -128,7 +131,7 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, onRelaunch, relau
       const left = card.left - box.left;
       const top = card.top - box.top;
       const base = { id: source.id, kind: element.kind, ...(element.readFailed ? { readFailed: true } : {}) };
-      if (isNarrow) threads.push({ ...base, ax: left, ay: top + 22, side: 'down', lane: laneDown++ });
+      if (isNarrow) threads.push({ ...base, ax: left + 24, ay: top, side: 'down', lane: laneDown++ });
       else if (left + card.width / 2 < centerX) threads.push({ ...base, ax: left + card.width, ay: top + Math.min(card.height / 2, 34), side: 'left', lane: laneLeft++ });
       else threads.push({ ...base, ax: left, ay: top + Math.min(card.height / 2, 34), side: 'right', lane: laneRight++ });
     }
@@ -187,9 +190,9 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, onRelaunch, relau
     <ForgeHeader model={model} headingId={headingId} onConnect={onConnect} onRelaunch={onRelaunch} relaunchPending={relaunchPending} />
     <div ref={stageRef} className="forge-live-stage">
       <canvas ref={canvasRef} className="forge-live-canvas" aria-hidden="true" />
+      {mission && narrow ? <ForgeWorkbench model={mission} replaying={playing && reconstructing && mission.motion === 'settled'} /> : null}
       <div ref={anvilRef} className="forge-live-anvil">
-        {mission ? <ForgeWorkbench model={mission} replaying={playing && reconstructing && mission.motion === 'settled'} /> : null}
-        <span className="forge-live-anvil-label" aria-hidden="true">KERNEL · GOAL</span>
+        {mission && !narrow ? <ForgeWorkbench model={mission} replaying={playing && reconstructing && mission.motion === 'settled'} /> : null}
       </div>
       {mission ? <>
         {visibleSources.length ? <ul className="forge-live-sources" aria-label={`Fuentes de la misión (${sources.length})`}>
@@ -200,7 +203,7 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, onRelaunch, relau
         {hiddenCount > 0 || expanded ? <button type="button" className="forge-live-more" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
           {expanded ? 'Mostrar menos fuentes' : `Ver ${hiddenCount} ${hiddenCount === 1 ? 'fuente más' : 'fuentes más'}`}<ChevronDown />
         </button> : null}
-        {showTray ? <div ref={trayRef} className="forge-live-tray" aria-hidden="true"><span>FIND · KERNEL SUPPORT ({mission.counts.supported})</span></div> : null}
+        {showTray ? <div ref={trayRef} className="forge-live-tray" aria-hidden="true"><span>{mission.counts.supported} {mission.counts.supported === 1 ? 'FIND' : 'FINDS'}</span></div> : null}
       </> : null}
     </div>
     {mission ? <footer className="forge-live-foot">
@@ -271,7 +274,7 @@ function ForgeHeader({ model, headingId, onConnect, onRelaunch, relaunchPending 
         <span className="forge-sr-only">: {stepStateLabel(step.state)}</span>
       </li>)}
     </ol>
-    <p className="forge-live-stepnow" aria-hidden="true">Paso {activeIndex + 1} de 5 · {model.steps[activeIndex]?.label}</p>
+    <p className="forge-live-stepnow" aria-hidden="true"><span className="forge-stepnow-word">Paso </span>{activeIndex + 1} de 5<span className="forge-stepnow-label"> · {model.steps[activeIndex]?.label}</span></p>
   </header>;
 }
 
@@ -332,14 +335,15 @@ function SourceCard({ source, goalTerms, onOpenFinds }: { source: ForgeSource; g
       </span>
       <span className="forge-source-host" title={source.url}>{source.host}{source.path ? <small>{source.path}</small> : null}</span>
     </header>
+    {source.findTitle ? <h3 className="forge-source-findtitle">{source.findTitle}</h3> : null}
     {source.quote ? <blockquote cite={source.url}>
       <p>«{source.quoteTruncatedStart ? '… ' : ''}<Highlighted text={source.quote} terms={highlight ? goalTerms : []} />{source.quoteTruncatedEnd ? ' …' : ''}»</p>
-    </blockquote> : source.evidenceTitle ? <p className="forge-source-title"><Highlighted text={source.evidenceTitle} terms={highlight ? goalTerms : []} /></p>
+    </blockquote> : source.evidenceTitle && source.evidenceTitle !== source.findTitle ? <p className="forge-source-title"><Highlighted text={source.evidenceTitle} terms={highlight ? goalTerms : []} /></p>
       : source.candidateTitle && !GENERIC_CANDIDATE_TITLE.test(source.candidateTitle) ? <p className="forge-source-title is-candidate">{source.candidateTitle}</p> : null}
     {source.state === 'supported' && source.goalTerms?.length ? <ul className="forge-source-terms" aria-label="Términos del Goal presentes en la Evidence">
       {source.goalTerms.map((term) => <li key={term}><Check aria-hidden="true" />{term}</li>)}
     </ul> : null}
-    <p className="forge-source-meta">{metaLine(source)}</p>
+    {source.findTitle ? null : <p className="forge-source-meta">{metaLine(source)}</p>}
     <div className="forge-source-actions">
       {source.findTitle && onOpenFinds ? <button type="button" className="forge-source-find" onClick={onOpenFinds}><Sparkles aria-hidden="true" />Ver Find</button> : null}
       <a href={source.url} target="_blank" rel="noreferrer noopener" className="forge-source-link">Abrir fuente<ExternalLink aria-hidden="true" /><span className="forge-sr-only"> {source.host} (se abre en otra pestaña)</span></a>

@@ -189,7 +189,7 @@ test('a mission the Kernel left read without SUPPORT and without a lease can be 
 });
 
 for (const size of [{ width: 360, height: 780 }, { width: 390, height: 844 }, { width: 430, height: 932 }]) {
-  test(`forge phone polish at ${size.width}×${size.height}: anvil and steps in the first viewport, full-text cards, 44px targets`, async ({ page }, testInfo) => {
+  test(`forge phone polish at ${size.width}×${size.height}: anvil, steps and the gold Find in the first viewport, full-text cards, 44px targets`, async ({ page }, testInfo) => {
     await page.setViewportSize(size);
     await useForgeFixture(page);
     await page.goto('/');
@@ -199,11 +199,23 @@ for (const size of [{ width: 360, height: 780 }, { width: 390, height: 844 }, { 
     await expectNoHorizontalOverflow(page, size.width);
     const first = await page.evaluate(() => {
       const rect = (selector: string) => document.querySelector(selector)?.getBoundingClientRect();
-      return { steps: rect('.forge-live-steps')?.bottom ?? Number.NaN, anvil: rect('.forge-live-anvil')?.bottom ?? Number.NaN, composerTop: rect('.forge-composer')?.top ?? Number.NaN };
+      return {
+        steps: rect('.forge-live-steps')?.bottom ?? Number.NaN,
+        anvil: rect('.forge-live-anvil')?.bottom ?? Number.NaN,
+        find: rect('.forge-source[data-state="supported"] .forge-source-findtitle')?.bottom ?? Number.NaN,
+        composerTop: rect('.forge-composer')?.top ?? Number.NaN,
+        composerHeight: rect('.forge-composer')?.height ?? Number.NaN,
+      };
     });
-    // Track and the whole anvil zone (sparks) are visible before any scroll.
+    // Track, the whole anvil zone (sparks) and the gold Find (badge + title) are visible before any scroll.
     expect(first.steps).toBeLessThan(first.composerTop);
     expect(first.anvil).toBeLessThanOrEqual(first.composerTop);
+    expect(first.find).toBeLessThanOrEqual(first.composerTop - 24);
+    // The Goal tab's composer is one compact row while the forge is shown.
+    expect(first.composerHeight).toBeLessThanOrEqual(56);
+    // No truncated bar title and no anvil caption clutter on a phone.
+    await expect(page.locator('.forge-product-title strong')).toBeHidden();
+    await expect(page.locator('.forge-live').getByText('KERNEL · GOAL')).toHaveCount(0);
     // Kernel excerpts and titles are never clamped on a phone.
     const clipped = await page.locator('.forge-source blockquote p, .forge-source-title').evaluateAll((items) => items.filter((item) => item.scrollHeight > item.clientHeight + 1).length);
     expect(clipped).toBe(0);
