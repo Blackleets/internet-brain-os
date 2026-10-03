@@ -30,7 +30,27 @@ describe('Hermes mission worker', () => {
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
       .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true }) });
     const execute = vi.fn(async () => { throw new Error('provider\nfailed'); });
-    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({ status: 'failed', reason: 'provider failed' });
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({ status: 'failed', reason: 'provider failed', reported: true });
+  });
+
+  it('keeps the real adapter cause when the Kernel refuses the failure report', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockResolvedValueOnce({ ok: false, status: 409, json: async () => ({ ok: false, error: 'Mission lease is no longer active' }) });
+    const execute = vi.fn(async () => { throw new Error('Hermes adapter timed out'); });
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toEqual({
+      status: 'failed', missionId: mission.id, reason: 'Hermes adapter timed out', reported: false, reportError: 'Mission lease is no longer active',
+    });
+  });
+
+  it('does not reject when the Kernel is unreachable for the failure report', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockRejectedValueOnce(new Error('connect ECONNREFUSED 127.0.0.1:4311'));
+    const execute = vi.fn(async () => ({ findings: 'not-an-array' }));
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({
+      status: 'failed', reported: false, reason: expect.stringContaining('must return { findings'), reportError: expect.stringContaining('ECONNREFUSED'),
+    });
   });
 
   it('does not report a timeout until the adapter process has actually stopped', async () => {

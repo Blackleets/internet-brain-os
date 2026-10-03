@@ -36,10 +36,17 @@ export async function runHermesMissionWorker(options = {}) {
     return { status: missionWorkerStatus(completed.mission), mission: completed.mission };
   } catch (error) {
     const reason = sanitizeFailure(error);
-    await request(fetchImpl, `${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/failures`, apiToken, {
-      method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, reason }),
-    });
-    return { status: 'failed', missionId: mission.id, reason };
+    try {
+      await request(fetchImpl, `${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/failures`, apiToken, {
+        method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, reason }),
+      });
+    } catch (reportError) {
+      // The Kernel did not record this failure (unreachable, lease superseded, ...). Keep the real
+      // cause instead of replacing it with the report error; the lease expiry stays the Kernel's
+      // recovery path, so nothing here claims the Mission failed in Kernel state.
+      return { status: 'failed', missionId: mission.id, reason, reported: false, reportError: sanitizeFailure(reportError) };
+    }
+    return { status: 'failed', missionId: mission.id, reason, reported: true };
   }
 }
 
