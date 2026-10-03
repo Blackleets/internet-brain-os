@@ -35,6 +35,9 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, headingId = 'forg
   const [legendOpen, setLegendOpen] = useState<boolean | undefined>(undefined);
   const [replay, setReplay] = useState(0);
   const [playing, setPlaying] = useState(false);
+  // True only for a play-through that re-tells an already settled mission (first paint of a settled
+  // mission, or "Repetir la forja"); live Kernel updates never get the reconstruction caption.
+  const [reconstructing, setReconstructing] = useState(false);
   const reducedMotion = useReducedMotion();
   const reducedRef = useRef(reducedMotion);
   reducedRef.current = reducedMotion;
@@ -60,7 +63,7 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, headingId = 'forg
           const el = cardRefs.current.get(id);
           if (el) el.dataset.stage = stage;
         },
-        onPlaying: setPlaying,
+        onPlaying: (value) => { setPlaying(value); if (!value) setReconstructing(false); },
         onTray: (landed) => { if (trayRef.current) trayRef.current.dataset.landed = String(landed); },
       });
     } catch { return; }
@@ -83,7 +86,10 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, headingId = 'forg
   }, []);
 
   // A different mission replays from scratch; stale card stages never leak across missions.
-  useEffect(() => { stagesRef.current.clear(); setReplay((value) => value + 1); }, [missionKey]);
+  const settledAtMount = mission?.motion === 'settled';
+  const settledRef = useRef(settledAtMount);
+  settledRef.current = settledAtMount;
+  useEffect(() => { stagesRef.current.clear(); setReconstructing(settledRef.current); setReplay((value) => value + 1); }, [missionKey]);
 
   const measure = useCallback(() => {
     const root = rootRef.current;
@@ -98,10 +104,10 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, headingId = 'forg
     const box = stage.getBoundingClientRect();
     if (box.width < 1 || box.height < 1) return;
     const anvilBox = anvil.getBoundingClientRect();
-    const scale = isNarrow ? Math.min(0.78, anvilBox.width / 330) : Math.min(1, Math.max(0.62, anvilBox.width / 340));
+    const scale = isNarrow ? Math.min(0.86, anvilBox.width / 330) : Math.min(1, Math.max(0.62, anvilBox.width / 340));
     const anvilSpec = {
       x: anvilBox.left - box.left + anvilBox.width / 2,
-      y: anvilBox.top - box.top + anvilBox.height * (isNarrow ? 0.62 : 0.56),
+      y: anvilBox.top - box.top + anvilBox.height * (isNarrow ? 0.66 : 0.56),
       scale,
     };
     const trayBox = showTray ? trayRef.current?.getBoundingClientRect() : undefined;
@@ -179,7 +185,7 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, headingId = 'forg
     <div ref={stageRef} className="forge-live-stage">
       <canvas ref={canvasRef} className="forge-live-canvas" aria-hidden="true" />
       <div ref={anvilRef} className="forge-live-anvil">
-        {mission ? <ForgeWorkbench model={mission} replaying={playing && mission.motion === 'settled'} /> : null}
+        {mission ? <ForgeWorkbench model={mission} replaying={playing && reconstructing && mission.motion === 'settled'} /> : null}
         <span className="forge-live-anvil-label" aria-hidden="true">KERNEL · GOAL</span>
       </div>
       {mission ? <>
@@ -187,7 +193,7 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, headingId = 'forg
           {visibleSources.map((source) => <li key={source.id} ref={setCardRef(source.id)} className="forge-source" data-state={source.state}>
             <SourceCard source={source} goalTerms={mission.goalTerms} onOpenFinds={onOpenFinds} />
           </li>)}
-        </ul> : <p className="forge-live-nosources">{noSourcesCopy(mission)}</p>}
+        </ul> : noSourcesCopy(mission) ? <p className="forge-live-nosources">{noSourcesCopy(mission)}</p> : null}
         {hiddenCount > 0 || expanded ? <button type="button" className="forge-live-more" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
           {expanded ? 'Mostrar menos fuentes' : `Ver ${hiddenCount} ${hiddenCount === 1 ? 'fuente más' : 'fuentes más'}`}<ChevronDown />
         </button> : null}
@@ -201,7 +207,7 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, headingId = 'forg
         <div><dt>Evidence</dt><dd>{mission.counts.evidence}</dd></div>
         <div className="is-support"><dt>con SUPPORT</dt><dd>{mission.counts.supported}</dd></div>
       </dl>
-      {canReplay ? <button type="button" className="forge-live-replay" disabled={playing} onClick={() => { stagesRef.current.clear(); setReplay((value) => value + 1); }}>
+      {canReplay ? <button type="button" className="forge-live-replay" disabled={playing} onClick={() => { stagesRef.current.clear(); setReconstructing(true); setReplay((value) => value + 1); }}>
         <RotateCcw aria-hidden="true" />{playing ? 'Reproduciendo…' : 'Repetir la forja'}<span className="forge-sr-only"> (animación con los mismos datos del Kernel)</span>
       </button> : null}
       <details className="forge-live-legend" open={legendOpen ?? false} onToggle={(event) => setLegendOpen(event.currentTarget.open)}>
@@ -319,7 +325,7 @@ function SourceCard({ source, goalTerms, onOpenFinds }: { source: ForgeSource; g
     {source.quote ? <blockquote cite={source.url}>
       <p>«{source.quoteTruncatedStart ? '… ' : ''}<Highlighted text={source.quote} terms={highlight ? goalTerms : []} />{source.quoteTruncatedEnd ? ' …' : ''}»</p>
     </blockquote> : source.evidenceTitle ? <p className="forge-source-title"><Highlighted text={source.evidenceTitle} terms={highlight ? goalTerms : []} /></p>
-      : source.candidateTitle ? <p className="forge-source-title is-candidate">{source.candidateTitle}</p> : null}
+      : source.candidateTitle && !GENERIC_CANDIDATE_TITLE.test(source.candidateTitle) ? <p className="forge-source-title is-candidate">{source.candidateTitle}</p> : null}
     {source.state === 'supported' && source.goalTerms?.length ? <ul className="forge-source-terms" aria-label="Términos del Goal presentes en la Evidence">
       {source.goalTerms.map((term) => <li key={term}><Check aria-hidden="true" />{term}</li>)}
     </ul> : null}
@@ -380,9 +386,13 @@ function sourceAria(source: ForgeSource): string {
   return `${BADGES[source.state]} · ${source.host}. ${quote} ${metaLine(source)}`.replace(/\s+/g, ' ').trim();
 }
 
+/** Adapter placeholder titles ("Public source: host") repeat the host line; they carry no content. */
+const GENERIC_CANDIDATE_TITLE = /^public source:\s*\S+$/i;
+
 function noSourcesCopy(model: ForgeMissionModel): string {
   if (model.phase === 'searching') return 'Aún no hay candidatos: Hermes los está buscando. La forja no dibuja chispas sin URLs reales.';
-  if (model.phase === 'waiting_agent' || model.phase === 'queued') return 'Aún sin candidatos: cada URL real que encuentre Hermes saldrá del yunque como una chispa.';
+  // Waiting/queued: the workbench already says what comes next; no second copy of it.
+  if (model.phase === 'waiting_agent' || model.phase === 'queued') return '';
   if (model.phase === 'completed_empty') return 'La búsqueda terminó sin candidatos que verificar.';
   return 'El Kernel no publicó fuentes para esta misión.';
 }

@@ -160,6 +160,32 @@ test('a queued mission breathes honestly: waiting for the agent, clear next step
   await expect(forge.getByRole('button', { name: /Repetir la forja/ })).toHaveCount(0);
 });
 
+for (const size of [{ width: 360, height: 780 }, { width: 390, height: 844 }, { width: 430, height: 932 }]) {
+  test(`forge phone polish at ${size.width}×${size.height}: anvil and steps in the first viewport, full-text cards, 44px targets`, async ({ page }, testInfo) => {
+    await page.setViewportSize(size);
+    await useForgeFixture(page);
+    await page.goto('/');
+    await connect(page);
+    await openHome(page, true);
+    await expect(page.locator('.forge-source[data-state="supported"]')).toHaveAttribute('data-stage', 'gold', { timeout: 15_000 });
+    await expectNoHorizontalOverflow(page, size.width);
+    const first = await page.evaluate(() => {
+      const rect = (selector: string) => document.querySelector(selector)?.getBoundingClientRect();
+      return { steps: rect('.forge-live-steps')?.bottom ?? Number.NaN, anvil: rect('.forge-live-anvil')?.bottom ?? Number.NaN, composerTop: rect('.forge-composer')?.top ?? Number.NaN };
+    });
+    // Track and the whole anvil zone (sparks) are visible before any scroll.
+    expect(first.steps).toBeLessThan(first.composerTop);
+    expect(first.anvil).toBeLessThanOrEqual(first.composerTop);
+    // Kernel excerpts and titles are never clamped on a phone.
+    const clipped = await page.locator('.forge-source blockquote p, .forge-source-title').evaluateAll((items) => items.filter((item) => item.scrollHeight > item.clientHeight + 1).length);
+    expect(clipped).toBe(0);
+    const small = await page.locator('.forge-live button:visible, .forge-live a:visible, .forge-live summary:visible').evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height).filter((height) => height > 0 && height < 44));
+    expect(small).toEqual([]);
+    await page.screenshot({ path: testInfo.outputPath(`forge-phone-${size.width}x${size.height}.png`) });
+    await expectForgeClearOfComposer(page);
+  });
+}
+
 test('forge live view on desktop: wide anvil composition with sources on both sides', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await useForgeFixture(page);

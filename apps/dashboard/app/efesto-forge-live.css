@@ -945,3 +945,78 @@
   content: "";
   pointer-events: none;
 }
+
+/* ================= Phone polish (forge narrower than the wide composition) =================
+   First viewport (360×780 · 390×844 · 430×932): compact header and readable track, a tall anvil
+   zone so sparks own the screen, then a clean vertical stack of full-text source cards. */
+@container forge-live (max-width: 759.98px) {
+  .forge-live-head { gap: 11px; padding: 14px 14px 12px; }
+  .forge-live-eyebrow { font-size: 10px; letter-spacing: .18em; }
+  .forge-live-goal h2 {
+    display: -webkit-box;
+    margin: 5px 0 7px;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    font-size: 18.5px;
+    line-height: 1.24;
+  }
+  .forge-live-phase { gap: 8px; font-size: 13px; line-height: 1.42; }
+  .forge-live-phase strong { margin-bottom: 1px; font-size: 14px; }
+  .forge-live-phase i { margin-top: 6px; }
+  .forge-live-steps b { width: 30px; height: 30px; border-radius: 9px; }
+  .forge-live-steps::before { top: 14px; }
+  .forge-live-stepnow { margin: -3px 0 0; color: #c9bfb5; font-size: 12.5px; font-weight: 600; letter-spacing: .01em; }
+
+  .forge-live-stage { padding: 0 12px 14px; }
+  .forge-live-anvil { height: 280px; height: clamp(250px, 33svh, 298px); }
+
+  .forge-bench { top: 8px; gap: 5px; width: calc(100% - 16px); }
+  .forge-bench::before { inset: -12px -6px; }
+  .forge-bench-query { gap: 7px; padding: 8px 13px; font-size: 13px; }
+  .forge-bench-meta { max-width: 100%; font-size: 11.5px; line-height: 1.38; }
+  .forge-bench-keywords {
+    flex-wrap: nowrap;
+    justify-content: safe center;
+    max-width: 100%;
+    max-height: none;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, #000 86%, transparent);
+    mask-image: linear-gradient(90deg, #000 86%, transparent);
+  }
+  .forge-bench-keywords li { flex: 0 0 auto; }
+  .forge-bench[data-mode="waiting"] { top: 22px; }
+  .forge-bench-next { font-size: 13px; }
+
+  .forge-live-tray { height: 44px; margin: -10px 0 12px; }
+
+  .forge-live-sources { gap: 12px; padding: 2px 0 0 24px; }
+  .forge-source article { gap: 9px; padding: 13px 14px 12px; border-radius: 15px; }
+  .forge-source-badge { padding: 4px 8px; font-size: 10px; }
+  .forge-source-host { font-size: 12px; }
+  /* Full Kernel excerpt (bounded by the Kernel) and full title: never cut off on a phone. */
+  .forge-source blockquote p,
+  .forge-source-title {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+    font-size: 15px;
+    font-weight: 560;
+    line-height: 1.5;
+    letter-spacing: -.003em;
+  }
+  .forge-source-title.is-candidate { font-size: 14px; }
+  .forge-source-meta { font-size: 13px; line-height: 1.45; }
+  .forge-source-terms li { padding: 3px 8px 3px 6px; font-size: 11px; }
+  .forge-source-actions { flex-wrap: nowrap; gap: 8px; margin-top: 3px; }
+  .forge-source-actions > * { flex: 1 1 0; justify-content: center; }
+  .forge-source-actions > :only-child { flex: 0 0 auto; min-width: 46%; }
+  .forge-live .forge-source-link,
+  .forge-live .forge-source-find { min-height: 44px; padding: 0 12px; border-radius: 11px; font-size: 13.5px; }
+
+  .forge-live-more { margin-top: 14px; }
+  .forge-live-foot { gap: 10px; padding: 4px 12px 14px; }
+  .forge-live-counters dd { font-size: 21px; }
+  .forge-live-counters dt { font-size: 11.5px; }
+  .forge-live .forge-live-replay { width: 100%; min-height: 44px; }
+}
