@@ -69,14 +69,29 @@ describe('forge story (spider graph + forge.log)', () => {
 
   it('never invents the query text or the result count; shows them only when the Kernel row carries them', () => {
     const plain = buildForgeStory(mission('forged'));
-    expect(plain.query).toEqual({ text: 'empleo de conductor', exact: false });
+    expect(plain.query).toEqual({ text: 'empleo de conductor', exact: false, all: ['empleo de conductor'] });
     expect(plain.resultCount).toBeUndefined();
     expect(plain.log.some((line) => line.cue.kind === 'results')).toBe(false);
-    const published = buildForgeStory(mission('forged', { searchQueries: ['conductor barcelona'], searchTelemetry: { resultsCount: 10 } }));
-    expect(published.query).toEqual({ text: 'conductor barcelona', exact: true });
-    expect(published.resultCount).toBe(10);
-    expect(text(published.log[0].segs)).toBe('$ hermes.search «conductor barcelona»');
-    expect(text(published.log[1].segs)).toBe('← buscador 10 resultados');
+    const searchTelemetry = { schemaVersion: 'efesto.mission-search-telemetry.v1', displayOnly: true, recordedAt: '2026-10-03T09:01:00.000Z', searches: [
+      { query: 'empleo conductor', limit: 10, resultCount: 10 },
+      { query: 'trabajo conductor Barcelona', limit: 10 },
+    ] };
+    const published = buildForgeStory(mission('forged', { searchTelemetry }));
+    expect(published.query).toEqual({ text: 'empleo conductor', exact: true, all: ['empleo conductor', 'trabajo conductor Barcelona'] });
+    expect(published.runCounts).toEqual([10, undefined]);
+    // One search has no recorded count: no total is shown, only the per-search count that exists.
+    expect(published.resultCount).toBeUndefined();
+    expect(published.log.slice(0, 3).map((line) => text(line.segs))).toEqual([
+      '$ hermes.search «empleo conductor»', '← buscador 10 resultados', '$ hermes.search «trabajo conductor Barcelona»',
+    ]);
+    const counted = buildForgeStory(mission('forged', { searchTelemetry: { ...searchTelemetry, searches: [searchTelemetry.searches[0], { ...searchTelemetry.searches[1], resultCount: 7 }] } }));
+    expect(counted.resultCount).toBe(17);
+    // The chip types each query in turn: the second one while the crawl runs, before the spider.
+    const timeline = storyTimeline(counted);
+    expect(timeline.qa).toHaveLength(2);
+    expect(timeline.qa[1]).toBeGreaterThanOrEqual(timeline.crawl0);
+    expect(timeline.qb[1]).toBeLessThan(timeline.spider0);
+    expect(timeline.ra[1]).toBeGreaterThan(timeline.qb[1]);
   });
 
   it('while the Kernel verifies, holds after the candidates fell in and says the batch is in progress, with no per-page claim', () => {

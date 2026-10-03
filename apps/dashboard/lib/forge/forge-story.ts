@@ -29,8 +29,8 @@ export type StoryNode = {
 export type LogTone = 'k' | 'txt' | 'ok' | 'bad' | 'au' | 'c';
 export type LogSeg = { tone: LogTone; text: string };
 export type LogCue =
-  | { kind: 'query' }
-  | { kind: 'results' }
+  | { kind: 'query'; index: number }
+  | { kind: 'results'; index: number }
   | { kind: 'pick'; node: number }
   | { kind: 'reading' }
   | { kind: 'read'; node: number }
@@ -42,8 +42,14 @@ export type StoryReach = 'idle' | 'searching' | 'candidates' | 'final';
 
 export type ForgeStory = {
   missionId: string;
-  /** Exact query only when the Kernel row publishes it; otherwise the forge says "desde el Goal". */
-  query: { text: string; exact: boolean };
+  /**
+   * Exact queries only when the Kernel recorded them (Mission searchTelemetry); otherwise the forge
+   * types the Goal and says "desde el Goal". `text` is the first query (or the Goal).
+   */
+  query: { text: string; exact: boolean; all: string[] };
+  /** Per-search result counts as recorded (undefined where the record has none). */
+  runCounts: (number | undefined)[];
+  /** Total results returned, only when every recorded search carries its count. */
   resultCount?: number;
   nodes: StoryNode[];
   hiddenNodes: number;
@@ -54,16 +60,24 @@ export type ForgeStory = {
 
 export function buildForgeStory(model: ForgeMissionModel): ForgeStory {
   const exact = model.search.exactQueries;
-  const query = exact.length ? { text: exact.join(' · '), exact: true } : { text: model.search.goal || model.goalTitle, exact: false };
+  const runs = model.search.runs ?? [];
+  const query = exact.length
+    ? { text: exact[0], exact: true, all: [...exact] }
+    : { text: model.search.goal || model.goalTitle, exact: false, all: [model.search.goal || model.goalTitle] };
   const all = model.sources.map(storyNode);
   const nodes = all.slice(0, MAX_GRAPH_NODES);
   const reach = storyReach(model);
   const log: LogLine[] = [];
-  log.push({ id: 'query', cue: { kind: 'query' }, segs: exact.length
-    ? [{ tone: 'k', text: '$ hermes.search ' }, { tone: 'txt', text: `«${clip(query.text, 30)}»` }]
-    : [{ tone: 'k', text: '$ hermes.search ' }, { tone: 'txt', text: '← Goal' }, { tone: 'c', text: '  # consulta no publicada' }] });
-  if (model.searchResultCount !== undefined) {
-    log.push({ id: 'results', cue: { kind: 'results' }, segs: [{ tone: 'k', text: '← buscador ' }, { tone: 'txt', text: `${model.searchResultCount} ${model.searchResultCount === 1 ? 'resultado' : 'resultados'}` }] });
+  if (exact.length) {
+    exact.forEach((text, index) => {
+      log.push({ id: `query:${index}`, cue: { kind: 'query', index }, segs: [{ tone: 'k', text: '$ hermes.search ' }, { tone: 'txt', text: `«${clip(text, 30)}»` }] });
+      const count = runs[index]?.resultCount;
+      if (count !== undefined) {
+        log.push({ id: `results:${index}`, cue: { kind: 'results', index }, segs: [{ tone: 'k', text: '← buscador ' }, { tone: 'txt', text: `${count} ${count === 1 ? 'resultado' : 'resultados'}` }] });
+      }
+    });
+  } else {
+    log.push({ id: 'query', cue: { kind: 'query', index: 0 }, segs: [{ tone: 'k', text: '$ hermes.search ' }, { tone: 'txt', text: '← Goal' }, { tone: 'c', text: '  # consulta no publicada' }] });
   }
   nodes.forEach((node, index) => log.push({ id: `pick:${node.id}`, cue: { kind: 'pick', node: index }, segs: [{ tone: 'k', text: '+ candidato ' }, { tone: 'txt', text: clip(node.host, 30) }] }));
   if (reach === 'candidates') {
@@ -88,6 +102,7 @@ export function buildForgeStory(model: ForgeMissionModel): ForgeStory {
   return {
     missionId: model.missionId,
     query,
+    runCounts: exact.map((_, index) => runs[index]?.resultCount),
     ...(model.searchResultCount !== undefined ? { resultCount: model.searchResultCount } : {}),
     nodes,
     hiddenNodes: all.length - nodes.length,
@@ -142,6 +157,8 @@ function clip(text: string, max: number): string {
 
 export type StoryTimeline = {
   q0: number; q1: number; crawl0: number; spider0: number;
+  /** Per query: typing start / end in the chip, and when its result count comes back. */
+  qa: number[]; qb: number[]; ra: number[];
   pick: number[]; pull: number[]; read: number[];
   /** One hammer strike per Kernel SUPPORT node, in node order. */
   strike: number[]; strikeNode: number[];
@@ -149,12 +166,17 @@ export type StoryTimeline = {
   hold: Record<StoryReach, number>;
 };
 
-export function storyTimeline(story: Pick<ForgeStory, 'nodes'>): StoryTimeline {
+export function storyTimeline(story: Pick<ForgeStory, 'nodes'> & { query?: { all: string[] } }): StoryTimeline {
   const n = story.nodes.length;
   const q0 = 0.8;
   const q1 = 1.9;
   const crawl0 = 2.0;
   const spider0 = 4.25;
+  // The first query types before the crawl; further queries (2–3 phrasings) type while it crawls.
+  const queries = Math.max(1, Math.min(3, story.query?.all.length ?? 1));
+  const qa = [q0], qb = [q1];
+  for (let i = 1; i < queries; i += 1) { qa.push(crawl0 + 0.1 + (i - 1) * 0.85); qb.push(crawl0 + 0.65 + (i - 1) * 0.85); }
+  const ra = qb.map((end) => end + 0.35);
   const pickStep = n ? clampNum(2.4 / n, 0.3, 0.6) : 0;
   const pick = story.nodes.map((_, k) => spider0 + pickStep * (k + 1));
   const pickEnd = n ? pick[n - 1] : spider0;
@@ -171,7 +193,7 @@ export function storyTimeline(story: Pick<ForgeStory, 'nodes'>): StoryTimeline {
   const find = strike.length ? strike[strike.length - 1] + 0.9 : verdict + 0.4;
   const end = find + 2.2;
   return {
-    q0, q1, crawl0, spider0, pick, pull, read, strike, strikeNode, verdict, find, end,
+    q0, q1, crawl0, spider0, qa, qb, ra, pick, pull, read, strike, strikeNode, verdict, find, end,
     // idle holds before the query is typed (no search yet); searching holds before the crawl reaches any
     // real node (the spider roams the decorative graph meanwhile).
     hold: { idle: q0 - 0.3, searching: crawl0 - 0.05, candidates: read0 - 0.15, final: end },

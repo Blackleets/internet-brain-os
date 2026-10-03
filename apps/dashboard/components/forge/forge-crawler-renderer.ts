@@ -804,11 +804,14 @@ export class ForgeCrawlerRenderer {
   private updateDom() {
     const story = this.story!, T = this.tl!, t = this.t, G = this.G!;
     const n = story.nodes.length;
-    // chip: the query (or the Goal it derives from) types in
-    const q = story.query.text;
-    const typed = Math.round(clamp((t - T.q0) / (T.q1 - T.q0)) * q.length);
+    // chip: each recorded query (or the Goal it derives from) types in, one after another
+    let qi = 0;
+    for (let i = 1; i < T.qa.length && i < story.query.all.length; i += 1) if (t >= T.qa[i]) qi = i;
+    const q = story.query.all[qi] ?? story.query.text;
+    const typed = Math.round(clamp((t - T.qa[qi]) / (T.qb[qi] - T.qa[qi])) * q.length);
     const qText = typed >= q.length ? `«${q}»` : typed > 0 ? `«${q.slice(0, typed)}` : '';
-    const caretOn = !this.hooks.reducedMotion() && (t < T.q1 + 0.5 || story.reach === 'idle') && Math.sin(this.ambient * 12) > -0.2;
+    const lastTyped = T.qb[Math.min(T.qb.length, story.query.all.length) - 1] ?? T.q1;
+    const caretOn = !this.hooks.reducedMotion() && (t < lastTyped + 0.5 || story.reach === 'idle') && Math.sin(this.ambient * 12) > -0.2;
     // steps (visual only while replaying; the real step state stays in the DOM for assistive tech)
     const step = storyStep(T, t);
     const shownLog = this.visibleLog(t);
@@ -828,8 +831,10 @@ export class ForgeCrawlerRenderer {
       support: story.reach !== 'final' || t < (T.strike.length ? T.strike[0] + 0.05 : T.verdict) ? '·' : String(t >= T.find ? story.counts.supported : sups),
     };
     if (story.resultCount !== undefined) {
-      const k = clamp((t - T.crawl0 - 0.75) / 1.45);
-      cells.results = t < T.crawl0 + 0.75 ? '·' : String(Math.round(k * story.resultCount));
+      // results returned: each search's count lands when it comes back (only real recorded counts)
+      let sum = 0;
+      story.runCounts.forEach((count, i) => { if (count !== undefined && T.ra[i] !== undefined) sum += Math.round(clamp((t - T.ra[i]) / 0.6) * count); });
+      cells.results = T.ra[0] === undefined || t < T.ra[0] ? '·' : String(t >= (T.ra[T.ra.length - 1] ?? 0) + 0.6 ? story.resultCount : sum);
     }
     const visible = allPicked ? story.counts.candidates : picks;
     const key = [qText, caretOn, step, this.playing, lines.length, newest?.line.id, typedChars, ...Object.values(cells), visible, final].join('|');
@@ -877,8 +882,8 @@ export class ForgeCrawlerRenderer {
       const c = line.cue;
       let at = 0;
       switch (c.kind) {
-        case 'query': at = T.q0; break;
-        case 'results': at = 3.2; break;
+        case 'query': at = T.qa[c.index] ?? T.q0; break;
+        case 'results': at = T.ra[c.index] ?? T.q1 + 0.35; break;
         case 'pick': at = T.pick[c.node]; break;
         case 'reading': at = T.hold.candidates - 0.6; break;
         case 'read': at = T.read[c.node] + 0.5; break;

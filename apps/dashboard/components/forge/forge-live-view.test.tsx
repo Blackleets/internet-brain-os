@@ -104,11 +104,26 @@ describe('ForgeLiveView', () => {
     expect(container.querySelector('.forge-bench-meta')?.textContent).toMatch(/la consulta exacta no la publica el Kernel/);
   });
 
-  it('shows the exact search queries only when the Kernel publishes them', () => {
-    const { container } = render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('investigating'), mission: row({ executionPhase: 'investigating', searchCandidates: undefined, searchQueries: ['rust ownership rules'] }) })} />);
-    expect(container.querySelector('.forge-bench-q')?.textContent).toBe('«rust ownership rules»');
-    expect(container.querySelector('.forge-bench-meta')?.textContent).toBe('Consultas de Hermes publicadas por el Kernel');
-    expect(container.querySelector('.forge-chip-tag')).toBeNull();
+  it('shows the real queries and "N resultados devueltos" only when the Kernel recorded search telemetry', () => {
+    const searchTelemetry = { schemaVersion: 'efesto.mission-search-telemetry.v1', displayOnly: true, recordedAt: '2026-10-03T09:01:00.000Z', searches: [
+      { query: 'rust ownership rules', limit: 10, resultCount: 10 },
+      { query: 'rust borrow checker guide', limit: 10, resultCount: 9 },
+    ] };
+    const { container } = render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ searchTelemetry }) })} />);
+    // The chip settles on the last query typed; every query is in the title and for screen readers.
+    expect(container.querySelector('.forge-bench-q')?.textContent).toBe('«rust borrow checker guide»');
+    expect(container.querySelector('.forge-chip')?.getAttribute('title')).toContain('«rust ownership rules» · «rust borrow checker guide»');
+    expect(container.querySelector('.forge-chip-tag')?.textContent).toBe('2 consultas');
+    const results = container.querySelector('.forge-live-counters [data-k="results"]') as HTMLElement;
+    expect(results.textContent).toBe('resultados devueltos19');
+    expect(container.querySelector('.forge-bench-meta')?.textContent).toBe('Búsqueda web terminada · 19 resultados devueltos · 8 candidatos reales');
+  });
+
+  it('without search telemetry there is no query text and no result count, just "desde el Goal"', () => {
+    const { container } = render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ searchQueries: ['legacy'], searchResultCount: 9 }) })} />);
+    expect(container.querySelector('.forge-bench-q')?.textContent).toBe('«Rust ownership guide»');
+    expect(container.querySelector('.forge-chip-tag')?.textContent).toBe('desde el Goal');
+    expect(container.querySelector('.forge-live-counters [data-k="results"]')).toBeNull();
   });
 
   it('reports how many real candidates the search returned once the Kernel verifies them', () => {

@@ -180,12 +180,35 @@ describe('displayText', () => {
 
   it('exposes the search honestly: Goal + Kernel keywords, exact queries only when the Kernel publishes them', () => {
     const searching = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('investigating'), mission: row({ executionPhase: 'investigating', searchCandidates: undefined, investigatingAt: '2026-10-03T09:00:30.000Z', scope: { keywords: ['taladro', 'Taladro', 'percutor', ''] } }) }));
-    expect(searching.search).toEqual({ goal: 'Taladro percutor 18 V', keywords: ['taladro', 'percutor'], exactQueries: [] });
+    expect(searching.search).toEqual({ goal: 'Taladro percutor 18 V', keywords: ['taladro', 'percutor'], exactQueries: [], runs: [] });
+    expect(searching.searchResultCount).toBeUndefined();
     expect(searching.searchKeywords).toEqual(['taladro', 'percutor']);
     expect(searching.phaseSince).toBe('2026-10-03T09:00:30.000Z');
     expect(searching.nextStep).toMatch(/web\.read/);
-    const published = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('investigating'), mission: row({ executionPhase: 'investigating', searchCandidates: undefined, searchQueries: ['taladro percutor 18v oferta', 42] }) }));
-    expect(published.search.exactQueries).toEqual(['taladro percutor 18v oferta']);
+    // Only the Kernel's display-only searchTelemetry (v1) carries real queries and counts.
+    const telemetry = (searches: unknown[], extra: Record<string, unknown> = {}) => ({ schemaVersion: 'efesto.mission-search-telemetry.v1', displayOnly: true, recordedAt: '2026-10-03T09:00:40.000Z', searches, ...extra });
+    const published = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ searchTelemetry: telemetry([
+      { query: 'taladro percutor 18v oferta', limit: 10, resultCount: 10 },
+      { query: 'taladro percutor Madrid', limit: 10, resultCount: 8 },
+      { query: 42 },
+    ]) }) }));
+    expect(published.search.exactQueries).toEqual(['taladro percutor 18v oferta', 'taladro percutor Madrid']);
+    expect(published.search.runs).toEqual([{ query: 'taladro percutor 18v oferta', resultCount: 10 }, { query: 'taladro percutor Madrid', resultCount: 8 }]);
+    expect(published.searchResultCount).toBe(18);
+    // A search without its count: queries shown, no total (never guessed).
+    const partial = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ searchTelemetry: telemetry([{ query: 'a', resultCount: 10 }, { query: 'b' }]) }) }));
+    expect(partial.search.exactQueries).toEqual(['a', 'b']);
+    expect(partial.searchResultCount).toBeUndefined();
+    // Anything not shaped like the Kernel contract, or the old speculative fields, is ignored.
+    for (const extra of [
+      { searchTelemetry: telemetry([{ query: 'x', resultCount: 3 }], { schemaVersion: 'other' }) },
+      { searchTelemetry: telemetry([{ query: 'x', resultCount: 3 }], { displayOnly: false }) },
+      { searchQueries: ['legacy'], searchResultCount: 9, searchTelemetry: { resultsCount: 9 } },
+    ]) {
+      const ignored = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row(extra) }));
+      expect(ignored.search.exactQueries).toEqual([]);
+      expect(ignored.searchResultCount).toBeUndefined();
+    }
   });
 
   it('gives queued missions a next step and the time they have been waiting, never a search claim', () => {

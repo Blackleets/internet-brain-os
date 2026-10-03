@@ -177,18 +177,21 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onPlaying, onRec
 
   const canReplay = Boolean(sources.length > 0 && !reducedMotion && model.motion === 'settled');
   const exact = story.query.exact;
+  const queries = story.query.all;
+  const lastQuery = queries[queries.length - 1] ?? story.query.text;
   return <div ref={bodyRef} className="forge-live-body">
     <canvas ref={fxRef} className="forge-live-fx" aria-hidden="true" />
     <div ref={stageRef} className="forge-live-stage">
       <canvas ref={bgRef} className="forge-live-bg" aria-hidden="true" />
       <p className="forge-slabel" aria-hidden="true">La web · índice del buscador<span>fondo decorativo · no se cuenta</span></p>
       <div className="forge-bench" data-mode={waiting ? 'waiting' : searching ? 'searching' : 'searched'}>
-        <p ref={chipRef} className="forge-chip" title={exact ? 'Consulta publicada por el Kernel' : 'Hermes busca a partir del Goal; la consulta exacta no la publica el Kernel'}>
+        <p ref={chipRef} className="forge-chip" title={exact ? `Consultas que Hermes hizo, registradas por el Kernel: ${queries.map((item) => `«${item}»`).join(' · ')}` : 'Hermes busca a partir del Goal; la consulta exacta no la publica el Kernel'}>
           <span className="fn" aria-hidden="true">hermes.search(</span>
-          <span ref={queryRef} className="forge-bench-q">{waiting ? '' : `«${story.query.text}»`}</span>
+          <span ref={queryRef} className="forge-bench-q" aria-hidden={exact && queries.length > 1 ? 'true' : undefined}>{waiting ? '' : `«${exact ? lastQuery : story.query.text}»`}</span>
+          {exact && queries.length > 1 ? <span className="forge-sr-only">{queries.map((item) => `«${item}»`).join(', ')}</span> : null}
           <i ref={caretRef} className="forge-caret" aria-hidden="true" />
           <span className="fn" aria-hidden="true">)</span>
-          {waiting ? null : exact ? null : <em className="forge-chip-tag">desde el Goal</em>}
+          {waiting ? null : exact ? (queries.length > 1 ? <em className="forge-chip-tag">{queries.length} consultas</em> : null) : <em className="forge-chip-tag">desde el Goal</em>}
         </p>
         {waiting ? <div className="forge-bench-wait">
           <p className="forge-bench-title"><span className="forge-bench-embers" aria-hidden="true"><i /><i /><i /></span>{model.phase === 'queued' ? 'Esperando turno del agente' : 'Esperando a que Hermes se conecte'}</p>
@@ -199,7 +202,7 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onPlaying, onRec
       <div className="forge-live-anvil" aria-hidden="true" />
     </div>
     <dl ref={funnelRef} className="forge-live-counters" aria-label="Contadores de la misión" data-cells={story.resultCount !== undefined ? 4 : 3}>
-      {story.resultCount !== undefined ? <div data-k="results" data-on="true"><dt>resultados del buscador</dt><dd>{story.resultCount}</dd></div> : null}
+      {story.resultCount !== undefined ? <div data-k="results" data-on="true"><dt>resultados devueltos</dt><dd>{story.resultCount}</dd></div> : null}
       <div data-k="candidates" data-on="true"><dt>candidatos</dt><dd>{model.counts.sources}</dd></div>
       <div data-k="evidence" data-on="true"><dt>Evidence</dt><dd>{model.counts.evidence}</dd></div>
       <div data-k="support" data-on="true" className="is-support"><dt>SUPPORT</dt><dd>{model.counts.supported}</dd></div>
@@ -285,8 +288,11 @@ function ForgeHeader({ model, headingId, onConnect, onRelaunch, relaunchPending,
 function metaPill(model: ForgeMissionModel, replaying: boolean): [string, string] | undefined {
   if (model.phase === 'queued' || model.phase === 'waiting_agent') return undefined;
   if (replaying) return ['Reconstrucción', ' · datos reales del Kernel'];
-  if (model.phase === 'searching') return model.search.exactQueries.length ? ['Consultas de Hermes', ' publicadas por el Kernel'] : ['Hermes busca desde el Goal', ' · la consulta exacta no la publica el Kernel'];
-  if (model.counts.sources > 0) return ['Búsqueda web terminada', ` · ${model.counts.sources} ${model.counts.sources === 1 ? 'candidato real' : 'candidatos reales'}`];
+  if (model.phase === 'searching') return model.search.exactQueries.length ? ['Consultas de Hermes', ' registradas por el Kernel'] : ['Hermes busca desde el Goal', ' · la consulta exacta no la publica el Kernel'];
+  if (model.counts.sources > 0) {
+    const returned = model.searchResultCount !== undefined ? ` · ${model.searchResultCount} ${model.searchResultCount === 1 ? 'resultado devuelto' : 'resultados devueltos'}` : '';
+    return ['Búsqueda web terminada', `${returned} · ${model.counts.sources} ${model.counts.sources === 1 ? 'candidato real' : 'candidatos reales'}`];
+  }
   return undefined;
 }
 

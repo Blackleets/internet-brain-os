@@ -100,14 +100,14 @@ export type ForgeMissionModel = {
   /** Mission keywords exactly as the Kernel stored them (scope.keywords). */
   searchKeywords: string[];
   /**
-   * What the forge can honestly say about the web search: Hermes searches from the Goal, but the
-   * Kernel does not publish the exact query string, so `exactQuery` is only set if a Kernel row
-   * ever carries one (`searchQueries` / `searchQuery`).
+   * What the forge can honestly say about the web search. The exact queries (and per-query result
+   * counts) come only from the Mission's display-only `searchTelemetry` (Kernel schema
+   * efesto.mission-search-telemetry.v1); without it the forge says Hermes searched "desde el Goal".
    */
-  search: { goal: string; keywords: string[]; exactQueries: string[] };
+  search: { goal: string; keywords: string[]; exactQueries: string[]; runs: ForgeSearchRun[] };
   /**
-   * How many results the web search returned, only when a Kernel row publishes it
-   * (`searchResultCount` or `searchTelemetry.resultsCount`). Never inferred from the candidates.
+   * Total results the searches returned: only when every recorded search carries its count.
+   * Never inferred from the candidates.
    */
   searchResultCount?: number;
   /** Kernel timestamp of the moment the current phase started (ISO), when the row has it. */
@@ -173,7 +173,10 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
   }
   const phaseSince = phaseTimestamp(phase, row, surfaceMission);
   const nextStep = NEXT_STEPS[phase];
-  const resultCount = searchResultCount(row);
+  const runs = searchTelemetryRuns(row);
+  const resultCount = runs.length && runs.every((run) => run.resultCount !== undefined)
+    ? runs.reduce((sum, run) => sum + (run.resultCount ?? 0), 0)
+    : undefined;
   const relaunch = canRelaunch(phase, surfaceMission.status, row, input.now ?? Date.now()) && input.surface.goal.id ? { goalId: input.surface.goal.id } : undefined;
   return {
     kind: 'mission',
@@ -189,7 +192,7 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
     evidenceStatus: evidence.status,
     goalTerms,
     searchKeywords,
-    search: { goal: goalTitle, keywords: searchKeywords, exactQueries: exactQueries(row) },
+    search: { goal: goalTitle, keywords: searchKeywords, exactQueries: runs.map((run) => run.query), runs },
     ...(resultCount !== undefined ? { searchResultCount: resultCount } : {}),
     ...(phaseSince ? { phaseSince } : {}),
     ...(nextStep ? { nextStep } : {}),
@@ -230,19 +233,23 @@ function missionKeywords(row?: MissionSummary): string[] {
   return out;
 }
 
-function exactQueries(row?: MissionSummary): string[] {
-  if (!row) return [];
-  const raw = Array.isArray(row.searchQueries) ? row.searchQueries : [row.searchQuery];
-  return raw.map((item) => str(item)).filter((item) => item.length > 0 && item.length <= 200).slice(0, 6);
-}
+export type ForgeSearchRun = { query: string; resultCount?: number };
 
-function searchResultCount(row?: MissionSummary): number | undefined {
-  if (!row) return undefined;
-  const telemetry = asRow(row.searchTelemetry);
-  for (const value of [row.searchResultCount, telemetry?.resultsCount, telemetry?.results_count]) {
-    if (typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 10_000) return value;
+export const SEARCH_TELEMETRY_SCHEMA = 'efesto.mission-search-telemetry.v1';
+
+/** The searches the Kernel recorded for this attempt (display-only), validated again on read. */
+function searchTelemetryRuns(row?: MissionSummary): ForgeSearchRun[] {
+  const telemetry = asRow(row?.searchTelemetry);
+  if (!telemetry || telemetry.schemaVersion !== SEARCH_TELEMETRY_SCHEMA || telemetry.displayOnly !== true || !Array.isArray(telemetry.searches)) return [];
+  const runs: ForgeSearchRun[] = [];
+  for (const item of telemetry.searches.slice(0, 8)) {
+    const search = asRow(item);
+    const query = str(search?.query);
+    if (!search || !query || query.length > 300) continue;
+    const count = search.resultCount;
+    runs.push(typeof count === 'number' && Number.isInteger(count) && count >= 0 && count <= 1000 ? { query, resultCount: count } : { query });
   }
-  return undefined;
+  return runs;
 }
 
 function phaseTimestamp(phase: ForgePhase, row: MissionSummary | undefined, mission: NonNullable<GoalSurface['mission']>): string | undefined {
