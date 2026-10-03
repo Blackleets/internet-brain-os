@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { chmod, copyFile, mkdtemp, readFile, rm, unlink, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdtemp, readdir, readFile, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -11,6 +11,11 @@ const MAX_TIMEOUT_MS = 25 * 60_000;
 const FORCE_KILL_DELAY_MS = 500;
 const MAX_AGENT_TURNS = 8;
 const DEFAULT_AGENT_TURNS = 8;
+// Search telemetry (display-only): Hermes web_tools debug log, read from the isolated home before cleanup.
+const WEB_TOOLS_DEBUG_PREFIX = 'web_tools_debug_';
+const MAX_DEBUG_LOG_BYTES = 256 * 1024;
+const MAX_SEARCHES = 8;
+const MAX_QUERY_CHARS = 300;
 
 export function buildHermesPrompt(payload) {
   if (!payload || payload.schemaVersion !== 'efesto.hermes-mission.v1' || !payload.mission) {
@@ -68,6 +73,9 @@ export function buildHermesEnvironment(baseEnv, hermesHome) {
     HERMES_HOME: hermesHome,
     HERMES_ALLOW_PRIVATE_URLS: 'false',
     HERMES_IGNORE_RULES: '1',
+    // Records each web_search call (query, limit, result count; no result content) to
+    // $HERMES_HOME/logs so the adapter can report what Hermes actually searched.
+    WEB_TOOLS_DEBUG: 'true',
   };
   delete env.HERMES_SAFE_MODE;
   delete env.HERMES_ENABLE_PROJECT_PLUGINS;
@@ -337,19 +345,68 @@ export async function runHermesOneShot(payload, options = {}) {
     const sourceHome = resolveSourceHermesHome(baseEnv);
     await seedIsolatedHermesCredentials(hermesHome, sourceHome, copied);
     await applySourceHermesModelRoute(hermesHome, sourceHome);
-    return await runHermesProcess({
+    const result = await runHermesProcess({
       executable,
       args,
       timeoutMs,
       env: buildHermesEnvironment(baseEnv, hermesHome),
       cwd: hermesHome,
     });
+    const searches = await collectHermesSearchTelemetry(hermesHome);
+    return searches.length ? { ...result, searches } : result;
   } finally {
     await wipeCopiedHermesCredentials(hermesHome, copied);
     if (ownsHermesHome) {
       await rm(hermesHome, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
   }
+}
+
+/**
+ * Reads the Hermes web_tools debug logs in the isolated home and returns the web_search calls
+ * Hermes really made: { query, limit?, resultCount? }. A field the log does not carry (or carries
+ * malformed) is omitted, never guessed; resultCount is omitted for a call that errored. The logs
+ * are removed after reading. Telemetry is best effort: any read/parse problem yields [] and never
+ * fails the mission.
+ */
+export async function collectHermesSearchTelemetry(hermesHome) {
+  if (typeof hermesHome !== 'string' || !hermesHome.trim()) return [];
+  const logDir = join(hermesHome, 'logs');
+  let names;
+  try { names = (await readdir(logDir)).filter((name) => name.startsWith(WEB_TOOLS_DEBUG_PREFIX) && name.endsWith('.json')).sort(); }
+  catch { return []; }
+  const calls = [];
+  for (const name of names) {
+    const path = join(logDir, name);
+    try {
+      const info = await stat(path);
+      if (info.isFile() && info.size <= MAX_DEBUG_LOG_BYTES) {
+        const parsed = JSON.parse(await readFile(path, 'utf8'));
+        if (Array.isArray(parsed?.tool_calls)) calls.push(...parsed.tool_calls);
+      }
+    } catch { /* unreadable log: no telemetry from it */ }
+    try { await unlink(path); } catch { /* already gone */ }
+  }
+  return parseHermesSearchCalls(calls);
+}
+
+export function parseHermesSearchCalls(calls) {
+  if (!Array.isArray(calls)) return [];
+  const searches = [];
+  for (const call of calls) {
+    if (searches.length >= MAX_SEARCHES) break;
+    if (!call || typeof call !== 'object' || call.tool_name !== 'web_search_tool') continue;
+    const parameters = call.parameters && typeof call.parameters === 'object' ? call.parameters : {};
+    const query = typeof parameters.query === 'string' ? parameters.query.replace(/\s+/g, ' ').trim() : '';
+    if (!query || query.length > MAX_QUERY_CHARS || /[\u0000-\u001f\u007f]/.test(query)) continue;
+    const search = { query };
+    if (Number.isInteger(parameters.limit) && parameters.limit >= 1 && parameters.limit <= 100) search.limit = parameters.limit;
+    if ((call.error === null || call.error === undefined) && Number.isInteger(call.results_count) && call.results_count >= 0 && call.results_count <= 1000) {
+      search.resultCount = call.results_count;
+    }
+    searches.push(search);
+  }
+  return searches;
 }
 
 function configuredMaxTurns(value) {

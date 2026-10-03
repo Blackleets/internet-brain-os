@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -16,7 +16,19 @@ import {
   wipeCopiedHermesCredentials,
   applySourceHermesModelRoute,
   parseTopLevelHermesModelRoute,
+  collectHermesSearchTelemetry,
+  parseHermesSearchCalls,
 } from './hermes-efesto-adapter.mjs';
+
+const SAMPLE_DEBUG_LOG = new URL('./fixtures/hermes-web-tools-debug.sample.json', import.meta.url);
+const SAMPLE_SEARCHES = [
+  { query: 'empleo repartidor rider España', limit: 10, resultCount: 10 },
+  { query: 'trabajo delivery Barcelona', limit: 10, resultCount: 7 },
+  // errored call: what was searched is known, how many results came back is not
+  { query: 'ofertas rider glovo', limit: 10 },
+  // no limit and a malformed count in the log: both omitted, never guessed
+  { query: 'repartidor autónomo requisitos' },
+];
 
 describe('Hermes Efesto adapter', () => {
   it('builds a bounded public discovery prompt from an authorized mission', () => {
@@ -65,6 +77,62 @@ describe('Hermes Efesto adapter', () => {
     expect(env).not.toHaveProperty('HERMES_SAFE_MODE');
     expect(env).not.toHaveProperty('HERMES_ENABLE_PROJECT_PLUGINS');
     expect(env).not.toHaveProperty('HERMES_IGNORE_USER_CONFIG');
+    expect(env.WEB_TOOLS_DEBUG).toBe('true');
+  });
+
+  it('turns a Hermes web_tools debug log into search telemetry without guessing missing fields', async () => {
+    const sample = JSON.parse(await readFile(SAMPLE_DEBUG_LOG, 'utf8'));
+    expect(parseHermesSearchCalls(sample.tool_calls)).toEqual(SAMPLE_SEARCHES);
+    expect(parseHermesSearchCalls(undefined)).toEqual([]);
+    expect(parseHermesSearchCalls([
+      { tool_name: 'web_search_tool', parameters: { query: '   ' }, error: null, results_count: 3 },
+      { tool_name: 'web_search_tool', parameters: { query: 'x'.repeat(301) }, error: null, results_count: 3 },
+      { tool_name: 'web_search_tool', parameters: { query: 'ok', limit: 0 }, error: null, results_count: -1 },
+      null,
+    ])).toEqual([{ query: 'ok' }]);
+    const many = Array.from({ length: 12 }, (_, index) => ({ tool_name: 'web_search_tool', parameters: { query: `q${index}`, limit: 10 }, error: null, results_count: 1 }));
+    expect(parseHermesSearchCalls(many)).toHaveLength(8);
+  });
+
+  it('reads the debug logs from the isolated Hermes home, removes them, and tolerates a missing or broken log', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'efesto-hermes-telemetry-'));
+    try {
+      expect(await collectHermesSearchTelemetry(home)).toEqual([]);
+      await mkdir(join(home, 'logs'));
+      await writeFile(join(home, 'logs', 'web_tools_debug_a.json'), await readFile(SAMPLE_DEBUG_LOG, 'utf8'), 'utf8');
+      await writeFile(join(home, 'logs', 'web_tools_debug_b.json'), '{not json', 'utf8');
+      await writeFile(join(home, 'logs', 'vision_tools_debug_c.json'), '{"tool_calls":[{"tool_name":"web_search_tool","parameters":{"query":"nope"}}]}', 'utf8');
+      expect(await collectHermesSearchTelemetry(home)).toEqual(SAMPLE_SEARCHES);
+      expect((await readdir(join(home, 'logs'))).sort()).toEqual(['vision_tools_debug_c.json']);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it('reports the searches Hermes made alongside its findings, read before the isolated home is deleted', async () => {
+    const isolated = await mkdtemp(join(tmpdir(), 'efesto-hermes-telemetry-run-'));
+    const quietHome = await mkdtemp(join(tmpdir(), 'efesto-hermes-telemetry-quiet-'));
+    try {
+      const sample = await readFile(SAMPLE_DEBUG_LOG, 'utf8');
+      await writeFile(join(isolated, 'chat'), `const fs = require('node:fs'); const path = require('node:path');
+if (process.env.WEB_TOOLS_DEBUG !== 'true') process.exit(3);
+fs.mkdirSync(path.join(process.env.HERMES_HOME, 'logs'), { recursive: true });
+fs.writeFileSync(path.join(process.env.HERMES_HOME, 'logs', 'web_tools_debug_run.json'), ${JSON.stringify(sample)});
+process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/a' }] }));
+`, 'utf8');
+      const payload = { schemaVersion: 'efesto.hermes-mission.v1', mission: { id: 'mission-1', goalTitle: 'Find grants', cadence: 'once', scope: {} } };
+      const result = await runHermesOneShot(payload, { executable: process.execPath, hermesHome: isolated, timeoutMs: 4_000, env: { ...process.env, HERMES_HOME: isolated } });
+      expect(result.findings.map((finding) => finding.url)).toEqual(['https://example.com/a']);
+      expect(result.searches).toEqual(SAMPLE_SEARCHES);
+      // The run's debug log is consumed: nothing is left in the isolated home.
+      expect(await readdir(join(isolated, 'logs'))).toEqual([]);
+      await writeFile(join(quietHome, 'chat'), "process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/b' }] }));\n", 'utf8');
+      const quiet = await runHermesOneShot(payload, { executable: process.execPath, hermesHome: quietHome, timeoutMs: 4_000, env: { ...process.env, HERMES_HOME: quietHome } });
+      expect(quiet).not.toHaveProperty('searches');
+    } finally {
+      await rm(isolated, { recursive: true, force: true });
+      await rm(quietHome, { recursive: true, force: true });
+    }
   });
 
   it('resolves the process Hermes home without using the isolated destination', () => {
