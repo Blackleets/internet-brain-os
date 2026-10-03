@@ -203,4 +203,40 @@ describe('displayText', () => {
     expect(model.sources.find((item) => item.id === 'c3')?.goalTerms).toBeUndefined();
     expect(model.sources.find((item) => item.id === 'c1')?.state).toBe('supported');
   });
+
+  describe('relaunch (mission left in running/verifying by the Kernel)', () => {
+    const now = Date.parse('2026-10-03T10:00:00.000Z');
+    const unsupported = [
+      { candidateId: 'c1', status: 'verified', evidenceId: 'e1', sourceUrl: candidates[0].url, supported: false, supportReason: 'homepage_insufficient_coverage' },
+    ];
+    const failedAll = candidates.map((item) => ({ candidateId: item.id, status: 'verification_failed', reason: 'web.read returned HTTP 403' }));
+
+    it('offers relaunch for a read-without-SUPPORT mission with no lease', () => {
+      const model = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ verificationResults: unsupported }), now }));
+      expect(model.phase).toBe('verified_unsupported');
+      expect(model.relaunch).toEqual({ goalId: 'goal:1' });
+    });
+
+    it('offers relaunch when every page failed to read and no lease is live', () => {
+      const model = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ verificationResults: failedAll, leaseExpiresAt: '2026-10-03T09:59:00.000Z' }), now }));
+      expect(model.phase).toBe('read_failed_all');
+      expect(model.relaunch).toEqual({ goalId: 'goal:1' });
+    });
+
+    it('never offers relaunch while Hermes holds a live lease, while verifying, or once forged', () => {
+      const leased = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ verificationResults: unsupported, leaseExpiresAt: '2026-10-03T10:05:00.000Z' }), now }));
+      expect(leased.relaunch).toBeUndefined();
+      const verifying = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row(), now }));
+      expect(verifying.phase).toBe('verifying');
+      expect(verifying.relaunch).toBeUndefined();
+      const forged = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('forged', { status: 'completed' }), mission: row({ status: 'completed', verificationResults: forgedResults }), now }));
+      expect(forged.relaunch).toBeUndefined();
+    });
+
+    it('needs the full Kernel mission row (no guess from the surface alone)', () => {
+      const model = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), now }));
+      expect(model.relaunch).toBeUndefined();
+    });
+  });
 });
+

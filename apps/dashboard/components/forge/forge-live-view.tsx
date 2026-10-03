@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ChevronDown, ExternalLink, Plug, RotateCcw, Search, Sparkles, X } from 'lucide-react';
+import { Check, ChevronDown, ExternalLink, Plug, RefreshCw, RotateCcw, Search, Sparkles, X } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ForgeMissionModel, ForgeModel, ForgeSource, ForgeStepState } from '../../lib/forge/forge-model';
 import { buildForgeScene } from '../../lib/forge/forge-scene';
@@ -15,11 +15,14 @@ type Props = {
   model: ForgeModel;
   onConnect?: () => void;
   onOpenFinds?: () => void;
+  /** Re-confirms a mission the Kernel left read without SUPPORT and without a lease (model.relaunch). */
+  onRelaunch?: (goalId: string) => void;
+  relaunchPending?: boolean;
   /** Visible heading level context; Home uses h2 under its own title. */
   headingId?: string;
 };
 
-export function ForgeLiveView({ model, onConnect, onOpenFinds, headingId = 'forge-live-title' }: Props) {
+export function ForgeLiveView({ model, onConnect, onOpenFinds, onRelaunch, relaunchPending = false, headingId = 'forge-live-title' }: Props) {
   const rootRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -181,7 +184,7 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, headingId = 'forg
     data-reduced-motion={reducedMotion ? 'true' : undefined}
     aria-labelledby={headingId}
   >
-    <ForgeHeader model={model} headingId={headingId} onConnect={onConnect} />
+    <ForgeHeader model={model} headingId={headingId} onConnect={onConnect} onRelaunch={onRelaunch} relaunchPending={relaunchPending} />
     <div ref={stageRef} className="forge-live-stage">
       <canvas ref={canvasRef} className="forge-live-canvas" aria-hidden="true" />
       <div ref={anvilRef} className="forge-live-anvil">
@@ -227,7 +230,7 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, headingId = 'forg
   </section>;
 }
 
-function ForgeHeader({ model, headingId, onConnect }: { model: ForgeModel; headingId: string; onConnect?: () => void }) {
+function ForgeHeader({ model, headingId, onConnect, onRelaunch, relaunchPending }: { model: ForgeModel; headingId: string; onConnect?: () => void; onRelaunch?: (goalId: string) => void; relaunchPending?: boolean }) {
   if (model.kind === 'offline') {
     return <header className="forge-live-head">
       <div className="forge-live-goal">
@@ -255,6 +258,12 @@ function ForgeHeader({ model, headingId, onConnect }: { model: ForgeModel; headi
       <h2 id={headingId}>{model.goalTitle || 'Goal sin título'}</h2>
       <p className="forge-live-phase"><i data-tone={phaseTone(model)} /><span><strong>{model.phaseLabel}<PhaseClock since={model.phaseSince} live={model.motion === 'active'} /></strong> {model.phaseDetail}</span></p>
     </div>
+    {model.relaunch && onRelaunch ? <div className="forge-live-relaunch">
+      <button type="button" className="forge-live-relaunch-btn" disabled={relaunchPending} onClick={() => { if (model.relaunch) onRelaunch(model.relaunch.goalId); }}>
+        <RefreshCw aria-hidden="true" />{relaunchPending ? 'Relanzando…' : 'Relanzar misión'}
+      </button>
+      <p>El Kernel la dejó leída sin SUPPORT y nadie la está trabajando. Relanzar la vuelve a poner en cola para Hermes con el mismo Goal.</p>
+    </div> : null}
     <ol className="forge-live-steps" aria-label="Progreso de la misión">
       {model.steps.map((step, index) => <li key={step.id} data-state={step.state} aria-current={index === activeIndex ? 'step' : undefined}>
         <b aria-hidden="true">{step.state === 'done' || step.state === 'gold' ? <Check /> : step.state === 'failed' ? <X /> : index + 1}</b>

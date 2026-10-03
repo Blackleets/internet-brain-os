@@ -119,4 +119,18 @@ describe('ForgeLiveView', () => {
     const chips = within(container.querySelector('.forge-bench') as HTMLElement).getByRole('list', { name: 'Palabras clave de la misión' });
     expect(within(chips).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['empleo', 'ryder', 'delivery']);
   });
+
+  it('offers "Relanzar misión" only for a mission read without SUPPORT and no live lease', () => {
+    const onRelaunch = vi.fn();
+    const unsupported = [{ candidateId: 'c0', status: 'verified', evidenceId: 'e0', sourceUrl: candidates[0].url, supported: false, supportReason: 'homepage_insufficient_coverage' }];
+    const stalled = buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ searchCandidates: candidates.slice(0, 1), verificationResults: unsupported }) });
+    const { rerender } = render(<ForgeLiveView model={stalled} onRelaunch={onRelaunch} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Relanzar misión' }));
+    expect(onRelaunch).toHaveBeenCalledWith('goal:1');
+    rerender(<ForgeLiveView model={stalled} onRelaunch={onRelaunch} relaunchPending />);
+    expect((screen.getByRole('button', { name: 'Relanzando…' }) as HTMLButtonElement).disabled).toBe(true);
+    const leased = buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ searchCandidates: candidates.slice(0, 1), verificationResults: unsupported, leaseExpiresAt: new Date(Date.now() + 60_000).toISOString() }) });
+    rerender(<ForgeLiveView model={leased} onRelaunch={onRelaunch} />);
+    expect(screen.queryByRole('button', { name: /Relanza/ })).toBeNull();
+  });
 });

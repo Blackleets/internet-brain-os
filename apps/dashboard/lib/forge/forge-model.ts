@@ -32,6 +32,8 @@ export type ForgeInput = {
   mission?: MissionSummary;
   evidence?: ForgeEvidenceLoad;
   opportunities?: readonly OpportunitySummary[];
+  /** Clock for lease checks (ms since epoch); defaults to Date.now(). */
+  now?: number;
 };
 
 export type ForgeSourceState = 'candidate' | 'read_failed' | 'evidence' | 'supported' | 'unsupported';
@@ -107,6 +109,12 @@ export type ForgeMissionModel = {
   phaseSince?: string;
   /** Honest next step for waiting/queued states. */
   nextStep?: string;
+  /**
+   * Set when the Kernel left the mission read without SUPPORT (or with every read failed) in
+   * running/verifying with no live Hermes lease: nothing will move it on its own, so the user may
+   * confirm it again through the same Goal mission endpoint the dashboard uses to confirm a Goal.
+   */
+  relaunch?: { goalId: string };
 };
 
 export type ForgeModel =
@@ -160,6 +168,7 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
   }
   const phaseSince = phaseTimestamp(phase, row, surfaceMission);
   const nextStep = NEXT_STEPS[phase];
+  const relaunch = canRelaunch(phase, surfaceMission.status, row, input.now ?? Date.now()) && input.surface.goal.id ? { goalId: input.surface.goal.id } : undefined;
   return {
     kind: 'mission',
     missionId: surfaceMission.id,
@@ -177,11 +186,20 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
     search: { goal: goalTitle, keywords: searchKeywords, exactQueries: exactQueries(row) },
     ...(phaseSince ? { phaseSince } : {}),
     ...(nextStep ? { nextStep } : {}),
+    ...(relaunch ? { relaunch } : {}),
     summary: `${label}. ${counts.sources} ${plural(counts.sources, 'fuente', 'fuentes')}, ${counts.read} ${plural(counts.read, 'leída', 'leídas')}, ${counts.evidence} Evidence, ${counts.supported} con Kernel SUPPORT.`,
   };
 }
 
 const ACTIVE_PHASES = new Set<ForgePhase>(['waiting_agent', 'queued', 'searching', 'verifying']);
+
+/** Stalled by design in the Kernel: read without SUPPORT (or no page readable), status running, no live lease. */
+function canRelaunch(phase: ForgePhase, status: string, row: MissionSummary | undefined, now: number): boolean {
+  if (phase !== 'verified_unsupported' && phase !== 'read_failed_all') return false;
+  if (status !== 'running' || !row) return false;
+  const lease = Date.parse(str(row.leaseExpiresAt));
+  return !(Number.isFinite(lease) && lease > now);
+}
 
 const NEXT_STEPS: Partial<Record<ForgePhase, string>> = {
   waiting_agent: 'Siguiente: arranca Hermes; tomará la misión y buscará en la web pública.',

@@ -160,6 +160,34 @@ test('a queued mission breathes honestly: waiting for the agent, clear next step
   await expect(forge.getByRole('button', { name: /Repetir la forja/ })).toHaveCount(0);
 });
 
+test('a mission the Kernel left read without SUPPORT and without a lease can be relaunched with the Goal confirm endpoint', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const stalledResults = [{ candidateId: 'cand-b', status: 'verified', evidenceId: 'evidence-forge-b', sourceUrl: candidates[1].url, supported: false, supportReason: 'homepage_insufficient_coverage' }];
+  const stalledMission = { ...missions.missions[0], status: 'running', executionPhase: 'verifying', searchCandidates: [candidates[1]], verificationResults: stalledResults };
+  const stalledSurface = { ...surfaces.surfaces[0], mission: { ...surfaces.surfaces[0].mission, status: 'running', executionPhase: 'verifying', workState: 'verifying' } };
+  await page.route('http://127.0.0.1:4100/api/agent-missions', fulfill({ ok: true, missions: [stalledMission] }));
+  await page.route('http://127.0.0.1:4100/api/goal-surfaces', fulfill({ ok: true, surfaces: [stalledSurface] }));
+  const posted: unknown[] = [];
+  await page.route('http://127.0.0.1:4100/api/goals/goal-forge/missions', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    posted.push(route.request().postDataJSON());
+    await route.fulfill({ status: 201, headers: cors, body: JSON.stringify({ ok: true, mission: { ...stalledMission, status: 'queued', executionPhase: 'queued' } }) });
+  });
+  await page.goto('/');
+  await connect(page);
+  await openHome(page, true);
+  const forge = page.locator('.forge-live');
+  await expect(forge.getByText('Leídas sin SUPPORT', { exact: false }).first()).toBeVisible();
+  const relaunch = forge.getByRole('button', { name: 'Relanzar misión' });
+  await expect(relaunch).toBeVisible();
+  expect((await relaunch.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+  await page.screenshot({ path: testInfo.outputPath('forge-relaunch-390x844.png') });
+  await relaunch.click();
+  await expect.poll(() => posted.length).toBe(1);
+  expect(posted[0]).toEqual({ confirmed: true, agent: 'hermes', cadence: 'manual' });
+  await expect(page.getByText('Misión relanzada: el Kernel la puso en cola para Hermes.')).toBeVisible();
+});
+
 for (const size of [{ width: 360, height: 780 }, { width: 390, height: 844 }, { width: 430, height: 932 }]) {
   test(`forge phone polish at ${size.width}×${size.height}: anvil and steps in the first viewport, full-text cards, 44px targets`, async ({ page }, testInfo) => {
     await page.setViewportSize(size);
