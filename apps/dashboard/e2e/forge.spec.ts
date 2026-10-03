@@ -86,10 +86,60 @@ test('forge live view on a 390×844 phone: real Kernel states, readable cards, n
   await expectHonestSources(page);
   await expect(page.locator('.forge-live-stepnow')).toHaveText('Paso 5 de 5 · Find forjado');
   await expectNoHorizontalOverflow(page, 390);
-  // Touch targets stay usable on a phone.
+  // The play-through ends on the real Kernel verdicts: gold for SUPPORT, ash for the rest.
+  await expect(page.locator('.forge-source[data-state="supported"]')).toHaveAttribute('data-stage', 'gold', { timeout: 15_000 });
+  await expect(page.locator('.forge-source[data-state="read_failed"]')).toHaveAttribute('data-stage', 'ash');
+  // Touch targets stay usable on a phone (measured once the card settled, no transform).
   const link = page.locator('.forge-source[data-state="supported"] .forge-source-link');
   expect((await link.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(36);
+  await expect(page.locator('.forge-source[data-state="supported"] mark.forge-term')).toHaveText(['Fixture', 'ownership']);
+  await expect(page.getByRole('list', { name: 'Términos del Goal presentes en la Evidence' }).getByRole('listitem')).toHaveText(['fixture', 'ownership']);
+  await expect(page.locator('.forge-bench')).toHaveAttribute('data-mode', 'searched');
+  await expect(page.locator('.forge-bench-meta')).toHaveText('Búsqueda web terminada · 3 candidatos reales');
   await page.screenshot({ path: testInfo.outputPath('forge-mobile-390x844.png') });
+  // Replay re-runs the same Kernel records from the start, then settles on the same verdicts.
+  await page.getByRole('button', { name: /Repetir la forja/ }).click();
+  await expect(page.locator('.forge-bench-meta')).toHaveText('Reconstrucción · datos reales del Kernel');
+  await expect(page.locator('.forge-source[data-state="supported"]')).not.toHaveAttribute('data-stage', 'gold');
+  await expect(page.locator('.forge-source[data-state="supported"]')).toHaveAttribute('data-stage', 'gold', { timeout: 15_000 });
+  await expect(page.getByRole('button', { name: /Repetir la forja/ })).toBeEnabled({ timeout: 10_000 });
+});
+
+test('forge on a phone while the agent works: focuses the active mission, shows the Goal search honestly, no fake sparks', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const queuedSurface = { ...surfaces.surfaces[0], goal: { ...surfaces.surfaces[0].goal, id: 'goal-queued', title: 'Fixture newer queued goal' }, mission: { ...surfaces.surfaces[0].mission, id: 'mission-queued', status: 'queued', executionPhase: 'queued', workState: 'queued' } };
+  const searchingSurface = { ...surfaces.surfaces[0], mission: { ...surfaces.surfaces[0].mission, status: 'running', executionPhase: 'investigating', workState: 'investigating' } };
+  const searchingMission = { ...missions.missions[0], status: 'running', executionPhase: 'investigating', searchCandidates: [], verificationResults: [], scope: { keywords: ['ownership', 'rust'] }, investigatingAt: '2026-07-26T10:01:00.000Z' };
+  await page.route('http://127.0.0.1:4100/api/agent-missions', fulfill({ ok: true, missions: [searchingMission, { ...searchingMission, id: 'mission-queued', goalId: 'goal-queued', goalTitle: 'Fixture newer queued goal', status: 'queued', executionPhase: 'queued' }] }));
+  await page.route('http://127.0.0.1:4100/api/goal-surfaces', fulfill({ ok: true, surfaces: [queuedSurface, searchingSurface] }));
+  await page.goto('/');
+  await connect(page);
+  await openHome(page, true);
+  const forge = page.locator('.forge-live');
+  await expect(forge.getByRole('heading', { name: 'Fixture ownership guide' })).toBeVisible();
+  await expect(forge.locator('.forge-bench')).toHaveAttribute('data-mode', 'searching');
+  await expect(forge.locator('.forge-bench-q')).toHaveText('«Fixture ownership guide»');
+  await expect(forge.getByText(/la consulta exacta no la publica el Kernel/)).toBeVisible();
+  await expect(forge.getByRole('list', { name: 'Palabras clave de la misión' }).getByRole('listitem')).toHaveText(['ownership', 'rust']);
+  await expect(forge.locator('.forge-source')).toHaveCount(0);
+  await expectNoHorizontalOverflow(page, 390);
+});
+
+test('a queued mission breathes honestly: waiting for the agent, clear next step, no search claim', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const queuedSurface = { ...surfaces.surfaces[0], mission: { ...surfaces.surfaces[0].mission, status: 'queued', executionPhase: 'queued', workState: 'queued' } };
+  await page.route('http://127.0.0.1:4100/api/agent-missions', fulfill({ ok: true, missions: [{ ...missions.missions[0], status: 'queued', executionPhase: 'queued', searchCandidates: [], verificationResults: [] }] }));
+  await page.route('http://127.0.0.1:4100/api/goal-surfaces', fulfill({ ok: true, surfaces: [queuedSurface] }));
+  await page.goto('/');
+  await connect(page);
+  await openHome(page, true);
+  const forge = page.locator('.forge-live');
+  await expect(forge.locator('.forge-bench')).toHaveAttribute('data-mode', 'waiting');
+  await expect(forge.getByText('Esperando turno del agente', { exact: true })).toBeVisible();
+  await expect(forge.getByText(/Siguiente: Hermes toma la misión/)).toBeVisible();
+  await expect(forge.locator('.forge-bench-query')).toHaveCount(0);
+  await expect(forge.locator('.forge-source')).toHaveCount(0);
+  await expect(forge.getByRole('button', { name: /Repetir la forja/ })).toHaveCount(0);
 });
 
 test('forge live view on desktop: wide anvil composition with sources on both sides', async ({ page }, testInfo) => {
