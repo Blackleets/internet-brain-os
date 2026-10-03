@@ -16,6 +16,7 @@ import { replayLabPageHtml } from './replay-lab-page.mjs';
 import { OpportunityProjector } from './opportunity-classifier.mjs';
 import { GoalManager } from './goals.mjs';
 import { AgentMissionManager } from './agent-missions.mjs';
+import { MissionEvidenceReader } from './mission-evidence-reader.mjs';
 import { interactiveMissionConfirmationActor } from './mission-confirmation-boundary.mjs';
 import { GoalSurfaceReaderError, createGoalSurfaceReader } from './goal-surface-reader.mjs';
 import { PreferenceLearner } from './preference-learner.mjs';
@@ -72,6 +73,7 @@ const hermes = isMain
 const hermesWorkerReady = process.env.HEPHAESTUS_HERMES_READY === '1';
 const agentMissionManager = new AgentMissionManager(knowledgeStore, { isAgentReady: (agent) => agent === 'hermes' && (hermesWorkerReady || Boolean(hermes)) });
 const goalSurfaceReader = isMain ? await createGoalSurfaceReader(knowledgeStore) : undefined;
+const missionEvidenceReader = new MissionEvidenceReader(knowledgeStore);
 const preferenceLearner = new PreferenceLearner(knowledgeStore);
 const notificationReceiptStore = new FileNotificationReceiptStore(resolve(dataDir, 'notification-receipts.json'));
 const notificationGateway = await loadNotificationGateway(notificationReceiptStore);
@@ -126,6 +128,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const goals = options.goalManager;
   const agentMissions = options.agentMissionManager;
   const goalSurfaces = options.goalSurfaceReader;
+  const missionEvidence = options.missionEvidenceReader;
   const preferences = options.preferenceLearner;
   const missionExecutor = options.agentMissionExecutor;
   const models = options.modelForge;
@@ -470,6 +473,17 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       try { return send(response, 200, { ok: true, missions: await agentMissions.list() }); }
       catch { return send(response, 500, { ok: false, code: 'AGENT_MISSIONS_FAILED' }); }
     }
+    if (request.method === 'GET' && request.url?.startsWith('/api/agent-missions/') && request.url.endsWith('/evidence')) {
+      // Read-only: Kernel-persisted Evidence for one Mission with a bounded verbatim excerpt.
+      if (!missionEvidence) return send(response, 404, { ok: false, code: 'MISSION_EVIDENCE_UNAVAILABLE' });
+      const missionId = decodePathId(request.url.slice('/api/agent-missions/'.length, -'/evidence'.length));
+      if (missionId === null || !missionId) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
+      try { return send(response, 200, { ok: true, ...(await missionEvidence.list(missionId)) }); }
+      catch (error) {
+        if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code });
+        return send(response, 500, { ok: false, code: 'MISSION_EVIDENCE_FAILED' });
+      }
+    }
     if (request.method === 'POST' && request.url?.startsWith('/api/goals/') && request.url.endsWith('/missions')) {
       if (!agentMissions) return send(response, 404, { ok: false, code: 'AGENT_MISSIONS_UNAVAILABLE' });
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
@@ -638,6 +652,7 @@ export const server = createLocalKernelServer(inbox, projector, obsidian, summar
   goalManager,
   agentMissionManager,
   goalSurfaceReader,
+  missionEvidenceReader,
   preferenceLearner,
   agentMissionExecutor,
   modelForge,
