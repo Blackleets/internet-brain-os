@@ -17,6 +17,15 @@ export class ModelProviderRegistry {
   constructor(filePath, options = {}) {
     this.filePath = filePath;
     this.defaults = (options.defaults ?? []).map((item) => validateProvider(item, { credentialOptional: true }));
+    this.mutations = Promise.resolve();
+  }
+
+  // save/remove are whole-file read → modify → write: serialize them so concurrent
+  // Settings actions cannot overwrite each other. A failed mutation never blocks the next.
+  #mutate(operation) {
+    const run = this.mutations.catch(() => undefined).then(operation);
+    this.mutations = run.catch(() => undefined);
+    return run;
   }
 
   async list() {
@@ -32,6 +41,10 @@ export class ModelProviderRegistry {
 
   async save(input) {
     const provider = validateProvider({ ...input, id: cleanId(input?.id) || `provider-${randomUUID()}` });
+    return this.#mutate(() => this.#save(provider));
+  }
+
+  async #save(provider) {
     const persisted = await this.#read();
     const index = persisted.findIndex((item) => item.id === provider.id);
     if (index >= 0) persisted[index] = provider;
@@ -44,6 +57,10 @@ export class ModelProviderRegistry {
     if (this.defaults.some((item) => item.id === id)) {
       throw new ModelProviderError('PROVIDER_MANAGED_BY_ENV', 'Environment-managed providers cannot be deleted here.', 409);
     }
+    return this.#mutate(() => this.#remove(id));
+  }
+
+  async #remove(id) {
     const persisted = await this.#read();
     const next = persisted.filter((item) => item.id !== id);
     if (next.length === persisted.length) throw new ModelProviderError('PROVIDER_NOT_FOUND', 'Model provider was not found.', 404);

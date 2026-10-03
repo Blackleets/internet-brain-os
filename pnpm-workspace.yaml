@@ -8,3 +8,4 @@ overrides:
   nanoid: '3.3.18'
   postcss: '>=8.5.18'
   sharp: '>=0.35.4'
+  vite: '>=6.4.3 <7'

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EfestoProductShell from './efesto-product-shell';
 
@@ -126,6 +126,32 @@ describe('Efesto goal-first product shell', () => {
     expect(requests.some((request) => new URL(request.url).pathname === '/api/browser/case/case-1')).toBe(true);
   });
 
+  it('re-reads a Case from the Kernel when reopened instead of serving a session-stale Evidence list', async () => {
+    render(<EfestoProductShell />);
+    await connect();
+    fireEvent.click(screen.getByRole('button', { name: /^Evidencia/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Supplier research/ }));
+    await screen.findByRole('link', { name: /Abrir fuente/ });
+    const healthy = globalThis.fetch;
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, { ...init, signal: undefined });
+      if (new URL(request.url).pathname === '/api/browser/case/case-1') {
+        requests.push(request);
+        return Response.json({ ok: true, case: { id: 'case-1', title: 'Supplier research' }, evidence: [
+          { id: 'ev-1', summary: 'Precio publicado por vendedor', sourceUrl: 'https://shop.example/drill', confidence: 0.91, capturedAt: '2026-08-09T08:03:00.000Z' },
+          { id: 'ev-2', summary: 'Stock confirmado en tienda', sourceUrl: 'https://shop.example/stock', confidence: 0.88, capturedAt: '2026-08-09T09:00:00.000Z' },
+        ] });
+      }
+      return (healthy as typeof fetch)(input, init);
+    }));
+    const before = requests.filter((request) => new URL(request.url).pathname === '/api/browser/case/case-1').length;
+    fireEvent.click(screen.getByRole('button', { name: /Supplier research/ }));
+    // Cached receipts stay visible while the fresh read is in flight (no blank flash).
+    expect(screen.getAllByRole('link', { name: /Abrir fuente/ }).length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.getAllByRole('link', { name: /Abrir fuente/ }).map((link) => link.getAttribute('href'))).toContain('https://shop.example/stock'));
+    expect(requests.filter((request) => new URL(request.url).pathname === '/api/browser/case/case-1').length).toBe(before + 1);
+  });
+
   it('uses a configured model for Chat while keeping model output outside Evidence', async () => {
     render(<EfestoProductShell />);
     await connect();
@@ -153,6 +179,29 @@ describe('Efesto goal-first product shell', () => {
     expect(await screen.findByText('Find SUPPORT descartado; Evidence objetiva no fue reescrita.')).toBeTruthy();
     expect(screen.queryByText('Find descartado; Evidence objetiva no fue reescrita.')).toBeNull();
     await waitFor(() => expect(requests.some((request) => request.method === 'POST' && new URL(request.url).pathname === '/api/opportunities/opp-1/feedback')).toBe(true));
+  });
+
+  it('stops claiming the Kernel is online after polls fail (Kernel stopped/restarting) and recovers', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      render(<EfestoProductShell />);
+      await connect();
+      const healthy = globalThis.fetch;
+      vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
+      await act(async () => { await vi.advanceTimersByTimeAsync(7_000); });
+      expect(screen.queryByRole('button', { name: /Kernel listo/ })).toBeNull();
+      expect(screen.getByRole('button', { name: /Kernel sin respuesta/ })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /Kernel online/ })).toBeNull();
+      const kernelRow = screen.getAllByText('Kernel').map((label) => label.closest('.readiness-row')).find(Boolean);
+      expect(kernelRow?.textContent).toContain('offline');
+      expect(kernelRow?.querySelector('strong')?.className).not.toContain('ready');
+      vi.stubGlobal('fetch', healthy);
+      await act(async () => { await vi.advanceTimersByTimeAsync(3_500); });
+      expect(screen.getByRole('button', { name: /Kernel listo/ })).toBeTruthy();
+      expect(screen.getByRole('button', { name: /Kernel online/ })).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('keeps Memory honest and never treats chat as durable memory', async () => {

@@ -11,7 +11,9 @@ test.beforeEach(async ({ page }) => {
   page.on('requestfailed', (request) => {
     const failure = request.failure()?.errorText ?? 'unknown';
     const path = new URL(request.url()).pathname;
-    if (!(request.method() === 'GET' && path === '/health' && failure === 'net::ERR_ABORTED')) problems.push(`requestfailed: ${request.url()} (${failure})`);
+    // /health probes and the live /api/events stream are aborted on purpose (timeout, disconnect, unmount).
+    const expectedAbort = request.method() === 'GET' && (path === '/health' || path === '/api/events') && failure === 'net::ERR_ABORTED';
+    if (!expectedAbort) problems.push(`requestfailed: ${request.url()} (${failure})`);
   });
 });
 
@@ -166,6 +168,15 @@ test.describe('mobile Efesto product shell', () => {
 
     await page.getByRole('button', { name: 'Cerrar menú', exact: true }).first().click();
     await expect.poll(async () => (await sidebar.boundingBox())?.x ?? 0).toBeLessThan(-100);
+
+    // Keyboard: Escape closes the drawer, focus returns to the opener, and the closed drawer is inert.
+    const opener = page.getByRole('button', { name: 'Alternar navegación' }).first();
+    await opener.click();
+    await expect(page.getByRole('button', { name: 'Cerrar menú', exact: true }).first()).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect.poll(async () => (await sidebar.boundingBox())?.x ?? 0).toBeLessThan(-100);
+    await expect(opener).toBeFocused();
+    await expect(sidebar).toHaveAttribute('inert', '');
 
     await connect(page);
     await page.getByRole('button', { name: 'Alternar navegación' }).first().click();

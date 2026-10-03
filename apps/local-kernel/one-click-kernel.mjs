@@ -7,6 +7,7 @@ import { requestMissionCandidateVerification } from './automatic-mission-verific
 import { detectHermesRuntime, probeHermesReadOnlyRuntime } from './hermes-runtime.mjs';
 import { selectInternalPort } from './internal-port.mjs';
 import { runHermesMissionWorker } from './hermes-mission-worker.mjs';
+import { createKernelProxyHandler, safeMessage } from './kernel-proxy.mjs';
 
 const host = process.env.HEPHAESTUS_HOST ?? '127.0.0.1';
 const port = Number(process.env.HEPHAESTUS_PORT ?? 4000);
@@ -65,35 +66,12 @@ if (recoveryToken) {
   }
 }
 
-proxy = createServer(async (request, response) => {
-  try {
-    const body = await readBody(request);
-    const headers = forwardHeaders(request.headers);
-    const upstream = await fetch(`${internalBaseUrl}${request.url ?? '/'}`, {
-      method: request.method,
-      headers,
-      body: body.length ? body : undefined,
-      redirect: 'manual',
-    });
-    const payload = Buffer.from(await upstream.arrayBuffer());
-    response.statusCode = upstream.status;
-    for (const [name, value] of upstream.headers) {
-      if (!['content-length', 'transfer-encoding', 'connection'].includes(name.toLowerCase())) response.setHeader(name, value);
-    }
-    response.end(payload);
-
-    if (isMissionStart(request, upstream.status)) {
-      const token = String(request.headers['x-hephaestus-token'] ?? '').trim();
-      const parsed = parseJson(payload);
-      if (token && parsed?.mission) startMissionRuntime(parsed.mission, token);
-    }
-  } catch (error) {
-    if (response.headersSent) return response.destroy(error instanceof Error ? error : undefined);
-    response.statusCode = 502;
-    response.setHeader('content-type', 'application/json; charset=utf-8');
-    response.end(JSON.stringify({ ok: false, code: 'KERNEL_PROXY_FAILED', error: safeMessage(error) }));
-  }
-});
+// Streams SSE/NDJSON (dashboard live events, chat) and aborts upstream when a client leaves.
+proxy = createServer(createKernelProxyHandler({
+  internalBaseUrl,
+  maxBodyBytes: MAX_PROXY_BODY_BYTES,
+  onMissionStart: startMissionRuntime,
+}));
 
 proxy.listen(port, host, () => {
   console.log(`Hephaestus one-click Kernel listening on http://${host}:${port}`);
@@ -171,36 +149,4 @@ async function waitForKernel() {
   }
   kernel.kill();
   throw new Error('Internal Kernel did not become ready');
-}
-
-function isMissionStart(request, status) {
-  return request.method === 'POST' && status >= 200 && status < 300 && /^\/api\/goals\/[^/]+\/missions$/.test(request.url ?? '');
-}
-
-function forwardHeaders(headers) {
-  const forwarded = {};
-  for (const [name, value] of Object.entries(headers)) {
-    if (value !== undefined && !['host', 'connection', 'content-length'].includes(name.toLowerCase())) forwarded[name] = value;
-  }
-  return forwarded;
-}
-
-async function readBody(request) {
-  const chunks = [];
-  let bytes = 0;
-  for await (const chunk of request) {
-    bytes += chunk.length;
-    if (bytes > MAX_PROXY_BODY_BYTES) throw new Error('Request body exceeded the proxy limit');
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks);
-}
-
-function parseJson(value) {
-  try { return JSON.parse(value.toString('utf8')); }
-  catch { return undefined; }
-}
-
-function safeMessage(error) {
-  return String(error instanceof Error ? error.message : error).replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 500);
 }

@@ -8,7 +8,9 @@ import {
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { CaseSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
-import { isKernelSupportedFind, kernelSupportedFinds } from '../lib/kernel/supported-find';
+import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportProof, kernelSupportedFinds, missionVerifiedWithoutSupport } from '../lib/kernel/supported-find';
+import { statePillLabel, statePillTone } from '../lib/ui/state-pill-label.mjs';
+import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 
 export type Provider = {
   id: string;
@@ -25,7 +27,7 @@ export type EvidenceRecord = {
   tags?: string[]; entityIds?: string[]; relationshipIds?: string[];
 };
 export type CaseDetail = { case: Record<string, unknown>; evidence: EvidenceRecord[] };
-export type BrainPhase = 'offline' | 'ready' | 'queued' | 'investigating' | 'verifying' | 'forged' | 'thinking' | 'failed' | 'blocked' | 'unavailable';
+export type BrainPhase = 'offline' | 'ready' | 'queued' | 'investigating' | 'verifying' | 'verified_unsupported' | 'forged' | 'completed' | 'thinking' | 'failed' | 'blocked' | 'unavailable';
 
 const starterGoals = [
   'Encuentra las mejores herramientas para mi negocio',
@@ -38,30 +40,50 @@ const starterGoals = [
   'Ayúdame a tomar una decisión',
 ];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, supportedFinds = [], missions, onFindFeedback, onOpenCase }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, navExpanded, supportedFinds = [], forgeSupportedFindCount = 0, missions, onFindFeedback, onOpenCase }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
   input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
   onConfirmGoal: () => void; onEditGoal: () => void; onStarterGoal: (goal: string) => void; onStarterChat: (prompt: string) => void;
   onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
-  onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenNav: () => void;
+  onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenNav: (opener?: HTMLElement) => void; navExpanded?: boolean;
   supportedFinds?: OpportunitySummary[];
+  /** Focused-mission SUPPORT count (Living Forge). Not global inbox length. */
+  forgeSupportedFindCount?: number;
   missions?: readonly MissionSummary[];
   onFindFeedback?: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void;
   onOpenCase?: (caseId: string) => void;
 }) {
-  const state = brainState(phase);
-  const showSuggestions = chatMode ? messages.length === 0 : !preparedGoal && supportedFinds.length === 0;
+  // Fail-close: forge-state-action uses focused GoalSurface mission SUPPORT
+  // (findCount / verificationResults via countMissionKernelSupportedFinds), never
+  // global supportedFinds.length — older inbox must not brand zero-SUPPORT forged.
+  const state = brainState(phase, forgeSupportedFindCount);
+  // Fail-close chrome: zero-SUPPORT forged must not keep phase-forged (green Completado
+  // lookalike) while label is Investigación terminada. Mirror extension orb / Agent Hub
+  // research_completed neutral chrome; SUPPORT forged keeps phase-forged green.
+  // workState=completed (completed-without-Evidence) must not keep phase-ready green
+  // "Forja lista" Completado lookalike — Actividad already uses Terminada sin Evidence.
+  const chromePhase = (phase === 'forged' && forgeSupportedFindCount === 0) || phase === 'completed' || phase === 'verified_unsupported'
+    ? 'research_completed'
+    : phase;
+  // GoalSurface findCount can prove SUPPORT while inbox is empty (dismissed / not loaded).
+  // surfaceTitle + empty body must not say Nuevo Goal beside Find SUPPORT forjado.
+  const focusedMissionHasSupport = forgeSupportedFindCount > 0;
+  const showSuggestions = chatMode
+    ? messages.length === 0
+    : !preparedGoal && supportedFinds.length === 0 && !focusedMissionHasSupport;
   const surfaceTitle = chatMode
     ? (messages.length ? 'Conversación' : 'Nueva conversación')
-    // Fail-close chrome: supportedFinds is Kernel SUPPORT-only (shell kernelSupportedFinds).
-    // Bare "Hallazgo útil" must name SUPPORT like ActivityView / scorecard Find SUPPORT honesty.
-    : (preparedGoal ? 'Goal preparado' : supportedFinds.length ? 'Hallazgo · Kernel SUPPORT' : 'Nuevo Goal');
+    // Fail-close chrome: inbox SUPPORT Finds OR focused-mission findCount — never bare Hallazgo útil.
+    : (preparedGoal ? 'Goal preparado' : (supportedFinds.length || focusedMissionHasSupport) ? 'Hallazgo · Kernel SUPPORT' : 'Nuevo Goal');
+  const surfaceAria = chatMode
+    ? 'Conversación con Efesto'
+    : (preparedGoal ? 'Goal preparado' : (supportedFinds.length || focusedMissionHasSupport) ? 'Hallazgos Kernel SUPPORT' : 'Nuevo Goal');
 
-  return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal')} aria-label={chatMode ? 'Conversación con Efesto' : 'Nuevo Goal'}>
+  return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal')} aria-label={surfaceAria}>
     <header className="forge-surface-bar">
       <div className="forge-surface-leading">
-        <button type="button" className="forge-menu-button" onClick={onOpenNav} aria-label="Alternar navegación"><Menu /></button>
+        <button type="button" className="forge-menu-button" onClick={(event) => onOpenNav(event.currentTarget)} aria-label="Alternar navegación" aria-controls="efesto-sidebar" aria-expanded={navExpanded}><Menu /></button>
         <div className="forge-product-title">
           <span className="forge-agent-mark"><Image src="/efesto-smith.svg" alt="" width={28} height={28} /></span>
           <span><strong>{surfaceTitle}</strong><small>Efesto · {chatMode ? (chatAvailable ? modelLabel : 'modelo sin configurar') : 'misión controlada'}</small></span>
@@ -70,7 +92,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
 
       <ModeSwitcher chatMode={chatMode} onToggleChat={onToggleChat} />
 
-      <button type="button" className={'forge-state-action phase-' + phase} onClick={onOpenSettings} aria-label={connected ? 'Kernel conectado' : 'Conectar Kernel'}>
+      <button type="button" className={'forge-state-action phase-' + chromePhase} onClick={onOpenSettings} aria-label={connected ? 'Kernel conectado' : 'Conectar Kernel'}>
         <i />
         <span>{connected ? state.label : 'Conectar Kernel'}</span>
         <Plug />
@@ -107,13 +129,17 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
           <button type="button" className="secondary-action" onClick={onEditGoal}>Editar Goal</button>
         </div>
         <p className="forge-plan-boundary"><ShieldCheck /> Nada se ejecuta sin tu confirmación explícita.</p>
-      </section> : supportedFinds.length ? <section className="forge-home-finds" aria-label="Hallazgos respaldados por el Kernel">
+      </section> : (supportedFinds.length || focusedMissionHasSupport) ? <section className="forge-home-finds" aria-label="Hallazgos respaldados por el Kernel">
         <header>
           <small>FIND · KERNEL SUPPORT</small>
           <h1>Hallazgo · Kernel SUPPORT</h1>
-          <p>Resultado persistido por el Kernel: título, fuente y procedencia SUPPORT. Un snippet de Hermes no aparece aquí.</p>
+          <p>{supportedFinds.length
+            ? 'Resultado persistido por el Kernel: título, fuente y procedencia SUPPORT. Un snippet de Hermes no aparece aquí.'
+            : 'La misión enfocada forjó Kernel SUPPORT (GoalSurface findCount). El inbox no muestra Finds visibles ahora (vacío, filtrado o descartado).'}</p>
         </header>
-        <div className="find-grid">{supportedFinds.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFindFeedback ?? (() => undefined)} onOpenCase={onOpenCase} />)}</div>
+        {supportedFinds.length
+          ? <div className="find-grid">{supportedFinds.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFindFeedback ?? (() => undefined)} onOpenCase={onOpenCase} />)}</div>
+          : <p className="truth-card"><ShieldCheck /> Find SUPPORT forjado en la misión; sin tarjetas de inbox que mostrar.</p>}
       </section> : <section className="forge-empty forge-goal-empty" aria-label="Crear un Goal">
         <span className="forge-empty-mark"><Target /></span>
         <small>EFESTO · CONTROLLED MISSION</small>
@@ -320,21 +346,21 @@ function ModelSelector({ providers, selectedProviderId, selectedModel, connected
   </div>;
 }
 
-export function GoalsView({ snapshot, onNew }: { snapshot?: OverviewSnapshot; onNew: () => void }) {
+export function GoalsView({ snapshot, onNew, onConnect }: { snapshot?: OverviewSnapshot; onNew: () => void; onConnect?: () => void }) {
   const missions = snapshot?.missions ?? [];
   const goals = snapshot?.goals ?? [];
   const missionFor = (goalId: string) => missions.find((mission) => mission.goalId === goalId);
   const orphanMissions = missions.filter((mission) => !goals.some((goal) => goal.id === mission.goalId));
   return <Workspace icon={Target} eyebrow="Goal → Misión → Evidencia" title="Objetivos" copy="Goals persistidos por el Kernel. Crear un Goal no autoriza red; la misión exige confirmación explícita." action={<button type="button" className="primary-action" onClick={onNew}><Target /> Nuevo Goal</button>}>
-    {!snapshot ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para leer Goals y misiones reales." /> : goals.length === 0 && missions.length === 0 ? <Empty icon={Target} title="No hay Goals" copy="Crea un Goal; no simulamos ejecuciones vacías." /> : <div className="record-list">{goals.map((goal) => { const mission = missionFor(goal.id); return <article key={goal.id}><div className="record-icon"><Target /></div><div><strong>{goal.title}</strong><small>{goal.id}{mission ? ` · ${mission.id} · intento ${mission.attempt ?? 0}` : ''}</small></div><StatePill state={mission ? missionPillState(mission) : goal.status} /></article>; })}{orphanMissions.map((mission) => <article key={mission.id}><div className="record-icon"><Target /></div><div><strong>{mission.goalId}</strong><small>{mission.id} · intento {mission.attempt ?? 0}</small></div><StatePill state={missionPillState(mission)} /></article>)}</div>}
+    {!snapshot ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para leer Goals y misiones reales." action={connectAction(onConnect)} /> : goals.length === 0 && missions.length === 0 ? <Empty icon={Target} title="No hay Goals" copy="Crea un Goal; no simulamos ejecuciones vacías." action={newGoalAction(onNew)} /> : <div className="record-list">{goals.map((goal) => { const mission = missionFor(goal.id); return <article key={goal.id}><div className="record-icon"><Target /></div><div><strong>{goal.title}</strong><small>{goal.id}{mission ? ` · ${mission.id} · intento ${mission.attempt ?? 0}` : ''}</small></div><StatePill state={mission ? missionPillState(mission) : goal.status} /></article>; })}{orphanMissions.map((mission) => <article key={mission.id}><div className="record-icon"><Target /></div><div><strong>{mission.goalId}</strong><small>{mission.id} · intento {mission.attempt ?? 0}</small></div><StatePill state={missionPillState(mission)} /></article>)}</div>}
   </Workspace>;
 }
 
-export function FindsView({ opportunities, connected, onFeedback, onOpenCase, missions }: { opportunities: OpportunitySummary[]; connected: boolean; onFeedback: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void; onOpenCase?: (caseId: string) => void; missions?: readonly MissionSummary[] }) {
+export function FindsView({ opportunities, connected, onFeedback, onOpenCase, missions, onNewGoal, onConnect }: { opportunities: OpportunitySummary[]; connected: boolean; onFeedback: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void; onOpenCase?: (caseId: string) => void; missions?: readonly MissionSummary[]; onNewGoal?: () => void; onConnect?: () => void }) {
   // Fail-close: keep mission verificationResults SUPPORT in the gate (same as Home/shell).
   const supported = kernelSupportedFinds(opportunities, missions);
   return <Workspace icon={Sparkles} eyebrow="Hallazgos priorizados por el Kernel" title="Hallazgos" copy="Solo Finds con Kernel SUPPORT. El feedback cambia preferencia, no Evidence objetiva.">
-    {!connected ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para cargar hallazgos con Kernel SUPPORT." /> : supported.length === 0 ? <Empty icon={Search} title="Aún no hay hallazgos" copy="Ejecuta un Goal público. Solo aparecen Finds con Kernel SUPPORT; promover o completar no es un Find." /> : <div className="find-grid">{supported.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFeedback} onOpenCase={onOpenCase} />)}</div>}
+    {!connected ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para cargar hallazgos con Kernel SUPPORT." action={connectAction(onConnect)} /> : supported.length === 0 ? <Empty icon={Search} title="Aún no hay hallazgos" copy="Ejecuta un Goal público. Solo aparecen Finds con Kernel SUPPORT; promover o completar no es un Find." action={newGoalAction(onNewGoal)} /> : <div className="find-grid">{supported.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFeedback} onOpenCase={onOpenCase} />)}</div>}
   </Workspace>;
 }
 
@@ -344,6 +370,7 @@ function FindCard({ item, onFeedback, onOpenCase, missions }: { item: Opportunit
   const sourceUrl = optionalText(item.sourceUrl);
   // Fail-close label: mission verificationResults SUPPORT must not render as Lead no verificado.
   const kernelSupported = isKernelSupportedFind(item, missions);
+  const supportProof = kernelSupported ? kernelSupportProof(item, missions) : null;
   const reasons = Array.isArray(item.reasons) ? item.reasons.filter((value): value is string => typeof value === 'string' && value.trim().length > 0) : [];
   const evidenceCount = evidenceId ? 1 : 0;
   return <article className="find-card">
@@ -355,6 +382,7 @@ function FindCard({ item, onFeedback, onOpenCase, missions }: { item: Opportunit
       <div><dt>Evidence</dt><dd>{evidenceCount > 0 ? `${evidenceCount} registro` : 'no vinculada'}</dd></div>
       {caseId ? <div><dt>Case</dt><dd>{onOpenCase ? <button type="button" className="provenance-link" onClick={() => onOpenCase(caseId)}>{caseId}</button> : caseId}</dd></div> : null}
       {kernelSupported ? <div><dt>Kernel</dt><dd>SUPPORT</dd></div> : null}
+      {supportProof ? <div className="find-support-why"><dt>Por qué SUPPORT</dt><dd>El Kernel leyó la fuente y comprobó que cubre los términos clave del Goal; el texto del agente no cuenta. Prueba: {supportProof.kind === 'stamp' ? 'sello SUPPORT del Kernel en este hallazgo' : `verificación de la misión ${supportProof.missionId}`}.</dd></div> : null}
       {evidenceId ? <div><dt>Procedencia</dt><dd>Hallazgo → {evidenceId}{caseId ? ` → ${caseId}` : ''}{sourceUrl ? ' → fuente' : ''}</dd></div> : <div><dt>Procedencia</dt><dd>no publicada</dd></div>}
     </dl>
     {sourceUrl ? <a className="find-source" href={sourceUrl} target="_blank" rel="noreferrer">Abrir fuente <ExternalLink /></a> : <span className="source-missing">Sin URL publicada</span>}
@@ -363,9 +391,9 @@ function FindCard({ item, onFeedback, onOpenCase, missions }: { item: Opportunit
   </article>;
 }
 
-export function EvidenceView({ cases, selectedId, detail, loadingId, connected, onOpen }: { cases: CaseSummary[]; selectedId: string; detail?: CaseDetail; loadingId: string; connected: boolean; onOpen: (record: CaseSummary) => void }) {
+export function EvidenceView({ cases, selectedId, detail, loadingId, connected, onOpen, onNewGoal, onConnect }: { cases: CaseSummary[]; selectedId: string; detail?: CaseDetail; loadingId: string; connected: boolean; onOpen: (record: CaseSummary) => void ; onNewGoal?: () => void; onConnect?: () => void }) {
   return <Workspace icon={ShieldCheck} eyebrow="Cases · Fuentes · Procedencia" title="Evidencia" copy="Inspecciona recibos persistidos. Cada URL visible viene del Kernel.">
-    {!connected ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para leer Cases y Evidence." /> : <div className="evidence-layout"><section className="case-list"><header><span>Cases</span><b>{cases.length}</b></header>{cases.length ? cases.map((record) => <button type="button" key={record.id} className={selectedId === record.id ? 'active' : ''} onClick={() => onOpen(record)}><FileSearch /><span><strong>{record.title}</strong><small>{record.status} · {record.id}</small></span><ChevronRight /></button>) : <Empty icon={FileSearch} title="Sin Cases" copy="El Kernel devolvió una colección vacía." />}</section><section className="evidence-detail">{!selectedId ? <Empty icon={ShieldCheck} title="Selecciona un Case" copy="Aquí aparecerán sus fuentes y recibos reales." /> : loadingId === selectedId ? <Empty icon={Activity} title="Leyendo Evidence" copy="Esperando respuesta del Kernel." /> : !detail ? <Empty icon={CircleOff} title="Evidence no disponible" copy="No inventamos una proyección cuando el endpoint no responde." /> : detail.evidence.length === 0 ? <Empty icon={ShieldCheck} title="Case sin Evidence publicada" copy="El Case existe, pero todavía no tiene recibos visibles." /> : <EvidenceReceipts caseTitle={recordTitle(detail.case, selectedId)} evidence={detail.evidence} />}</section></div>}
+    {!connected ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para leer Cases y Evidence." action={connectAction(onConnect)} /> : <div className="evidence-layout"><section className="case-list"><header><span>Cases</span><b>{cases.length}</b></header>{cases.length ? cases.map((record) => <button type="button" key={record.id} className={selectedId === record.id ? 'active' : ''} onClick={() => onOpen(record)}><FileSearch /><span><strong>{record.title}</strong><small>{record.status} · {record.id}</small></span><ChevronRight /></button>) : <Empty icon={FileSearch} title="Aún no hay Evidence" copy="Se crea un Case cuando la extensión captura una página autorizada o cuando un Goal confirmado verifica fuentes públicas con el Kernel." action={newGoalAction(onNewGoal)} />}</section><section className="evidence-detail">{!selectedId ? <Empty icon={ShieldCheck} title="Selecciona un Case" copy="Aquí aparecerán sus fuentes y recibos reales." /> : loadingId === selectedId ? <Empty icon={Activity} title="Leyendo Evidence" copy="Esperando respuesta del Kernel." /> : !detail ? <Empty icon={CircleOff} title="Evidence no disponible" copy="No inventamos una proyección cuando el endpoint no responde." /> : detail.evidence.length === 0 ? <Empty icon={ShieldCheck} title="Case sin Evidence publicada" copy="El Case existe, pero todavía no tiene recibos visibles." /> : <EvidenceReceipts caseTitle={recordTitle(detail.case, selectedId)} evidence={detail.evidence} />}</section></div>}
   </Workspace>;
 }
 
@@ -429,25 +457,80 @@ export function AutomationsView({ missions, connected, onNewGoal }: { missions: 
   </Workspace>;
 }
 
-export function SettingsView({ connected, connecting, rememberSession, snapshot, onConnect, onDisconnect, onRefresh }: { connected: boolean; connecting: boolean; rememberSession: boolean; snapshot?: OverviewSnapshot; onConnect: (event: FormEvent<HTMLFormElement>) => void; onDisconnect: () => void; onRefresh: () => void }) {
+export function SettingsView({ connected, connecting, rememberSession, snapshot, kernelBaseUrl, onConnect, onDisconnect, onRefresh }: { connected: boolean; connecting: boolean; rememberSession: boolean; snapshot?: OverviewSnapshot; kernelBaseUrl?: string; onConnect: (event: FormEvent<HTMLFormElement>) => void; onDisconnect: () => void; onRefresh: () => void }) {
   const bootstrap = snapshot?.readiness.bootstrap;
   return <Workspace icon={Settings} eyebrow="Control del propietario" title="Ajustes" copy="Conexión local, readiness y recuperación. Los secretos no se imprimen.">
-    <div className="settings-layout"><form className="connection-card" onSubmit={onConnect}><header><span className={`kernel-dot ${connected ? 'online' : 'offline'}`} /><div><small>DISPOSITIVO ACTUAL</small><strong>{connected ? 'Autorizado' : 'Conectar Kernel'}</strong></div></header>{!connected ? <><label>URL del Kernel<input name="baseUrl" aria-label="URL del Kernel" type="url" defaultValue="http://127.0.0.1:4000" required /></label><label>Token privado<input name="token" aria-label="Token privado" type="password" autoComplete="off" placeholder="Opcional si usas pairing" /></label><label>Código de emparejamiento<input name="pairingCode" aria-label="Código de emparejamiento" inputMode="text" autoComplete="off" placeholder="ABCD-1234" /></label><label className="remember-row"><input name="rememberSession" type="checkbox" defaultChecked={rememberSession} /><span><strong>Recordar durante esta sesión</strong><small>sessionStorage; no persistencia indefinida.</small></span></label><div className="connection-actions"><button type="submit" name="action" value="pair" className="primary-action" disabled={connecting}>{connecting ? 'Emparejando…' : 'Emparejar con código'}</button><button type="submit" name="action" value="token" className="secondary-action" disabled={connecting}>Autorizar dispositivo</button></div></> : <div className="connection-actions"><button type="button" className="primary-action" onClick={onRefresh}><RefreshCw /> Comprobar ahora</button><button type="button" className="danger-action" onClick={onDisconnect}>Desconectar</button></div>}</form><section className="readiness-card"><header><ShieldCheck /><div><small>READINESS REAL</small><strong>{bootstrap?.overall ?? (connected ? 'connected' : 'offline')}</strong></div></header><ReadinessRow label="Kernel" value={bootstrap?.kernel ?? (connected ? 'ready' : 'offline')} ready={connected} /><ReadinessRow label="Hermes" value={bootstrap?.hermes ?? 'sin diagnóstico'} ready={bootstrap?.hermes === 'ready'} /><ReadinessRow label="Obsidian" value={bootstrap?.obsidian ?? 'sin configurar'} ready={bootstrap?.obsidian === 'ready'} /><ReadinessRow label="Extensión" value={bootstrap?.pairing ?? 'sin emparejar'} ready={bootstrap?.pairing === 'paired'} /><a href="http://127.0.0.1:4000/replay-lab" target="_blank" rel="noreferrer">Abrir Replay Lab <ExternalLink /></a></section></div>
+    <div className="settings-layout"><form className="connection-card" onSubmit={onConnect}><header><span className={`kernel-dot ${connected ? 'online' : 'offline'}`} /><div><small>DISPOSITIVO ACTUAL</small><strong>{connected ? 'Autorizado' : 'Conectar Kernel'}</strong></div></header>{!connected ? <><label>URL del Kernel<input name="baseUrl" aria-label="URL del Kernel" type="url" defaultValue="http://127.0.0.1:4000" required /></label><label>Token privado<input name="token" aria-label="Token privado" type="password" autoComplete="off" placeholder="Opcional si usas pairing" /></label><label>Código de emparejamiento<input name="pairingCode" aria-label="Código de emparejamiento" inputMode="text" autoComplete="off" placeholder="ABCD-1234" /></label><label className="remember-row"><input name="rememberSession" type="checkbox" defaultChecked={rememberSession} /><span><strong>Recordar durante esta sesión</strong><small>sessionStorage; no persistencia indefinida.</small></span></label><div className="connection-actions"><button type="submit" name="action" value="pair" className="primary-action" disabled={connecting}>{connecting ? 'Emparejando…' : 'Emparejar con código'}</button><button type="submit" name="action" value="token" className="secondary-action" disabled={connecting}>Autorizar dispositivo</button></div></> : <div className="connection-actions"><button type="button" className="primary-action" onClick={onRefresh}><RefreshCw /> Comprobar ahora</button><button type="button" className="danger-action" onClick={onDisconnect}>Desconectar</button></div>}</form><section className="readiness-card"><header><ShieldCheck /><div><small>READINESS REAL</small><strong>{bootstrap?.overall ?? (connected ? 'connected' : 'offline')}</strong></div></header><ReadinessRow label="Kernel" value={snapshot?.readiness.kernel === 'offline' ? 'offline' : bootstrap?.kernel ?? (connected ? 'ready' : 'offline')} ready={connected && snapshot?.readiness.kernel !== 'offline'} /><ReadinessRow label="Hermes" value={bootstrap?.hermes ?? 'sin diagnóstico'} ready={bootstrap?.hermes === 'ready'} /><ReadinessRow label="Obsidian" value={bootstrap?.obsidian ?? 'sin configurar'} ready={bootstrap?.obsidian === 'ready'} /><ReadinessRow label="Extensión" value={bootstrap?.pairing ?? 'sin emparejar'} ready={bootstrap?.pairing === 'paired'} /><a href={replayLabHref(kernelBaseUrl)} target="_blank" rel="noreferrer">Abrir Replay Lab <ExternalLink /></a></section></div>
   </Workspace>;
 }
 
 function missionPillState(mission: MissionSummary): string {
   // Bare status completed (no Evidence / Kernel forge) must not look like Completado.
-  if (mission.executionPhase === 'forged') return 'forged';
+  // Forged without Kernel SUPPORT Finds must not keep a green "forged" Completado-lookalike
+  // on Goals/Actividad (Home already uses Investigación terminada / Research completed).
+  if (mission.executionPhase === 'forged') {
+    return countMissionKernelSupportedFinds(mission) > 0 ? 'forged' : 'research_completed';
+  }
+  if (missionVerifiedWithoutSupport(mission)) return 'verified_unsupported';
   if (mission.executionPhase) return mission.executionPhase;
   if (mission.status === 'completed') return 'completed_without_forge';
   return mission.status;
 }
 function Workspace({ icon: Icon, eyebrow, title, copy, action, children }: { icon: typeof Target; eyebrow: string; title: string; copy: string; action?: ReactNode; children: ReactNode }) { return <section className="workspace"><header className="workspace-heading"><span><Icon /></span><div><small>{eyebrow}</small><h1>{title}</h1><p>{copy}</p></div>{action ? <div className="workspace-heading-action">{action}</div> : null}</header><div className="workspace-body">{children}</div></section>; }
-function Empty({ icon: Icon, title, copy }: { icon: typeof Target; title: string; copy: string }) { return <div className="empty-state"><Icon /><strong>{title}</strong><p>{copy}</p></div>; }
-function StatePill({ state }: { state: string }) { const tone = ['ready', 'forged', 'available', 'new'].includes(state) ? 'good' : ['failed', 'invalid', 'blocked'].includes(state) ? 'bad' : ['running', 'investigating', 'verifying', 'queued', 'waiting_for_agent'].includes(state) ? 'working' : 'neutral'; return <span className={`state-pill ${tone}`}><i />{state.replaceAll('_', ' ')}</span>; }
+function Empty({ icon: Icon, title, copy, action }: { icon: typeof Target; title: string; copy: string; action?: { label: string; onClick: () => void } }) { return <div className="empty-state"><Icon /><strong>{title}</strong><p>{copy}</p>{action ? <button type="button" className="empty-state-action" onClick={action.onClick}>{action.label}</button> : null}</div>; }
+function connectAction(onConnect?: () => void) { return onConnect ? { label: 'Conectar Kernel', onClick: onConnect } : undefined; }
+function newGoalAction(onNewGoal?: () => void) { return onNewGoal ? { label: 'Crear un Goal', onClick: onNewGoal } : undefined; }
+// Fail-close Goals/Actividad/Automations StatePill labels (page.tsx → EfestoProductShell).
+// missionPillState / activityFrom already gate forged → SUPPORT-only; bare English
+// "forged" / "research completed" must not stand in for Home forge-state-action honesty
+// (Find SUPPORT forjado / Investigación terminada / Terminada sin Evidence).
+function StatePill({ state }: { state: string }) {
+  return <span className={`state-pill ${statePillTone(state)}`}><i />{statePillLabel(state)}</span>;
+}
 function ReadinessRow({ label, value, ready }: { label: string; value: string; ready: boolean }) { return <div className="readiness-row"><span>{label}</span><strong className={ready ? 'ready' : ''}><i />{value}</strong></div>; }
-export function brainState(phase: BrainPhase) { if (phase === 'thinking') return { label: 'Conversando', detail: 'Modelo transmitiendo' }; if (phase === 'investigating') return { label: 'Investigando', detail: 'Hermes ejecutando una misión' }; if (phase === 'verifying') return { label: 'Verificando Evidence', detail: 'Kernel aplicando gates' }; if (phase === 'queued') return { label: 'Misión preparada', detail: 'Esperando agente' }; if (phase === 'forged') return { label: 'Evidence forjada', detail: 'Resultado persistido' }; if (phase === 'failed') return { label: 'Atención requerida', detail: 'La última misión falló' }; if (phase === 'blocked') return { label: 'BLOCKED', detail: 'La política del Kernel denegó la ejecución automática' }; if (phase === 'unavailable') return { label: 'Hermes no disponible', detail: 'El agente no está listo; no hay investigación inventada' }; if (phase === 'ready') return { label: 'Forja lista', detail: 'Listo para un nuevo Goal' }; return { label: 'Modo local desconectado', detail: 'Sin actividad simulada' }; }
+export function brainState(phase: BrainPhase, supportedFindCount = 0) {
+  if (phase === 'thinking') return { label: 'Conversando', detail: 'Modelo transmitiendo' };
+  if (phase === 'investigating') return { label: 'Investigando', detail: 'Hermes ejecutando una misión' };
+  if (phase === 'verifying') return { label: 'Verificando Evidence', detail: 'Kernel aplicando gates' };
+  // Verification finished with zero Kernel SUPPORT while the Mission honestly stays
+  // verifying: must not keep claiming gates are still running.
+  if (phase === 'verified_unsupported') return { label: 'Sin SUPPORT', detail: 'Ninguna página verificada respalda el Goal' };
+  if (phase === 'queued') return { label: 'Misión preparada', detail: 'Esperando agente' };
+  if (phase === 'forged') {
+    // Fail-close Home forge-state-action (page.tsx → EfestoProductShell → HomeView):
+    // forgeSupportedFindCount is focused GoalSurface SUPPORT (findCount when
+    // verificationResults are stripped) — not global inbox length.
+    // forged without Kernel SUPPORT Finds must not read like Completado/useful Find;
+    // with SUPPORT Finds, name them like extension Living Forge / mission-state.
+    if (supportedFindCount > 0) {
+      return {
+        label: supportedFindCount === 1 ? 'Find SUPPORT forjado' : 'Finds SUPPORT forjados',
+        detail: supportedFindCount === 1
+          ? '1 Find pasó Kernel SUPPORT'
+          : `${supportedFindCount} Finds pasaron Kernel SUPPORT`,
+      };
+    }
+    return { label: 'Investigación terminada', detail: 'Ningún Find pasó Kernel SUPPORT' };
+  }
+  // Bare completed (no forged Evidence) — same honesty as Actividad completed_without_forge
+  // / extension Research ended without Evidence. Must not fall through to Forja lista.
+  if (phase === 'completed') {
+    return { label: 'Terminada sin Evidence', detail: 'El intento terminó sin Evidence forjada' };
+  }
+  if (phase === 'failed') return { label: 'Atención requerida', detail: 'La última misión falló' };
+  if (phase === 'blocked') return { label: 'BLOCKED', detail: 'La política del Kernel denegó la ejecución automática' };
+  if (phase === 'unavailable') return { label: 'Hermes no disponible', detail: 'El agente no está listo; no hay investigación inventada' };
+  if (phase === 'ready') return { label: 'Forja lista', detail: 'Listo para un nuevo Goal' };
+  return { label: 'Modo local desconectado', detail: 'Sin actividad simulada' };
+}
+/** Replay Lab lives on the connected loopback Kernel (any port), not a hardcoded :4000. */
+function replayLabHref(kernelBaseUrl?: string) {
+  let origin = 'http://127.0.0.1:4000';
+  if (kernelBaseUrl) {
+    try { origin = normalizeKernelBaseUrl(kernelBaseUrl); } catch { /* keep default loopback Kernel */ }
+  }
+  return `${origin}/replay-lab`;
+}
 function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' }).format(date); }
 function formatRelevance(value: number) { return value <= 1 ? `${Math.round(value * 100)}%` : String(Math.round(value)); }
 function optionalText(value: unknown): string | undefined { return typeof value === 'string' && value.trim() ? value.trim() : undefined; }

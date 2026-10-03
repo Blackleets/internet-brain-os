@@ -30,8 +30,54 @@ describe('Hermes mission worker', () => {
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
       .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true }) });
     const execute = vi.fn(async () => { throw new Error('provider\nfailed'); });
-    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({ status: 'failed', reason: 'provider failed' });
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({ status: 'failed', reason: 'provider failed', reported: true });
   });
+
+  it('keeps the real adapter cause when the Kernel refuses the failure report', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockResolvedValueOnce({ ok: false, status: 409, json: async () => ({ ok: false, error: 'Mission lease is no longer active' }) });
+    const execute = vi.fn(async () => { throw new Error('Hermes adapter timed out'); });
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toEqual({
+      status: 'failed', missionId: mission.id, reason: 'Hermes adapter timed out', reported: false, reportError: 'Mission lease is no longer active',
+    });
+  });
+
+  it('does not reject when the Kernel is unreachable for the failure report', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockRejectedValueOnce(new Error('connect ECONNREFUSED 127.0.0.1:4311'));
+    const execute = vi.fn(async () => ({ findings: 'not-an-array' }));
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({
+      status: 'failed', reported: false, reason: expect.stringContaining('must return { findings'), reportError: expect.stringContaining('ECONNREFUSED'),
+    });
+  });
+
+  it('bounds a stalled Kernel request instead of awaiting forever, then reports the timeout', async () => {
+    // A Kernel that accepts the connection but never answers used to leave the worker (and the
+    // one-click activeRuns entry for this Mission) pending forever, so it was never retried.
+    const stalled = (_url, init) => new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true });
+    });
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockImplementationOnce(stalled)
+      .mockImplementationOnce(stalled)
+      .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true }) });
+    const execute = vi.fn(async () => ({ findings: [{ url: 'https://example.com/job', title: 'Job', text: 'Search snippet' }] }));
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute, requestTimeoutMs: 50 }))
+      .resolves.toMatchObject({ status: 'failed', reported: true, reason: 'Kernel request timed out after 50 ms' });
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    expect(fetchImpl.mock.calls.every(([, init]) => init.signal instanceof AbortSignal)).toBe(true);
+  }, 5_000);
+
+  it('a stalled claim rejects with a bounded timeout rather than hanging', async () => {
+    const fetchImpl = vi.fn((_url, init) => new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true });
+    }));
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, requestTimeoutMs: 50 }))
+      .rejects.toThrow('Kernel request timed out after 50 ms');
+  }, 5_000);
 
   it('does not report a timeout until the adapter process has actually stopped', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'efesto-worker-timeout-test-'));

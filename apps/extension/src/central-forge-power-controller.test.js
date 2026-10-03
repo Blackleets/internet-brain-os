@@ -118,6 +118,49 @@ describe('central forge power controller', () => {
     expect(detail.textContent).toMatch(/no Find passed Kernel SUPPORT/i);
     expect(detail.textContent).toMatch(/Evidence\/Received/i);
   });
+
+  it('end-of-cycle auto-disable keeps zero-SUPPORT forged off START EFESTO', async () => {
+    const { button, label, controller } = harness({
+      stored: { efestoForgeEnabled: true, efestoForgeCompletedGoals: ['goal-1'] },
+      missions: [{
+        id: 'm1',
+        goalId: 'goal-1',
+        status: 'completed',
+        executionPhase: 'forged',
+        workState: 'forged',
+        createdAt: '2026-07-22T19:00:00Z',
+        resultSummary: { received: 1, evidenceCreated: 1, opportunitiesPromoted: 0 },
+        verificationResults: [{ candidateId: 'cand-1', evidenceId: 'ev-1', supported: false }],
+      }],
+      goals: [{ id: 'goal-1', title: 'Find work', priority: 2 }],
+    });
+    await controller.initialize();
+    await flushAsync();
+    expect(button.dataset.enabled).toBe('false');
+    expect(button.dataset.state).toBe('research_completed');
+    expect(label.textContent).toBe('Research completed');
+    expect(label.textContent).not.toMatch(/START EFESTO/i);
+  });
+
+  it('end-of-cycle auto-disable keeps completed-without-Evidence off START EFESTO', async () => {
+    const { button, label, controller } = harness({
+      stored: { efestoForgeEnabled: true, efestoForgeCompletedGoals: ['goal-1'] },
+      missions: [{
+        id: 'm1',
+        goalId: 'goal-1',
+        status: 'completed',
+        createdAt: '2026-07-22T19:00:00Z',
+        resultSummary: { received: 0, evidenceCreated: 0, opportunitiesPromoted: 0 },
+      }],
+      goals: [{ id: 'goal-1', title: 'Find work', priority: 2 }],
+    });
+    await controller.initialize();
+    await flushAsync();
+    expect(button.dataset.enabled).toBe('false');
+    expect(button.dataset.state).toBe('completed_without_forge');
+    expect(label.textContent).toBe('Research ended without Evidence');
+    expect(label.textContent).not.toMatch(/START EFESTO/i);
+  });
 });
 
 

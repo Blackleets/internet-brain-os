@@ -47,3 +47,13 @@ describe('Efesto automatic capture policy', () => {
     expect(normalizePublicOrigin('not a url')).toBeUndefined();
   });
 });
+
+describe('auto-capture cooldown memory', () => {
+  it('keys by URL without fragment and keeps only entries inside the cooldown', async () => {
+    const { autoCaptureKey, rememberAutoCapture } = await import('./auto-capture-policy.js');
+    expect(autoCaptureKey('https://example.org/a?x=1#top')).toBe('https://example.org/a?x=1');
+    const now = 10 * AUTO_CAPTURE_COOLDOWN_MS;
+    const next = rememberAutoCapture({ old: now - AUTO_CAPTURE_COOLDOWN_MS, fresh: now - 1000, junk: 'nope' }, 'new', now);
+    expect(next).toEqual({ fresh: now - 1000, new: now });
+  });
+});

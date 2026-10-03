@@ -41,14 +41,25 @@ describe('Shared Goal Truth popup binding', () => {
 
   it('does not present completed as forged without persisted forged work state', () => {
     mount();
-    applyGoalTruthPresentation(document, {
-      focused: { workState: 'completed', workLabel: 'Research completed' },
-      forgeActivity: { label: 'The forge is ready', detail: 'Create a Goal or analyze a public page.', tone: 'idle' },
+    const result = applyGoalTruthPresentation(document, {
+      focused: { workState: 'completed', workLabel: 'Research ended without Evidence' },
+      forgeActivity: {
+        label: 'Research ended without Evidence',
+        detail: 'The bounded attempt finished. No Kernel-sealed Evidence was forged.',
+        tone: 'idle',
+      },
     });
+    // completed-without-forge must not keep green Completado (data-status=completed)
+    // and Living Forge must not keep forge-is-ready Forja lista beside that honesty.
+    expect(result).toEqual({ status: 'research_completed', text: 'Research ended without Evidence' });
+    expect(document.querySelector('#mission-state')?.dataset.status).toBe('research_completed');
+    expect(document.querySelector('#mission-state')?.dataset.status).not.toBe('completed');
+    expect(document.querySelector('#mission-state')?.textContent).toBe('Research ended without Evidence');
     expect(document.querySelector('#living-forge')?.dataset.activity).toBe('idle');
     expect(document.querySelector('.live-badge-label')?.textContent).toBe('LISTA');
     expect(document.querySelector('.live-badge-label')?.textContent).not.toMatch(/EN VIVO/i);
-    expect(document.querySelector('#forge-activity-label')?.textContent).toBe('The forge is ready');
+    expect(document.querySelector('#forge-activity-label')?.textContent).toBe('Research ended without Evidence');
+    expect(document.querySelector('#forge-activity-label')?.textContent).not.toMatch(/forge is ready/i);
   });
 
   it('reads through the authenticated Shared Goal Truth transport and never needs a writer', async () => {
@@ -59,6 +70,33 @@ describe('Shared Goal Truth popup binding', () => {
     expect(document.querySelector('#mission-state')?.textContent).not.toMatch(/finding/i);
     expect(listGoalSurfacesFn).toHaveBeenCalledWith({ baseUrl: 'http://127.0.0.1:4000', apiToken: 'x'.repeat(40) });
     expect(document.querySelector('#living-forge')?.dataset.activity).toBe('verifying');
+  });
+
+
+  it('gates #mission-state chrome on GoalSurface findCount — forged without SUPPORT is research_completed', () => {
+    mount();
+    const zero = applyGoalTruthPresentation(document, {
+      focused: { workState: 'forged', workLabel: 'Research completed', findCount: 0 },
+      forgeActivity: { label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.', tone: 'idle' },
+    });
+    expect(zero).toEqual({ status: 'research_completed', text: 'Research completed' });
+    expect(document.querySelector('#mission-state')?.dataset.status).toBe('research_completed');
+    expect(document.querySelector('#mission-state')?.dataset.status).not.toBe('forged');
+    expect(document.querySelector('#living-forge')?.dataset.activity).toBe('idle');
+
+    const missing = applyGoalTruthPresentation(document, {
+      focused: { workState: 'forged', workLabel: 'Research completed' },
+      forgeActivity: { label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.', tone: 'idle' },
+    });
+    expect(missing.status).toBe('research_completed');
+
+    const support = applyGoalTruthPresentation(document, {
+      focused: { workState: 'forged', workLabel: '1 Find passed Kernel SUPPORT', findCount: 1 },
+      forgeActivity: { label: 'A Kernel SUPPORT Find was forged', detail: '1 Find passed Kernel SUPPORT and were forged.', tone: 'success' },
+    });
+    expect(support).toEqual({ status: 'completed', text: '1 Find passed Kernel SUPPORT' });
+    expect(document.querySelector('#mission-state')?.dataset.status).toBe('completed');
+    expect(document.querySelector('#living-forge')?.dataset.activity).toBe('success');
   });
 
   it('fails visually closed when Goal truth cannot be read instead of retaining legacy activity', async () => {

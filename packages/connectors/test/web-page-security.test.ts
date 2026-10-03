@@ -58,6 +58,25 @@ describe('WebPageFetcher public-network boundary', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
+  test('blocks DNS answers in special-purpose 198.18.0.0/15 and 192.0.0.0/24', async () => {
+    for (const address of ['198.18.0.1', '198.19.255.254', '192.0.0.1', '::ffff:198.18.0.1']) {
+      const lookupImpl = vi.fn(async () => [{ address, family: address.includes(':') ? 6 : 4 }]);
+      const fetchImpl = vi.fn();
+      await expect(new WebPageFetcher({ fetchImpl, lookupImpl: lookupImpl as never }).fetch('https://evil.example'), address)
+        .rejects.toThrow('Private network URLs');
+      expect(fetchImpl, address).not.toHaveBeenCalled();
+    }
+  });
+
+  test('still allows public neighbours of those ranges', async () => {
+    for (const address of ['198.17.255.255', '198.20.0.1', '192.0.1.1']) {
+      const lookupImpl = vi.fn(async () => [{ address, family: 4 }]);
+      const fetchImpl = vi.fn(async () => new Response('<title>ok</title>ok', { status: 200, headers: { 'content-type': 'text/html' } }));
+      await expect(new WebPageFetcher({ fetchImpl: fetchImpl as typeof fetch, lookupImpl: lookupImpl as never }).fetch('https://public.example'), address)
+        .resolves.toBeTruthy();
+    }
+  });
+
   test('blocks DNS answers that resolve to hex-form IPv4-mapped loopback', async () => {
     const lookupImpl = vi.fn(async () => [{ address: '::ffff:7f00:1', family: 6 }]);
     const fetchImpl = vi.fn();

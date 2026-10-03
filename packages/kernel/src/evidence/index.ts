@@ -17,8 +17,9 @@ export {
 } from './evidence-errors';
 export type { InvalidEvidenceInputField } from './evidence-errors';
 
-export { evidenceSupportsGoal } from './support';
+export { evidenceSupportsGoal, explainEvidenceSupport } from './support';
 export type {
+  EvidenceSupportExplanation,
   EvidenceSupportResult,
   GoalSupportInput,
   PageSupportInput,

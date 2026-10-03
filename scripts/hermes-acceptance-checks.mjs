@@ -32,6 +32,21 @@ function finding(url, extra = {}) {
   };
 }
 
+// After #238 the only agent intake that admits URLs is resultKind:'search_candidates'
+// (candidates, never Evidence); bare findings are refused as AGENT_FINDINGS_NOT_EVIDENCE.
+// Every boundary probe targets that real intake so it exercises live validation.
+function candidates(ctx, findings, extra = {}) {
+  return api(ctx.baseUrl, ctx.token, `/api/agent-missions/${encodeURIComponent(ctx.missionId)}/results`, {
+    method: 'POST',
+    body: { resultKind: 'search_candidates', leaseId: ctx.leaseId, findings, ...extra },
+  });
+}
+
+async function missionById(ctx) {
+  const response = await api(ctx.baseUrl, ctx.token, '/api/agent-missions');
+  return (response.body?.missions ?? []).find((item) => item.id === ctx.missionId);
+}
+
 export async function checkConsentRequired(ctx) {
   const response = await api(ctx.baseUrl, ctx.token, `/api/goals/${encodeURIComponent(ctx.goalId)}/missions`, {
     method: 'POST',
@@ -46,70 +61,71 @@ export async function checkConsentRequired(ctx) {
   };
 }
 
+export async function checkLegacyFindingsRefused(ctx) {
+  const response = await api(ctx.baseUrl, ctx.token, `/api/agent-missions/${encodeURIComponent(ctx.missionId)}/results`, {
+    method: 'POST',
+    body: { leaseId: ctx.leaseId, findings: [finding('https://example.com/legacy-findings-probe')] },
+  });
+  return {
+    id: 'A10',
+    name: 'Agent findings are never admitted as Evidence (Completado requires Kernel SUPPORT)',
+    passed: response.status === 409 && response.body?.code === 'AGENT_FINDINGS_NOT_EVIDENCE',
+    detail: `status=${response.status} code=${response.body?.code ?? 'none'}`,
+  };
+}
+
 export async function checkHostileUrlsRejected(ctx) {
   const rejected = [];
   const accepted = [];
   for (const url of HOSTILE_URLS) {
-    const response = await api(ctx.baseUrl, ctx.token, `/api/agent-missions/${encodeURIComponent(ctx.missionId)}/results`, {
-      method: 'POST',
-      body: { leaseId: ctx.leaseId, findings: [finding(url)] },
-    });
+    const response = await candidates(ctx, [finding(url)]);
     (response.status === 400 ? rejected : accepted).push(`${url} -> ${response.status}`);
   }
   return {
     id: 'A2',
-    name: 'Private, loopback, credential-bearing and sensitive URLs are rejected',
+    name: 'Private, loopback, credential-bearing and sensitive URLs are rejected at candidate intake',
     passed: accepted.length === 0,
     detail: `rejected=${rejected.length}/${HOSTILE_URLS.length}${accepted.length ? ` accepted=${JSON.stringify(accepted)}` : ''}`,
   };
 }
 
 export async function checkAuthorityFieldsIgnored(ctx) {
-  const response = await api(ctx.baseUrl, ctx.token, `/api/agent-missions/${encodeURIComponent(ctx.missionId)}/results`, {
-    method: 'POST',
-    body: {
-      leaseId: ctx.leaseId,
-      status: 'failed',
-      executionPhase: 'rejected',
-      resultSummary: { received: 999, evidenceCreated: 999, opportunitiesPromoted: 999 },
-      findings: [finding('https://example.com/authority-probe')],
-    },
+  const response = await candidates(ctx, [finding('https://example.com/authority-probe')], {
+    status: 'completed',
+    executionPhase: 'forged',
+    resultSummary: { received: 999, evidenceCreated: 999, opportunitiesPromoted: 999 },
   });
-  const summary = response.body?.mission?.resultSummary;
-  const kernelOwned = response.body?.mission?.status === 'completed'
-    && response.body?.mission?.executionPhase === 'forged'
+  const mission = response.body?.mission;
+  const summary = mission?.resultSummary;
+  const kernelOwned = mission?.status === 'running'
+    && mission?.executionPhase === 'verifying'
     && summary?.received === 1
-    && summary?.evidenceCreated === 1;
+    && summary?.evidenceCreated === 0
+    && summary?.opportunitiesPromoted === 0;
   return {
     id: 'A3',
     name: 'Agent-supplied authority fields are ignored; Kernel recomputes state and summary',
     passed: response.status === 202 && kernelOwned,
-    detail: `status=${response.status} missionStatus=${response.body?.mission?.status ?? 'none'} summary=${JSON.stringify(summary ?? null)}`,
+    detail: `status=${response.status} missionStatus=${mission?.status ?? 'none'} phase=${mission?.executionPhase ?? 'none'} summary=${JSON.stringify(summary ?? null)}`,
   };
 }
 
 export async function checkInvalidLeaseRejected(ctx) {
-  const response = await api(ctx.baseUrl, ctx.token, `/api/agent-missions/${encodeURIComponent(ctx.missionId)}/results`, {
-    method: 'POST',
-    body: { leaseId: '00000000-0000-4000-8000-000000000000', findings: [finding('https://example.com/stale-lease')] },
-  });
+  const response = await candidates({ ...ctx, leaseId: '00000000-0000-4000-8000-000000000000' }, [finding('https://example.com/stale-lease')]);
   return {
     id: 'A4',
-    name: 'Stale or forged lease cannot admit findings',
-    passed: response.status === 409,
+    name: 'Stale or forged lease cannot admit candidates',
+    passed: response.status === 409 && response.body?.code === 'AGENT_MISSION_LEASE_INVALID',
     detail: `status=${response.status} code=${response.body?.code ?? 'none'}`,
   };
 }
 
 export async function checkOversizedPayloadRejected(ctx) {
   const findings = Array.from({ length: 21 }, (_, index) => finding(`https://example.com/overflow-${index}`));
-  const response = await api(ctx.baseUrl, ctx.token, `/api/agent-missions/${encodeURIComponent(ctx.missionId)}/results`, {
-    method: 'POST',
-    body: { leaseId: ctx.leaseId, findings },
-  });
+  const response = await candidates(ctx, findings);
   return {
     id: 'A5',
-    name: 'Oversized finding batches are rejected before persistence',
+    name: 'Oversized candidate batches are rejected before persistence',
     passed: response.status === 400,
     detail: `status=${response.status} code=${response.body?.code ?? 'none'}`,
   };
@@ -127,52 +143,45 @@ export async function checkUnauthenticatedAccessRejected(ctx) {
 
 export async function checkDeduplication(ctx) {
   const url = 'https://example.com/duplicate-acceptance-probe';
-  const response = await api(ctx.baseUrl, ctx.token, `/api/agent-missions/${encodeURIComponent(ctx.missionId)}/results`, {
-    method: 'POST',
-    body: { leaseId: ctx.leaseId, findings: [finding(url), finding(url)] },
-  });
-  const summary = response.body?.mission?.resultSummary;
+  const response = await candidates(ctx, [finding(url), finding(url)]);
+  const mission = response.body?.mission;
+  const persisted = Array.isArray(mission?.searchCandidates) ? mission.searchCandidates.length : -1;
   return {
     id: 'A7',
-    name: 'Duplicate findings do not inflate evidenceCreated',
-    passed: response.status === 202 && summary?.received === 2 && summary?.evidenceCreated === 1,
-    detail: `status=${response.status} summary=${JSON.stringify(summary ?? null)}`,
+    name: 'Duplicate candidates are persisted once and never count as Evidence',
+    passed: response.status === 202 && persisted === 1 && mission?.resultSummary?.evidenceCreated === 0,
+    detail: `status=${response.status} persistedCandidates=${persisted} summary=${JSON.stringify(mission?.resultSummary ?? null)}`,
   };
 }
 
 export async function checkTerminalStateOwnedByKernel(ctx) {
-  const response = await api(ctx.baseUrl, ctx.token, '/api/agent-missions');
-  const mission = (response.body?.missions ?? []).find((item) => item.id === ctx.missionId);
-  const terminal = mission?.status === 'completed' && mission?.executionPhase === 'forged';
+  const mission = await missionById(ctx);
+  const kernelOwned = mission?.status === 'running' && mission?.executionPhase === 'verifying';
   return {
     id: 'A8',
-    name: 'Kernel owns the terminal mission state and clears the lease',
-    passed: Boolean(terminal) && mission?.leaseId === undefined && mission?.leaseExpiresAt === undefined,
+    name: 'Kernel owns the post-intake state (verifying, not Completado) and clears the lease',
+    passed: Boolean(kernelOwned) && mission?.leaseId === undefined && mission?.leaseExpiresAt === undefined,
     detail: `status=${mission?.status ?? 'none'} phase=${mission?.executionPhase ?? 'none'} leaseCleared=${mission?.leaseId === undefined}`,
   };
 }
 
 export async function checkReplayIdempotentAfterCompletion(ctx) {
-  const beforeResponse = await api(ctx.baseUrl, ctx.token, '/api/agent-missions');
-  const before = (beforeResponse.body?.missions ?? []).find((item) => item.id === ctx.missionId);
+  const before = await missionById(ctx);
   const duplicateUrl = 'https://example.com/duplicate-acceptance-probe';
-  const response = await api(ctx.baseUrl, ctx.token, `/api/agent-missions/${encodeURIComponent(ctx.missionId)}/results`, {
-    method: 'POST',
-    body: { leaseId: ctx.leaseId, findings: [finding(duplicateUrl), finding(duplicateUrl)] },
-  });
-  const afterResponse = await api(ctx.baseUrl, ctx.token, '/api/agent-missions');
-  const after = (afterResponse.body?.missions ?? []).find((item) => item.id === ctx.missionId);
+  const response = await candidates(ctx, [finding(duplicateUrl), finding(duplicateUrl)]);
+  const after = await missionById(ctx);
   const beforeExecution = missionExecutionSnapshot(before);
   const afterExecution = missionExecutionSnapshot(after);
   const executionUnchanged = JSON.stringify(afterExecution) === JSON.stringify(beforeExecution);
   return {
     id: 'A9',
-    name: 'Exact result retry is idempotent and does not reopen or duplicate the mission',
+    name: 'Exact candidate retry is idempotent and does not reopen or duplicate the mission',
     passed: response.status === 202
       && response.body?.idempotent === true
       && executionUnchanged
-      && after?.resultSummary?.evidenceCreated === 1,
-    detail: `status=${response.status} idempotent=${response.body?.idempotent === true} executionUnchanged=${executionUnchanged} evidenceCreated=${after?.resultSummary?.evidenceCreated ?? 'none'}`,
+      && after?.searchCandidates?.length === 1
+      && after?.resultSummary?.evidenceCreated === 0,
+    detail: `status=${response.status} idempotent=${response.body?.idempotent === true} executionUnchanged=${executionUnchanged} candidates=${after?.searchCandidates?.length ?? 'none'}`,
   };
 }
 
@@ -184,6 +193,7 @@ function missionExecutionSnapshot(mission) {
     completedAt: mission?.completedAt,
     forgedAt: mission?.forgedAt,
     resultSummary: mission?.resultSummary,
+    searchCandidateDigest: mission?.searchCandidateDigest,
     leaseClosed: mission?.leaseId === undefined && mission?.leaseExpiresAt === undefined,
   };
 }

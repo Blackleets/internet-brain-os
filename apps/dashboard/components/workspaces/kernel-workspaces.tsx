@@ -5,6 +5,7 @@ import {
 import type { ReactNode } from 'react';
 import { useState, type FormEvent } from 'react';
 import type { OverviewSnapshot } from '../../lib/kernel/overview';
+import { countMissionKernelSupportedFinds } from '../../lib/kernel/supported-find';
 import type { DashboardActions } from '../overview/overview-screen';
 import { Panel } from '../ui/panel';
 import { StatusBadge, type StatusState } from '../ui/status-badge';
@@ -117,7 +118,13 @@ function GoalComposer({ createGoal, onState }: { createGoal: DashboardActions['c
 
 
 function missionWorkspaceBadge(mission: OverviewSnapshot['missions'][number]): { state: StatusState; label: string } {
-  if (mission.executionPhase === 'forged') return { state: 'healthy', label: 'forged' };
+  // Forged without Kernel SUPPORT Finds must not stay healthy green "forged"
+  // (Goals/Actividad + overview activity already use research_completed).
+  if (mission.executionPhase === 'forged') {
+    return countMissionKernelSupportedFinds(mission) > 0
+      ? { state: 'healthy', label: 'forged' }
+      : { state: 'unavailable', label: 'research_completed' };
+  }
   if (mission.executionPhase === 'failed' || mission.status === 'failed') {
     return { state: 'failed', label: mission.executionPhase ?? mission.status };
   }

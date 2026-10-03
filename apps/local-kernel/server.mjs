@@ -233,7 +233,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       }
     }
     if (request.method === 'GET' && request.url?.startsWith('/api/browser/case/') && captureProjector) {
-      const caseId = decodeURIComponent(request.url.slice('/api/browser/case/'.length));
+      const caseId = decodePathId(request.url.slice('/api/browser/case/'.length));
+      if (caseId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
       try {
         const result = await captureProjector.getCaseById(caseId);
         return send(response, 200, { ok: true, ...result });
@@ -264,7 +265,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     if (request.method === 'DELETE' && request.url?.startsWith('/api/chat/providers/')) {
       if (!providers) return send(response, 404, { ok: false, code: 'MODEL_PROVIDERS_UNAVAILABLE' });
       try {
-        const providerId = decodeURIComponent(request.url.slice('/api/chat/providers/'.length));
+        const providerId = decodePathId(request.url.slice('/api/chat/providers/'.length));
+      if (providerId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
         await providers.remove(providerId);
         return send(response, 200, { ok: true });
       } catch (error) {
@@ -352,7 +354,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     }
     if ((request.method === 'GET' || request.method === 'DELETE') && request.url?.startsWith('/api/chat/conversations/')) {
       if (!conversations) return send(response, 404, { ok: false, code: 'CHAT_HISTORY_UNAVAILABLE' });
-      const conversationId = decodeURIComponent(request.url.slice('/api/chat/conversations/'.length));
+      const conversationId = decodePathId(request.url.slice('/api/chat/conversations/'.length));
+      if (conversationId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
       try {
         if (request.method === 'DELETE') {
           await conversations.remove(conversationId);
@@ -405,7 +408,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       if (!preferences) return send(response, 404, { ok: false, code: 'PREFERENCE_LEARNING_UNAVAILABLE' });
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
       try {
-        const opportunityId = decodeURIComponent(request.url.slice('/api/opportunities/'.length, -'/feedback'.length));
+        const opportunityId = decodePathId(request.url.slice('/api/opportunities/'.length, -'/feedback'.length));
+      if (opportunityId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
         return send(response, 201, { ok: true, feedback: await preferences.record(opportunityId, await readJson(request)) });
       } catch (error) {
         if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
@@ -430,7 +434,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     if (request.method === 'GET' && request.url?.startsWith('/api/goal-surfaces/')) {
       if (!goalSurfaces) return send(response, 404, { ok: false, code: 'GOAL_SURFACES_UNAVAILABLE' });
       try {
-        const goalId = decodeURIComponent(request.url.slice('/api/goal-surfaces/'.length));
+        const goalId = decodePathId(request.url.slice('/api/goal-surfaces/'.length));
+      if (goalId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
         const surface = await goalSurfaces.get(goalId);
         return surface
           ? send(response, 200, { ok: true, surface })
@@ -469,7 +474,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       if (!agentMissions) return send(response, 404, { ok: false, code: 'AGENT_MISSIONS_UNAVAILABLE' });
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
       try {
-        const goalId = decodeURIComponent(request.url.slice('/api/goals/'.length, -'/missions'.length));
+        const goalId = decodePathId(request.url.slice('/api/goals/'.length, -'/missions'.length));
+      if (goalId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
         const input = await readJson(request);
         const confirmationActor = interactiveMissionConfirmationActor(origin, allowedDashboardOrigins);
         const mission = await agentMissions.create(goalId, input, { confirmationActor });
@@ -490,6 +496,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
           return send(response, 400, { ok: false, code: 'INVALID_MISSION_ID' });
         }
         const mission = await missionExecutor.claim('hermes', requestedId);
+        if (mission) publishMissionUpdated(kernelEvents, mission);
         return send(response, mission ? 200 : 204, mission ? { ok: true, mission } : undefined);
       } catch { return send(response, 500, { ok: false, code: 'AGENT_MISSION_CLAIM_FAILED' }); }
     }
@@ -497,7 +504,8 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       if (!missionExecutor) return send(response, 404, { ok: false, code: 'AGENT_EXECUTOR_UNAVAILABLE' });
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
       try {
-        const missionId = decodeURIComponent(request.url.slice('/api/agent-missions/'.length, -'/results'.length));
+        const missionId = decodePathId(request.url.slice('/api/agent-missions/'.length, -'/results'.length));
+      if (missionId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
         const completed = await missionExecutor.complete(missionId, await readJson(request));
         if (completed.idempotent === true) {
           return send(response, 202, {
@@ -508,6 +516,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         }
         const obsidianReceipt = await syncMissionObsidian(completed, obsidianProjector);
         const mission = await attachMissionObsidianReceipt(missionExecutor.store, missionId, obsidianReceipt);
+        publishMissionUpdated(kernelEvents, mission ?? completed.mission);
         return send(response, 202, { ok: true, ...completed, mission, obsidianReceipt });
       } catch (error) {
         if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
@@ -518,8 +527,11 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       if (!missionExecutor) return send(response, 404, { ok: false, code: 'AGENT_EXECUTOR_UNAVAILABLE' });
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
       try {
-        const missionId = decodeURIComponent(request.url.slice('/api/agent-missions/'.length, -'/failures'.length));
-        return send(response, 202, { ok: true, mission: await missionExecutor.fail(missionId, await readJson(request)) });
+        const missionId = decodePathId(request.url.slice('/api/agent-missions/'.length, -'/failures'.length));
+      if (missionId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
+        const failedMission = await missionExecutor.fail(missionId, await readJson(request));
+        publishMissionUpdated(kernelEvents, failedMission);
+        return send(response, 202, { ok: true, mission: failedMission });
       } catch (error) {
         if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
         return send(response, 500, { ok: false, code: 'AGENT_FAILURE_REPORT_FAILED' });
@@ -534,6 +546,15 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       }
     }
     if (request.method === 'GET' && request.url === '/api/events') {
+      // Subscribe before the 200 head: a full bus throws, and throwing after writeHead
+      // escaped the handler (unhandled rejection, client hung on a headless stream).
+      let unsubscribe;
+      try {
+        unsubscribe = kernelEvents.subscribe((frame) => response.write(frame));
+      } catch {
+        return send(response, 503, { ok: false, code: 'EVENT_STREAM_FULL', error: 'Too many live event streams' });
+      }
+      request.on('close', () => unsubscribe());
       response.writeHead(200, {
         'content-type': 'text/event-stream; charset=utf-8',
         'cache-control': 'no-cache',
@@ -541,14 +562,13 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         'x-accel-buffering': 'no',
       });
       response.write(': connected\n\n');
-      const unsubscribe = kernelEvents.subscribe((frame) => response.write(frame));
-      request.on('close', () => unsubscribe());
       return undefined;
     }
     if (request.method === 'GET' && request.url?.startsWith('/api/replay-lab/cases/')) {
       if (!replayLabQuery) return send(response, 404, { ok: false, code: 'REPLAY_LAB_UNAVAILABLE' });
       try {
-        const caseId = decodeURIComponent(request.url.slice('/api/replay-lab/cases/'.length));
+        const caseId = decodePathId(request.url.slice('/api/replay-lab/cases/'.length));
+      if (caseId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
         return send(response, 200, { ok: true, case: await replayLabQuery.getCase(caseId) });
       } catch {
         return send(response, 404, { ok: false, code: 'REPLAY_LAB_CASE_NOT_FOUND' });
@@ -747,6 +767,12 @@ function parseNotificationsListQuery(url) {
   return options;
 }
 
+/** Decode one path id; malformed percent-encoding must be a 400, never a thrown URIError. */
+function decodePathId(encoded) {
+  try { return decodeURIComponent(encoded); }
+  catch { return null; }
+}
+
 function matchNotificationActionPath(url, action) {
   if (typeof url !== 'string' || typeof action !== 'string') return null;
   const prefix = '/api/notifications/';
@@ -780,14 +806,45 @@ function send(response, status, body) {
 async function writeStreamEvent(response, event) {
   if (response.destroyed || response.writableEnded) return;
   if (response.write(`${JSON.stringify(event)}\n`)) return;
-  await new Promise((resolve) => response.once('drain', resolve));
+  // A client that disconnects while backpressured never emits 'drain': also settle on
+  // close/error so the stream handler and chat.stream cannot stay pending forever.
+  await new Promise((resolve) => {
+    const done = () => {
+      response.off('drain', done);
+      response.off('close', done);
+      response.off('error', done);
+      resolve();
+    };
+    response.once('drain', done);
+    response.once('close', done);
+    response.once('error', done);
+    if (response.destroyed) done();
+  });
 }
 
 function sendHtml(response, status, html) {
   response.statusCode = status;
   response.setHeader('content-type', 'text/html; charset=utf-8');
   response.setHeader('cache-control', 'no-store');
+  // Replay Lab hosts a Kernel-token field and capture import: never frameable (clickjacking).
+  response.setHeader('x-frame-options', 'DENY');
+  response.setHeader('content-security-policy', "frame-ancestors 'none'");
+  response.setHeader('referrer-policy', 'no-referrer');
   response.end(html);
+}
+
+/**
+ * Notifies live /api/events clients that a mission changed through the agent HTTP contract
+ * (claim, results, failures). Ids and lifecycle fields only: no lease, findings or failure text.
+ * Clients must still re-read /api/agent-missions; the event is a refresh hint, not the record.
+ */
+function publishMissionUpdated(kernelEvents, mission) {
+  if (!mission || typeof mission.id !== 'string') return;
+  const payload = { missionId: mission.id };
+  for (const key of ['goalId', 'status', 'executionPhase']) {
+    if (typeof mission[key] === 'string') payload[key] = mission[key];
+  }
+  kernelEvents.publish('mission.updated', payload);
 }
 
 async function syncMissionObsidian(completed, obsidianProjector) {

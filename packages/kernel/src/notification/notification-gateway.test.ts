@@ -48,6 +48,34 @@ describe('NotificationGateway', () => {
     await expect(gateway.markRead('notification:missing', 'user:local', '2026-08-08T15:01:00.000Z')).rejects.toThrow(NotificationNotFoundError);
   });
 
+
+  test('mark-read does not drop receipts from unfiltered list(limit) — only state=unread advances', async () => {
+    const gateway = new NotificationGateway(store());
+    const ids = [];
+    for (let i = 0; i < 5; i += 1) {
+      const queued = await gateway.queue(input({
+        dedupeKey: `find:supported:opportunity:${i}`,
+        sourceType: 'opportunity',
+        sourceId: `opportunity:${i}`,
+        createdAt: `2026-08-08T15:0${i}:00.000Z`,
+      }));
+      ids.push(queued.id);
+    }
+    // Newest-first unfiltered page of 3.
+    const page = await gateway.list({ limit: 3 });
+    expect(page.map((row) => row.id)).toEqual([ids[4], ids[3], ids[2]]);
+    await gateway.markRead(ids[4], 'user:local', '2026-08-08T15:10:00.000Z');
+    await gateway.markRead(ids[3], 'user:local', '2026-08-08T15:10:01.000Z');
+    await gateway.markRead(ids[2], 'user:local', '2026-08-08T15:10:02.000Z');
+    // Unfiltered list still returns the same newest three (now read) — older unread starved.
+    const still = await gateway.list({ limit: 3 });
+    expect(still.map((row) => row.id)).toEqual([ids[4], ids[3], ids[2]]);
+    expect(still.every((row) => row.state === 'read')).toBe(true);
+    // state=unread list advances past mark-read and surfaces older SUPPORT receipts.
+    const unread = await gateway.list({ state: 'unread', limit: 3 });
+    expect(unread.map((row) => row.id)).toEqual([ids[1], ids[0]]);
+  });
+
   test('returned values cannot mutate persisted notification payload', async () => {
     const gateway = new NotificationGateway(store());
     const queued = await gateway.queue(input());

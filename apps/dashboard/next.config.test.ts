@@ -24,4 +24,14 @@ describe('dashboard Next.js config', () => {
       if (previous === undefined) delete process.env.VERCEL; else process.env.VERCEL = previous;
     }
   });
+
+  it('refuses framing on every dashboard route (confirmation clicks must be the owner\'s)', async () => {
+    const rules = await nextConfig.headers?.();
+    const all = rules?.find((rule) => rule.source === '/:path*');
+    const byKey = Object.fromEntries((all?.headers ?? []).map((header) => [header.key.toLowerCase(), header.value]));
+    expect(byKey['x-frame-options']).toBe('DENY');
+    expect(byKey['content-security-policy']).toContain("frame-ancestors 'none'");
+    expect(byKey['referrer-policy']).toBe('no-referrer');
+    expect(byKey['x-content-type-options']).toBe('nosniff');
+  });
 });

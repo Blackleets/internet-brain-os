@@ -104,6 +104,12 @@ const server = createServer((request, response) => {
   }
   if (request.method !== 'GET') { response.writeHead(405, headers).end(); return; }
 
+  if (path === '/api/events') {
+    // Live Kernel event stream: the dashboard subscribes for immediate refresh hints.
+    response.writeHead(200, { ...headers, 'content-type': 'text/event-stream; charset=utf-8', connection: 'keep-alive' });
+    response.write(': connected\n\n');
+    return;
+  }
   if (path === '/api/browser/case/case-1') {
     response.writeHead(200, headers).end(JSON.stringify({ ok: true, case: { id: 'case-1', title: 'Supplier research' }, evidence: [{ id: 'evidence-1', summary: 'Public supplier evidence', sourceUrl: 'https://supplier.example/source', confidence: 0.93, capturedAt: '2026-07-26T10:02:00.000Z', tags: ['public'] }] })); return;
   }
@@ -114,5 +120,5 @@ const server = createServer((request, response) => {
 });
 
 server.once('error', (error) => { console.error(error); process.exitCode = 1; });
-for (const signal of ['SIGINT', 'SIGTERM']) server.once(signal, () => server.close(() => process.exit(0)));
+for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { server.close(() => process.exit(0)); server.closeAllConnections(); });
 server.listen(port, host);

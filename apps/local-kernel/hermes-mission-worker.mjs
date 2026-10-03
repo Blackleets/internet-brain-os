@@ -5,6 +5,10 @@ const MAX_OUTPUT_BYTES = 512 * 1024;
 const DEFAULT_TIMEOUT_MS = 15 * 60_000;
 const MAX_TIMEOUT_MS = 30 * 60_000;
 const FORCE_KILL_DELAY_MS = 500;
+// Kernel calls here are local bookkeeping (claim, submit candidates, report failure, read state).
+// Without a bound a stalled Kernel left the worker awaiting forever, and the one-click runtime
+// never retried that Mission because its activeRuns entry never settled.
+const DEFAULT_KERNEL_REQUEST_TIMEOUT_MS = 60_000;
 
 export async function runHermesMissionWorker(options = {}) {
   const baseUrl = normalizeLoopback(options.baseUrl ?? process.env.HEPHAESTUS_KERNEL_URL ?? 'http://127.0.0.1:4000');
@@ -13,7 +17,9 @@ export async function runHermesMissionWorker(options = {}) {
   const args = options.args ?? parseArgs(process.env.HEPHAESTUS_HERMES_ARGS_JSON);
   const fetchImpl = options.fetchImpl ?? fetch;
   const execute = options.execute ?? executeAdapter;
-  const claimed = await request(fetchImpl, `${baseUrl}/api/agent-missions/claim`, apiToken, {
+  const requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_KERNEL_REQUEST_TIMEOUT_MS;
+  const request = (url, token, init, allowEmpty) => kernelRequest(fetchImpl, url, token, init, allowEmpty, requestTimeoutMs);
+  const claimed = await request(`${baseUrl}/api/agent-missions/claim`, apiToken, {
     method: 'POST',
     ...(options.missionId ? { body: JSON.stringify({ missionId: options.missionId }) } : {}),
   }, true);
@@ -25,21 +31,28 @@ export async function runHermesMissionWorker(options = {}) {
     const findings = validateAdapterResult(result);
     let completed;
     try {
-      completed = await request(fetchImpl, `${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, apiToken, {
+      completed = await request(`${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, apiToken, {
         method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, resultKind: 'search_candidates', findings }),
       });
     } catch (error) {
-      const reconciled = await reconcileSettledMission(fetchImpl, baseUrl, apiToken, mission.id);
+      const reconciled = await reconcileSettledMission(request, baseUrl, apiToken, mission.id);
       if (reconciled) return { status: missionWorkerStatus(reconciled), mission: reconciled };
       throw error;
     }
     return { status: missionWorkerStatus(completed.mission), mission: completed.mission };
   } catch (error) {
     const reason = sanitizeFailure(error);
-    await request(fetchImpl, `${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/failures`, apiToken, {
-      method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, reason }),
-    });
-    return { status: 'failed', missionId: mission.id, reason };
+    try {
+      await request(`${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/failures`, apiToken, {
+        method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, reason }),
+      });
+    } catch (reportError) {
+      // The Kernel did not record this failure (unreachable, lease superseded, ...). Keep the real
+      // cause instead of replacing it with the report error; the lease expiry stays the Kernel's
+      // recovery path, so nothing here claims the Mission failed in Kernel state.
+      return { status: 'failed', missionId: mission.id, reason, reported: false, reportError: sanitizeFailure(reportError) };
+    }
+    return { status: 'failed', missionId: mission.id, reason, reported: true };
   }
 }
 
@@ -85,17 +98,27 @@ function adapterFailure(code, stderr) {
   return `Hermes adapter exited with code ${code}${diagnostic ? `: ${diagnostic}` : ''}`;
 }
 
-async function request(fetchImpl, url, token, init, allowEmpty = false) {
-  const response = await fetchImpl(url, { ...init, headers: { 'x-hephaestus-token': token, ...(init.body ? { 'content-type': 'application/json' } : {}) } });
+async function kernelRequest(fetchImpl, url, token, init, allowEmpty = false, timeoutMs = DEFAULT_KERNEL_REQUEST_TIMEOUT_MS) {
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      ...init,
+      headers: { 'x-hephaestus-token': token, ...(init.body ? { 'content-type': 'application/json' } : {}) },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (error) {
+    if (error?.name === 'TimeoutError' || error?.name === 'AbortError') throw new Error(`Kernel request timed out after ${timeoutMs} ms`);
+    throw error;
+  }
   if (allowEmpty && response.status === 204) return undefined;
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error ?? `Kernel request failed with HTTP ${response.status}`);
   return body;
 }
 
-async function reconcileSettledMission(fetchImpl, baseUrl, token, missionId) {
+async function reconcileSettledMission(request, baseUrl, token, missionId) {
   try {
-    const body = await request(fetchImpl, `${baseUrl}/api/agent-missions`, token, { method: 'GET' });
+    const body = await request(`${baseUrl}/api/agent-missions`, token, { method: 'GET' });
     const mission = Array.isArray(body.missions) ? body.missions.find((item) => item?.id === missionId) : undefined;
     return mission && (mission.status === 'completed' || mission.executionPhase === 'verifying') ? mission : undefined;
   } catch {

@@ -13,21 +13,41 @@ function hasHttpSourceUrl(sourceUrl: string): boolean {
   }
 }
 
-function missionSupportsEvidence(
+function missionSupportingEvidence(
   evidenceId: string,
   missions: readonly MissionSummary[] | undefined,
-): boolean {
-  if (!missions?.length || !evidenceId) return false;
+): MissionSummary | undefined {
+  if (!missions?.length || !evidenceId) return undefined;
   for (const mission of missions) {
     const results = mission.verificationResults;
     if (!Array.isArray(results)) continue;
     for (const entry of results) {
       if (!entry || typeof entry !== 'object') continue;
       const record = entry as Record<string, unknown>;
-      if (text(record.evidenceId) === evidenceId && record.supported === true) return true;
+      if (text(record.evidenceId) === evidenceId && record.supported === true) return mission;
     }
   }
-  return false;
+  return undefined;
+}
+
+function missionSupportsEvidence(evidenceId: string, missions: readonly MissionSummary[] | undefined): boolean {
+  return missionSupportingEvidence(evidenceId, missions) !== undefined;
+}
+
+export type KernelSupportProof = { kind: 'stamp' } | { kind: 'mission'; missionId: string };
+
+/**
+ * Which Kernel record proves a Find's SUPPORT (for display only; the gate is isKernelSupportedFind).
+ * null when the Find does not pass the gate.
+ */
+export function kernelSupportProof(
+  item: OpportunitySummary,
+  missions?: readonly MissionSummary[],
+): KernelSupportProof | null {
+  if (!isKernelSupportedFind(item, missions)) return null;
+  if (item.supported === true) return { kind: 'stamp' };
+  const mission = missionSupportingEvidence(text(item.evidenceId), missions);
+  return mission ? { kind: 'mission', missionId: mission.id } : null;
 }
 
 /**
@@ -54,4 +74,61 @@ export function kernelSupportedFinds(
   missions?: readonly MissionSummary[],
 ): OpportunitySummary[] {
   return (items ?? []).filter((item) => isKernelSupportedFind(item, missions));
+}
+
+/**
+ * Honest-blocked verification: the Mission still reports `verifying`, but the Kernel
+ * already finished verifying fetched pages and none passed Kernel SUPPORT. The Kernel
+ * intentionally keeps the phase (L7 admits it), so UI must not keep animating
+ * "Verificando Evidence — Kernel aplicando gates" forever.
+ *
+ * With verificationResults: true only when at least one row is `verified` and no row is
+ * supported (all-fetch-failed batches stay `verifying`: retry remains possible).
+ * Without them (GoalSurface strips rows): findCount === 0 is only projected once
+ * verificationResults exist, so it is the same zero-SUPPORT signal.
+ */
+export function missionVerifiedWithoutSupport(mission?: unknown): boolean {
+  if (!mission || typeof mission !== 'object') return false;
+  const record = mission as Record<string, unknown>;
+  const phase = record.workState ?? record.executionPhase;
+  if (phase !== 'verifying') return false;
+  const results = record.verificationResults;
+  if (Array.isArray(results)) {
+    let verified = 0;
+    for (const entry of results) {
+      if (!entry || typeof entry !== 'object') continue;
+      const row = entry as Record<string, unknown>;
+      if (row.supported === true) return false;
+      if (row.status === 'verified') verified += 1;
+    }
+    return verified > 0;
+  }
+  return record.findCount === 0;
+}
+
+/**
+ * Mission-scoped Kernel SUPPORT Find count for Home forge-state-action.
+ * Prefer verificationResults supported === true when present (raw Mission rows).
+ * GoalSurface missions strip verificationResults and expose the same Kernel
+ * SUPPORT total as findCount — use that so focusedGoalSurface.mission is honest.
+ * Global inbox Finds must not brand a zero-SUPPORT forged focused mission.
+ */
+export function countMissionKernelSupportedFinds(mission?: unknown): number {
+  if (!mission || typeof mission !== 'object') return 0;
+  const record = mission as Record<string, unknown>;
+  const results = record.verificationResults;
+  if (Array.isArray(results)) {
+    let n = 0;
+    for (const entry of results) {
+      if (!entry || typeof entry !== 'object') continue;
+      if ((entry as Record<string, unknown>).supported === true) n += 1;
+    }
+    return n;
+  }
+  // Shared Goal Truth projection: findCount is already SUPPORT-only.
+  const findCount = record.findCount;
+  if (typeof findCount === 'number' && Number.isSafeInteger(findCount) && findCount >= 0) {
+    return findCount;
+  }
+  return 0;
 }

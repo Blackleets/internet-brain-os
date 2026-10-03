@@ -49,6 +49,8 @@ jobs:
       - name: Enforce typecheck result
         run: test "${{ steps.typecheck.outputs.status }}" = "0"
       - run: pnpm test
+      - name: SQLite entity repository spec (node:sqlite, excluded from vitest)
+        run: pnpm test:sqlite
       - run: pnpm build
       - name: First-run end-to-end verification
         run: pnpm verify:first-run

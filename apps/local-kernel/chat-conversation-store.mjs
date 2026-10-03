@@ -18,6 +18,15 @@ export class ChatConversationStore {
   constructor(filePath, options = {}) {
     this.filePath = filePath;
     this.now = options.now ?? (() => new Date());
+    this.mutations = Promise.resolve();
+  }
+
+  // Mutations are whole-file read → modify → write: serialize them so concurrent chat
+  // operations cannot overwrite each other. A failed mutation never blocks the next.
+  #mutate(operation) {
+    const run = this.mutations.catch(() => undefined).then(operation);
+    this.mutations = run.catch(() => undefined);
+    return run;
   }
 
   async list() {
@@ -34,6 +43,10 @@ export class ChatConversationStore {
   }
 
   async create(input) {
+    return this.#mutate(() => this.#create(input));
+  }
+
+  async #create(input) {
     const providerId = clean(input?.providerId, 64);
     const model = clean(input?.model, 120);
     const caseId = clean(input?.caseId, 160);
@@ -59,6 +72,10 @@ export class ChatConversationStore {
   }
 
   async appendExchange(id, input) {
+    return this.#mutate(() => this.#appendExchange(id, input));
+  }
+
+  async #appendExchange(id, input) {
     const state = await this.#read();
     const conversation = state.conversations.find((item) => item.id === id);
     if (!conversation) throw notFound();
@@ -88,6 +105,10 @@ export class ChatConversationStore {
   }
 
   async remove(id) {
+    return this.#mutate(() => this.#remove(id));
+  }
+
+  async #remove(id) {
     const state = await this.#read();
     const next = state.conversations.filter((item) => item.id !== id);
     if (next.length === state.conversations.length) throw notFound();

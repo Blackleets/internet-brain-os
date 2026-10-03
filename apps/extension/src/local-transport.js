@@ -62,6 +62,57 @@ export async function sendPageContext(context, options = {}) {
   }
 }
 
+export async function listNotifications(options = {}) {
+  const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const apiToken = requireApiToken(options.apiToken);
+  const params = new URLSearchParams();
+  if (typeof options.state === 'string' && options.state.trim()) params.set('state', options.state.trim());
+  if (Number.isInteger(options.limit)) params.set('limit', String(options.limit));
+  const query = params.toString();
+  const url = `${baseUrl}/api/notifications${query ? `?${query}` : ''}`;
+  let response;
+  try {
+    response = await fetchImpl(url, { headers: { 'x-hephaestus-token': apiToken } });
+  } catch {
+    throw new LocalTransportError('TRANSPORT', 'Unable to reach the local Efesto NotificationGateway');
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new LocalTransportError(payload.code ?? 'KERNEL_REJECTED', payload.error ?? `Local Kernel request failed with HTTP ${response.status}`);
+  }
+  if (!payload?.ok || !Array.isArray(payload.notifications)) {
+    throw new LocalTransportError('INVALID_RESPONSE', 'Local Kernel returned an invalid notification list');
+  }
+  return payload.notifications;
+}
+
+export async function markNotificationRead(notificationId, options = {}) {
+  if (typeof notificationId !== 'string' || !notificationId.trim()) {
+    throw new LocalTransportError('INVALID_NOTIFICATION', 'A Kernel notification id is required');
+  }
+  const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const apiToken = requireApiToken(options.apiToken);
+  let response;
+  try {
+    response = await fetchImpl(`${baseUrl}/api/notifications/${encodeURIComponent(notificationId.trim())}/read`, {
+      method: 'POST',
+      headers: { 'x-hephaestus-token': apiToken },
+    });
+  } catch {
+    throw new LocalTransportError('TRANSPORT', 'Unable to mark the Kernel notification as read');
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new LocalTransportError(payload.code ?? 'KERNEL_REJECTED', payload.error ?? `Local Kernel request failed with HTTP ${response.status}`);
+  }
+  if (!payload?.ok || !payload.notification) {
+    throw new LocalTransportError('INVALID_RESPONSE', 'Local Kernel returned an invalid notification receipt');
+  }
+  return payload.notification;
+}
+
 export async function listOpportunities(options = {}) {
   const baseUrl = normalizeBaseUrl(options.baseUrl ?? DEFAULT_KERNEL_BASE_URL);
   const fetchImpl = options.fetchImpl ?? fetch;

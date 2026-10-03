@@ -10,6 +10,7 @@ describe('one-click Hermes runtime entrypoints', () => {
     'apps/extension/src/central-forge-power-controller.js',
     'apps/extension/src/central-forge-power.js',
     'apps/extension/src/unsupported-page-guard.js',
+    'apps/extension/src/page-support.js',
   ])('parses %s without executing it', (path) => {
     const result = spawnSync(process.execPath, ['--check', resolve(path)], { encoding: 'utf8', windowsHide: true });
     expect(result.status, result.stderr).toBe(0);
@@ -33,9 +34,11 @@ describe('one-click Hermes runtime entrypoints', () => {
 
   it('turns missing content-script receivers into a normal unsupported-page state', () => {
     const source = readFileSync(resolve('apps/extension/src/unsupported-page-guard.js'), 'utf8');
-    expect(source).toContain('Receiving end does not exist');
-    expect(source).toContain('Could not establish connection');
-    expect(source).toContain("parsed.protocol === 'http:' || parsed.protocol === 'https:'");
+    const support = readFileSync(resolve('apps/extension/src/page-support.js'), 'utf8');
+    expect(source).toContain("from './page-support.js'");
+    expect(support).toContain('Receiving end does not exist');
+    expect(support).toContain('Could not establish connection');
+    expect(support).toContain("parsed.protocol === 'http:' || parsed.protocol === 'https:'");
     expect(source).toContain('captureButton.disabled = true');
     expect(source).toContain("status.classList.remove('error')");
   });
