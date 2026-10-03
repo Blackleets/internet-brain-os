@@ -633,3 +633,17 @@ This completes the web-first design slice. Responsive mobile use is included thr
 ### Risks / next
 - Live search variance can still make L5/L6 fail honestly; the failure class now says which kind.
 - No UAT is claimed. `publicLaunchApproved` remains false. PR #241 stays OPEN for owner review.
+
+## Handoff 2026-10-03 - Grok (EFESTO executor) - Forge live view
+
+### What I changed
+- Dashboard Forge live view (`components/forge/*`, `lib/forge/forge-model.ts`, `app/efesto-forge-live.css`) mounted on Home (while a Kernel mission exists) and Objetivos (all states), plus mobile shell polish of the Home bar/composer.
+- Kernel read-only `GET /api/agent-missions/:id/evidence` (`apps/local-kernel/mission-evidence-reader.mjs`): Mission-linked verified Evidence with SUPPORT decision and a bounded verbatim excerpt chosen from goal-term prose (page chrome and undecoded binary are never quoted).
+
+### Tests or checks performed
+- `pnpm architecture:check`, `pnpm typecheck`, `pnpm test`, `pnpm dashboard:test`, `pnpm dashboard:build`, `pnpm audit --prod`, dashboard Playwright (existing + `e2e/forge.spec.ts` at 390×844 and 1280×800).
+
+### Risks / next
+- Not UAT. Real-Kernel screenshots used manually submitted candidates via the agent result contract, not the Hermes runtime. `publicLaunchApproved` remains false.
+- Observed outside this branch's scope: the SUPPORT gate passed docs.python.org classes tutorial for Goal "Rust lifetimes explained" (title word "explained" counted as a goal term; "rust" absent); Kernel web.read stored python.org homepage `rawText` as undecoded binary; some stored page titles keep HTML entities.
+
