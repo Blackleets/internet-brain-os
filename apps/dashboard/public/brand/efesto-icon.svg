@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><defs><linearGradient id="bgc" x1="0" y1="0" x2="0" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1A130F"/><stop offset="1" stop-color="#090706"/></linearGradient>
+       <radialGradient id="hlc" cx="512" cy="600" r="520" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FF7A2A" stop-opacity=".22"/><stop offset="1" stop-color="#FF7A2A" stop-opacity="0"/></radialGradient><clipPath id="clc"><rect width="1024" height="1024" rx="228"/></clipPath></defs>
+<g clip-path="url(#clc)"><rect width="1024" height="1024" fill="url(#bgc)"/><rect width="1024" height="1024" fill="url(#hlc)"/></g>
+<rect x="2" y="2" width="1020" height="1020" rx="226" fill="none" stroke="rgba(255,190,140,.14)" stroke-width="4"/>
+<g transform="translate(179.2 185.2) scale(10.4)"><defs>
+  <linearGradient id="cdi-fill" x1="0" y1="55" x2="0" y2="5" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FF7A2A" stop-opacity="0.34"/><stop offset=".6" stop-color="#F5C451" stop-opacity="0.12"/><stop offset="1" stop-color="#F5C451" stop-opacity="0"/></linearGradient>
+  <linearGradient id="cdi-edge" x1="0" y1="55" x2="0" y2="5" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F5C451"/><stop offset="1" stop-color="#EE8748"/></linearGradient>
+  <radialGradient id="cdi-core"><stop offset="0" stop-color="#FFF3DA"/><stop offset=".55" stop-color="#F5C451"/><stop offset="1" stop-color="#FF7A2A"/></radialGradient>
+  <radialGradient id="cdi-glow" cx="32" cy="44" r="22" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FF7A2A" stop-opacity="0.6"/><stop offset="1" stop-color="#FF7A2A" stop-opacity="0"/></radialGradient>
+</defs>
+<circle cx="32" cy="44" r="22" fill="url(#cdi-glow)"/>
+<path d="M33.5 3.5L38.5 15.5L46.5 28L46 41.5L39 51.5L32 55L25 51.5L18 41.5L18.5 29L21.5 17.5L27.5 23L30.5 13.5L33.5 3.5Z" fill="url(#cdi-fill)"/>
+<g fill="none" stroke="url(#cdi-edge)" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M33.5 3.5L38.5 15.5L46.5 28L46 41.5L39 51.5L32 55L25 51.5L18 41.5L18.5 29L21.5 17.5L27.5 23L30.5 13.5L33.5 3.5Z" stroke-width="1.6"/>
+  <g stroke-width="1" opacity=".85"><path d="M30.5 13.5L33.5 25"/><path d="M38.5 15.5L33.5 25"/><path d="M27.5 23L33.5 25"/><path d="M33.5 25L37.5 36.5"/><path d="M33.5 25L27 38"/><path d="M18.5 29L27 38"/><path d="M27.5 23L27 38"/><path d="M46.5 28L37.5 36.5"/><path d="M46 41.5L37.5 36.5"/><path d="M37.5 36.5L32 46.5"/><path d="M27 38L32 46.5"/><path d="M18 41.5L27 38"/><path d="M39 51.5L32 46.5"/><path d="M25 51.5L32 46.5"/><path d="M32 55L32 46.5"/><path d="M37.5 36.5L27 38"/><path d="M18.5 29L27.5 23"/></g>
+</g>
+<circle cx="33.5" cy="3.5" r="2.5" fill="#F5C451"/><circle cx="38.5" cy="15.5" r="1.5" fill="#EE8748"/><circle cx="46.5" cy="28" r="1.5" fill="#EE8748"/><circle cx="46" cy="41.5" r="1.5" fill="#EE8748"/><circle cx="39" cy="51.5" r="1.5" fill="#EE8748"/><circle cx="32" cy="55" r="1.5" fill="#EE8748"/><circle cx="25" cy="51.5" r="1.5" fill="#EE8748"/><circle cx="18" cy="41.5" r="1.5" fill="#EE8748"/><circle cx="18.5" cy="29" r="1.5" fill="#EE8748"/><circle cx="27.5" cy="23" r="1.5" fill="#EE8748"/><circle cx="33.5" cy="25" r="1.9" fill="#F5C451"/><circle cx="37.5" cy="36.5" r="1.9" fill="#F5C451"/><circle cx="27" cy="38" r="1.9" fill="#F5C451"/><circle cx="32" cy="46.5" r="3.2" fill="url(#cdi-core)"/><circle cx="21.5" cy="17.5" r="1.5" fill="#EE8748"/><circle cx="30.5" cy="13.5" r="1.5" fill="#EE8748"/>
+<path d="M21 59.5H43" stroke="#EE8748" stroke-width="1.5" stroke-linecap="round" opacity=".7"/></g></svg>

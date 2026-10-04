@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import EfestoProductShell from './efesto-product-shell';
 
@@ -59,11 +59,12 @@ describe('shell keyboard navigation', () => {
     stubViewport(true);
     render(<EfestoProductShell />);
     fireEvent.click(menuButton());
-    fireEvent.click(screen.getByRole('button', { name: 'Evidencia' }));
+    const sidebar = () => within(document.getElementById('efesto-sidebar') as HTMLElement);
+    fireEvent.click(sidebar().getByRole('button', { name: 'Evidencia' }));
     const main = screen.getByRole('main');
     expect(document.activeElement).toBe(main);
     expect(main.getAttribute('tabindex')).toBe('-1');
-    expect(screen.getByRole('button', { name: 'Evidencia' }).getAttribute('aria-current')).toBe('page');
+    expect(sidebar().getByRole('button', { name: 'Evidencia' }).getAttribute('aria-current')).toBe('page');
 
     // Off Home the topbar button opens the drawer; Escape must return focus to that opener.
     fireEvent.click(topbarMenuButton());

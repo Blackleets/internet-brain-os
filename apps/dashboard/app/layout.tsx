@@ -1,11 +1,17 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
+import localFont from 'next/font/local';
 import './globals.css';
 import './conversation-shell.css';
 import './efesto-product.css';
 import './efesto-product-compat.css';
 import './efesto-forge-visual.css';
 import './efesto-forge-redesign.css';
+import './efesto-forge-live.css';
+import './efesto-v3.css';
+
+const geist = localFont({ src: './fonts/Geist-Variable.ttf', variable: '--font-geist', weight: '100 900', display: 'swap' });
+const geistMono = localFont({ src: './fonts/GeistMono-Variable.ttf', variable: '--font-geist-mono', weight: '100 900', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'Efesto · The Intelligence Forge',
@@ -28,7 +34,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="es">
+    <html lang="es" className={`${geist.variable} ${geistMono.variable}`}>
       <body>{children}</body>
     </html>
   );

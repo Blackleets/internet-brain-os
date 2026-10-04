@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- Forge live mission view on Home and Objetivos: the focused Kernel mission rendered as an anvil with real candidates, Kernel web.read Evidence, SUPPORT verdicts and Finds (mobile-first at 390×844, wide anvil composition on desktop, reduced-motion still frame, honest offline/connecting/empty states). New read-only `GET /api/agent-missions/:id/evidence` projection returns bounded verbatim Evidence excerpts (never Hermes snippets, never undecoded binary).
 - Canonical `CONSTITUTION.md` for Efesto's product identity, Kernel authority, safety boundaries, truthful autonomy, engineering discipline, agent preflight, and amendment process; `pnpm resume` now validates its required agent entry points before exposing the live checkpoint.
 - Credential-free remote Hermes L1→L7 acceptance using a checksum-verified, runner-local Ollama runtime and reviewed tool-capable Qwen3 model identity; no founder API key or PC installation is required.
 - Remote GitHub acceptance workflow for authentic Hermes v0.20 public-web L1→L7 proof, pinned to reviewed action/runtime commits and publishing only the sanitized acceptance report.

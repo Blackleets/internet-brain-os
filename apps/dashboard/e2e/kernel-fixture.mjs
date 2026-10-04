@@ -110,6 +110,10 @@ const server = createServer((request, response) => {
     response.write(': connected\n\n');
     return;
   }
+  if (path === '/api/agent-missions/mission-1/evidence') {
+    // TEST FIXTURE: Kernel Evidence projection for the forge live view (excerpt is fixture text).
+    response.writeHead(200, headers).end(JSON.stringify({ ok: true, schemaVersion: 'efesto.mission-evidence.v1', sourceOfTruth: 'kernel', missionId: 'mission-1', evidence: [{ id: 'evidence-1', candidateId: 'cand-1', caseId: 'case-1', sourceUrl: 'https://clients.example/projects/ai-automation', title: 'AI automation project · fixture page', capturedAt: '2026-07-26T10:02:00.000Z', contentHash: 'fixture-hash', extractionMethod: 'kernel-web-read-v1', supported: true, supportReason: 'supported', excerpt: { text: 'Fixture excerpt: we are looking for an AI automation partner for client onboarding.', anchor: 'goal_term', truncatedStart: false, truncatedEnd: false } }], limits: { maxRecords: 20, maxExcerptChars: 280 } })); return;
+  }
   if (path === '/api/browser/case/case-1') {
     response.writeHead(200, headers).end(JSON.stringify({ ok: true, case: { id: 'case-1', title: 'Supplier research' }, evidence: [{ id: 'evidence-1', summary: 'Public supplier evidence', sourceUrl: 'https://supplier.example/source', confidence: 0.93, capturedAt: '2026-07-26T10:02:00.000Z', tags: ['public'] }] })); return;
   }

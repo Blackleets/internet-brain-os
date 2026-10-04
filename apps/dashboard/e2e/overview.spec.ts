@@ -44,7 +44,7 @@ test('runs the Goal-first journey only after explicit confirmation', async ({ pa
   page.on('request', (request) => { if (request.method() === 'POST') writes.push(new URL(request.url()).pathname); });
   await page.goto('/');
   expect(page.viewportSize()).toEqual({ width: 1536, height: 1024 });
-  await expect(page.locator('.efesto-product')).toHaveCSS('grid-template-columns', /236px/);
+  await expect(page.locator('.efesto-product')).toHaveCSS('grid-template-columns', /252px/);
   await expect(page.getByRole('heading', { name: '¿Qué estás buscando?', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Goal', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByText('Controlado por el Kernel', { exact: true })).toBeVisible();
@@ -55,9 +55,14 @@ test('runs the Goal-first journey only after explicit confirmation', async ({ pa
   // the legacy agent-mission record says forged; the visible phase must
   // follow the goal surface, not the legacy record.
   await expect(page.getByText('Investigando', { exact: true })).toBeVisible();
-  await expect(page.getByText('AI automation project', { exact: true })).toBeVisible();
+  // The Find title shows on the Home Finds card and on the forge's gold SUPPORT card.
+  await expect(page.locator('.forge-home-finds').getByText('AI automation project', { exact: true })).toBeVisible();
+  await expect(page.locator('.forge-live .forge-source[data-state="supported"]').getByRole('heading', { name: /^AI automation project/ })).toBeVisible();
   await expect(page.getByText('Kernel SUPPORT', { exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Abrir fuente/ })).toHaveAttribute('href', 'https://clients.example/projects/ai-automation');
+  await expect(page.locator('.forge-home-finds').getByRole('link', { name: /Abrir fuente/ })).toHaveAttribute('href', 'https://clients.example/projects/ai-automation');
+  // The forge live view sits above the Finds and quotes only Kernel Evidence excerpts.
+  await expect(page.locator('.forge-live .forge-source[data-state="supported"]')).toHaveCount(1);
+  await expect(page.locator('.forge-live').getByText(/Fixture excerpt: we are looking for an AI automation partner/)).toBeVisible();
   await expect(page.getByText('Hermes snippet drill')).toHaveCount(0);
   // The product scorecard lives on the Missions route (G5.2 contract).
   await page.locator('.efesto-sidebar nav').getByRole('button', { name: /^Objetivos/ }).click();
@@ -146,7 +151,7 @@ test.describe('mobile Efesto product shell', () => {
     expect(manifest.short_name).toBe('Efesto');
     expect(manifest.display).toBe('standalone');
     expect(manifest.start_url).toBe('/');
-    expect(manifest.icons).toEqual(expect.arrayContaining([expect.objectContaining({ src: '/efesto-smith.svg' })]));
+    expect(manifest.icons).toEqual(expect.arrayContaining([expect.objectContaining({ src: '/brand/efesto-icon.svg' })]));
   });
 
   test('uses a drawer, single-column Goal surface and safe composer without horizontal overflow', async ({ page }) => {

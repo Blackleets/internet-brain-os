@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256"><defs>
+  <linearGradient id="cml-fill" x1="0" y1="55" x2="0" y2="5" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#E85A12" stop-opacity="0.22"/><stop offset=".6" stop-color="#D9961A" stop-opacity="0.1"/><stop offset="1" stop-color="#D9961A" stop-opacity="0"/></linearGradient>
+  <linearGradient id="cml-edge" x1="0" y1="55" x2="0" y2="5" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#D9961A"/><stop offset="1" stop-color="#E0641C"/></linearGradient>
+  <radialGradient id="cml-core"><stop offset="0" stop-color="#FFE7B0"/><stop offset=".55" stop-color="#D9961A"/><stop offset="1" stop-color="#E85A12"/></radialGradient>
+  <radialGradient id="cml-glow" cx="32" cy="44" r="22" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#E85A12" stop-opacity="0.28"/><stop offset="1" stop-color="#E85A12" stop-opacity="0"/></radialGradient>
+</defs>
+<circle cx="32" cy="44" r="22" fill="url(#cml-glow)"/>
+<path d="M33.5 3.5L38.5 15.5L46.5 28L46 41.5L39 51.5L32 55L25 51.5L18 41.5L18.5 29L21.5 17.5L27.5 23L30.5 13.5L33.5 3.5Z" fill="url(#cml-fill)"/>
+<g fill="none" stroke="url(#cml-edge)" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M33.5 3.5L38.5 15.5L46.5 28L46 41.5L39 51.5L32 55L25 51.5L18 41.5L18.5 29L21.5 17.5L27.5 23L30.5 13.5L33.5 3.5Z" stroke-width="1.6"/>
+  <g stroke-width="1" opacity=".85"><path d="M30.5 13.5L33.5 25"/><path d="M38.5 15.5L33.5 25"/><path d="M27.5 23L33.5 25"/><path d="M33.5 25L37.5 36.5"/><path d="M33.5 25L27 38"/><path d="M18.5 29L27 38"/><path d="M27.5 23L27 38"/><path d="M46.5 28L37.5 36.5"/><path d="M46 41.5L37.5 36.5"/><path d="M37.5 36.5L32 46.5"/><path d="M27 38L32 46.5"/><path d="M18 41.5L27 38"/><path d="M39 51.5L32 46.5"/><path d="M25 51.5L32 46.5"/><path d="M32 55L32 46.5"/><path d="M37.5 36.5L27 38"/><path d="M18.5 29L27.5 23"/></g>
+</g>
+<circle cx="33.5" cy="3.5" r="2.5" fill="#D9961A"/><circle cx="38.5" cy="15.5" r="1.5" fill="#E0641C"/><circle cx="46.5" cy="28" r="1.5" fill="#E0641C"/><circle cx="46" cy="41.5" r="1.5" fill="#E0641C"/><circle cx="39" cy="51.5" r="1.5" fill="#E0641C"/><circle cx="32" cy="55" r="1.5" fill="#E0641C"/><circle cx="25" cy="51.5" r="1.5" fill="#E0641C"/><circle cx="18" cy="41.5" r="1.5" fill="#E0641C"/><circle cx="18.5" cy="29" r="1.5" fill="#E0641C"/><circle cx="27.5" cy="23" r="1.5" fill="#E0641C"/><circle cx="33.5" cy="25" r="1.9" fill="#D9961A"/><circle cx="37.5" cy="36.5" r="1.9" fill="#D9961A"/><circle cx="27" cy="38" r="1.9" fill="#D9961A"/><circle cx="32" cy="46.5" r="3.2" fill="url(#cml-core)"/><circle cx="21.5" cy="17.5" r="1.5" fill="#E0641C"/><circle cx="30.5" cy="13.5" r="1.5" fill="#E0641C"/>
+<path d="M21 59.5H43" stroke="#E0641C" stroke-width="1.5" stroke-linecap="round" opacity=".7"/></svg>

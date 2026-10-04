@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { EfestoMark } from './brand/efesto-mark';
 import {
   Activity, Bot, BrainCircuit, Check, ChevronDown, ChevronRight, CircleOff, Database, ExternalLink, FileSearch,
   History, Menu, MessageSquare, Pause, Plug, RefreshCw, Search, Send, Settings, ShieldCheck, Sparkles, Target, Workflow, X,
@@ -11,6 +11,8 @@ import type { OverviewSnapshot } from '../lib/kernel/overview';
 import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportProof, kernelSupportedFinds, missionVerifiedWithoutSupport } from '../lib/kernel/supported-find';
 import { statePillLabel, statePillTone } from '../lib/ui/state-pill-label.mjs';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
+import type { ForgeModel } from '../lib/forge/forge-model';
+import { ForgeLiveView } from './forge/forge-live-view';
 
 export type Provider = {
   id: string;
@@ -40,7 +42,7 @@ const starterGoals = [
   'Ayúdame a tomar una decisión',
 ];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, navExpanded, supportedFinds = [], forgeSupportedFindCount = 0, missions, onFindFeedback, onOpenCase }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, navExpanded, supportedFinds = [], forgeSupportedFindCount = 0, missions, onFindFeedback, onOpenCase, forgeModel, onOpenFinds, onRelaunchMission, relaunchPending = false }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
   input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
@@ -53,7 +55,15 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   missions?: readonly MissionSummary[];
   onFindFeedback?: (id: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') => void;
   onOpenCase?: (caseId: string) => void;
+  /** Forge live view of the focused Kernel mission (real data only). */
+  forgeModel?: ForgeModel;
+  onOpenFinds?: () => void;
+  /** Re-confirm a stalled mission through the Goal missions endpoint (same as confirming a Goal). */
+  onRelaunchMission?: (goalId: string) => void;
+  relaunchPending?: boolean;
 }) {
+  // The forge replaces the "¿Qué estás buscando?" hero only while a real Kernel mission exists.
+  const showForge = !chatMode && !preparedGoal && connected && forgeModel?.kind === 'mission';
   // Fail-close: forge-state-action uses focused GoalSurface mission SUPPORT
   // (findCount / verificationResults via countMissionKernelSupportedFinds), never
   // global supportedFinds.length — older inbox must not brand zero-SUPPORT forged.
@@ -71,22 +81,48 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   const focusedMissionHasSupport = forgeSupportedFindCount > 0;
   const showSuggestions = chatMode
     ? messages.length === 0
-    : !preparedGoal && supportedFinds.length === 0 && !focusedMissionHasSupport;
+    : !preparedGoal && !showForge && supportedFinds.length === 0 && !focusedMissionHasSupport;
   const surfaceTitle = chatMode
     ? (messages.length ? 'Conversación' : 'Nueva conversación')
     // Fail-close chrome: inbox SUPPORT Finds OR focused-mission findCount — never bare Hallazgo útil.
-    : (preparedGoal ? 'Goal preparado' : (supportedFinds.length || focusedMissionHasSupport) ? 'Hallazgo · Kernel SUPPORT' : 'Nuevo Goal');
+    : (preparedGoal ? 'Goal preparado' : showForge ? 'Misión del Kernel' : (supportedFinds.length || focusedMissionHasSupport) ? 'Hallazgo · Kernel SUPPORT' : 'Nuevo Goal');
   const surfaceAria = chatMode
     ? 'Conversación con Efesto'
-    : (preparedGoal ? 'Goal preparado' : (supportedFinds.length || focusedMissionHasSupport) ? 'Hallazgos Kernel SUPPORT' : 'Nuevo Goal');
+    : (preparedGoal ? 'Goal preparado' : showForge ? 'Misión del Kernel' : (supportedFinds.length || focusedMissionHasSupport) ? 'Hallazgos Kernel SUPPORT' : 'Nuevo Goal');
 
-  return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal')} aria-label={surfaceAria}>
+  // With a live forge the composer follows the forge in the scroll (the forge fills the first
+  // viewport, as in the approved v3 mockup); otherwise it stays docked under the conversation.
+  const composer = <ComposerForm
+    input={input}
+    chatMode={chatMode}
+    chatAvailable={chatAvailable}
+    chatPending={chatPending}
+    submitDisabled={submitDisabled}
+    suggestions={showSuggestions ? starterGoals : []}
+    onSuggestion={chatMode ? onStarterChat : onStarterGoal}
+    onInputChange={onInputChange}
+    onSubmit={onSubmit}
+    onStopChat={onStopChat}
+    onOpenModels={onOpenModels}
+    modelLabel={modelLabel}
+    providers={providers}
+    selectedProviderId={selectedProviderId}
+    selectedModel={selectedModel}
+    connected={connected}
+    onSelectModel={onSelectModel}
+    onOpenSettings={onOpenSettings}
+  />;
+
+  return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal') + (showForge ? ' has-forge' : '')} aria-label={surfaceAria}>
     <header className="forge-surface-bar">
       <div className="forge-surface-leading">
-        <button type="button" className="forge-menu-button" onClick={(event) => onOpenNav(event.currentTarget)} aria-label="Alternar navegación" aria-controls="efesto-sidebar" aria-expanded={navExpanded}><Menu /></button>
+        <button type="button" className="forge-menu-button" onClick={(event) => onOpenNav(event.currentTarget)} aria-label="Alternar navegación" aria-controls="efesto-sidebar" aria-expanded={navExpanded}>
+          <Menu className="forge-menu-icon" aria-hidden="true" />
+          <span className="forge-menu-brand" aria-hidden="true"><EfestoMark size={30} /><b>EFESTO</b></span>
+        </button>
         <div className="forge-product-title">
-          <span className="forge-agent-mark"><Image src="/efesto-smith.svg" alt="" width={28} height={28} /></span>
-          <span><strong>{surfaceTitle}</strong><small>Efesto · {chatMode ? (chatAvailable ? modelLabel : 'modelo sin configurar') : 'misión controlada'}</small></span>
+          <span className="forge-agent-mark"><EfestoMark size={28} /></span>
+          <span className="forge-crumb">{chatMode ? 'Chat' : 'Inicio'}<i aria-hidden="true">/</i><strong>{surfaceTitle}</strong></span>
         </div>
       </div>
 
@@ -95,21 +131,21 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
       <button type="button" className={'forge-state-action phase-' + chromePhase} onClick={onOpenSettings} aria-label={connected ? 'Kernel conectado' : 'Conectar Kernel'}>
         <i />
         <span>{connected ? state.label : 'Conectar Kernel'}</span>
-        <Plug />
+        <Plug aria-hidden="true" />
       </button>
     </header>
 
     <div className="forge-scroll">
       {chatMode ? messages.length ? <section className="forge-thread" aria-label="Mensajes">
         {messages.map((message, index) => <article className={'forge-message ' + message.role} key={message.role + '-' + index}>
-          <div className="forge-message-avatar">{message.role === 'user' ? 'Tú' : <Image src="/efesto-smith.svg" alt="" width={24} height={24} />}</div>
+          <div className="forge-message-avatar">{message.role === 'user' ? 'Tú' : <EfestoMark size={24} simple />}</div>
           <div className="forge-message-body">
             <header><strong>{message.role === 'user' ? 'Tú' : message.model ?? 'Efesto'}</strong>{message.role === 'assistant' ? <span><ShieldCheck /> Privado</span> : null}</header>
             <p>{message.content || (chatPending && index === messages.length - 1 ? <span className="forge-generating"><i />Pensando…</span> : null)}</p>
           </div>
         </article>)}
       </section> : <section className="forge-empty" aria-label="Nueva conversación">
-        <span className="forge-empty-mark"><Image src="/efesto-smith.svg" alt="" width={52} height={52} /></span>
+        <span className="forge-empty-mark"><EfestoMark size={52} /></span>
         <small>EFESTO · INTELLIGENCE FORGE</small>
         <h1>¿En qué trabajamos?</h1>
         <p>Pregunta, analiza o convierte una intención en un Goal cuando necesites una misión controlada.</p>
@@ -129,7 +165,11 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
           <button type="button" className="secondary-action" onClick={onEditGoal}>Editar Goal</button>
         </div>
         <p className="forge-plan-boundary"><ShieldCheck /> Nada se ejecuta sin tu confirmación explícita.</p>
-      </section> : (supportedFinds.length || focusedMissionHasSupport) ? <section className="forge-home-finds" aria-label="Hallazgos respaldados por el Kernel">
+      </section> : <>
+      {showForge && forgeModel ? <div className="forge-home-live">
+        <ForgeLiveView model={forgeModel} onOpenFinds={onOpenFinds} onRelaunch={onRelaunchMission} relaunchPending={relaunchPending} headingId="forge-home-live-title" />
+      </div> : null}
+      {(supportedFinds.length || focusedMissionHasSupport) ? <section className="forge-home-finds" aria-label="Hallazgos respaldados por el Kernel">
         <header>
           <small>FIND · KERNEL SUPPORT</small>
           <h1>Hallazgo · Kernel SUPPORT</h1>
@@ -140,35 +180,18 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
         {supportedFinds.length
           ? <div className="find-grid">{supportedFinds.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFindFeedback ?? (() => undefined)} onOpenCase={onOpenCase} />)}</div>
           : <p className="truth-card"><ShieldCheck /> Find SUPPORT forjado en la misión; sin tarjetas de inbox que mostrar.</p>}
-      </section> : <section className="forge-empty forge-goal-empty" aria-label="Crear un Goal">
+      </section> : showForge ? null : <section className="forge-empty forge-goal-empty" aria-label="Crear un Goal">
         <span className="forge-empty-mark"><Target /></span>
         <small>EFESTO · CONTROLLED MISSION</small>
         <h1>¿Qué estás buscando?</h1>
         <p>Un Goal en una línea. Preparar no autoriza red ni misiones.</p>
         <div className="forge-empty-meta"><span><ShieldCheck /> Controlado por el Kernel</span><span><i /> Confirmación humana</span></div>
       </section>}
+      {showForge ? composer : null}
+      </>}
     </div>
 
-    <ComposerForm
-      input={input}
-      chatMode={chatMode}
-      chatAvailable={chatAvailable}
-      chatPending={chatPending}
-      submitDisabled={submitDisabled}
-      suggestions={showSuggestions ? starterGoals : []}
-      onSuggestion={chatMode ? onStarterChat : onStarterGoal}
-      onInputChange={onInputChange}
-      onSubmit={onSubmit}
-      onStopChat={onStopChat}
-      onOpenModels={onOpenModels}
-      modelLabel={modelLabel}
-      providers={providers}
-      selectedProviderId={selectedProviderId}
-      selectedModel={selectedModel}
-      connected={connected}
-      onSelectModel={onSelectModel}
-      onOpenSettings={onOpenSettings}
-    />
+    {showForge ? null : composer}
   </section>;
 }
 
@@ -346,13 +369,17 @@ function ModelSelector({ providers, selectedProviderId, selectedModel, connected
   </div>;
 }
 
-export function GoalsView({ snapshot, onNew, onConnect }: { snapshot?: OverviewSnapshot; onNew: () => void; onConnect?: () => void }) {
+export function GoalsView({ snapshot, onNew, onConnect, forgeModel, onOpenFinds, onRelaunchMission, relaunchPending = false }: { snapshot?: OverviewSnapshot; onNew: () => void; onConnect?: () => void; forgeModel?: ForgeModel; onOpenFinds?: () => void; onRelaunchMission?: (goalId: string) => void; relaunchPending?: boolean }) {
   const missions = snapshot?.missions ?? [];
   const goals = snapshot?.goals ?? [];
   const missionFor = (goalId: string) => missions.find((mission) => mission.goalId === goalId);
   const orphanMissions = missions.filter((mission) => !goals.some((goal) => goal.id === mission.goalId));
+  // The forge carries its own offline/empty truth (and Conectar action), so it replaces the
+  // generic Empty card instead of stacking a second copy of the same message.
+  const forge = forgeModel ? <div className="goals-forge-live"><ForgeLiveView model={forgeModel} onConnect={onConnect} onOpenFinds={onOpenFinds} onRelaunch={onRelaunchMission} relaunchPending={relaunchPending} headingId="goals-forge-live-title" /></div> : null;
   return <Workspace icon={Target} eyebrow="Goal → Misión → Evidencia" title="Objetivos" copy="Goals persistidos por el Kernel. Crear un Goal no autoriza red; la misión exige confirmación explícita." action={<button type="button" className="primary-action" onClick={onNew}><Target /> Nuevo Goal</button>}>
-    {!snapshot ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para leer Goals y misiones reales." action={connectAction(onConnect)} /> : goals.length === 0 && missions.length === 0 ? <Empty icon={Target} title="No hay Goals" copy="Crea un Goal; no simulamos ejecuciones vacías." action={newGoalAction(onNew)} /> : <div className="record-list">{goals.map((goal) => { const mission = missionFor(goal.id); return <article key={goal.id}><div className="record-icon"><Target /></div><div><strong>{goal.title}</strong><small>{goal.id}{mission ? ` · ${mission.id} · intento ${mission.attempt ?? 0}` : ''}</small></div><StatePill state={mission ? missionPillState(mission) : goal.status} /></article>; })}{orphanMissions.map((mission) => <article key={mission.id}><div className="record-icon"><Target /></div><div><strong>{mission.goalId}</strong><small>{mission.id} · intento {mission.attempt ?? 0}</small></div><StatePill state={missionPillState(mission)} /></article>)}</div>}
+    {forge}
+    {!snapshot ? (forge ? null : <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para leer Goals y misiones reales." action={connectAction(onConnect)} />) : goals.length === 0 && missions.length === 0 ? (forge ? null : <Empty icon={Target} title="No hay Goals" copy="Crea un Goal; no simulamos ejecuciones vacías." action={newGoalAction(onNew)} />) : <div className="record-list">{goals.map((goal) => { const mission = missionFor(goal.id); return <article key={goal.id}><div className="record-icon"><Target /></div><div><strong>{goal.title}</strong><small>{goal.id}{mission ? ` · ${mission.id} · intento ${mission.attempt ?? 0}` : ''}</small></div><StatePill state={mission ? missionPillState(mission) : goal.status} /></article>; })}{orphanMissions.map((mission) => <article key={mission.id}><div className="record-icon"><Target /></div><div><strong>{mission.goalId}</strong><small>{mission.id} · intento {mission.attempt ?? 0}</small></div><StatePill state={missionPillState(mission)} /></article>)}</div>}
   </Workspace>;
 }
 
