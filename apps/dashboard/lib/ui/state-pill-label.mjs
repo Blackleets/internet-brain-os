@@ -12,11 +12,16 @@ const STATE_PILL_LABELS = Object.freeze({
   completed_without_forge: 'Terminada sin Evidence',
   waiting_for_agent: 'Esperando agente',
   queued: 'En cola',
-  running: 'En ejecucion',
+  running: 'En ejecución',
   investigating: 'Investigando',
   verifying: 'Verificando',
   verified_unsupported: 'Sin SUPPORT',
   failed: 'Fallida',
+  blocked: 'Bloqueada',
+  runtime_read_only_unverified: 'Hermes requiere actualización segura',
+  authorization_missing: 'Falta autorización del Goal',
+  authorization_revision_mismatch: 'Goal requiere reautorización',
+  goal_not_active: 'Goal no activo',
   active: 'Activa',
   new: 'Nueva',
   available: 'Disponible',
@@ -30,7 +35,7 @@ export function statePillLabel(state) {
 
 export function statePillTone(state) {
   if (['ready', 'forged', 'available', 'new'].includes(state)) return 'good';
-  if (['failed', 'invalid', 'blocked'].includes(state)) return 'bad';
+  if (['failed', 'invalid', 'blocked', 'runtime_read_only_unverified', 'authorization_missing', 'authorization_revision_mismatch', 'goal_not_active'].includes(state)) return 'bad';
   if (['running', 'investigating', 'verifying', 'queued', 'waiting_for_agent'].includes(state)) return 'working';
   return 'neutral';
 }
