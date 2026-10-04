@@ -10,6 +10,7 @@ import './efesto-forge-redesign.css';
 import './efesto-forge-live.css';
 import './efesto-v3.css';
 import './efesto-legibility.css';
+import './efesto-agent-connector.css';
 
 const geist = localFont({ src: './fonts/Geist-Variable.ttf', variable: '--font-geist', weight: '100 900', display: 'swap' });
 const geistMono = localFont({ src: './fonts/GeistMono-Variable.ttf', variable: '--font-geist-mono', weight: '100 900', display: 'swap' });

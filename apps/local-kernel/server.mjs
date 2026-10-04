@@ -12,6 +12,7 @@ import { PairingError, PairingSession } from './pairing-session.mjs';
 import { ExtensionIdentityRegistry } from './extension-identity-registry.mjs';
 import { createHermesLocalIngestionRoute } from './hermes-route-factory.mjs';
 import { HermesImportError } from './hermes-import-service.mjs';
+import { AgentPresence, agentsSnapshot } from './agent-presence.mjs';
 import { replayLabPageHtml } from './replay-lab-page.mjs';
 import { OpportunityProjector } from './opportunity-classifier.mjs';
 import { GoalManager } from './goals.mjs';
@@ -131,6 +132,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const missionEvidence = options.missionEvidenceReader;
   const preferences = options.preferenceLearner;
   const missionExecutor = options.agentMissionExecutor;
+  const agentPresence = options.agentPresence ?? new AgentPresence();
   const models = options.modelForge;
   const providers = options.modelProviderRegistry;
   const chat = options.chatService;
@@ -518,6 +520,17 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         return send(response, 500, { ok: false, code: 'AGENT_MISSION_CREATE_FAILED' });
       }
     }
+    if (request.method === 'GET' && request.url === '/api/agents') {
+      // Read-only: what this Kernel has observed from agent workers (contacts + stored Missions).
+      try { return send(response, 200, agentsSnapshot(agentPresence, agentMissions ? await agentMissions.list() : [])); }
+      catch { return send(response, 500, { ok: false, code: 'AGENTS_STATUS_FAILED' }); }
+    }
+    if (request.method === 'POST' && request.url === '/api/agents/hermes/ping') {
+      // Worker-side connection check (pnpm hermes:worker:doctor). A browser cannot mark an agent as
+      // connected: any request carrying an Origin (dashboard, extension, page) is refused.
+      if (typeof origin === 'string') return send(response, 403, { ok: false, code: 'AGENT_PING_BROWSER_FORBIDDEN' });
+      return send(response, 200, { ok: true, agent: 'hermes', recordedAt: agentPresence.record('hermes', 'ping') });
+    }
     if (request.method === 'POST' && request.url === '/api/agent-missions/claim') {
       if (!missionExecutor) return send(response, 404, { ok: false, code: 'AGENT_EXECUTOR_UNAVAILABLE' });
       try {
@@ -528,6 +541,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
           return send(response, 400, { ok: false, code: 'INVALID_MISSION_ID' });
         }
         const mission = await missionExecutor.claim('hermes', requestedId);
+        if (typeof origin !== 'string') agentPresence.record('hermes', mission ? 'claim' : 'poll');
         if (mission) publishMissionUpdated(kernelEvents, mission);
         return send(response, mission ? 200 : 204, mission ? { ok: true, mission } : undefined);
       } catch { return send(response, 500, { ok: false, code: 'AGENT_MISSION_CLAIM_FAILED' }); }
@@ -539,6 +553,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         const missionId = decodePathId(request.url.slice('/api/agent-missions/'.length, -'/results'.length));
       if (missionId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
         const completed = await missionExecutor.complete(missionId, await readJson(request));
+        if (typeof origin !== 'string') agentPresence.record('hermes', 'result');
         if (completed.idempotent === true) {
           return send(response, 202, {
             ok: true,
@@ -562,6 +577,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         const missionId = decodePathId(request.url.slice('/api/agent-missions/'.length, -'/failures'.length));
       if (missionId === null) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
         const failedMission = await missionExecutor.fail(missionId, await readJson(request));
+        if (typeof origin !== 'string') agentPresence.record('hermes', 'failure');
         publishMissionUpdated(kernelEvents, failedMission);
         return send(response, 202, { ok: true, mission: failedMission });
       } catch (error) {

@@ -111,7 +111,9 @@ test('wires Finds, Evidence and model Chat to real product contracts', async ({ 
 test('disconnect removes the session credential and returns truthful offline state', async ({ page }) => {
   await page.goto('/');
   await connect(page);
+  // The top connector opens the Conexiones sheet; Kernel settings are one step away.
   await page.getByRole('button', { name: /Kernel listo/ }).click();
+  await page.getByRole('dialog', { name: 'Kernel y agentes' }).getByRole('button', { name: /Gestionar Kernel/ }).click();
   await page.getByRole('button', { name: 'Desconectar', exact: true }).click();
   // Back in Settings after disconnect: the connection card flips to its
   // offline form (URL/token inputs visible again).

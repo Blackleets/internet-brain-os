@@ -14,6 +14,8 @@ import { statePillLabel, statePillTone } from '../lib/ui/state-pill-label.mjs';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { displayText, type ForgeModel } from '../lib/forge/forge-model';
 import { ForgeLiveView } from './forge/forge-live-view';
+import { AgentConnector } from './agents/agent-connector';
+import type { AgentsSnapshot } from '../lib/kernel/agents';
 
 export type Provider = {
   id: string;
@@ -43,13 +45,15 @@ const starterGoals = [
   'Ayúdame a tomar una decisión',
 ];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, navExpanded, supportedFinds = [], forgeSupportedFindCount = 0, missions, onFindFeedback, onOpenCase, forgeModel, onOpenFinds, onRelaunchMission, relaunchPending = false, onSearchMore, onReviseGoal }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, navExpanded, supportedFinds = [], forgeSupportedFindCount = 0, missions, onFindFeedback, onOpenCase, forgeModel, onOpenFinds, onRelaunchMission, relaunchPending = false, onSearchMore, onReviseGoal, onOpenConnections }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
   input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
   onConfirmGoal: () => void; onEditGoal: () => void; onStarterGoal: (goal: string) => void; onStarterChat: (prompt: string) => void;
   onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
   onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenNav: (opener?: HTMLElement) => void; navExpanded?: boolean;
+  /** Top connector: Kernel + agent connection sheet (only once a Kernel is connected). */
+  onOpenConnections?: () => void;
   supportedFinds?: OpportunitySummary[];
   /** Focused-mission SUPPORT count (Living Forge). Not global inbox length. */
   forgeSupportedFindCount?: number;
@@ -132,7 +136,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
 
       <ModeSwitcher chatMode={chatMode} onToggleChat={onToggleChat} />
 
-      <button type="button" className={'forge-state-action phase-' + chromePhase} onClick={onOpenSettings} aria-label={connected ? 'Kernel conectado' : 'Conectar Kernel'}>
+      <button type="button" className={'forge-state-action phase-' + chromePhase} onClick={connected && onOpenConnections ? onOpenConnections : onOpenSettings} aria-label={connected ? 'Kernel conectado' : 'Conectar Kernel'} aria-haspopup={connected && onOpenConnections ? 'dialog' : undefined}>
         <i />
         <span>{connected ? state.label : 'Conectar Kernel'}</span>
         <Plug aria-hidden="true" />
@@ -474,10 +478,11 @@ export function ModelsView({ providers, selectedProviderId, selectedModel, model
   </Workspace>;
 }
 
-export function AgentsView({ snapshot, onSettings, onNewGoal }: { snapshot?: OverviewSnapshot; onSettings: () => void; onNewGoal: () => void }) {
-  const hermes = snapshot?.readiness.bootstrap?.hermes;
-  return <Workspace icon={Bot} eyebrow="Ejecución controlada" title="Agentes" copy="Hermes y futuros agentes pueden ejecutar herramientas; el Kernel conserva la autoridad." action={<button type="button" className="secondary-action" onClick={onSettings}><Settings /> Configurar</button>}>
-    <div className="agent-hero"><div className="agent-mark"><Bot /></div><div><small>NOUS RESEARCH</small><h2>Hermes Agent</h2><p>Discovery y ejecución acotada. Sus candidatos deben regresar por el bridge autenticado. Un Find exige Kernel SUPPORT.</p></div><StatePill state={hermes === 'ready' ? 'ready' : hermes ?? 'offline'} /></div><div className="agent-contract"><span><b>Kernel</b>{snapshot?.readiness.kernel ?? 'offline'}</span><span><b>Hermes</b>{hermes ?? 'sin diagnóstico'}</span><span><b>Missions</b>{snapshot?.missions.length ?? 0}</span><span><b>Autoridad</b>Kernel-only</span></div><button type="button" className="primary-action" onClick={onNewGoal}><Target /> Preparar una misión</button>
+export function AgentsView({ snapshot, onSettings, onNewGoal, connected = Boolean(snapshot), kernelUrl, onTestAgents }: { snapshot?: OverviewSnapshot; onSettings: () => void; onNewGoal: () => void; connected?: boolean; kernelUrl?: string; onTestAgents?: () => Promise<AgentsSnapshot | undefined> }) {
+  return <Workspace icon={Bot} eyebrow="Ejecución controlada" title="Agentes" copy="Hermes y futuros agentes pueden ejecutar herramientas; el Kernel conserva la autoridad." action={<button type="button" className="secondary-action" onClick={onSettings}><Settings /> Kernel</button>}>
+    <div className="agent-hero"><div className="agent-mark"><Bot /></div><div><small>NOUS RESEARCH</small><h2>Hermes Agent</h2><p>Discovery y ejecución acotada. Sus candidatos deben regresar por el bridge autenticado. Un Find exige Kernel SUPPORT.</p></div></div>
+    <AgentConnector connected={connected} kernelUrl={kernelUrl} agents={snapshot?.agents} onConnectKernel={onSettings} onTest={onTestAgents ?? (async () => snapshot?.agents)} />
+    <button type="button" className="primary-action" onClick={onNewGoal}><Target /> Preparar una misión</button>
   </Workspace>;
 }
 

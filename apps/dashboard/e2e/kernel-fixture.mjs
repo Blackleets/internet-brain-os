@@ -63,6 +63,9 @@ const fixtures = {
   },
 };
 
+let agentContact;
+const fixtureStartedAt = new Date().toISOString();
+
 const routes = new Map([
   ['/health', fixtures.health], ['/status', fixtures.status], ['/bootstrap/status', fixtures.bootstrap],
   ['/api/cases', fixtures.cases], ['/api/goals', fixtures.goals], ['/api/agent-missions', fixtures.missions], ['/api/goal-surfaces', fixtures.goalSurfaces],
@@ -80,8 +83,23 @@ const server = createServer((request, response) => {
   };
 
   if (request.method === 'OPTIONS') { response.writeHead(204, headers).end(); return; }
+  if (request.method === 'POST' && path === '/__fixture/reset-agents') { agentContact = undefined; response.writeHead(204, headers).end(); return; }
   if (path.startsWith('/api/') && request.headers['x-hephaestus-token'] !== token) { response.writeHead(401, headers).end(JSON.stringify({ ok: false })); return; }
 
+  // Agent presence mimics the Kernel contract (efesto.agents.v1): only a non-browser ping counts.
+  if (request.method === 'POST' && path === '/api/agents/hermes/ping') {
+    if (request.headers.origin) { response.writeHead(403, headers).end(JSON.stringify({ ok: false, code: 'AGENT_PING_BROWSER_FORBIDDEN' })); return; }
+    agentContact = new Date().toISOString();
+    response.writeHead(200, headers).end(JSON.stringify({ ok: true, agent: 'hermes', recordedAt: agentContact })); return;
+  }
+  if (request.method === 'GET' && path === '/api/agents') {
+    const online = agentContact && Date.now() - Date.parse(agentContact) < 120_000;
+    response.writeHead(200, headers).end(JSON.stringify({ ok: true, schemaVersion: 'efesto.agents.v1', kernelStartedAt: fixtureStartedAt, onlineWindowMs: 120_000, agents: [{
+      id: 'hermes', label: 'Hermes Agent', state: online ? 'online' : 'history', kernelStartedAt: fixtureStartedAt, onlineWindowMs: 120_000,
+      ...(agentContact ? { lastSeenAt: agentContact, lastSeenVia: 'ping', lastPingAt: agentContact } : {}),
+      lastClaimAt: '2026-07-26T10:00:00.000Z', lastMission: { id: 'mission-1', goalTitle: 'Find AI automation clients', phase: 'forged', at: '2026-07-26T10:01:00.000Z' }, queuedMissions: 0,
+    }] })); return;
+  }
   if (request.method === 'POST' && path === '/api/goals') {
     response.writeHead(200, headers).end(JSON.stringify({ ok: true, goal: { id: 'goal-e2e', title: 'Auditar fuentes públicas' } })); return;
   }

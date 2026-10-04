@@ -227,6 +227,7 @@ describe('loadOverview', () => {
       '/api/opportunities',
       '/api/model-forge',
       '/api/preferences',
+      '/api/agents',
     ]);
   });
 

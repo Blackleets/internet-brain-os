@@ -10,6 +10,7 @@ import type {
   OpportunitySummary,
 } from './contracts';
 import { parseProductScorecardPreferences, type ProductValueScorecard } from './product-scorecard';
+import { parseAgents, type AgentsSnapshot } from './agents';
 import {
   parseBootstrap,
   parseCases,
@@ -54,6 +55,8 @@ export type OverviewSnapshot = {
     opportunities: number;
   };
   productScorecard?: ProductValueScorecard;
+  /** Kernel-proven agent connection (GET /api/agents). Absent on Kernels that do not publish it. */
+  agents?: AgentsSnapshot;
   cases: CaseSummary[];
   goals: GoalSummary[];
   missions: MissionSummary[];
@@ -86,15 +89,17 @@ export async function loadOverview(client: KernelClient, signal?: AbortSignal): 
   let opportunityRecords: OpportunitySummary[] = [];
   let modelForge: ModelForgeSummary | undefined;
   let productScorecard: ProductValueScorecard | undefined;
+  let agents: AgentsSnapshot | undefined;
 
   if (!connectionImpossible) {
-    const [cases, goals, missions, opportunities, modelForgeResult, scorecardResult] = await Promise.allSettled([
+    const [cases, goals, missions, opportunities, modelForgeResult, scorecardResult, agentsResult] = await Promise.allSettled([
       client.get('/api/cases', parseCases, signal),
       client.get('/api/goals', parseGoals, signal),
       client.get('/api/agent-missions', parseMissions, signal),
       client.get('/api/opportunities', parseOpportunities, signal),
       client.get('/api/model-forge', parseModelForge, signal),
       client.get('/api/preferences', parseProductScorecardPreferences, signal),
+      client.get('/api/agents', parseAgents, signal),
     ]);
     const protectedResults = [
       ['cases', cases],
@@ -112,6 +117,8 @@ export async function loadOverview(client: KernelClient, signal?: AbortSignal): 
     opportunityRecords = fulfilledValue(opportunities, [] as OpportunitySummary[]);
     modelForge = fulfilledValue(modelForgeResult, undefined);
     productScorecard = fulfilledValue(scorecardResult, undefined);
+    // Optional and not an overview issue: older Kernels have no /api/agents; the UI then says so.
+    agents = fulfilledValue(agentsResult, undefined);
   } else {
     issues.push(...unavailableIssues(['cases', 'goals', 'missions', 'opportunities', 'activity', 'modelForge', 'scorecard']));
   }
@@ -132,6 +139,7 @@ export async function loadOverview(client: KernelClient, signal?: AbortSignal): 
       opportunities: opportunityRecords.length,
     },
     ...(productScorecard === undefined ? {} : { productScorecard }),
+    ...(agents === undefined ? {} : { agents }),
     cases: caseRecords,
     goals: goalRecords,
     missions: missionRecords,
