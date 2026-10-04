@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { chmod, copyFile, mkdtemp, readFile, rm, unlink, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdtemp, readdir, readFile, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -11,6 +11,11 @@ const MAX_TIMEOUT_MS = 25 * 60_000;
 const FORCE_KILL_DELAY_MS = 500;
 const MAX_AGENT_TURNS = 8;
 const DEFAULT_AGENT_TURNS = 8;
+// Search telemetry (display-only): Hermes web_tools debug log, read from the isolated home before cleanup.
+const WEB_TOOLS_DEBUG_PREFIX = 'web_tools_debug_';
+const MAX_DEBUG_LOG_BYTES = 256 * 1024;
+const MAX_SEARCHES = 8;
+const MAX_QUERY_CHARS = 300;
 
 export function buildHermesPrompt(payload) {
   if (!payload || payload.schemaVersion !== 'efesto.hermes-mission.v1' || !payload.mission) {
@@ -68,6 +73,9 @@ export function buildHermesEnvironment(baseEnv, hermesHome) {
     HERMES_HOME: hermesHome,
     HERMES_ALLOW_PRIVATE_URLS: 'false',
     HERMES_IGNORE_RULES: '1',
+    // Records each web_search call (query, limit, result count; no result content) to
+    // $HERMES_HOME/logs so the adapter can report what Hermes actually searched.
+    WEB_TOOLS_DEBUG: 'true',
   };
   delete env.HERMES_SAFE_MODE;
   delete env.HERMES_ENABLE_PROJECT_PLUGINS;
@@ -101,6 +109,14 @@ export function normalizeHermesExecutable(value) {
 }
 
 export function parseHermesFindings(text) {
+  return { findings: parseHermesFindingsWithFunnel(text).findings };
+}
+
+/**
+ * Same parse, plus the display-only findings funnel: how many findings Hermes returned and how
+ * many the adapter dropped, by reason. Only counts; no URL or text from a dropped finding is kept.
+ */
+export function parseHermesFindingsWithFunnel(text) {
   if (typeof text !== 'string' || !text.trim()) throw new Error('Hermes returned empty output');
   const trimmed = text.trim();
   const withoutThinking = trimmed.replace(/^(?:<think>[\s\S]*?<\/think>\s*)+/i, '');
@@ -127,7 +143,65 @@ export function parseHermesFindings(text) {
   if (!parsed || !Array.isArray(parsed.findings) || parsed.findings.length > 20) {
     throw new Error('Hermes must return { findings: [...] } with at most 20 findings');
   }
-  return { findings: parsed.findings.map((finding, index) => normalizeFinding(finding, index)) };
+  // A finding whose http(s) URL is malformed and cannot be recovered unambiguously is dropped, not
+  // guessed; the Kernel rejects any URL that is not well-formed, so it would otherwise fail the batch.
+  const normalized = parsed.findings.map((finding, index) => normalizeFinding(finding, index));
+  const findings = normalized.filter(Boolean);
+  const malformed = normalized.length - findings.length;
+  return { findings, funnel: { findingsReturned: parsed.findings.length, dropped: malformed ? { malformed_url: malformed } : {} } };
+}
+
+/**
+ * True for a well-formed absolute http(s) URL as written (mirrors the Kernel's candidate check):
+ * no whitespace, controls or RFC 3986-excluded characters, valid percent escapes, no `](` and no
+ * square brackets in the path. Non-ASCII characters and bracketed query keys stay allowed.
+ */
+export function isWellFormedWebUrl(raw) {
+  if (typeof raw !== 'string' || !/^https?:\/\//i.test(raw)) return false;
+  if (/[\s"<>\\^`{|}\u0000-\u001f\u007f]/.test(raw) || /%(?![0-9a-f]{2})/i.test(raw) || raw.includes('](')) return false;
+  const afterScheme = raw.slice(raw.indexOf('//') + 2);
+  const authorityEnd = afterScheme.search(/[/?#]/);
+  const authority = authorityEnd < 0 ? afterScheme : afterScheme.slice(0, authorityEnd);
+  const rest = authorityEnd < 0 ? '' : afterScheme.slice(authorityEnd);
+  const pathEnd = rest.search(/[?#]/);
+  if (/[[\]]/.test(pathEnd < 0 ? rest : rest.slice(0, pathEnd))) return false;
+  if (/[[\]]/.test(authority) && !/^(?:[^@]*@)?\[[0-9a-f:.]+\](?::\d+)?$/i.test(authority)) return false;
+  try {
+    const parsed = new URL(raw);
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && Boolean(parsed.hostname);
+  } catch { return false; }
+}
+
+/**
+ * Recovers the one URL a malformed agent string unambiguously points at, e.g. markdown debris
+ * `https://a.example/](https://a.example/page` → `https://a.example/page` (the link target).
+ * Every http(s) URL inside the string is collected; all of them must be on the same host (www.
+ * ignored). The markdown target (right after `](`) wins; otherwise one URL that every other one is a
+ * prefix of. Anything else is ambiguous and yields undefined; nothing is ever invented.
+ */
+export function recoverWebUrl(raw) {
+  if (typeof raw !== 'string') return undefined;
+  const value = raw.trim().replace(/^<(.*)>$/s, '$1');
+  if (isWellFormedWebUrl(value)) return value;
+  const found = [];
+  for (const match of value.matchAll(/https?:\/\/[^\s<>"'`\\[\]()]+/gi)) {
+    // It must end where markup ends (string end, `)`, `]` or `>`): a URL cut short by a space or
+    // a stray character would be a guess.
+    const next = value[match.index + match[0].length];
+    if (next !== undefined && !/[)\]>]/.test(next)) continue;
+    const url = match[0].replace(/[.,;:!?]+$/, '');
+    if (!isWellFormedWebUrl(url)) continue;
+    found.push({ url, target: value.slice(Math.max(0, match.index - 2), match.index) === '](' });
+  }
+  if (found.length === 0) return undefined;
+  const hosts = new Set(found.map(({ url }) => new URL(url).hostname.toLowerCase().replace(/^www\./, '')));
+  if (hosts.size !== 1) return undefined;
+  const targets = [...new Set(found.filter((item) => item.target).map((item) => item.url))];
+  if (targets.length === 1) return targets[0];
+  if (targets.length > 1) return undefined;
+  const distinct = [...new Set(found.map((item) => item.url))];
+  const longest = distinct.reduce((a, b) => (b.length > a.length ? b : a));
+  return distinct.every((url) => longest.startsWith(url)) ? longest : undefined;
 }
 
 function extractLiteralWebUrls(text) {
@@ -191,13 +265,15 @@ function normalizeFinding(value, index) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`finding ${index} must be an object`);
   const allowed = new Set(['url', 'title', 'text', 'summary', 'discoveredAt']);
   for (const key of Object.keys(value)) if (!allowed.has(key)) throw new Error(`finding ${index} contains unsupported field ${key}`);
-  const url = bounded(value.url, 2048, `finding ${index} url`);
-  let parsedUrl;
-  try { parsedUrl = new URL(url); }
-  catch { throw new Error(`finding ${index} url must be public http or https`); }
-  if (!['http:', 'https:'].includes(parsedUrl.protocol) || !parsedUrl.hostname) {
-    throw new Error(`finding ${index} url must be public http or https`);
+  const rawUrl = bounded(value.url, 2048, `finding ${index} url`);
+  const url = recoverWebUrl(rawUrl);
+  if (!url) {
+    // Not even a recoverable http(s) URL: a non-web scheme stays a hard error (security contract);
+    // malformed http(s) text is dropped from the batch.
+    if (!/https?:\/\//i.test(rawUrl)) throw new Error(`finding ${index} url must be public http or https`);
+    return undefined;
   }
+  const parsedUrl = new URL(url);
   return {
     url,
     title: value.title === undefined ? `Public source: ${parsedUrl.hostname}` : bounded(value.title, 240, `finding ${index} title`),
@@ -337,19 +413,68 @@ export async function runHermesOneShot(payload, options = {}) {
     const sourceHome = resolveSourceHermesHome(baseEnv);
     await seedIsolatedHermesCredentials(hermesHome, sourceHome, copied);
     await applySourceHermesModelRoute(hermesHome, sourceHome);
-    return await runHermesProcess({
+    const result = await runHermesProcess({
       executable,
       args,
       timeoutMs,
       env: buildHermesEnvironment(baseEnv, hermesHome),
       cwd: hermesHome,
     });
+    const searches = await collectHermesSearchTelemetry(hermesHome);
+    return searches.length ? { ...result, searches } : result;
   } finally {
     await wipeCopiedHermesCredentials(hermesHome, copied);
     if (ownsHermesHome) {
       await rm(hermesHome, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
   }
+}
+
+/**
+ * Reads the Hermes web_tools debug logs in the isolated home and returns the web_search calls
+ * Hermes really made: { query, limit?, resultCount? }. A field the log does not carry (or carries
+ * malformed) is omitted, never guessed; resultCount is omitted for a call that errored. The logs
+ * are removed after reading. Telemetry is best effort: any read/parse problem yields [] and never
+ * fails the mission.
+ */
+export async function collectHermesSearchTelemetry(hermesHome) {
+  if (typeof hermesHome !== 'string' || !hermesHome.trim()) return [];
+  const logDir = join(hermesHome, 'logs');
+  let names;
+  try { names = (await readdir(logDir)).filter((name) => name.startsWith(WEB_TOOLS_DEBUG_PREFIX) && name.endsWith('.json')).sort(); }
+  catch { return []; }
+  const calls = [];
+  for (const name of names) {
+    const path = join(logDir, name);
+    try {
+      const info = await stat(path);
+      if (info.isFile() && info.size <= MAX_DEBUG_LOG_BYTES) {
+        const parsed = JSON.parse(await readFile(path, 'utf8'));
+        if (Array.isArray(parsed?.tool_calls)) calls.push(...parsed.tool_calls);
+      }
+    } catch { /* unreadable log: no telemetry from it */ }
+    try { await unlink(path); } catch { /* already gone */ }
+  }
+  return parseHermesSearchCalls(calls);
+}
+
+export function parseHermesSearchCalls(calls) {
+  if (!Array.isArray(calls)) return [];
+  const searches = [];
+  for (const call of calls) {
+    if (searches.length >= MAX_SEARCHES) break;
+    if (!call || typeof call !== 'object' || call.tool_name !== 'web_search_tool') continue;
+    const parameters = call.parameters && typeof call.parameters === 'object' ? call.parameters : {};
+    const query = typeof parameters.query === 'string' ? parameters.query.replace(/\s+/g, ' ').trim() : '';
+    if (!query || query.length > MAX_QUERY_CHARS || /[\u0000-\u001f\u007f]/.test(query)) continue;
+    const search = { query };
+    if (Number.isInteger(parameters.limit) && parameters.limit >= 1 && parameters.limit <= 100) search.limit = parameters.limit;
+    if ((call.error === null || call.error === undefined) && Number.isInteger(call.results_count) && call.results_count >= 0 && call.results_count <= 1000) {
+      search.resultCount = call.results_count;
+    }
+    searches.push(search);
+  }
+  return searches;
 }
 
 function configuredMaxTurns(value) {
@@ -399,7 +524,7 @@ export function runHermesProcess({ executable, args, timeoutMs, env, cwd }) {
       if (code !== 0) {
         return finish(new Error(processFailure('Hermes', code, stderr)));
       }
-      try { finish(undefined, parseHermesFindings(stdout)); }
+      try { finish(undefined, parseHermesFindingsWithFunnel(stdout)); }
       catch (error) { finish(error); }
     });
   });

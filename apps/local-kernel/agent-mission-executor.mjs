@@ -4,6 +4,15 @@ import { MissionSearchCandidateVerifier } from './mission-search-candidate-verif
 import { InboxError } from './page-context-inbox.mjs';
 
 const MAX_SEARCH_CANDIDATES = 20;
+export const SEARCH_TELEMETRY_SCHEMA = 'efesto.mission-search-telemetry.v1';
+const MAX_TELEMETRY_SEARCHES = 8;
+const MAX_TELEMETRY_QUERY_CHARS = 300;
+const MAX_TELEMETRY_LIMIT = 100;
+const MAX_TELEMETRY_RESULT_COUNT = 1000;
+const MAX_TELEMETRY_PLANNED_QUERIES = 3;
+// Funnel counts are bounded by the adapter contract (at most 20 findings per Hermes answer).
+const MAX_TELEMETRY_FINDINGS = 20;
+export const FUNNEL_DROP_REASONS = Object.freeze(['malformed_url', 'per_domain_cap', 'duplicate', 'other']);
 
 export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
   constructor(store, opportunityProjector, options = {}) {
@@ -30,7 +39,9 @@ export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
       throw invalid(`findings must be an array with at most ${MAX_SEARCH_CANDIDATES} items`);
     }
     const normalized = dedupeByUrl(input.findings.map(normalizeCandidate));
+    // The digest (duplicate/idempotency check) covers the candidates only: telemetry is display-only.
     const digest = createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
+    const searchTelemetry = normalizeSearchTelemetry(input?.searchTelemetry, { findingsSubmitted: input.findings.length });
 
     return this.store.project(async (data) => {
       const missions = data.agentMissions ?? [];
@@ -41,10 +52,12 @@ export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
       }
       requireActiveLease(current, leaseId, this.now());
       const now = this.now().toISOString();
+      const telemetry = searchTelemetry ? { searchTelemetry: { ...searchTelemetry, recordedAt: now } } : {};
 
       if (normalized.length === 0) {
         const completed = {
-          ...current,
+          ...withoutSearchTelemetry(current),
+          ...telemetry,
           status: 'completed',
           completedAt: now,
           limitation: 'Public discovery completed with no candidates',
@@ -66,7 +79,8 @@ export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
         status: 'pending_verification',
       }));
       const verifying = {
-        ...current,
+        ...withoutSearchTelemetry(current),
+        ...telemetry,
         status: 'running',
         executionPhase: 'verifying',
         verifyingAt: now,
@@ -84,11 +98,137 @@ export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
   }
 }
 
+/**
+ * Optional, display-only record of the agent's public search work:
+ *   { searches: [{ query, limit?, resultCount? }], plannedQueries?: string[],
+ *     funnel?: { findingsReturned, dropped: { malformed_url?, per_domain_cap?, duplicate?, other? } } }
+ * `searches` are the queries really sent; `plannedQueries` the ones the adapter asked for. The Kernel
+ * itself marks each search `matchesPlan` (exact match after whitespace collapse), so a rewritten
+ * query is visible. The funnel must add up: findingsReturned − dropped = findings submitted.
+ * Bounded and validated; anything invalid drops the whole record (never the results). It never
+ * feeds Evidence, web.read or SUPPORT.
+ */
+export function normalizeSearchTelemetry(value, { findingsSubmitted } = {}) {
+  if (!isPlainObject(value) || !onlyKeys(value, ['searches', 'plannedQueries', 'funnel'])) return undefined;
+  const { searches } = value;
+  const hasPlan = value.plannedQueries !== undefined;
+  const hasFunnel = value.funnel !== undefined;
+  // No searches at all is only worth recording next to a plan or a funnel ("planned 3, sent 0").
+  if (!Array.isArray(searches) || searches.length > MAX_TELEMETRY_SEARCHES) return undefined;
+  if (searches.length === 0 && !hasPlan && !hasFunnel) return undefined;
+  let plannedQueries;
+  if (hasPlan) {
+    if (!Array.isArray(value.plannedQueries) || value.plannedQueries.length === 0 || value.plannedQueries.length > MAX_TELEMETRY_PLANNED_QUERIES) return undefined;
+    plannedQueries = [];
+    for (const planned of value.plannedQueries) {
+      const query = telemetryQuery(planned);
+      if (!query || plannedQueries.includes(query)) return undefined;
+      plannedQueries.push(query);
+    }
+  }
+  const normalized = [];
+  for (const search of searches) {
+    if (!isPlainObject(search) || !onlyKeys(search, ['query', 'limit', 'resultCount'])) return undefined;
+    const query = telemetryQuery(search.query);
+    if (!query) return undefined;
+    const entry = { query };
+    if (search.limit !== undefined) {
+      if (!Number.isInteger(search.limit) || search.limit < 1 || search.limit > MAX_TELEMETRY_LIMIT) return undefined;
+      entry.limit = search.limit;
+    }
+    if (search.resultCount !== undefined) {
+      if (!Number.isInteger(search.resultCount) || search.resultCount < 0 || search.resultCount > MAX_TELEMETRY_RESULT_COUNT) return undefined;
+      entry.resultCount = search.resultCount;
+    }
+    if (plannedQueries) entry.matchesPlan = plannedQueries.includes(query);
+    normalized.push(entry);
+  }
+  let funnel;
+  if (hasFunnel) {
+    funnel = normalizeFunnel(value.funnel, findingsSubmitted);
+    if (!funnel) return undefined;
+  }
+  return {
+    schemaVersion: SEARCH_TELEMETRY_SCHEMA,
+    displayOnly: true,
+    searches: normalized,
+    ...(plannedQueries ? { plannedQueries } : {}),
+    ...(funnel ? { funnel } : {}),
+  };
+}
+
+function telemetryQuery(value) {
+  if (typeof value !== 'string') return undefined;
+  const query = value.replace(/\s+/g, ' ').trim();
+  if (!query || query.length > MAX_TELEMETRY_QUERY_CHARS || /[\u0000-\u001f\u007f]/.test(query)) return undefined;
+  return query;
+}
+
+function normalizeFunnel(value, findingsSubmitted) {
+  if (!isPlainObject(value) || !onlyKeys(value, ['findingsReturned', 'dropped'])) return undefined;
+  const count = (n) => Number.isInteger(n) && n >= 0 && n <= MAX_TELEMETRY_FINDINGS;
+  if (!count(value.findingsReturned)) return undefined;
+  const rawDropped = value.dropped ?? {};
+  if (!isPlainObject(rawDropped) || !onlyKeys(rawDropped, FUNNEL_DROP_REASONS)) return undefined;
+  const dropped = {};
+  let total = 0;
+  for (const reason of FUNNEL_DROP_REASONS) {
+    if (rawDropped[reason] === undefined) continue;
+    if (!count(rawDropped[reason])) return undefined;
+    dropped[reason] = rawDropped[reason];
+    total += rawDropped[reason];
+  }
+  if (total > value.findingsReturned) return undefined;
+  // The counts must describe this very batch, or they would misreport what happened.
+  if (!Number.isInteger(findingsSubmitted) || value.findingsReturned - total !== findingsSubmitted) return undefined;
+  return { findingsReturned: value.findingsReturned, dropped };
+}
+
+function withoutSearchTelemetry(mission) {
+  if (!mission || !('searchTelemetry' in mission)) return mission;
+  const { searchTelemetry: _previous, ...rest } = mission;
+  return rest;
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function onlyKeys(value, allowed) {
+  return Object.keys(value).every((key) => allowed.includes(key));
+}
+
+/**
+ * A candidate URL must be a well-formed absolute http(s) URL as written, not merely something the
+ * lenient WHATWG parser accepts. WHATWG happily parses markdown debris such as
+ * `https://a.example/](https://a.example/page` into a path, so the raw string is checked first:
+ * no whitespace, controls or RFC 3986-excluded characters, valid percent escapes, no `](`, and no
+ * square brackets in the path (brackets are only legal in an IPv6 host literal). Non-ASCII
+ * characters (IRIs) stay allowed; brackets stay allowed in the query, where real sites use them.
+ */
+export function isWellFormedAbsoluteHttpUrl(raw) {
+  if (typeof raw !== 'string' || !/^https?:\/\//i.test(raw)) return false;
+  if (/[\s"<>\\^`{|}\u0000-\u001f\u007f]/.test(raw) || /%(?![0-9a-f]{2})/i.test(raw) || raw.includes('](')) return false;
+  const afterScheme = raw.slice(raw.indexOf('//') + 2);
+  const authorityEnd = afterScheme.search(/[/?#]/);
+  const authority = authorityEnd < 0 ? afterScheme : afterScheme.slice(0, authorityEnd);
+  const rest = authorityEnd < 0 ? '' : afterScheme.slice(authorityEnd);
+  const pathEnd = rest.search(/[?#]/);
+  const path = pathEnd < 0 ? rest : rest.slice(0, pathEnd);
+  if (/[[\]]/.test(path)) return false;
+  if (/[[\]]/.test(authority) && !/^(?:[^@]*@)?\[[0-9a-f:.]+\](?::\d+)?$/i.test(authority)) return false;
+  try {
+    const parsed = new URL(raw);
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && Boolean(parsed.hostname);
+  } catch { return false; }
+}
+
 function normalizeCandidate(value, index) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw invalid(`finding ${index} must be an object`);
   const rawUrl = clean(value.url, 2048, `finding ${index} url`);
   let parsed;
   try { parsed = new URL(rawUrl); } catch { throw invalid(`finding ${index} URL is invalid`); }
+  if (['http:', 'https:'].includes(parsed.protocol) && !isWellFormedAbsoluteHttpUrl(rawUrl)) throw invalid(`finding ${index} URL is not a well-formed absolute HTTP(S) URL`);
   if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) throw invalid(`finding ${index} URL must be public HTTP(S)`);
   if (isPrivateLiteralHost(parsed.hostname)
     || [...parsed.searchParams.keys()].some((key) => /^(?:token|access_token|auth|authorization|api[_-]?key|code|session|signature|sig)$/i.test(key))) {
