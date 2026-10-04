@@ -63,6 +63,56 @@ function Invoke-Pnpm([string[]]$Arguments, [string]$FailureMessage) {
   }
 }
 
+function Resolve-HermesExecutable {
+  if (-not [string]::IsNullOrWhiteSpace($env:HEPHAESTUS_HERMES_EXECUTABLE)) {
+    return $env:HEPHAESTUS_HERMES_EXECUTABLE.Trim()
+  }
+  if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) { return $null }
+  $standard = Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent\venv\Scripts\hermes.exe'
+  if (Test-Path $standard) { return $standard }
+  return $null
+}
+
+function Test-HermesSafeSearchRuntime([string]$Executable) {
+  if ([string]::IsNullOrWhiteSpace($Executable) -or -not (Test-Path $Executable)) { return $false }
+  try {
+    $help = (& $Executable chat --help 2>&1 | Out-String)
+    if ($LASTEXITCODE -ne 0) { return $false }
+    $hasQuery = $help -match '(?m)(^|\s)(-q(,|\s)|--query)'
+    $hasQuiet = $help -match '(?m)(^|\s)(-Q(,|\s)|--quiet)'
+    return $hasQuery -and $hasQuiet -and $help.Contains('--max-turns') -and $help.Contains('--toolsets') -and $help.Contains('--ignore-rules')
+  } catch {
+    return $false
+  }
+}
+
+function Ensure-HermesSafeSearchRuntime {
+  $hermes = Resolve-HermesExecutable
+  if ([string]::IsNullOrWhiteSpace($hermes)) {
+    Write-Step 'Hermes was not found. The launcher will stop with setup guidance instead of claiming Efesto is ready.'
+    return
+  }
+
+  if (Test-HermesSafeSearchRuntime $hermes) {
+    Write-Step 'Hermes bounded search-only runtime certified.'
+    return
+  }
+
+  if (-not [string]::IsNullOrWhiteSpace($env:HEPHAESTUS_HERMES_EXECUTABLE)) {
+    throw 'The configured custom Hermes runtime does not expose Efesto safe-search controls. Efesto will not modify a custom runtime automatically.'
+  }
+
+  Write-Step 'Hermes is installed but incompatible with Efesto safe search. Updating Hermes with backup...'
+  & $hermes update --backup --yes
+  if ($LASTEXITCODE -ne 0) { throw "Hermes update failed (exit $LASTEXITCODE)." }
+
+  $hermes = Resolve-HermesExecutable
+  if (-not (Test-HermesSafeSearchRuntime $hermes)) {
+    throw 'Hermes updated, but the bounded search-only controls are still unavailable. Efesto remains blocked safely.'
+  }
+  Write-Step 'Hermes updated and bounded search-only runtime certified.'
+}
+
 function Install-DesktopShortcut {
   if ($SkipShortcut) { return }
   $desktop = [Environment]::GetFolderPath('Desktop')
@@ -105,6 +155,9 @@ try {
 
   Write-Step 'Building the browser extension bundle...'
   Invoke-Pnpm @('build:extension') 'Extension build failed'
+
+  Write-Step 'Verifying the Hermes safe-search runtime...'
+  Ensure-HermesSafeSearchRuntime
 
   Write-Step 'Running Efesto launcher repair/start...'
   Invoke-Pnpm @('efesto:launcher', 'repair') 'Efesto launcher repair failed'
