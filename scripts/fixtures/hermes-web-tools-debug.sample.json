@@ -1,0 +1,49 @@
+{
+  "session_id": "00000000-0000-4000-8000-000000000000",
+  "start_time": "2026-10-03T23:30:00.000000",
+  "end_time": "2026-10-03T23:30:09.000000",
+  "debug_enabled": true,
+  "total_calls": 5,
+  "tool_calls": [
+    {
+      "timestamp": "2026-10-03T23:30:02.000000",
+      "tool_name": "web_search_tool",
+      "parameters": { "query": "empleo repartidor rider España", "limit": 10 },
+      "error": null,
+      "results_count": 10,
+      "original_response_size": 0,
+      "final_response_size": 5120
+    },
+    {
+      "timestamp": "2026-10-03T23:30:05.000000",
+      "tool_name": "web_search_tool",
+      "parameters": { "query": "trabajo  delivery\n Barcelona", "limit": 10 },
+      "error": null,
+      "results_count": 7,
+      "original_response_size": 0,
+      "final_response_size": 3900
+    },
+    {
+      "timestamp": "2026-10-03T23:30:06.000000",
+      "tool_name": "web_search_tool",
+      "parameters": { "query": "ofertas rider glovo", "limit": 10 },
+      "error": "Error searching web: provider timeout",
+      "results_count": 0,
+      "original_response_size": 0,
+      "final_response_size": 0
+    },
+    {
+      "timestamp": "2026-10-03T23:30:07.000000",
+      "tool_name": "web_extract_tool",
+      "parameters": { "urls": ["https://example.com/"] },
+      "error": null
+    },
+    {
+      "timestamp": "2026-10-03T23:30:08.000000",
+      "tool_name": "web_search_tool",
+      "parameters": { "query": "repartidor autónomo requisitos" },
+      "error": null,
+      "results_count": "unknown"
+    }
+  ]
+}
