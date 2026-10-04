@@ -107,7 +107,7 @@ export default function EfestoProductShell() {
     const hermesUnavailable = hermes === 'missing' || hermes === 'invalid' || hermes === 'failed';
     const waiting = mission?.workState === 'waiting_for_agent' || mission?.workState === 'queued';
     if (hermesUnavailable && waiting) return 'unavailable';
-    if (mission?.workState === 'verifying') {
+    if (mission?.workState === 'verifying' || mission?.workState === 'failed') {
       // GoalSurface strips verificationResults; prefer the full Mission row when loaded so
       // an all-fetch-failed batch (retry still possible) keeps Verificando.
       const fullMission = snapshot?.missions.find((item) => item.id === mission.id);

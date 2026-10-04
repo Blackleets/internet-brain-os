@@ -124,6 +124,17 @@ describe('missionVerifiedWithoutSupport (honest-blocked verifying)', () => {
     expect(missionVerifiedWithoutSupport({ workState: 'verifying', findCount: 0 })).toBe(true);
   });
 
+  it('reads the Kernel-settled shape (failed/failed after a read without SUPPORT) the same way', () => {
+    const settled = { id: 'm', goalId: 'g', status: 'failed', executionPhase: 'failed', createdAt: '2026-09-02T00:00:00.000Z', lastFailure: { code: 'verified_without_support' } } as const;
+    expect(missionVerifiedWithoutSupport({ ...settled, verificationResults: [
+      { candidateId: 'c1', status: 'verified', evidenceId: 'ev-1', supported: false },
+    ] })).toBe(true);
+    // Every read failed, attempts exhausted without rows, or a GoalSurface without rows: not "read without SUPPORT".
+    expect(missionVerifiedWithoutSupport({ ...settled, verificationResults: [{ candidateId: 'c1', status: 'verification_failed', reason: 'x' }] })).toBe(false);
+    expect(missionVerifiedWithoutSupport({ ...settled })).toBe(false);
+    expect(missionVerifiedWithoutSupport({ workState: 'failed', findCount: 0 })).toBe(false);
+  });
+
   it('stays false while verification is pending, retryable, supported or not verifying', () => {
     expect(missionVerifiedWithoutSupport({ ...verifying })).toBe(false);
     expect(missionVerifiedWithoutSupport({ workState: 'verifying' })).toBe(false);

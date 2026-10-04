@@ -91,7 +91,9 @@ export function missionVerifiedWithoutSupport(mission?: unknown): boolean {
   if (!mission || typeof mission !== 'object') return false;
   const record = mission as Record<string, unknown>;
   const phase = record.workState ?? record.executionPhase;
-  if (phase !== 'verifying') return false;
+  // The Kernel now settles a batch read without SUPPORT as failed (lastFailure.code
+  // verified_without_support); older Kernels left it verifying.
+  if (phase !== 'verifying' && phase !== 'failed') return false;
   const results = record.verificationResults;
   if (Array.isArray(results)) {
     let verified = 0;
@@ -103,7 +105,8 @@ export function missionVerifiedWithoutSupport(mission?: unknown): boolean {
     }
     return verified > 0;
   }
-  return record.findCount === 0;
+  // A failed GoalSurface without its rows cannot tell "read, no SUPPORT" from "nothing readable".
+  return phase === 'verifying' && record.findCount === 0;
 }
 
 /**

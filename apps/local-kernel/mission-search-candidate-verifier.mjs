@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { InboxError, MAX_PAGE_CONTEXT_VISIBLE_TEXT } from './page-context-inbox.mjs';
 import { classifyOpportunity } from './opportunity-classifier.mjs';
 import { queueSupportedFindNotifications } from './supported-find-notifier.mjs';
+import { isSettledVerification, settleVerificationWithoutFind } from './mission-verification-settlement.mjs';
 
 const READ_CAPABILITY = 'web.read';
 
@@ -23,7 +24,7 @@ export class MissionSearchCandidateVerifier {
   async verify(missionId) {
     const initial = await this.store.read();
     const initialMission = findMission(initial, missionId);
-    if (initialMission.status === 'completed' && initialMission.verificationDigest) {
+    if (isSettledVerification(initialMission)) {
       await this.#notifySupportedFinds(initialMission);
       return { mission: initialMission, evidence: [], idempotent: true };
     }
@@ -56,7 +57,7 @@ export class MissionSearchCandidateVerifier {
 
     const fresh = await this.store.read();
     const freshMission = findMission(fresh, missionId);
-    if (freshMission.status === 'completed' && freshMission.verificationDigest) {
+    if (isSettledVerification(freshMission)) {
       await this.#notifySupportedFinds(freshMission);
       return { mission: freshMission, evidence: [], idempotent: true };
     }
@@ -79,7 +80,7 @@ export class MissionSearchCandidateVerifier {
       const missions = data.agentMissions ?? [];
       const index = missions.findIndex((item) => item.id === missionId);
       const current = missions[index];
-      if (current?.status === 'completed' && current.verificationDigest) {
+      if (isSettledVerification(current)) {
         return { changed: false, data, result: { mission: current, evidence: [], idempotent: true } };
       }
       requireSameCandidateBatch(expectedMission, current);
@@ -153,13 +154,13 @@ export class MissionSearchCandidateVerifier {
           limitation: 'Kernel web.read verification completed; only fetched page content became Evidence',
           resultSummary,
         }
+        // No Kernel SUPPORT: settle explicitly (failed, never Completado) instead of leaving an
+        // ownerless running/verifying Mission behind.
         : {
-          ...current,
-          status: 'running',
-          executionPhase: 'verifying',
+          ...settleVerificationWithoutFind(current, verificationResults, now),
           verificationResults,
+          verificationDigest: digest,
           searchCandidates,
-          limitation: 'Kernel web.read retrieved page content as Evidence; none of the pages support the Goal, so investigation remains incomplete',
           resultSummary,
         };
       delete nextMission.verificationBlock;
@@ -180,10 +181,16 @@ export class MissionSearchCandidateVerifier {
       const current = missions[index];
       requireSameCandidateBatch(expectedMission, current);
       const verificationResults = outcomes.map((item) => ({ candidateId: item.candidate.id, status: 'verification_failed', reason: item.reason }));
+      const searchCandidates = current.searchCandidates.map((candidate) => {
+        const result = verificationResults.find((item) => item.candidateId === candidate.id);
+        return result ? { ...candidate, ...result } : candidate;
+      });
+      // Every read failed: settle as failed (code web_read_failed) instead of an ownerless verifying Mission.
       const next = {
-        ...current,
+        ...settleVerificationWithoutFind(current, verificationResults, this.now().toISOString()),
         verificationResults,
-        limitation: 'Kernel web.read verification failed for all candidates; retry remains safe',
+        verificationDigest: verificationSealDigest(current.searchCandidateDigest, verificationResults),
+        searchCandidates,
         resultSummary: { received: current.searchCandidates.length, evidenceCreated: 0, opportunitiesPromoted: 0 },
       };
       const updated = [...missions];

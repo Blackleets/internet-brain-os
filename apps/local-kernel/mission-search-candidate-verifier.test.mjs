@@ -126,16 +126,25 @@ describe('Kernel-owned search candidate verification', () => {
     expect(data.opportunities ?? []).toHaveLength(0);
   });
 
-  it('keeps the Mission in verifying with zero Evidence when every web.read fails', async () => {
-    const { store, mission, verifier } = await fixture({ fetch: async () => { throw new Error('network unavailable'); } });
+  it('settles as failed (web_read_failed) with zero Evidence when every web.read fails, and replays without reading again', async () => {
+    let reads = 0;
+    const { store, mission, verifier } = await fixture({ fetch: async () => { reads += 1; throw new Error('network unavailable'); } });
     const result = await verifier.verify(mission.id);
     expect(result.mission).toMatchObject({
-      status: 'running', executionPhase: 'verifying',
+      status: 'failed', executionPhase: 'failed',
+      lastFailure: { code: 'web_read_failed', reason: 'Kernel web.read could not read any candidate page', attempt: 1 },
       resultSummary: { received: 1, evidenceCreated: 0, opportunitiesPromoted: 0 },
-      limitation: 'Kernel web.read verification failed for all candidates; retry remains safe',
     });
+    expect(result.mission.failedAt).toBe('2026-08-09T22:20:00.000Z');
+    expect(result.mission.leaseId).toBeUndefined();
     expect(result.mission.verificationResults[0]).toMatchObject({ status: 'verification_failed' });
+    expect(result.mission.searchCandidates[0]).toMatchObject({ status: 'verification_failed' });
     expect((await store.read()).evidence ?? []).toHaveLength(0);
+    const before = await store.read();
+    const replay = await verifier.verify(mission.id);
+    expect(replay.idempotent).toBe(true);
+    expect(reads).toBe(1);
+    expect(await store.read()).toEqual(before);
   });
   it('does not forge Completado from HTTP 200 off-topic pages when the Goal token is absent', async () => {
     const { store, mission, verifier } = await fixture(
@@ -158,18 +167,22 @@ describe('Kernel-owned search candidate verification', () => {
     const result = await verifier.verify(mission.id);
     expect(result.mission.status).not.toBe('completed');
     expect(result.mission.executionPhase).not.toBe('forged');
+    // Settled explicitly (never Completado): read, no Kernel SUPPORT, no Find.
     expect(result.mission).toMatchObject({
-      status: 'running',
-      executionPhase: 'verifying',
+      status: 'failed',
+      executionPhase: 'failed',
+      lastFailure: { code: 'verified_without_support', attempt: 1 },
     });
-    expect(result.mission.limitation).toMatch(/none of the pages support the Goal/);
+    expect(result.mission.lastFailure.reason).toMatch(/none supports the Goal/);
+    expect(result.mission.limitation).toMatch(/none supports the Goal, so no Find was forged/);
     const data = await store.read();
     expect(data.evidence).toHaveLength(1);
     expect(data.cases).toHaveLength(1);
     expect(data.evidence[0].rawText).toContain('JSON Web Tokens');
     expect(data.opportunities ?? []).toHaveLength(0);
     expect(data.agentMissions[0].searchCandidates[0].supported).toBe(false);
-    expect(result.mission.verificationDigest).toBeUndefined();
+    expect(result.mission.forgedAt).toBeUndefined();
+    expect(result.mission.completedAt).toBeUndefined();
   });
 
   it('does not seal Completado when only the untrusted Hermes snippet echoes the Goal token', async () => {
@@ -201,8 +214,9 @@ describe('Kernel-owned search candidate verification', () => {
     expect(result.mission.status).not.toBe('completed');
     expect(result.mission.executionPhase).not.toBe('forged');
     expect(result.mission).toMatchObject({
-      status: 'running',
-      executionPhase: 'verifying',
+      status: 'failed',
+      executionPhase: 'failed',
+      lastFailure: { code: 'verified_without_support' },
     });
     const data = await store.read();
     expect(data.evidence.length).toBeGreaterThanOrEqual(0);
@@ -210,7 +224,8 @@ describe('Kernel-owned search candidate verification', () => {
     expect(data.cases[0].description).not.toContain(unique);
     expect(data.opportunities ?? []).toHaveLength(0);
     expect(data.agentMissions[0].searchCandidates[0].supported).toBe(false);
-    expect(result.mission.verificationDigest).toBeUndefined();
+    expect(result.mission.forgedAt).toBeUndefined();
+    expect(result.mission.completedAt).toBeUndefined();
   });
 
   it('includes Goal SUPPORT in the forged seal digest so identical IDs with different support cannot collide', async () => {

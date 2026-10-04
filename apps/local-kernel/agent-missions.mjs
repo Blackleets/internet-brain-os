@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { InboxError } from './page-context-inbox.mjs';
 import { createGoalExecutionAuthorizationReceipt } from './goal-execution-authorization.mjs';
+import { settleStrandedVerification } from './mission-verification-settlement.mjs';
 
 const AGENTS = new Set(['hermes']);
 const ACTIVE_STATUSES = new Set(['waiting_for_agent', 'queued']);
@@ -114,6 +115,10 @@ function reconcileMission(mission, now, isAgentReady) {
       limitation: 'Agent became ready; recovered and queued for authorized execution',
     };
   }
+  // A verification that already read (or failed to read) every candidate without SUPPORT used to
+  // stay running/verifying with no lease and no process; settle it so it is not shown as working.
+  const settled = settleStrandedVerification(mission, now);
+  if (settled !== mission) return settled;
   return reconcileExpiredMission(mission, now);
 }
 

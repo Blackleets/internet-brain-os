@@ -518,7 +518,11 @@ function derivePhase(workState: string, blocked: boolean, counts: ForgeCounts, s
       return 'verifying';
     case 'forged': return counts.supported > 0 ? 'forged' : 'research_completed';
     case 'completed': return counts.sources === 0 ? 'completed_empty' : 'completed_without_evidence';
-    case 'failed': return 'failed';
+    // The Kernel settles a verification without a Find as failed: keep the precise outcome.
+    case 'failed':
+      if (counts.read > 0 && counts.supported === 0) return 'verified_unsupported';
+      if (counts.sources > 0 && failedReads === counts.sources) return 'read_failed_all';
+      return 'failed';
     default: return counts.supported > 0 ? 'forged' : 'queued';
   }
 }
@@ -542,7 +546,7 @@ function phaseCopy(phase: ForgePhase, counts: ForgeCounts, row?: MissionSummary)
         ? `El Kernel lee ${counts.sources} ${plural(counts.sources, 'candidato', 'candidatos')} con web.read y guarda Evidence al terminar.`
         : 'El Kernel aplica web.read y SUPPORT a los candidatos.',
     };
-    case 'read_failed_all': return { label: 'Sin lectura', detail: 'El Kernel no pudo leer ninguna página. Reintentar es seguro.' };
+    case 'read_failed_all': return { label: 'Sin lectura', detail: 'El Kernel no pudo leer ninguna página. Buscar más es seguro.' };
     case 'verified_unsupported':
     case 'research_completed': return {
       label: 'Leídas sin SUPPORT',

@@ -141,6 +141,23 @@ describe('buildForgeModel', () => {
     expect(model.sources.every((item) => item.reason === 'No se pudo leer: contenido vacío')).toBe(true);
   });
 
+  it('reads a Kernel-settled verification without a Find (failed/failed) precisely, with Buscar más and no working state', () => {
+    const settled = { status: 'failed', executionPhase: 'failed', failedAt: '2026-10-03T09:03:00.000Z', verifyingAt: '2026-10-03T09:02:00.000Z' };
+    const unsupported = forgedResults.map((item) => (item.candidateId === 'c1' ? { ...item, supported: false } : item));
+    const noSupport = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('failed', { status: 'failed', executionPhase: 'failed', findCount: 0 }), mission: row({ ...settled, verificationResults: unsupported, lastFailure: { code: 'verified_without_support', reason: 'Kernel web.read read 2 pages; none supports the Goal (no Kernel SUPPORT, no Find)' } }), evidence: { status: 'available', records } }));
+    expect(noSupport.phase).toBe('verified_unsupported');
+    expect(noSupport.phaseLabel).toBe('Leídas sin SUPPORT');
+    expect(noSupport.counts.supported).toBe(0);
+    expect(noSupport.searchMore).toBeTruthy();
+    expect(noSupport.motion).not.toBe('active');
+    const failedReads = candidates.map((item) => ({ candidateId: item.id, status: 'verification_failed', reason: 'web.read returned HTTP 403' }));
+    const unread = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('failed', { status: 'failed', executionPhase: 'failed' }), mission: row({ ...settled, verificationResults: failedReads, lastFailure: { code: 'web_read_failed', reason: 'Kernel web.read could not read any candidate page' } }) }));
+    expect(unread.phase).toBe('read_failed_all');
+    expect(unread.searchMore).toBeTruthy();
+    // A failed Mission without candidates (bounded attempts exhausted) stays a plain failure.
+    expect(mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('failed', { status: 'failed' }), mission: row({ status: 'failed', executionPhase: 'failed', searchCandidates: [], failedAt: '2026-10-03T09:03:00.000Z' }) })).phase).toBe('failed');
+  });
+
   it('marks blocked, failed and completed-without-candidates truthfully', () => {
     expect(mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('queued', { blockedReason: 'policy' }) })).phase).toBe('blocked');
     const failed = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('failed'), mission: row({ status: 'failed', searchCandidates: undefined, lastFailure: { reason: 'Hermes lease expired' } }) }));
