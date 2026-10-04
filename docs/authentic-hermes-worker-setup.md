@@ -26,11 +26,12 @@ The Kernel still owns URL validation, Evidence creation, deduplication, Goal-sco
 
 1. reads exactly one mission JSON object from stdin;
 2. validates `efesto.hermes-mission.v1`;
-3. builds a bounded public-research prompt;
-4. creates one exclusive private config in the ephemeral home with `agent.max_turns: 8`, `auxiliary.free_only: true` (auxiliary tasks never fall back to a paid OpenRouter model), `auxiliary.title_generation.enabled: false` (no extra session-title model call) and the already-configured provider/model route, then invokes the authentic CLI from that empty home/working directory with `chat --query <prompt> --quiet --max-turns <bounded> --provider <configured> --model <configured> --ignore-rules --toolsets search`;
+3. plans 2–3 search queries from the Goal's own words (no invented years, numbers or spellings);
+4. creates one exclusive private config in the ephemeral home with `agent.max_turns: 1`, `auxiliary.free_only: true` (auxiliary tasks never fall back to a paid OpenRouter model), `auxiliary.title_generation.enabled: false` (no extra session-title model call) and the already-configured provider/model route, runs the 2–3 planned queries itself (in order, limit 10 each) through Hermes's own DuckDuckGo worker (`<hermes venv>/bin/python -m plugins.web.ddgs._search_worker`, or `HEPHAESTUS_HERMES_PYTHON`; without it the adapter fails closed), with only network/locale variables in its environment, then invokes the authentic CLI from that empty home/working directory with `chat --query <selection prompt with the results> --quiet --max-turns 1 --provider <configured> --model <configured> --ignore-rules --toolsets context_engine` (a toolset with no tools under the default context engine: the model can only select findings from the listed results, and a web_search in its debug log fails the run);
 5. accepts strict JSON containing at most 20 findings, or discards all non-URL prose from an invalid response and admits only at most 20 deduplicated literal HTTP(S) URLs as neutral candidates;
 6. rejects unsupported authority fields, oversized values, invalid output, timeouts, and non-zero exits;
-7. writes only `{ "findings": [...] }` to stdout.
+7. drops findings that were not among the listed results (funnel `other`) or that earlier attempts already brought (`knownSourceUrls`, funnel `duplicate`), then diversifies;
+8. writes `{ "findings": [...], "searches": [...], "plannedQueries": [...], "funnel": {...} }` to stdout; `searches` are the adapter's own calls, so every recorded query equals a planned one.
 
 The Kernel performs the final URL, scope, provenance, deduplication, and persistence validation again.
 
