@@ -80,6 +80,39 @@ function cleanQueryText(value, max) {
   return value.replace(/[\u0000-\u001f\u007f"]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max).trim();
 }
 
+const MAX_KNOWN_URLS_IN_PROMPT = 20;
+
+/**
+ * Pages earlier attempts of this Mission already brought ("Buscar más": the Kernel claim's
+ * knownSourceUrls). Only well-formed http(s) URLs, bounded.
+ */
+export function missionKnownSourceUrls(mission) {
+  const raw = Array.isArray(mission?.knownSourceUrls) ? mission.knownSourceUrls : [];
+  const out = [];
+  for (const item of raw) {
+    if (typeof item !== 'string' || item.length > 2048 || !isWellFormedWebUrl(item) || out.includes(item)) continue;
+    out.push(item);
+    if (out.length >= 40) break;
+  }
+  return out;
+}
+
+function comparableUrl(raw) {
+  try {
+    const url = new URL(raw);
+    return `${url.hostname.toLowerCase().replace(/^www\./, '')}${url.pathname.replace(/\/+$/, '')}${url.search}`;
+  } catch { return ''; }
+}
+
+/** Drops findings an earlier attempt already brought; they count as duplicate in the funnel. */
+export function dropKnownFindings(findings, knownUrls) {
+  const known = new Set((knownUrls ?? []).map(comparableUrl).filter(Boolean));
+  if (!known.size || !Array.isArray(findings)) return { findings: Array.isArray(findings) ? findings : [], dropped: {} };
+  const kept = findings.filter((finding) => !known.has(comparableUrl(finding?.url)));
+  const removed = findings.length - kept.length;
+  return { findings: kept, dropped: removed ? { duplicate: removed } : {} };
+}
+
 export function buildHermesPrompt(payload) {
   if (!payload || payload.schemaVersion !== 'efesto.hermes-mission.v1' || !payload.mission) {
     throw new Error('Expected one efesto.hermes-mission.v1 mission object');
@@ -103,6 +136,7 @@ export function buildHermesPrompt(payload) {
     'Prefer canonical, directly readable public pages with substantive content; avoid login walls, paywalls, redirectors, search-result pages and JavaScript-only shells.',
     ...searchLines,
     `From those results, return ${MIN_FINDINGS} to ${MAX_FINDINGS} relevant findings about the Goal itself when public search supports them, from varied source domains (at most ${MAX_PER_HOST} per domain); no companies, brands or topics that are not in the Goal.`,
+    ...knownLines(mission),
     'Return ONLY one valid JSON object with this exact shape: {"findings":[{"url":"https://public.example/path"}]}.',
     'Each finding must contain exactly one field: url. Do not copy titles, snippets, summaries, dates, or other prose from the search result. Keep every URL on one line, escape it as JSON, and do not use trailing commas.',
     'Use at most 20 findings. URLs must be public http or https. Do not include markdown fences or commentary.',
@@ -115,6 +149,13 @@ export function buildHermesPrompt(payload) {
     `Location: ${String(scope.location ?? '').slice(0, 240)}`,
     `Cadence: ${String(mission.cadence ?? '').slice(0, 80)}`,
   ].join('\n');
+}
+
+function knownLines(mission) {
+  const known = missionKnownSourceUrls(mission).slice(0, MAX_KNOWN_URLS_IN_PROMPT);
+  return known.length
+    ? [`Earlier attempts already brought these pages; do not return them again, prefer other pages from the results: ${JSON.stringify(known)}`]
+    : [];
 }
 
 export function buildHermesArgs(prompt, maxTurns = DEFAULT_AGENT_TURNS, provider, model) {
@@ -534,8 +575,9 @@ export async function runHermesOneShot(payload, options = {}) {
       cwd: hermesHome,
     });
     const searches = await collectHermesSearchTelemetry(hermesHome);
-    const diverse = diversifyFindingsWithCounts(result.findings);
-    const funnel = mergeFindingsFunnel(result.funnel, diverse.dropped);
+    const fresh = dropKnownFindings(result.findings, missionKnownSourceUrls(payload.mission));
+    const diverse = diversifyFindingsWithCounts(fresh.findings);
+    const funnel = mergeFindingsFunnel(mergeFindingsFunnel(result.funnel, fresh.dropped), diverse.dropped);
     return {
       ...result,
       findings: diverse.findings,

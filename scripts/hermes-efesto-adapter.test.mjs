@@ -26,6 +26,8 @@ import {
   parseHermesFindingsWithFunnel,
   isWellFormedWebUrl,
   recoverWebUrl,
+  missionKnownSourceUrls,
+  dropKnownFindings,
 } from './hermes-efesto-adapter.mjs';
 import { normalizeSearchTelemetry } from '../apps/local-kernel/agent-mission-executor.mjs';
 import { adapterSearchTelemetry } from '../apps/local-kernel/hermes-mission-worker.mjs';
@@ -151,6 +153,36 @@ process.stdout.write(${JSON.stringify(JSON.stringify(answer))});
       expect(result.funnel).toEqual({ findingsReturned: 6, dropped: { malformed_url: 1, duplicate: 1, per_domain_cap: 1 } });
       const stored = normalizeSearchTelemetry(adapterSearchTelemetry(result), { findingsSubmitted: result.findings.length });
       expect(stored.searches.map((search) => [search.query, search.matchesPlan])).toEqual([[planned[0], true], ['rider delivery españa 2025 2026', false]]);
+      expect(stored.funnel).toEqual(result.funnel);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it('"Buscar más": skips pages earlier attempts already brought (knownSourceUrls), counted as duplicate', async () => {
+    const mission = { id: 'mission-more', goalTitle: 'empleo rider delivery', cadence: 'manual', scope: { keywords: ['empleo', 'rider', 'delivery'] },
+      knownSourceUrls: ['https://www.randstad.es/riders/', 'javascript:alert(1)', 42, 'https://jobs.example/a', 'https://jobs.example/a'] };
+    expect(missionKnownSourceUrls(mission)).toEqual(['https://www.randstad.es/riders/', 'https://jobs.example/a']);
+    expect(missionKnownSourceUrls({})).toEqual([]);
+    const prompt = buildHermesPrompt({ schemaVersion: 'efesto.hermes-mission.v1', mission });
+    expect(prompt).toContain('Earlier attempts already brought these pages; do not return them again');
+    expect(prompt).toContain('"https://www.randstad.es/riders/"');
+    expect(prompt).not.toContain('javascript:');
+    expect(buildHermesPrompt({ schemaVersion: 'efesto.hermes-mission.v1', mission: { ...mission, knownSourceUrls: undefined } })).not.toContain('Earlier attempts');
+    // host case, www. and a trailing slash do not make an old page new
+    const { findings, dropped } = dropKnownFindings([{ url: 'https://RANDSTAD.es/riders' }, { url: 'https://jobs.example/a' }, { url: 'https://jobs.example/b' }], missionKnownSourceUrls(mission));
+    expect(findings).toEqual([{ url: 'https://jobs.example/b' }]);
+    expect(dropped).toEqual({ duplicate: 2 });
+    expect(dropKnownFindings([{ url: 'https://jobs.example/b' }], [])).toEqual({ findings: [{ url: 'https://jobs.example/b' }], dropped: {} });
+
+    const home = await mkdtemp(join(tmpdir(), 'efesto-hermes-more-'));
+    try {
+      const answer = { findings: [{ url: 'https://www.randstad.es/riders/' }, { url: 'https://jobs.example/b' }, { url: 'https://jobs.example/b' }] };
+      await writeFile(join(home, 'chat'), `process.stdout.write(${JSON.stringify(JSON.stringify(answer))});\n`, 'utf8');
+      const result = await runHermesOneShot({ schemaVersion: 'efesto.hermes-mission.v1', mission }, { executable: process.execPath, hermesHome: home, timeoutMs: 4_000, env: { ...process.env, HERMES_HOME: home } });
+      expect(result.findings.map((finding) => finding.url)).toEqual(['https://jobs.example/b']);
+      expect(result.funnel).toEqual({ findingsReturned: 3, dropped: { duplicate: 2 } });
+      const stored = normalizeSearchTelemetry(adapterSearchTelemetry(result), { findingsSubmitted: result.findings.length });
       expect(stored.funnel).toEqual(result.funnel);
     } finally {
       await rm(home, { recursive: true, force: true });
