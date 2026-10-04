@@ -12,7 +12,7 @@ const fixtures = {
     message: 'Efesto is ready.', diagnostics: { kernel: { reachable: true }, hermes: { found: true }, obsidian: { configured: true }, pairing: { paired: true } },
     actions: [{ id: 'open_efesto', label: 'Open Efesto', recoverable: false }],
   },
-  cases: { ok: true, cases: [{ id: 'case-1', title: 'Supplier research', status: 'active' }] },
+  cases: { ok: true, cases: [{ id: 'case-1', title: 'Supplier research', status: 'active' }, { id: 'case-encoded-title', title: '9. Classes &#8212; Python 3.14 documentation for supplier onboarding &amp; research', status: 'draft' }] },
   goals: { ok: true, goals: [{ id: 'goal-1', title: 'Find AI clients', priority: 3, status: 'active', createdAt: '2026-07-26T10:00:00.000Z' }] },
   missions: { ok: true, missions: [{ id: 'mission-1', goalId: 'goal-1', goalTitle: 'Find AI clients', status: 'running', executionPhase: 'investigating', attempt: 1, createdAt: '2026-07-26T10:00:00.000Z', verificationResults: [{ candidateId: 'cand-1', status: 'verified', evidenceId: 'evidence-1', sourceUrl: 'https://clients.example/projects/ai-automation', supported: true, supportReason: 'supported' }] }, { id: 'mission-forged', goalId: 'goal-1', goalTitle: 'Find AI clients', status: 'completed', executionPhase: 'forged', attempt: 1, createdAt: '2026-07-26T10:01:00.000Z', verificationResults: [{ candidateId: 'cand-1', status: 'verified', evidenceId: 'evidence-1', sourceUrl: 'https://clients.example/projects/ai-automation', supported: true, supportReason: 'supported' }] }] },
   goalSurfaces: { ok: true, surfaces: [{

@@ -12,7 +12,7 @@ import type { OverviewSnapshot } from '../lib/kernel/overview';
 import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportProof, kernelSupportedFinds, missionVerifiedWithoutSupport } from '../lib/kernel/supported-find';
 import { statePillLabel, statePillTone } from '../lib/ui/state-pill-label.mjs';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
-import type { ForgeModel } from '../lib/forge/forge-model';
+import { displayText, type ForgeModel } from '../lib/forge/forge-model';
 import { ForgeLiveView } from './forge/forge-live-view';
 
 export type Provider = {
@@ -406,7 +406,7 @@ function FindCard({ item, onFeedback, onOpenCase, missions }: { item: Opportunit
   const evidenceCount = evidenceId ? 1 : 0;
   return <article className="find-card">
     <header><span>{item.categoryLabel}</span><span className={'lead-label' + (kernelSupported ? ' kernel-support' : '')}>{kernelSupported ? 'Kernel SUPPORT' : 'Lead no verificado'}</span></header>
-    <h2>{item.title}</h2>
+    <h2>{displayText(item.title)}</h2>
     {reasons.length ? <p className="find-signals">Señales: {reasons.join(' · ')}</p> : null}
     <p>{item.sourceHost} · relevancia {formatRelevance(item.relevance)}</p>
     <dl className="find-provenance">
@@ -424,7 +424,7 @@ function FindCard({ item, onFeedback, onOpenCase, missions }: { item: Opportunit
 
 export function EvidenceView({ cases, selectedId, detail, loadingId, connected, onOpen, onNewGoal, onConnect }: { cases: CaseSummary[]; selectedId: string; detail?: CaseDetail; loadingId: string; connected: boolean; onOpen: (record: CaseSummary) => void ; onNewGoal?: () => void; onConnect?: () => void }) {
   return <Workspace icon={ShieldCheck} eyebrow="Cases · Fuentes · Procedencia" title="Evidencia" copy="Inspecciona recibos persistidos. Cada URL visible viene del Kernel.">
-    {!connected ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para leer Cases y Evidence." action={connectAction(onConnect)} /> : <div className="evidence-layout"><section className="case-list"><header><span>Cases</span><b>{cases.length}</b></header>{cases.length ? cases.map((record) => <button type="button" key={record.id} className={selectedId === record.id ? 'active' : ''} onClick={() => onOpen(record)}><FileSearch /><span><strong>{record.title}</strong><small>{record.status} · {record.id}</small></span><ChevronRight /></button>) : <Empty icon={FileSearch} title="Aún no hay Evidence" copy="Se crea un Case cuando la extensión captura una página autorizada o cuando un Goal confirmado verifica fuentes públicas con el Kernel." action={newGoalAction(onNewGoal)} />}</section><section className="evidence-detail">{!selectedId ? <Empty icon={ShieldCheck} title="Selecciona un Case" copy="Aquí aparecerán sus fuentes y recibos reales." /> : loadingId === selectedId ? <Empty icon={Activity} title="Leyendo Evidence" copy="Esperando respuesta del Kernel." /> : !detail ? <Empty icon={CircleOff} title="Evidence no disponible" copy="No inventamos una proyección cuando el endpoint no responde." /> : detail.evidence.length === 0 ? <Empty icon={ShieldCheck} title="Case sin Evidence publicada" copy="El Case existe, pero todavía no tiene recibos visibles." /> : <EvidenceReceipts caseTitle={recordTitle(detail.case, selectedId)} evidence={detail.evidence} />}</section></div>}
+    {!connected ? <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para leer Cases y Evidence." action={connectAction(onConnect)} /> : <div className="evidence-layout"><section className="case-list"><header><span>Cases</span><b>{cases.length}</b></header>{cases.length ? cases.map((record) => <button type="button" key={record.id} className={selectedId === record.id ? 'active' : ''} onClick={() => onOpen(record)}><FileSearch /><span><strong>{displayText(record.title)}</strong><small>{record.status} · {record.id}</small></span><ChevronRight /></button>) : <Empty icon={FileSearch} title="Aún no hay Evidence" copy="Se crea un Case cuando la extensión captura una página autorizada o cuando un Goal confirmado verifica fuentes públicas con el Kernel." action={newGoalAction(onNewGoal)} />}</section><section className="evidence-detail">{!selectedId ? <Empty icon={ShieldCheck} title="Selecciona un Case" copy="Aquí aparecerán sus fuentes y recibos reales." /> : loadingId === selectedId ? <Empty icon={Activity} title="Leyendo Evidence" copy="Esperando respuesta del Kernel." /> : !detail ? <Empty icon={CircleOff} title="Evidence no disponible" copy="No inventamos una proyección cuando el endpoint no responde." /> : detail.evidence.length === 0 ? <Empty icon={ShieldCheck} title="Case sin Evidence publicada" copy="El Case existe, pero todavía no tiene recibos visibles." /> : <EvidenceReceipts caseTitle={recordTitle(detail.case, selectedId)} evidence={detail.evidence} />}</section></div>}
   </Workspace>;
 }
 
@@ -437,7 +437,7 @@ function EvidenceReceipts({ caseTitle, evidence }: { caseTitle: string; evidence
     return <article key={key} className={hasSource ? 'has-source' : ''}>
       <button type="button" className="evidence-toggle" aria-expanded={open} onClick={() => setOpenIds((current) => ({ ...current, [key]: !open }))}>
         {hasSource ? <Check className="evidence-check" /> : <ShieldCheck />}
-        <span><strong>{item.summary ?? item.id ?? `Evidence ${index + 1}`}</strong><small>{open ? 'Ocultar procedencia' : 'Ver procedencia'}</small></span>
+        <span><strong>{displayText(item.summary ?? item.id ?? `Evidence ${index + 1}`)}</strong><small>{open ? 'Ocultar procedencia' : 'Ver procedencia'}</small></span>
         <ChevronDown />
       </button>
       {item.sourceUrl ? <a href={item.sourceUrl} target="_blank" rel="noreferrer">Abrir fuente <ExternalLink /></a> : <span className="source-missing">Sin URL publicada</span>}
@@ -565,4 +565,4 @@ function replayLabHref(kernelBaseUrl?: string) {
 function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' }).format(date); }
 function formatRelevance(value: number) { return value <= 1 ? `${Math.round(value * 100)}%` : String(Math.round(value)); }
 function optionalText(value: unknown): string | undefined { return typeof value === 'string' && value.trim() ? value.trim() : undefined; }
-function recordTitle(record: Record<string, unknown>, fallback: string) { return typeof record.title === 'string' ? record.title : typeof record.question === 'string' ? record.question : fallback; }
+function recordTitle(record: Record<string, unknown>, fallback: string) { return displayText(typeof record.title === 'string' ? record.title : typeof record.question === 'string' ? record.question : fallback); }

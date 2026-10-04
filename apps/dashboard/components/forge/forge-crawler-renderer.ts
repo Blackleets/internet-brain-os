@@ -142,6 +142,7 @@ export class ForgeCrawlerRenderer {
   private stages = new Map<string, CrawlerStage>();
   private domKey = '';
   private replaying = false;
+  private tickerLinesKey = '';
 
   constructor(private fxCanvas: HTMLCanvasElement, private bgCanvas: HTMLCanvasElement, private el: CrawlerElements, private hooks: CrawlerHooks) {
     const fx = fxCanvas.getContext('2d');
@@ -247,6 +248,7 @@ export class ForgeCrawlerRenderer {
       rest: { x: q.x + (mob ? -120 : -230), y: q.y + (mob ? 8 : 14) },
     };
     this.domKey = '';
+    this.tickerLinesKey = '';
     this.draw();
   }
   private bgSig = '';
@@ -958,31 +960,43 @@ export class ForgeCrawlerRenderer {
     if (this.el.caret) this.el.caret.style.opacity = caretOn ? '1' : '0';
     const replay = this.playing;
     this.el.steps().forEach((li, i) => {
-      if (!replay) { delete li.dataset.vis; return; }
-      li.dataset.vis = i < step ? (i >= 3 ? 'gold' : 'done') : i === step ? 'now' : 'todo';
+      if (!replay) { if (li.dataset.vis !== undefined) delete li.dataset.vis; return; }
+      const vis = i < step ? (i >= 3 ? 'gold' : 'done') : i === step ? 'now' : 'todo';
+      // Writing an unchanged attribute still invalidates style; only touch what moved.
+      if (li.dataset.vis !== vis) li.dataset.vis = vis;
     });
     for (const [k, el] of this.el.cells()) {
       const v = cells[k]; if (v === undefined) continue;
       if (el.textContent !== v) el.textContent = v;
       const cell = el.closest('[data-k]') as HTMLElement | null;
-      if (cell) cell.dataset.on = v === '·' ? 'false' : 'true';
+      const on = v === '·' ? 'false' : 'true';
+      if (cell && cell.dataset.on !== on) cell.dataset.on = on;
     }
-    if (this.el.panelCount) this.el.panelCount.textContent = `${visible} de ${story.counts.candidates}`;
+    const panelCount = `${visible} de ${story.counts.candidates}`;
+    if (this.el.panelCount && this.el.panelCount.textContent !== panelCount) this.el.panelCount.textContent = panelCount;
     const ticker = this.el.ticker;
     if (ticker) {
-      const frag = document.createDocumentFragment();
-      lines.forEach((entry, index) => {
+      const lineDiv = (entry: { line: LogLine }, typed: number) => {
         const div = document.createElement('div'); div.className = 'ln';
-        let left = index === lines.length - 1 ? typedChars : Infinity;
+        let left = typed;
         for (const seg of entry.line.segs) {
           if (left <= 0) break;
           const span = document.createElement('span'); span.className = seg.tone;
           span.textContent = seg.text.slice(0, Math.max(0, left)); left -= seg.text.length;
           div.appendChild(span);
         }
-        frag.appendChild(div);
-      });
-      ticker.replaceChildren(frag);
+        return div;
+      };
+      const linesKey = lines.map((entry) => `${entry.line.id}:${entry.line.segs.map((seg) => seg.text).join('')}`).join('|');
+      if (linesKey === this.tickerLinesKey && ticker.lastElementChild && lines.length) {
+        // Only the typewriter on the newest line advanced: rebuild that one line, not the log.
+        ticker.lastElementChild.replaceWith(lineDiv(lines[lines.length - 1], typedChars));
+      } else {
+        const frag = document.createDocumentFragment();
+        lines.forEach((entry, index) => frag.appendChild(lineDiv(entry, index === lines.length - 1 ? typedChars : Infinity)));
+        ticker.replaceChildren(frag);
+        this.tickerLinesKey = linesKey;
+      }
     }
   }
 
