@@ -228,4 +228,22 @@ describe('ForgeLiveView', () => {
     expect(screen.getByText(/Intento anterior · 1 SUPPORT · 1 Evidence/)).toBeTruthy();
     expect(screen.getByLabelText('Contadores de la misión').textContent).toBe('candidatos0Evidence0SUPPORT0');
   });
+
+  it('a stalled mission with "Buscar más" available offers it in the header instead of a plain "Relanzar misión" that would drop the kept attempts', () => {
+    const onRelaunch = vi.fn();
+    const onSearchMore = vi.fn();
+    const unsupported = [{ candidateId: 'c0', status: 'verified', evidenceId: 'e0', sourceUrl: candidates[0].url, supported: false, supportReason: 'homepage_insufficient_coverage' }];
+    const prior = [{ status: 'completed', executionPhase: 'forged', searchCandidates: [], verificationResults: [{ candidateId: 'p0', status: 'verified', evidenceId: 'ep', sourceUrl: 'https://kept.example/find', supported: true }] }];
+    const stalled = buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ searchCandidates: candidates.slice(0, 1), verificationResults: unsupported, priorAttempts: prior }) });
+    render(<ForgeLiveView model={stalled} onRelaunch={onRelaunch} onSearchMore={onSearchMore} />);
+    expect(screen.queryByRole('button', { name: 'Relanzar misión' })).toBeNull();
+    const buttons = screen.getAllByRole('button', { name: 'Buscar más' });
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0].closest('header')).not.toBeNull();
+    expect(screen.getByText(/conserva lo ya encontrado/)).toBeTruthy();
+    fireEvent.click(buttons[0]);
+    expect(onSearchMore).toHaveBeenCalledWith('goal:1');
+    expect(onRelaunch).not.toHaveBeenCalled();
+    expect(screen.getByText(/Intento anterior · 1 SUPPORT · 1 Evidence/)).toBeTruthy();
+  });
 });

@@ -167,7 +167,7 @@ test('a queued mission breathes honestly: waiting for the agent, clear next step
   await expect(forge.getByRole('button', { name: /Repetir la forja/ })).toHaveCount(0);
 });
 
-test('a mission the Kernel left read without SUPPORT and without a lease can be relaunched with the Goal confirm endpoint', async ({ page }, testInfo) => {
+test('a mission the Kernel left read without SUPPORT and without a lease is offered "Buscar más" (keeps earlier attempts) through the Goal confirm endpoint, not a plain relaunch', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const stalledResults = [{ candidateId: 'cand-b', status: 'verified', evidenceId: 'evidence-forge-b', sourceUrl: candidates[1].url, supported: false, supportReason: 'homepage_insufficient_coverage' }];
   const stalledMission = { ...missions.missions[0], status: 'running', executionPhase: 'verifying', searchCandidates: [candidates[1]], verificationResults: stalledResults };
@@ -185,14 +185,16 @@ test('a mission the Kernel left read without SUPPORT and without a lease can be 
   await openHome(page, true);
   const forge = page.locator('.forge-live');
   await expect(forge.getByText('Leídas sin SUPPORT', { exact: false }).first()).toBeVisible();
-  const relaunch = forge.getByRole('button', { name: 'Relanzar misión' });
+  await expect(forge.getByRole('button', { name: 'Relanzar misión' })).toHaveCount(0);
+  const relaunch = forge.locator('header').getByRole('button', { name: 'Buscar más' });
   await expect(relaunch).toBeVisible();
+  await expect(forge.getByRole('button', { name: 'Buscar más' })).toHaveCount(1);
   expect((await relaunch.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
   await page.screenshot({ path: testInfo.outputPath('forge-relaunch-390x844.png') });
   await relaunch.click();
   await expect.poll(() => posted.length).toBe(1);
-  expect(posted[0]).toEqual({ confirmed: true, agent: 'hermes', cadence: 'manual' });
-  await expect(page.getByText('Misión relanzada: el Kernel la puso en cola para Hermes.')).toBeVisible();
+  expect(posted[0]).toEqual({ confirmed: true, agent: 'hermes', cadence: 'manual', mode: 'search_more' });
+  await expect(page.getByText(/Buscar más: el Kernel puso un nuevo intento en cola para Hermes/)).toBeVisible();
 });
 
 test('"Buscar más" on a forged mission posts search_more through the dashboard confirm path and keeps the earlier Find on screen', async ({ page }, testInfo) => {

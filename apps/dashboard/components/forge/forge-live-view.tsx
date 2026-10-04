@@ -55,7 +55,7 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, onRelaunch, relau
     data-reduced-motion={reducedMotion ? 'true' : undefined}
     aria-labelledby={headingId}
   >
-    <ForgeHeader model={model} headingId={headingId} onConnect={onConnect} onRelaunch={onRelaunch} relaunchPending={relaunchPending} replaying={Boolean(mission && playing && reconstructing && mission.motion === 'settled')} />
+    <ForgeHeader model={model} headingId={headingId} onConnect={onConnect} onRelaunch={onRelaunch} relaunchPending={relaunchPending} onSearchMore={onSearchMore} replaying={Boolean(mission && playing && reconstructing && mission.motion === 'settled')} />
     {mission
       ? <ForgeBody key={mission.missionId} model={mission} narrow={narrow} reducedMotion={reducedMotion} onOpenFinds={onOpenFinds} onSearchMore={onSearchMore} searchMorePending={relaunchPending} onPlaying={setPlaying} onReconstructing={setReconstructing} />
       : <div className="forge-live-cold" aria-hidden="true"><div className="forge-live-stage is-cold"><p className="forge-slabel">La web · índice del buscador<span>fondo decorativo · no se cuenta</span></p></div></div>}
@@ -222,7 +222,7 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onSearchMore, se
       {hiddenCount > 0 || expanded ? <button type="button" className="forge-live-more" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
         {expanded ? 'Mostrar menos fuentes' : `Ver ${hiddenCount} ${hiddenCount === 1 ? 'fuente más' : 'fuentes más'}`}<ChevronDown aria-hidden="true" />
       </button> : null}
-      {model.searchMore && onSearchMore ? <div className="forge-live-searchmore">
+      {model.searchMore && onSearchMore && !model.relaunch ? <div className="forge-live-searchmore">
         <button type="button" className="forge-live-relaunch-btn forge-live-searchmore-btn" disabled={searchMorePending} aria-describedby={searchMoreNoteId} onClick={() => { if (model.searchMore) onSearchMore(model.searchMore.goalId); }}>
           <Search aria-hidden="true" />{searchMorePending ? 'Enviando…' : 'Buscar más'}
         </button>
@@ -248,7 +248,7 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onSearchMore, se
   </div>;
 }
 
-function ForgeHeader({ model, headingId, onConnect, onRelaunch, relaunchPending, replaying }: { model: ForgeModel; headingId: string; onConnect?: () => void; onRelaunch?: (goalId: string) => void; relaunchPending?: boolean; replaying: boolean }) {
+function ForgeHeader({ model, headingId, onConnect, onRelaunch, relaunchPending, onSearchMore, replaying }: { model: ForgeModel; headingId: string; onConnect?: () => void; onRelaunch?: (goalId: string) => void; relaunchPending?: boolean; onSearchMore?: (goalId: string) => void; replaying: boolean }) {
   if (model.kind === 'offline') {
     return <header className="forge-live-head">
       <div className="forge-live-goal">
@@ -276,7 +276,14 @@ function ForgeHeader({ model, headingId, onConnect, onRelaunch, relaunchPending,
       <p className="forge-live-kick"><small className="forge-live-eyebrow">GOAL · MISIÓN DEL KERNEL</small><span className="forge-live-id" title={model.missionId}>{shortId(model.missionId)}</span>{meta ? <span className="forge-bench-meta" data-replaying={replaying ? 'true' : undefined} title={meta.join('')}>{meta[0]}<span className="forge-meta-more">{meta[1]}</span></span> : null}</p>
       <h2 id={headingId}>{model.goalTitle || 'Goal sin título'}</h2>
       <p className="forge-live-phase"><i data-tone={phaseTone(model)} /><span><strong>{model.phaseLabel}<PhaseClock since={model.phaseSince} live={model.motion === 'active'} /></strong> {model.phaseDetail}</span></p>
-      {model.relaunch && onRelaunch ? <div className="forge-live-relaunch">
+      {model.relaunch && onSearchMore && model.searchMore ? <div className="forge-live-relaunch">
+        {/* Stalled mission with "Buscar más" available: it re-queues the same Goal like Relanzar did, but
+            keeps the earlier attempts, so a plain restart (which drops that history) is not offered here. */}
+        <button type="button" className="forge-live-relaunch-btn forge-live-searchmore-btn" disabled={relaunchPending} onClick={() => { if (model.searchMore) onSearchMore(model.searchMore.goalId); }}>
+          <Search aria-hidden="true" />{relaunchPending ? 'Enviando…' : 'Buscar más'}
+        </button>
+        <p>El Kernel la dejó sin SUPPORT y nadie la está trabajando. Buscar más la vuelve a poner en cola para Hermes con el mismo Goal y conserva lo ya encontrado.</p>
+      </div> : model.relaunch && onRelaunch ? <div className="forge-live-relaunch">
         <button type="button" className="forge-live-relaunch-btn" disabled={relaunchPending} onClick={() => { if (model.relaunch) onRelaunch(model.relaunch.goalId); }}>
           <RefreshCw aria-hidden="true" />{relaunchPending ? 'Relanzando…' : 'Relanzar misión'}
         </button>
