@@ -68,8 +68,13 @@ export function launcherOps(options = {}) {
   const env = options.env ?? process.env;
   const cwd = options.cwd ?? process.cwd();
   const paths = options.paths ?? defaultEfestoPaths(env, cwd);
+  const inspect = async () => {
+    const local = await inspectEfestoBootstrap({ ...options, env, cwd, paths });
+    if (local.kernel !== 'ready') return local;
+    return await readRunningKernelBootstrap(local, options) ?? local;
+  };
   return {
-    inspect: () => inspectEfestoBootstrap({ ...options, env, cwd, paths }),
+    inspect,
     ensureDirectories: () => mkdir(dirname(paths.logFile), { recursive: true }),
     writeLog: (message) => appendLog(paths.logFile, message),
     removeStalePidFile: () => rm(paths.pidFile, { force: true }),
