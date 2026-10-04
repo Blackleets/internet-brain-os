@@ -29,10 +29,14 @@ export class WebPageFetcher {
       let response: Response | undefined;
       for (let redirects = 0; redirects <= 5; redirects += 1) {
         const address = await resolvePublicHttpUrl(parsed, this.options.lookupImpl ?? lookup);
-        const headers = {
+        const headers: Record<string, string> = {
           accept: 'text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8',
           'user-agent': this.options.userAgent ?? 'InternetBrainOS/0.1 (+public-research)',
         };
+        // A request without Accept-Encoding means "any coding is acceptable" (RFC 9110),
+        // so CDNs may answer gzip/br. The pinned request reads raw bytes: name exactly the
+        // codings decodeContent() can undo. fetchImpl (undici) negotiates and decodes itself.
+        if (!this.options.fetchImpl) headers['accept-encoding'] = 'gzip, deflate, br';
         response = this.options.fetchImpl
           ? await this.options.fetchImpl(parsed, { redirect: 'manual', signal: controller.signal, headers })
           : await (this.options.requestImpl ?? pinnedRequest)(parsed, address, controller.signal, headers);
@@ -45,7 +49,9 @@ export class WebPageFetcher {
       if (!response) throw new Error('Unable to fetch public page');
 
       const contentType = response.headers.get('content-type') ?? 'application/octet-stream';
-      const body = await readBoundedText(response, 2 * 1024 * 1024);
+      // Raw transports (pinned request / requestImpl) hand back encoded bytes; fetchImpl
+      // already decoded them while keeping the Content-Encoding header.
+      const body = await readBoundedText(response, 2 * 1024 * 1024, !this.options.fetchImpl);
       const title = extractTitle(body) || parsed.hostname;
       const text = contentType.includes('html') ? htmlToText(body) : body.trim();
 
@@ -63,7 +69,7 @@ export class WebPageFetcher {
   }
 }
 
-async function readBoundedText(response: Response, maximumBytes: number): Promise<string> {
+async function readBoundedText(response: Response, maximumBytes: number, decodeContentEncoding: boolean): Promise<string> {
   const declared = Number(response.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > maximumBytes) throw new Error('Public page exceeds 2 MiB limit');
   if (!response.body) return '';
@@ -80,10 +86,57 @@ async function readBoundedText(response: Response, maximumBytes: number): Promis
     }
     chunks.push(value);
   }
-  const bytes = new Uint8Array(size);
+  const raw = new Uint8Array(size);
   let offset = 0;
-  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-  return new TextDecoder().decode(bytes);
+  for (const chunk of chunks) { raw.set(chunk, offset); offset += chunk.byteLength; }
+  const bytes = decodeContentEncoding
+    ? decodeContent(raw, response.headers.get('content-encoding'), maximumBytes)
+    : raw;
+  return decodeText(bytes, response.headers.get('content-type'));
+}
+
+/** Undo Content-Encoding (gzip / x-gzip / deflate / br), bounded against decompression bombs. */
+function decodeContent(bytes: Uint8Array, contentEncoding: string | null, maximumBytes: number): Uint8Array {
+  const codings = (contentEncoding ?? '').split(',').map((item) => item.trim().toLowerCase()).filter((item) => item && item !== 'identity');
+  let current = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  // Codings are listed in the order they were applied; undo them in reverse.
+  for (const coding of codings.reverse()) {
+    const options = { maxOutputLength: maximumBytes };
+    try {
+      if (coding === 'gzip' || coding === 'x-gzip') current = gunzipSync(current, options);
+      else if (coding === 'br') current = brotliDecompressSync(current, options);
+      else if (coding === 'deflate') {
+        try { current = inflateSync(current, options); } catch (error) {
+          if (error instanceof RangeError) throw error;
+          current = inflateRawSync(current, options);
+        }
+      } else throw new Error(`Unsupported content-encoding: ${coding}`);
+    } catch (error) {
+      if (error instanceof RangeError) throw new Error('Public page exceeds 2 MiB limit');
+      if (error instanceof Error && error.message.startsWith('Unsupported content-encoding')) throw error;
+      throw new Error(`Undecodable ${coding} content`);
+    }
+  }
+  return new Uint8Array(current.buffer, current.byteOffset, current.byteLength);
+}
+
+/**
+ * Decode text in the declared charset and refuse binary bodies (images, PDFs, archives,
+ * still-compressed bytes) so they never become Evidence.
+ */
+function decodeText(bytes: Uint8Array, contentType: string | null): string {
+  const sample = bytes.subarray(0, 8192);
+  if (sample.includes(0)) throw new Error('web.read returned binary or undecodable content');
+  const charset = /charset\s*=\s*"?([^";\s]+)/i.exec(contentType ?? '')?.[1];
+  let decoder: TextDecoder;
+  try { decoder = new TextDecoder(charset ?? 'utf-8'); } catch { decoder = new TextDecoder(); }
+  const text = decoder.decode(bytes);
+  let replaced = 0;
+  for (const character of text) if (character === '\uFFFD') replaced += 1;
+  if (text.length && replaced > 16 && replaced / text.length > 0.05) {
+    throw new Error('web.read returned binary or undecodable content');
+  }
+  return text;
 }
 
 async function resolvePublicHttpUrl(url: URL, lookupImpl: typeof lookup): Promise<string> {
@@ -216,16 +269,37 @@ function stripTags(value: string): string {
   return value.replace(/<[^>]+>/g, ' ');
 }
 
+const NAMED_ENTITIES: Readonly<Record<string, string>> = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00A0',
+  AMP: '&', LT: '<', GT: '>', QUOT: '"',
+  mdash: '\u2014', ndash: '\u2013', hellip: '\u2026', middot: '\u00B7', bull: '\u2022',
+  lsquo: '\u2018', rsquo: '\u2019', sbquo: '\u201A', ldquo: '\u201C', rdquo: '\u201D', bdquo: '\u201E',
+  laquo: '\u00AB', raquo: '\u00BB', lsaquo: '\u2039', rsaquo: '\u203A',
+  copy: '\u00A9', reg: '\u00AE', trade: '\u2122', deg: '\u00B0', euro: '\u20AC', pound: '\u00A3',
+  yen: '\u00A5', cent: '\u00A2', sect: '\u00A7', para: '\u00B6', times: '\u00D7', divide: '\u00F7',
+  iexcl: '\u00A1', iquest: '\u00BF', ordf: '\u00AA', ordm: '\u00BA', shy: '\u00AD',
+  aacute: '\u00E1', eacute: '\u00E9', iacute: '\u00ED', oacute: '\u00F3', uacute: '\u00FA',
+  Aacute: '\u00C1', Eacute: '\u00C9', Iacute: '\u00CD', Oacute: '\u00D3', Uacute: '\u00DA',
+  ntilde: '\u00F1', Ntilde: '\u00D1', uuml: '\u00FC', Uuml: '\u00DC', ouml: '\u00F6', Ouml: '\u00D6',
+  auml: '\u00E4', Auml: '\u00C4', ccedil: '\u00E7', Ccedil: '\u00C7', agrave: '\u00E0', egrave: '\u00E8',
+  szlig: '\u00DF', ensp: '\u2002', emsp: '\u2003', thinsp: '\u2009', zwnj: '\u200C', zwj: '\u200D',
+};
+
+/** Single-pass HTML entity decoding (named, decimal, hex); "&amp;lt;" stays "&lt;". */
 function decodeEntities(value: string): string {
-  return value
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/gi, "'");
+  return value.replace(/&(#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6}|[A-Za-z][A-Za-z0-9]{1,31});/g, (entity, body: string) => {
+    if (body.startsWith('#')) {
+      const hex = body[1] === 'x' || body[1] === 'X';
+      const codePoint = Number.parseInt(body.slice(hex ? 2 : 1), hex ? 16 : 10);
+      if (!Number.isFinite(codePoint) || codePoint === 0 || codePoint > 0x10FFFF
+        || (codePoint >= 0xD800 && codePoint <= 0xDFFF)) return '\uFFFD';
+      return String.fromCodePoint(codePoint);
+    }
+    return NAMED_ENTITIES[body] ?? entity;
+  });
 }
 import { lookup } from 'node:dns/promises';
 import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { isIP } from 'node:net';
+import { brotliDecompressSync, gunzipSync, inflateRawSync, inflateSync } from 'node:zlib';
