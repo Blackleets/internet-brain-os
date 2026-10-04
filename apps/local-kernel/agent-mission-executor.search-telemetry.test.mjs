@@ -130,6 +130,48 @@ describe('per-mission search telemetry (display-only)', () => {
     for (const value of plans) expect(normalizeSearchTelemetry(value)).toBeUndefined();
   });
 
+  it('keeps the result items each search returned (url + title), bounded and public-only, display-only', async () => {
+    const results = [
+      { url: 'https://shop.example/drill', title: '  Cordless\u0007 drill   24.99 EUR ' },
+      { url: 'https://blog.example/compare?ref=1' },
+    ];
+    const value = { searches: [{ query: 'drill offer', limit: 10, resultCount: 10, results }] };
+    expect(normalizeSearchTelemetry(value).searches[0].results).toEqual([
+      { url: 'https://shop.example/drill', title: 'Cordless drill 24.99 EUR' },
+      { url: 'https://blog.example/compare?ref=1' },
+    ]);
+    const item = (i) => ({ url: `https://site${i}.example/p`, title: `Page ${i}` });
+    const many = (n, from = 0) => Array.from({ length: n }, (_, i) => item(from + i));
+    // 3 × 10 = 30 is the ceiling; 11 in one search or 31 in total drops the record.
+    expect(normalizeSearchTelemetry({ searches: [{ query: 'a', results: many(10) }, { query: 'b', results: many(10, 10) }, { query: 'c', results: many(10, 20) }] })).toBeDefined();
+    const invalid = [
+      { searches: [{ query: 'a', results: many(11) }] },
+      { searches: [{ query: 'a', results: many(10) }, { query: 'b', results: many(10, 10) }, { query: 'c', results: many(10, 20) }, { query: 'd', results: many(1, 30) }] },
+      { searches: [{ query: 'a', resultCount: 1, results: many(2) }] },
+      { searches: [{ query: 'a', results: 'https://x.example/' }] },
+      { searches: [{ query: 'a', results: [{ url: 'https://x.example/', title: 'x', snippet: 'no extra fields' }] }] },
+      { searches: [{ query: 'a', results: [{ url: 'http://127.0.0.1:4310/api/agents' }] }] },
+      { searches: [{ query: 'a', results: [{ url: 'http://192.168.1.2/' }] }] },
+      { searches: [{ query: 'a', results: [{ url: 'https://user:pw@x.example/' }] }] },
+      { searches: [{ query: 'a', results: [{ url: 'https://x.example/cb?token=abc' }] }] },
+      { searches: [{ query: 'a', results: [{ url: 'javascript:alert(1)' }] }] },
+      { searches: [{ query: 'a', results: [{ url: 'https://x.example/](https://y.example/' }] }] },
+      { searches: [{ query: 'a', results: [{ url: 'https://x.example/', title: 'x'.repeat(161) }] }] },
+      { searches: [{ query: 'a', results: [{ url: 'https://x.example/' }, { url: 'https://x.example/' }] }] },
+    ];
+    for (const bad of invalid) expect(normalizeSearchTelemetry(bad)).toBeUndefined();
+  });
+
+  it('stores result items with the candidates and never turns them into candidates, Evidence or SUPPORT', async () => {
+    const { store, mission, executor, claim } = await claimed();
+    const results = [{ url: 'https://shop.example/drill', title: 'Drill' }, { url: 'https://other.example/x', title: 'Other page' }];
+    await executor.complete(mission.id, { leaseId: claim.leaseId, resultKind: 'search_candidates', findings: [finding], searchTelemetry: { searches: [{ query: 'drill offer', limit: 10, resultCount: 2, results }] } });
+    const stored = (await store.read()).agentMissions[0];
+    expect(stored.searchTelemetry.searches[0].results).toEqual(results);
+    expect(stored.searchCandidates.map((item) => item.url)).toEqual(['https://shop.example/drill']);
+    expect((await store.read()).evidence ?? []).toHaveLength(0);
+  });
+
   it('records candidates normally when the telemetry is invalid', async () => {
     const { store, mission, executor, claim } = await claimed();
     await executor.complete(mission.id, { leaseId: claim.leaseId, resultKind: 'search_candidates', findings: [finding], searchTelemetry: { searches: [{ query: 'ok', limit: 'ten' }] } });

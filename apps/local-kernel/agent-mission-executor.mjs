@@ -10,6 +10,11 @@ const MAX_TELEMETRY_QUERY_CHARS = 300;
 const MAX_TELEMETRY_LIMIT = 100;
 const MAX_TELEMETRY_RESULT_COUNT = 1000;
 const MAX_TELEMETRY_PLANNED_QUERIES = 3;
+// Result items a search returned (display-only: the forge shows the pages around the spider).
+const MAX_TELEMETRY_RESULTS_PER_SEARCH = 10;
+const MAX_TELEMETRY_RESULTS_TOTAL = 30;
+const MAX_TELEMETRY_RESULT_TITLE_CHARS = 160;
+const SENSITIVE_QUERY_KEY = /^(?:token|access_token|auth|authorization|api[_-]?key|code|session|signature|sig)$/i;
 // Funnel counts are bounded by the adapter contract (at most 20 findings per Hermes answer).
 const MAX_TELEMETRY_FINDINGS = 20;
 export const FUNNEL_DROP_REASONS = Object.freeze(['malformed_url', 'per_domain_cap', 'duplicate', 'other']);
@@ -127,8 +132,9 @@ export function normalizeSearchTelemetry(value, { findingsSubmitted } = {}) {
     }
   }
   const normalized = [];
+  let totalResults = 0;
   for (const search of searches) {
-    if (!isPlainObject(search) || !onlyKeys(search, ['query', 'limit', 'resultCount'])) return undefined;
+    if (!isPlainObject(search) || !onlyKeys(search, ['query', 'limit', 'resultCount', 'results'])) return undefined;
     const query = telemetryQuery(search.query);
     if (!query) return undefined;
     const entry = { query };
@@ -139,6 +145,14 @@ export function normalizeSearchTelemetry(value, { findingsSubmitted } = {}) {
     if (search.resultCount !== undefined) {
       if (!Number.isInteger(search.resultCount) || search.resultCount < 0 || search.resultCount > MAX_TELEMETRY_RESULT_COUNT) return undefined;
       entry.resultCount = search.resultCount;
+    }
+    if (search.results !== undefined) {
+      const results = telemetryResults(search.results);
+      if (!results) return undefined;
+      if (entry.resultCount !== undefined && results.length > entry.resultCount) return undefined;
+      totalResults += results.length;
+      if (totalResults > MAX_TELEMETRY_RESULTS_TOTAL) return undefined;
+      entry.results = results;
     }
     if (plannedQueries) entry.matchesPlan = plannedQueries.includes(query);
     normalized.push(entry);
@@ -155,6 +169,40 @@ export function normalizeSearchTelemetry(value, { findingsSubmitted } = {}) {
     ...(plannedQueries ? { plannedQueries } : {}),
     ...(funnel ? { funnel } : {}),
   };
+}
+
+/**
+ * `results` of one search: [{ url, title? }], at most 10 per search and 30 in total. Display-only (the
+ * forge draws them around the spider); never Evidence, never web.read input, never SUPPORT. Each URL
+ * must be a well-formed public http(s) URL without credentials, private literal hosts or
+ * sensitive query keys; the title is plain text. Anything invalid drops the whole telemetry record.
+ */
+function telemetryResults(value) {
+  if (!Array.isArray(value) || value.length > MAX_TELEMETRY_RESULTS_PER_SEARCH) return undefined;
+  const results = [];
+  for (const item of value) {
+    if (!isPlainObject(item) || !onlyKeys(item, ['url', 'title'])) return undefined;
+    const url = publicTelemetryUrl(item.url);
+    if (!url || results.some((existing) => existing.url === url)) return undefined;
+    const entry = { url };
+    if (item.title !== undefined) {
+      if (typeof item.title !== 'string') return undefined;
+      const title = item.title.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (title.length > MAX_TELEMETRY_RESULT_TITLE_CHARS) return undefined;
+      if (title) entry.title = title;
+    }
+    results.push(entry);
+  }
+  return results;
+}
+
+function publicTelemetryUrl(raw) {
+  if (typeof raw !== 'string' || raw.length > 2048 || !isWellFormedAbsoluteHttpUrl(raw)) return undefined;
+  let parsed;
+  try { parsed = new URL(raw); } catch { return undefined; }
+  if (parsed.username || parsed.password || isPrivateLiteralHost(parsed.hostname)) return undefined;
+  if ([...parsed.searchParams.keys()].some((key) => SENSITIVE_QUERY_KEY.test(key))) return undefined;
+  return parsed.href;
 }
 
 function telemetryQuery(value) {
@@ -231,7 +279,7 @@ function normalizeCandidate(value, index) {
   if (['http:', 'https:'].includes(parsed.protocol) && !isWellFormedAbsoluteHttpUrl(rawUrl)) throw invalid(`finding ${index} URL is not a well-formed absolute HTTP(S) URL`);
   if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) throw invalid(`finding ${index} URL must be public HTTP(S)`);
   if (isPrivateLiteralHost(parsed.hostname)
-    || [...parsed.searchParams.keys()].some((key) => /^(?:token|access_token|auth|authorization|api[_-]?key|code|session|signature|sig)$/i.test(key))) {
+    || [...parsed.searchParams.keys()].some((key) => SENSITIVE_QUERY_KEY.test(key))) {
     throw invalid(`finding ${index} URL contains private or sensitive data`);
   }
   return {
