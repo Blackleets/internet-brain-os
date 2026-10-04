@@ -228,7 +228,12 @@ export async function runPlannedSearches(planned, worker, options = {}) {
   const seen = new Set();
   for (const query of planned.slice(0, MAX_SEARCH_CALLS)) {
     const outcome = await runSearchWorker(worker, query, options);
-    searches.push({ query, limit: SEARCH_LIMIT, ...(outcome.ok ? { resultCount: outcome.results.length } : {}) });
+    const search = { query, limit: SEARCH_LIMIT, ...(outcome.ok ? { resultCount: outcome.results.length } : {}) };
+    if (outcome.ok) {
+      const shown = displayableResults(outcome.results);
+      if (shown.length) search.results = shown;
+    }
+    searches.push(search);
     if (!outcome.ok) continue;
     for (const hit of outcome.results) {
       const url = typeof hit?.url === 'string' ? hit.url.trim() : '';
@@ -240,6 +245,33 @@ export async function runPlannedSearches(planned, worker, options = {}) {
     }
   }
   return { searches, results };
+}
+
+const SENSITIVE_QUERY_KEY = /^(?:token|access_token|auth|authorization|api[_-]?key|code|session|signature|sig)$/i;
+
+/**
+ * What one search returned, for display only (the forge draws these pages around the spider):
+ * [{ url, title? }], at most the search limit, public web URLs only (no credentials, IP literals,
+ * local hosts or sensitive query keys), no repeats within the search. Never Evidence or SUPPORT;
+ * the Kernel validates them again and drops the whole telemetry record if one is invalid.
+ */
+export function displayableResults(hits) {
+  const shown = [];
+  for (const hit of Array.isArray(hits) ? hits : []) {
+    if (shown.length >= SEARCH_LIMIT) break;
+    const url = typeof hit?.url === 'string' ? hit.url.trim() : '';
+    if (!url || url.length > 2048 || !isWellFormedWebUrl(url)) continue;
+    let parsed;
+    try { parsed = new URL(url); } catch { continue; }
+    const host = parsed.hostname.toLowerCase();
+    if (parsed.username || parsed.password || !host.includes('.') || host.includes(':') || host.startsWith('[')
+      || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host) || /(?:^|\.)(?:localhost|local|internal)$/.test(host)) continue;
+    if ([...parsed.searchParams.keys()].some((key) => SENSITIVE_QUERY_KEY.test(key))) continue;
+    if (shown.some((item) => item.url === parsed.href)) continue;
+    const title = cleanQueryText(hit.title, MAX_RESULT_TITLE_CHARS);
+    shown.push({ url: parsed.href, ...(title ? { title } : {}) });
+  }
+  return shown;
 }
 
 /** Drops findings that are not one of the listed results (the model may only select); counted as other. */

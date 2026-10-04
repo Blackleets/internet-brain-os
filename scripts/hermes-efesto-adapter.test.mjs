@@ -9,6 +9,7 @@ import {
   selectionMaxTokens,
   buildSelectionPrompt,
   runPlannedSearches,
+  displayableResults,
   runSearchWorker,
   keepListedFindings,
   resolveSearchWorker,
@@ -133,7 +134,12 @@ describe('Hermes Efesto adapter', () => {
       process.stdout.write(JSON.stringify({ ok: true, results: base.map((url, i) => ({ title: 'T' + i + ' '.repeat(3) + 'x'.repeat(300), url, description: 'd\\u0007' + i, position: i + 1 })) }));`);
     const { searches, results } = await runPlannedSearches(['q1', 'q2', 'q-fail', 'q-extra'], worker, { env: { PATH: process.env.PATH, OPENROUTER_API_KEY: 'must-not-leak' } });
     // at most 3 queries; the failed one is recorded as sent, with no invented count
-    expect(searches).toEqual([{ query: 'q1', limit: 10, resultCount: 4 }, { query: 'q2', limit: 10, resultCount: 2 }, { query: 'q-fail', limit: 10 }]);
+    expect(searches.map(({ results: _shown, ...rest }) => rest)).toEqual([{ query: 'q1', limit: 10, resultCount: 4 }, { query: 'q2', limit: 10, resultCount: 2 }, { query: 'q-fail', limit: 10 }]);
+    // what each search returned, for display: public web URLs only, per query (repeats across queries stay)
+    expect(searches[0].results.map((item) => item.url)).toEqual(['https://a.example/1', 'https://www.a.example/1/', 'https://b.example/x']);
+    expect(searches[1].results.map((item) => item.url)).toEqual(['https://b.example/x', 'https://c.example/y']);
+    expect(searches[0].results[0].title.length).toBeLessThanOrEqual(120);
+    expect(searches[2]).not.toHaveProperty('results');
     const requests = (await readFile(seen, 'utf8')).trim().split('\n').map((line) => JSON.parse(line));
     expect(requests).toEqual([{ query: 'q1', safe_limit: 10 }, { query: 'q2', safe_limit: 10 }, { query: 'q-fail', safe_limit: 10 }]);
     // de-duplicated across queries (www./trailing slash), only web URLs, clipped text without controls
@@ -149,6 +155,22 @@ describe('Hermes Efesto adapter', () => {
     const startedAt = Date.now();
     expect(await runSearchWorker(slow, 'x', { timeoutMs: 200 })).toEqual({ ok: false });
     expect(Date.now() - startedAt).toBeLessThan(2_000);
+  });
+
+  it('keeps only displayable result items: public web pages, no credentials, IPs, local hosts or tokens', () => {
+    const hits = [
+      { url: 'https://ok.example/a', title: ' Fine\u0007 page ' },
+      { url: 'https://ok.example/a' },
+      { url: 'http://127.0.0.1:4310/api' }, { url: 'http://[::1]/' }, { url: 'http://192.168.0.2/x' },
+      { url: 'https://printer.local/' }, { url: 'http://intranet/' }, { url: 'https://u:p@ok.example/' },
+      { url: 'https://ok.example/cb?code=1' }, { url: 'javascript:alert(1)' }, { url: 'ftp://ok.example/' },
+      { url: 'https://ok.example/](https://evil.example/' }, { title: 'no url' },
+      { url: 'https://two.example/b?q=rust' },
+    ];
+    expect(displayableResults(hits)).toEqual([{ url: 'https://ok.example/a', title: 'Fine page' }, { url: 'https://two.example/b?q=rust' }]);
+    const many = Array.from({ length: 14 }, (_, i) => ({ url: `https://s${i}.example/` }));
+    expect(displayableResults(many)).toHaveLength(10);
+    expect(displayableResults(undefined)).toEqual([]);
   });
 
   it('locates Hermes\'s own ddgs worker next to the Hermes executable, or fails closed', async () => {
@@ -187,7 +209,8 @@ process.stdout.write(${JSON.stringify(JSON.stringify(answer))});
 `, 'utf8');
       const result = await runHermesOneShot({ schemaVersion: 'efesto.hermes-mission.v1', mission }, { executable: process.execPath, searchWorker: WORKER, hermesHome: home, timeoutMs: 4_000, env: { ...process.env, HERMES_HOME: home } });
       expect(result.plannedQueries).toEqual(planned);
-      expect(result.searches).toEqual(planned.map((query) => ({ query, limit: 10, resultCount: 6 })));
+      expect(result.searches.map(({ results: _shown, ...rest }) => rest)).toEqual(planned.map((query) => ({ query, limit: 10, resultCount: 6 })));
+      expect(result.searches.every((search) => search.results.length > 0 && search.results.length <= 6)).toBe(true);
       const prompt = await readFile(join(home, 'prompt.txt'), 'utf8');
       expect(prompt).toContain('Search results (6, JSON)');
       expect(result.findings.map((finding) => finding.url)).toEqual(['https://jobs.example/a', 'https://jobs.example/b', 'https://example.com/a', 'https://other.example/rider']);
@@ -195,6 +218,8 @@ process.stdout.write(${JSON.stringify(JSON.stringify(answer))});
       const stored = normalizeSearchTelemetry(adapterSearchTelemetry(result), { findingsSubmitted: result.findings.length });
       expect(stored.searches.every((search) => search.matchesPlan === true)).toBe(true);
       expect(stored.searches.map((search) => search.query)).toEqual(planned);
+      // the Kernel accepted the display-only result items as sent (validated, unchanged)
+      expect(stored.searches.map((search) => search.results)).toEqual(result.searches.map((search) => search.results));
       expect(stored.funnel).toEqual(result.funnel);
     } finally {
       await rm(home, { recursive: true, force: true });
