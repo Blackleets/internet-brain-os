@@ -98,3 +98,11 @@
 /* The pill keeps "Kernel listo" on one line on phones; the view title gives way instead. */
 .connection-pill { flex: none; white-space: nowrap; }
 .efesto-topbar .top-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Phones: the whole command is visible (wrapped) instead of clipped behind the copy button;
+   copying still takes the exact text. */
+@media (max-width: 560px) {
+  .agent-code { grid-template-columns: minmax(0, 1fr); padding: 6px; gap: 2px; }
+  .agent-code button { order: -1; justify-self: end; min-height: 36px; }
+  .agent-code pre { padding: 2px 8px 8px; overflow-x: visible; white-space: pre-wrap; word-break: break-all; font-size: 11.5px; line-height: 1.55; }
+  .agent-code pre code { overflow-wrap: anywhere; }
+}

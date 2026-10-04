@@ -153,6 +153,8 @@ export function readFailureCode(reason?: string): string {
   if (sys) return sys[1];
   if (/timeout|timed out|abort/i.test(reason)) return 'TIMEOUT';
   if (/empty content/i.test(reason)) return 'VACÍA';
+  if (/bot-protection/i.test(reason)) return 'ANTI-BOT';
+  if (/private network/i.test(reason)) return 'RED PRIVADA';
   return 'ERROR';
 }
 

@@ -184,6 +184,8 @@ describe('forge story (spider graph + forge.log)', () => {
     expect(readFailureCode('getaddrinfo ENOTFOUND es.nodns.example')).toBe('ENOTFOUND');
     expect(readFailureCode('request timed out')).toBe('TIMEOUT');
     expect(readFailureCode(undefined)).toBe('ERROR');
+    expect(readFailureCode('web.read got a bot-protection check page instead of the page content')).toBe('ANTI-BOT');
+    expect(readFailureCode('Private network URLs are not supported')).toBe('RED PRIVADA');
     expect(shortTitle('Trabajos de conductor en Barcelona: determina tus horas | Drive')).toBe('Trabajos de conductor en Barcelona');
     expect(shortTitle('Ownership')).toBe('Ownership');
   });

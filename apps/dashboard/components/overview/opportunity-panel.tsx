@@ -1,6 +1,7 @@
 import type { MissionSummary, OpportunitySummary } from '../../lib/kernel/contracts';
 import { isKernelSupportedFind } from '../../lib/kernel/supported-find';
 import { Panel } from '../ui/panel';
+import { findNextActionEs } from '../../lib/finds/find-copy';
 
 type OpportunityPanelProps = {
   opportunities: OpportunitySummary[];
@@ -23,7 +24,7 @@ export function OpportunityPanel({ opportunities, unavailable, missions }: Oppor
           </span>
         </div>
         <p>{opportunity.categoryLabel} · {opportunity.sourceHost}</p>
-        <p className="opportunity-next-action">Siguiente paso: {opportunity.nextAction}</p>
+        <p className="opportunity-next-action">Siguiente paso: {findNextActionEs(opportunity.nextAction)}</p>
       </li>
     );
   })}</ul>}</Panel>;

@@ -585,7 +585,7 @@ function phaseCopy(phase: ForgePhase, counts: ForgeCounts, row?: MissionSummary)
         ? `El Kernel lee ${counts.sources} ${plural(counts.sources, 'candidato', 'candidatos')} con web.read y guarda Evidence al terminar.`
         : 'El Kernel aplica web.read y SUPPORT a los candidatos.',
     };
-    case 'read_failed_all': return { label: 'Sin lectura', detail: 'El Kernel no pudo leer ninguna página. Buscar más es seguro.' };
+    case 'read_failed_all': return { label: 'Sin lectura', detail: `El Kernel no pudo leer ${counts.sources === 1 ? 'la página candidata' : `ninguna de las ${counts.sources} páginas candidatas`}; cada tarjeta dice por qué. Buscar más pide a Hermes otras fuentes y conserva lo guardado.` };
     case 'verified_unsupported':
     case 'research_completed': return {
       label: 'Leídas sin SUPPORT',
@@ -659,10 +659,21 @@ export function attemptFailureCopy(reason: string): string {
   return reason.length > 90 ? `${reason.slice(0, 89)}…` : reason;
 }
 
+const HTTP_READ_COPY: Record<string, string> = {
+  '401': 'el sitio pide iniciar sesión',
+  '403': 'el sitio denegó el acceso al lector del Kernel',
+  '404': 'la página ya no existe',
+  '410': 'la página ya no existe',
+  '429': 'el sitio limitó las lecturas (demasiadas peticiones)',
+  '500': 'el sitio falló al responder',
+  '502': 'el sitio no respondió bien',
+  '503': 'el sitio no estaba disponible',
+};
+
 export function readFailureReason(code?: string): string {
   if (!code) return 'El Kernel no pudo leer la página';
   const http = code.match(/HTTP\s+(\d{3})/i);
-  if (http) return `No se pudo leer: HTTP ${http[1]}`;
+  if (http) return `No se pudo leer: ${HTTP_READ_COPY[http[1]] ?? 'el sitio respondió con error'} (HTTP ${http[1]})`;
   if (/empty content/i.test(code)) return 'No se pudo leer: contenido vacío';
   if (/timeout|timed out|abort/i.test(code)) return 'No se pudo leer: tiempo de espera agotado';
   if (/bot-protection/i.test(code)) return 'No se pudo leer: el sitio mostró una comprobación anti-bots, no su contenido';

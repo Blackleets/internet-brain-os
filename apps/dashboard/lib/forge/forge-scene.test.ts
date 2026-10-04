@@ -70,7 +70,7 @@ describe('buildForgeScene (real Kernel data → visual elements)', () => {
     expect(byId[candidates[0].url]).toMatchObject({ kind: 'gold', evidenceId: 'e1' });
     expect(byId[candidates[1].url]).toMatchObject({ kind: 'ash', evidenceId: 'e2', reason: expect.stringContaining('términos del Goal') });
     expect(byId[candidates[1].url].readFailed).toBeUndefined();
-    expect(byId[candidates[2].url]).toMatchObject({ kind: 'ash', readFailed: true, reason: 'No se pudo leer: HTTP 404' });
+    expect(byId[candidates[2].url]).toMatchObject({ kind: 'ash', readFailed: true, reason: 'No se pudo leer: la página ya no existe (HTTP 404)' });
     expect(byId[candidates[3].url].kind).toBe('spark');
     // threads = Evidence records (gold + no-SUPPORT ash); a failed read never had Evidence.
     expect(scene.counts).toEqual({ sparks: 4, threads: 2, gold: 1, ash: 2 });

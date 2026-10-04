@@ -9,6 +9,7 @@ import { countMissionKernelSupportedFinds } from '../../lib/kernel/supported-fin
 import type { DashboardActions } from '../overview/overview-screen';
 import { Panel } from '../ui/panel';
 import { StatusBadge, type StatusState } from '../ui/status-badge';
+import { findNextActionEs } from '../../lib/finds/find-copy';
 
 export function KernelWorkspaces({ snapshot, actions }: { snapshot: OverviewSnapshot; actions?: DashboardActions }) {
   const [actionState, setActionState] = useState<string>();
@@ -58,7 +59,7 @@ export function KernelWorkspaces({ snapshot, actions }: { snapshot: OverviewSnap
             Gate-blind "oportunidades priorizadas" must name SUPPORT like OpportunityPanel / Hallazgos.
             Fail-close feedback actionState: inbox rows are SUPPORT Finds — bare "Oportunidad descartada"
             must name Find SUPPORT like EfestoProductShell recordFeedback dismiss toast. */}
-        {snapshot.opportunities.length === 0 ? <Empty text="No hay hallazgos con Kernel SUPPORT priorizados todavía." /> : <ul className="workspace-records opportunity-records">{snapshot.opportunities.slice(0, 8).map((item) => <li key={item.id}><div><strong>{item.title}</strong><span>{item.categoryLabel} · {item.sourceHost} · relevancia {item.relevance}</span><span>Siguiente paso: {item.nextAction}</span></div>{actions ? <div className="feedback-actions"><button type="button" onClick={() => run(() => actions.recordOpportunityFeedback(item.id, 'useful'), setActionState, 'Feedback guardado')}>Útil</button><button type="button" onClick={() => run(() => actions.recordOpportunityFeedback(item.id, 'saved'), setActionState, 'Preferencia guardada en el Kernel.')}>Guardar</button><button type="button" onClick={() => run(() => actions.recordOpportunityFeedback(item.id, 'dismissed'), setActionState, 'Find SUPPORT descartado; Evidence objetiva no fue reescrita.')}>Descartar</button></div> : null}</li>)}</ul>}
+        {snapshot.opportunities.length === 0 ? <Empty text="No hay hallazgos con Kernel SUPPORT priorizados todavía." /> : <ul className="workspace-records opportunity-records">{snapshot.opportunities.slice(0, 8).map((item) => <li key={item.id}><div><strong>{item.title}</strong><span>{item.categoryLabel} · {item.sourceHost} · relevancia {item.relevance}</span><span>Siguiente paso: {findNextActionEs(item.nextAction)}</span></div>{actions ? <div className="feedback-actions"><button type="button" onClick={() => run(() => actions.recordOpportunityFeedback(item.id, 'useful'), setActionState, 'Feedback guardado')}>Útil</button><button type="button" onClick={() => run(() => actions.recordOpportunityFeedback(item.id, 'saved'), setActionState, 'Preferencia guardada en el Kernel.')}>Guardar</button><button type="button" onClick={() => run(() => actions.recordOpportunityFeedback(item.id, 'dismissed'), setActionState, 'Find SUPPORT descartado; Evidence objetiva no fue reescrita.')}>Descartar</button></div> : null}</li>)}</ul>}
       </Workspace>
 
       <Workspace id="automations" icon={Workflow} title="Automatizaciones" eyebrow="Procesos existentes">

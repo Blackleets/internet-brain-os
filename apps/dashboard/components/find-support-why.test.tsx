@@ -33,7 +33,9 @@ describe('Find card explains Kernel SUPPORT', () => {
     render(<FindsView opportunities={[find()]} missions={[mission]} connected onFeedback={vi.fn()} />);
     expect(screen.getByText('Por qué SUPPORT')).toBeTruthy();
     expect(screen.getByText(/El Kernel leyó la fuente y comprobó que cubre los términos clave del Goal/)).toBeTruthy();
-    expect(screen.getByText(/verificación de la misión mission-7/)).toBeTruthy();
+    // the proving mission is a compact id chip (full id in its title)
+    expect(screen.getByText(/verificación de la misión/)).toBeTruthy();
+    expect(document.querySelector('.find-support-why .kernel-id-chip')?.getAttribute('title')).toBe('mission-7');
   });
 
   it('names the Kernel stamp when the Find itself carries it', () => {

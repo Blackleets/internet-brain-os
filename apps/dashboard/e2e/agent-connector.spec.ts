@@ -33,6 +33,11 @@ for (const view of [{ name: '390', width: 390, height: 844, mobile: true }, { na
     await expect(sheet.getByRole('heading', { name: /^Sin contacto desde que arrancó el Kernel/ })).toBeVisible();
     await expect(sheet.getByLabel('Configuración del worker', { exact: true })).toContainText('export HEPHAESTUS_KERNEL_URL="http://127.0.0.1:4100"');
     await expect(sheet).not.toContainText(token);
+    // every setup command is fully visible: on phones it wraps instead of hiding behind «Copiar»
+    if (view.mobile) {
+      const clipped = await sheet.locator('.agent-code pre').evaluateAll((items) => items.filter((pre) => pre.scrollWidth > pre.clientWidth + 1).length);
+      expect(clipped).toBe(0);
+    }
     const box = await sheet.boundingBox();
     expect(box && box.x >= 0 && box.x + box.width <= view.width + 1).toBe(true);
     if (shotsDir) await page.screenshot({ path: `${shotsDir}/agent-connector-${view.name}.png` });

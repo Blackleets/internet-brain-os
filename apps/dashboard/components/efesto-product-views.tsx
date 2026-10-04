@@ -14,6 +14,8 @@ import { statePillLabel, statePillTone } from '../lib/ui/state-pill-label.mjs';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { displayText, type ForgeModel } from '../lib/forge/forge-model';
 import { ForgeLiveView } from './forge/forge-live-view';
+import { KernelIdChip } from './kernel-id-chip';
+import { findCategoryEs, findNextActionEs } from '../lib/finds/find-copy';
 import { AgentConnector } from './agents/agent-connector';
 import type { AgentsSnapshot } from '../lib/kernel/agents';
 
@@ -409,19 +411,19 @@ function FindCard({ item, onFeedback, onOpenCase, missions }: { item: Opportunit
   const reasons = Array.isArray(item.reasons) ? item.reasons.filter((value): value is string => typeof value === 'string' && value.trim().length > 0) : [];
   const evidenceCount = evidenceId ? 1 : 0;
   return <article className="find-card">
-    <header><span>{item.categoryLabel}</span><span className={'lead-label' + (kernelSupported ? ' kernel-support' : '')}>{kernelSupported ? 'Kernel SUPPORT' : 'Lead no verificado'}</span></header>
+    <header><span>{findCategoryEs(item.categoryLabel)}</span><span className={'lead-label' + (kernelSupported ? ' kernel-support' : '')}>{kernelSupported ? 'Kernel SUPPORT' : 'Lead no verificado'}</span></header>
     <h2>{displayText(item.title)}</h2>
     {reasons.length ? <p className="find-signals">Señales: {reasons.join(' · ')}</p> : null}
     <p>{item.sourceHost} · relevancia {formatRelevance(item.relevance)}</p>
     <dl className="find-provenance">
       <div><dt>Evidence</dt><dd>{evidenceCount > 0 ? `${evidenceCount} registro` : 'no vinculada'}</dd></div>
-      {caseId ? <div><dt>Case</dt><dd>{onOpenCase ? <button type="button" className="provenance-link" onClick={() => onOpenCase(caseId)}>{caseId}</button> : caseId}</dd></div> : null}
+      {caseId ? <div><dt>Case</dt><dd><KernelIdChip id={caseId} {...(onOpenCase ? { onOpen: () => onOpenCase(caseId) } : {})} /></dd></div> : null}
       {kernelSupported ? <div><dt>Kernel</dt><dd>SUPPORT</dd></div> : null}
-      {supportProof ? <div className="find-support-why"><dt>Por qué SUPPORT</dt><dd>El Kernel leyó la fuente y comprobó que cubre los términos clave del Goal; el texto del agente no cuenta. Prueba: {supportProof.kind === 'stamp' ? 'sello SUPPORT del Kernel en este hallazgo' : `verificación de la misión ${supportProof.missionId}`}.</dd></div> : null}
-      {evidenceId ? <div><dt>Procedencia</dt><dd>Hallazgo → {evidenceId}{caseId ? ` → ${caseId}` : ''}{sourceUrl ? ' → fuente' : ''}</dd></div> : <div><dt>Procedencia</dt><dd>no publicada</dd></div>}
+      {supportProof ? <div className="find-support-why"><dt>Por qué SUPPORT</dt><dd>El Kernel leyó la fuente y comprobó que cubre los términos clave del Goal; el texto del agente no cuenta. Prueba: {supportProof.kind === 'stamp' ? 'sello SUPPORT del Kernel en este hallazgo.' : <>verificación de la misión <KernelIdChip id={supportProof.missionId} /></>}</dd></div> : null}
+      {evidenceId ? <div><dt>Procedencia</dt><dd className="find-chain">Hallazgo → <KernelIdChip id={evidenceId} />{caseId ? <> → <KernelIdChip id={caseId} /></> : null}{sourceUrl ? ' → fuente' : ''}</dd></div> : <div><dt>Procedencia</dt><dd>no publicada</dd></div>}
     </dl>
     {sourceUrl ? <a className="find-source" href={sourceUrl} target="_blank" rel="noreferrer">Abrir fuente <ExternalLink /></a> : <span className="source-missing">Sin URL publicada</span>}
-    {item.nextAction ? <div className="find-next"><small>Siguiente paso</small><strong>{item.nextAction}</strong></div> : null}
+    {item.nextAction ? <div className="find-next"><small>Siguiente paso</small><strong>{findNextActionEs(item.nextAction)}</strong></div> : null}
     <div className="find-actions"><button type="button" onClick={() => onFeedback(item.id, 'useful')}><Check /> Útil</button><button type="button" onClick={() => onFeedback(item.id, 'saved')}><History /> Guardar</button><button type="button" onClick={() => onFeedback(item.id, 'dismissed')}><X /> Descartar</button></div>
   </article>;
 }

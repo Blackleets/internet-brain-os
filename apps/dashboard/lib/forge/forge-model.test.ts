@@ -100,7 +100,7 @@ describe('buildForgeModel', () => {
     expect(supported).toMatchObject({ state: 'supported', evidenceId: 'e1', quote: 'Taladro percutor 18 V por 109,90 €', quoteState: 'available', findTitle: 'Taladro percutor 18 V — Tools', evidenceTitle: 'Taladro percutor 18 V — Tools' });
     expect(unsupported).toMatchObject({ state: 'unsupported', reasonCode: 'insufficient_term_coverage', reason: 'La página no cubre suficientes términos del Goal', quoteState: 'none' });
     expect(unsupported.quote).toBeUndefined();
-    expect(failed).toMatchObject({ state: 'read_failed', reason: 'No se pudo leer: HTTP 404' });
+    expect(failed).toMatchObject({ state: 'read_failed', reason: 'No se pudo leer: la página ya no existe (HTTP 404)' });
     expect(model.summary).toBe('Find forjado. 3 fuentes, 2 leídas, 2 Evidence, 1 con Kernel SUPPORT.');
     // A Hermes snippet is never rendered as a quote.
     expect(JSON.stringify(model)).not.toContain('HERMES SNIPPET');
@@ -183,7 +183,9 @@ describe('reason copy', () => {
   it('translates known Kernel reasons and keeps unknown codes visible', () => {
     expect(supportReason('unique_id_missing')).toBe('Falta el identificador exacto que pide el Goal');
     expect(supportReason('new_reason')).toBe('Sin Kernel SUPPORT (motivo del Kernel: new_reason)');
-    expect(readFailureReason('web.read returned HTTP 503')).toBe('No se pudo leer: HTTP 503');
+    expect(readFailureReason('web.read returned HTTP 503')).toBe('No se pudo leer: el sitio no estaba disponible (HTTP 503)');
+    expect(readFailureReason('web.read returned HTTP 403')).toBe('No se pudo leer: el sitio denegó el acceso al lector del Kernel (HTTP 403)');
+    expect(readFailureReason('web.read returned HTTP 418')).toBe('No se pudo leer: el sitio respondió con error (HTTP 418)');
     expect(readFailureReason('DNS failure')).toBe('No se pudo leer: DNS failure');
   });
 });
