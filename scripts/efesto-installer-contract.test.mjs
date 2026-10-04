@@ -31,6 +31,16 @@ describe('Efesto Windows one-click installer contract', () => {
     expect(installer).not.toMatch(/kernel-api-token\s*=|API_SECRET\s*=|HEPHAESTUS_API_TOKEN\s*=/i);
   });
 
+  test('certifies Hermes safe-search and self-heals only the standard installation with backup', () => {
+    expect(installer).toContain('Test-HermesSafeSearchRuntime');
+    expect(installer).toContain("$help.Contains('--max-turns')");
+    expect(installer).toContain("$help.Contains('--toolsets')");
+    expect(installer).toContain("$help.Contains('--ignore-rules')");
+    expect(installer).toContain('& $hermes update --backup --yes');
+    expect(installer).toContain('Efesto will not modify a custom runtime automatically');
+    expect(installer.indexOf('Ensure-HermesSafeSearchRuntime')).toBeLessThan(installer.indexOf("@('efesto:launcher', 'repair')"));
+  });
+
   test('offers a double-click entrypoint and self-healing daily launcher', () => {
     expect(installCmd).toContain('install-efesto.ps1');
     expect(launcherCmd).toContain('where node');
