@@ -148,6 +148,7 @@ function publicClaim(mission) {
     scope: mission.scope,
     cadence: mission.cadence,
     attempt: mission.attempt,
+    ...(Array.isArray(mission.knownSourceUrls) && mission.knownSourceUrls.length ? { knownSourceUrls: mission.knownSourceUrls.slice(0, 40) } : {}),
     leaseId: mission.leaseId,
     leaseExpiresAt: mission.leaseExpiresAt,
   };

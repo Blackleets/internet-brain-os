@@ -65,4 +65,38 @@ describe('Mission HTTP confirmation authority boundary', () => {
     expect(response.status).toBe(403);
     expect((await store.read()).agentMissions ?? []).toHaveLength(0);
   });
+
+  it('"Buscar más" (mode search_more) needs the trusted dashboard origin; token-only is refused and changes nothing', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'efesto-g4-confirmation-'));
+    const store = new LocalKnowledgeStore(join(dir, 'store.json'));
+    const goal = await new GoalManager(store).create({ title: 'Find safe public offers', categories: ['offer'] });
+    const missions = new AgentMissionManager(store, { isAgentReady: () => true, now: () => new Date('2026-08-09T20:30:00.000Z') });
+    server = createLocalKernelServer(new PageContextInbox(join(dir, 'inbox.jsonl')), undefined, undefined, undefined, {
+      apiToken,
+      agentMissionManager: missions,
+      allowedDashboardOrigins: ['https://efesto.example'],
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const endpoint = `http://127.0.0.1:${server.address().port}/api/goals/${encodeURIComponent(goal.id)}/missions`;
+    const headers = { 'x-hephaestus-token': apiToken, 'content-type': 'application/json' };
+    const created = await fetch(endpoint, { method: 'POST', headers: { ...headers, origin: 'https://efesto.example' }, body: JSON.stringify({ agent: 'hermes', confirmed: true }) });
+    expect(created.status).toBe(201);
+    const data = await store.read();
+    // TEST FIXTURE: a settled attempt as the Kernel verifier leaves it.
+    await store.write({ ...data, agentMissions: [{ ...data.agentMissions[0], status: 'completed', executionPhase: 'forged', completedAt: '2026-08-09T20:20:00.000Z', verificationResults: [{ candidateId: 'c1', status: 'verified', sourceUrl: 'https://shop.example/a', supported: true }] }] });
+    const settled = await store.read();
+    const body = JSON.stringify({ agent: 'hermes', confirmed: true, mode: 'search_more' });
+
+    const tokenOnly = await fetch(endpoint, { method: 'POST', headers, body });
+    expect(tokenOnly.status).toBe(403);
+    expect((await tokenOnly.json()).code).toBe('MISSION_CONFIRMATION_REQUIRED');
+    expect(await store.read()).toEqual(settled);
+
+    const interactive = await fetch(endpoint, { method: 'POST', headers: { ...headers, origin: 'https://efesto.example' }, body });
+    expect(interactive.status).toBe(201);
+    const { mission } = await interactive.json();
+    expect(mission).toMatchObject({ status: 'queued', searchMode: 'search_more', knownSourceUrls: ['https://shop.example/a'] });
+    expect(mission.authorization).toMatchObject({ actorType: 'interactive_user', decidedBy: 'dashboard-ui' });
+    expect(mission.priorAttempts[0].verificationResults[0]).toMatchObject({ sourceUrl: 'https://shop.example/a', supported: true });
+  });
 });

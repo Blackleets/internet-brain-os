@@ -36,10 +36,15 @@ export class MissionEvidenceReader {
     }
     const goal = (Array.isArray(data?.goals) ? data.goals : []).find((item) => item?.id === mission.goalId);
     const terms = anchorTerms(goal, mission);
-    const results = Array.isArray(mission.verificationResults) ? mission.verificationResults : [];
+    // Current attempt first, then the attempts kept by "Buscar más" (marked priorAttempt).
+    const current = Array.isArray(mission.verificationResults) ? mission.verificationResults : [];
+    const prior = (Array.isArray(mission.priorAttempts) ? mission.priorAttempts : [])
+      .slice().reverse()
+      .flatMap((attempt) => (Array.isArray(attempt?.verificationResults) ? attempt.verificationResults : []).map((result) => ({ result, prior: true })));
+    const results = [...current.map((result) => ({ result, prior: false })), ...prior];
     const records = [];
     const seen = new Set();
-    for (const result of results) {
+    for (const { result, prior: fromPriorAttempt } of results) {
       if (records.length >= MAX_MISSION_EVIDENCE_RECORDS) break;
       if (!result || result.status !== 'verified' || typeof result.evidenceId !== 'string') continue;
       if (seen.has(result.evidenceId)) continue;
@@ -47,7 +52,8 @@ export class MissionEvidenceReader {
       // Fail closed: only Evidence the Kernel linked to this Mission is projected.
       if (!evidence || evidence.missionId !== mission.id) continue;
       seen.add(result.evidenceId);
-      records.push(projectEvidence(evidence, result, terms));
+      const record = projectEvidence(evidence, result, terms);
+      records.push(fromPriorAttempt ? { ...record, priorAttempt: true } : record);
     }
     return {
       schemaVersion: MISSION_EVIDENCE_SCHEMA_VERSION,
