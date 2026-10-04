@@ -11,11 +11,74 @@ const MAX_TIMEOUT_MS = 25 * 60_000;
 const FORCE_KILL_DELAY_MS = 500;
 const MAX_AGENT_TURNS = 8;
 const DEFAULT_AGENT_TURNS = 8;
+// Discovery breadth: 2–3 phrasings × 10 results, 5–10 findings from varied domains.
+const MIN_SEARCHES = 2;
+const MAX_SEARCH_CALLS = 3;
+const SEARCH_LIMIT = 10;
+const MIN_FINDINGS = 5;
+const MAX_FINDINGS = 10;
+const MAX_PER_HOST = 2;
 // Search telemetry (display-only): Hermes web_tools debug log, read from the isolated home before cleanup.
 const WEB_TOOLS_DEBUG_PREFIX = 'web_tools_debug_';
 const MAX_DEBUG_LOG_BYTES = 256 * 1024;
 const MAX_SEARCHES = 8;
 const MAX_QUERY_CHARS = 300;
+
+// Filler words that carry no topic; they are never required in a search phrasing.
+const GOAL_STOPWORDS = new Set([
+  'a', 'al', 'an', 'and', 'ayuda', 'busco', 'buscar', 'como', 'con', 'de', 'del', 'el', 'en', 'encontrar', 'find', 'for',
+  'help', 'i', 'in', 'la', 'las', 'lo', 'los', 'looking', 'me', 'mi', 'my', 'necesito', 'need', 'o', 'of', 'or', 'para',
+  'please', 'por', 'que', 'quiero', 'some', 'the', 'to', 'un', 'una', 'unos', 'unas', 'want', 'with', 'y',
+]);
+const MAX_CORE_TERMS = 8;
+
+/** Topic terms of the Goal (scope keywords, else Goal title words) minus filler, for query anchoring. */
+export function goalCoreTerms(mission) {
+  const scope = mission?.scope ?? {};
+  const keywords = Array.isArray(scope.keywords) ? scope.keywords.filter((value) => typeof value === 'string') : [];
+  const source = keywords.length ? keywords : String(mission?.goalTitle ?? '').split(/[^\p{L}\p{N}]+/u);
+  const terms = [];
+  for (const raw of source.slice(0, 40)) {
+    const term = raw.trim().toLowerCase().slice(0, 60);
+    if (term.length < 2 || GOAL_STOPWORDS.has(term) || terms.includes(term)) continue;
+    terms.push(term);
+    if (terms.length === MAX_CORE_TERMS) break;
+  }
+  return terms;
+}
+
+const MAX_QUERY_TERMS = 6;
+const MAX_PLANNED_QUERY_CHARS = 160;
+
+/**
+ * The 2–3 queries the adapter asks Hermes to send, built deterministically from the Goal's own
+ * words: its core terms (filler removed, at most 6), then variants that drop the first or last term,
+ * or add the Location when one is set and not already a term. Nothing is invented — no years,
+ * numbers, synonyms, translations or spelling fixes — and duplicates are removed. A Goal with only
+ * one or two usable terms and no Location yields a single query.
+ */
+export function planSearchQueries(mission) {
+  const scope = mission?.scope ?? {};
+  const terms = goalCoreTerms(mission).slice(0, MAX_QUERY_TERMS);
+  const location = cleanQueryText(scope.location, 60);
+  const base = terms.length ? terms.join(' ') : cleanQueryText(mission?.goalTitle, 120);
+  if (!base) return [];
+  const addLocation = location && !base.toLowerCase().split(' ').includes(location.toLowerCase()) && !base.toLowerCase().includes(location.toLowerCase());
+  const variants = addLocation
+    ? [base, `${base} ${location}`, terms.length >= 3 ? `${terms.slice(1).join(' ')} ${location}` : undefined]
+    : [base, terms.length >= 3 ? terms.slice(1).join(' ') : undefined, terms.length >= 3 ? terms.slice(0, -1).join(' ') : undefined];
+  const planned = [];
+  for (const variant of variants) {
+    const query = cleanQueryText(variant, MAX_PLANNED_QUERY_CHARS);
+    if (query && !planned.some((item) => item.toLowerCase() === query.toLowerCase())) planned.push(query);
+  }
+  return planned.slice(0, MAX_SEARCH_CALLS);
+}
+
+function cleanQueryText(value, max) {
+  if (typeof value !== 'string') return '';
+  return value.replace(/[\u0000-\u001f\u007f"]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max).trim();
+}
 
 export function buildHermesPrompt(payload) {
   if (!payload || payload.schemaVersion !== 'efesto.hermes-mission.v1' || !payload.mission) {
@@ -23,6 +86,14 @@ export function buildHermesPrompt(payload) {
   }
   const mission = payload.mission;
   const scope = mission.scope ?? {};
+  const coreTerms = goalCoreTerms(mission);
+  const planned = planSearchQueries(mission);
+  const searchLines = planned.length
+    ? [
+      `Make exactly ${planned.length} web_search ${planned.length === 1 ? 'call' : 'calls'}, one per query below and in this order, each with "limit": ${SEARCH_LIMIT}. Use each query string exactly as written: do not translate, correct, reorder, extend or add words, years or numbers, and make no other search. Then return the final JSON. Do not call any other tool.`,
+      ...planned.map((query, index) => `Query ${index + 1}: ${JSON.stringify(query)}`),
+    ]
+    : [`Make ${MIN_SEARCHES} or ${MAX_SEARCH_CALLS} public web_search calls, each with "limit": ${SEARCH_LIMIT}, using the Goal's own words without adding years or numbers. Then return the final JSON. Do not call any other tool.`];
   return [
     '/no_think',
     'You are executing one bounded public-source discovery mission for Efesto.',
@@ -30,8 +101,8 @@ export function buildHermesPrompt(payload) {
     'Do not access local files, private networks, credentials, messaging history, private sessions, browser automation or computer-use.',
     'Do not perform purchases, submissions, logins, outreach, downloads or destructive actions.',
     'Prefer canonical, directly readable public pages with substantive content; avoid login walls, paywalls, redirectors, search-result pages and JavaScript-only shells.',
-    'Make exactly one public search call using the Goal, then return the final JSON. Do not call another tool after the search result.',
-    'Return 3 to 5 relevant findings when public search supports them, using diverse source hosts where practical.',
+    ...searchLines,
+    `From those results, return ${MIN_FINDINGS} to ${MAX_FINDINGS} relevant findings about the Goal itself when public search supports them, from varied source domains (at most ${MAX_PER_HOST} per domain); no companies, brands or topics that are not in the Goal.`,
     'Return ONLY one valid JSON object with this exact shape: {"findings":[{"url":"https://public.example/path"}]}.',
     'Each finding must contain exactly one field: url. Do not copy titles, snippets, summaries, dates, or other prose from the search result. Keep every URL on one line, escape it as JSON, and do not use trailing commas.',
     'Use at most 20 findings. URLs must be public http or https. Do not include markdown fences or commentary.',
@@ -40,6 +111,7 @@ export function buildHermesPrompt(payload) {
     `Goal: ${String(mission.goalTitle ?? '').slice(0, 500)}`,
     `Categories: ${JSON.stringify(Array.isArray(scope.categories) ? scope.categories.slice(0, 20) : [])}`,
     `Keywords: ${JSON.stringify(Array.isArray(scope.keywords) ? scope.keywords.slice(0, 40) : [])}`,
+    `Core Goal terms: ${JSON.stringify(coreTerms)}`,
     `Location: ${String(scope.location ?? '').slice(0, 240)}`,
     `Cadence: ${String(mission.cadence ?? '').slice(0, 80)}`,
   ].join('\n');
@@ -94,6 +166,9 @@ export async function prepareHermesHome(hermesHome, maxTurns = DEFAULT_AGENT_TUR
   };
   const config = {
     agent: { max_turns: maxTurns },
+    // Never let an auxiliary task (compression, vision, titles…) fall back to a paid OpenRouter
+    // model, and skip session-title generation, which only costs an extra model call per run.
+    auxiliary: { free_only: true, title_generation: { enabled: false } },
     ...(Object.keys(route).length > 0 ? { model: route } : {}),
   };
   await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
@@ -202,6 +277,43 @@ export function recoverWebUrl(raw) {
   const distinct = [...new Set(found.map((item) => item.url))];
   const longest = distinct.reduce((a, b) => (b.length > a.length ? b : a));
   return distinct.every((url) => longest.startsWith(url)) ? longest : undefined;
+}
+
+/**
+ * Keeps the agent's order but drops repeated URLs, keeps at most MAX_PER_HOST findings per domain
+ * (www. ignored) and at most MAX_FINDINGS overall. It only removes candidates, never adds one.
+ */
+export function diversifyFindings(findings, options) {
+  return diversifyFindingsWithCounts(findings, options).findings;
+}
+
+/** diversifyFindings plus how many findings it removed, by reason (counts only). */
+export function diversifyFindingsWithCounts(findings, { maxPerHost = MAX_PER_HOST, max = MAX_FINDINGS } = {}) {
+  const dropped = { duplicate: 0, per_domain_cap: 0, other: 0 };
+  if (!Array.isArray(findings)) return { findings: [], dropped: {} };
+  const perHost = new Map();
+  const seen = new Set();
+  const kept = [];
+  for (const finding of findings) {
+    // beyond the overall cap
+    if (kept.length >= max) { dropped.other += 1; continue; }
+    let host;
+    try { host = new URL(finding.url).hostname.toLowerCase().replace(/^www\./, ''); } catch { dropped.other += 1; continue; }
+    if (seen.has(finding.url)) { dropped.duplicate += 1; continue; }
+    const count = perHost.get(host) ?? 0;
+    if (count >= maxPerHost) { dropped.per_domain_cap += 1; continue; }
+    seen.add(finding.url);
+    perHost.set(host, count + 1);
+    kept.push(finding);
+  }
+  return { findings: kept, dropped: Object.fromEntries(Object.entries(dropped).filter(([, n]) => n > 0)) };
+}
+
+/** Funnel for the batch actually sent: findingsReturned − all drops = findings.length. */
+export function mergeFindingsFunnel(funnel, extraDropped) {
+  const dropped = { ...(funnel?.dropped ?? {}) };
+  for (const [reason, n] of Object.entries(extraDropped ?? {})) dropped[reason] = (dropped[reason] ?? 0) + n;
+  return { findingsReturned: funnel?.findingsReturned ?? 0, dropped };
 }
 
 function extractLiteralWebUrls(text) {
@@ -401,6 +513,7 @@ export async function applySourceHermesModelRoute(isolatedHome, sourceHome) {
 export async function runHermesOneShot(payload, options = {}) {
   const executable = normalizeHermesExecutable(options.executable ?? process.env.HEPHAESTUS_HERMES_EXECUTABLE ?? 'hermes');
   const prompt = buildHermesPrompt(payload);
+  const plannedQueries = planSearchQueries(payload.mission);
   const timeoutMs = options.timeoutMs ?? configuredTimeout(process.env.HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
   const ownsHermesHome = options.hermesHome === undefined;
   const hermesHome = options.hermesHome ?? await mkdtemp(join(tmpdir(), 'efesto-hermes-'));
@@ -421,7 +534,15 @@ export async function runHermesOneShot(payload, options = {}) {
       cwd: hermesHome,
     });
     const searches = await collectHermesSearchTelemetry(hermesHome);
-    return searches.length ? { ...result, searches } : result;
+    const diverse = diversifyFindingsWithCounts(result.findings);
+    const funnel = mergeFindingsFunnel(result.funnel, diverse.dropped);
+    return {
+      ...result,
+      findings: diverse.findings,
+      ...(searches.length ? { searches } : {}),
+      ...(plannedQueries.length ? { plannedQueries } : {}),
+      funnel,
+    };
   } finally {
     await wipeCopiedHermesCredentials(hermesHome, copied);
     if (ownsHermesHome) {

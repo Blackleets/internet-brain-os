@@ -6,6 +6,10 @@ import {
   buildHermesArgs,
   buildHermesEnvironment,
   buildHermesPrompt,
+  goalCoreTerms,
+  planSearchQueries,
+  diversifyFindingsWithCounts,
+  mergeFindingsFunnel,
   normalizeHermesExecutable,
   parseHermesFindings,
   prepareHermesHome,
@@ -17,11 +21,14 @@ import {
   applySourceHermesModelRoute,
   parseTopLevelHermesModelRoute,
   collectHermesSearchTelemetry,
+  diversifyFindings,
   parseHermesSearchCalls,
   parseHermesFindingsWithFunnel,
   isWellFormedWebUrl,
   recoverWebUrl,
 } from './hermes-efesto-adapter.mjs';
+import { normalizeSearchTelemetry } from '../apps/local-kernel/agent-mission-executor.mjs';
+import { adapterSearchTelemetry } from '../apps/local-kernel/hermes-mission-worker.mjs';
 
 const SAMPLE_DEBUG_LOG = new URL('./fixtures/hermes-web-tools-debug.sample.json', import.meta.url);
 const SAMPLE_SEARCHES = [
@@ -32,6 +39,9 @@ const SAMPLE_SEARCHES = [
   // no limit and a malformed count in the log: both omitted, never guessed
   { query: 'repartidor autónomo requisitos' },
 ];
+
+// Isolated runs never fall back to paid auxiliary models and skip title generation.
+const AUXILIARY = { free_only: true, title_generation: { enabled: false } };
 
 describe('Hermes Efesto adapter', () => {
   it('builds a bounded public discovery prompt from an authorized mission', () => {
@@ -44,13 +54,107 @@ describe('Hermes Efesto adapter', () => {
     expect(prompt).toContain('public-source discovery mission');
     expect(prompt).toContain('candidates, not verified Evidence');
     expect(prompt).toContain('canonical, directly readable public pages');
-    expect(prompt).toContain('Make exactly one public search call');
-    expect(prompt).toContain('Do not call another tool after the search result.');
-    expect(prompt).toContain('Return 3 to 5 relevant findings');
+    // Contract (deliberately changed again, 2026-10-04): the adapter writes the queries from the
+    // Goal's own words and Hermes must send exactly those, limit 10 each, then return 5–10 findings
+    // from varied domains, and still no other tool. The old "phrasings of the Goal" wording is gone.
+    expect(prompt).toContain('Make exactly 2 web_search calls, one per query below and in this order, each with "limit": 10.');
+    expect(prompt).toContain('Use each query string exactly as written: do not translate, correct, reorder, extend or add words, years or numbers, and make no other search.');
+    expect(prompt).toContain('Query 1: "grant"\nQuery 2: "grant Madrid"');
+    expect(prompt).toContain('Do not call any other tool.');
+    expect(prompt).toContain('return 5 to 10 relevant findings about the Goal itself when public search supports them, from varied source domains (at most 2 per domain); no companies, brands or topics that are not in the Goal.');
+    expect(prompt).not.toContain('different phrasings of the Goal');
+    expect(prompt).not.toContain('exactly one public search call');
+    expect(prompt).toContain('Location: Madrid');
     expect(prompt.startsWith('/no_think\n')).toBe(true);
     expect(prompt).toContain('{"findings":[{"url":"https://public.example/path"}]}');
     expect(prompt).toContain('Each finding must contain exactly one field: url.');
     expect(prompt).toContain('Do not copy titles, snippets, summaries, dates, or other prose');
+  });
+
+  it('anchors every phrasing to the core Goal terms and forbids off-Goal brands and numeric noise', () => {
+    // Live rider mission: run 2 drifted to McDonald's and appended "2024-1953"-style noise.
+    const mission = { id: 'm', goalTitle: 'quiero empleo ryder budcar delivery en España', cadence: 'once', scope: { categories: ['job'], keywords: ['quiero', 'budcar', 'empleo', 'ryder', 'delivery', 'españa'] } };
+    expect(goalCoreTerms(mission)).toEqual(['budcar', 'empleo', 'ryder', 'delivery', 'españa']);
+    const prompt = buildHermesPrompt({ schemaVersion: 'efesto.hermes-mission.v1', mission });
+    expect(prompt).toContain('Core Goal terms: ["budcar","empleo","ryder","delivery","españa"]');
+    expect(planSearchQueries(mission)).toEqual(['budcar empleo ryder delivery españa', 'empleo ryder delivery españa', 'budcar empleo ryder delivery']);
+    expect(prompt).toContain('Query 1: "budcar empleo ryder delivery españa"\nQuery 2: "empleo ryder delivery españa"\nQuery 3: "budcar empleo ryder delivery"');
+    expect(prompt).toContain('no companies, brands or topics that are not in the Goal');
+    expect(prompt).toContain('do not translate, correct, reorder, extend or add words, years or numbers');
+    expect(prompt).not.toMatch(/Query \d: ".*\b20\d\d\b/);
+    // without keywords the Goal title words are used; one usable term means "at least 1"
+    expect(goalCoreTerms({ goalTitle: 'Quiero encontrar subvenciones para mi startup', scope: {} })).toEqual(['subvenciones', 'startup']);
+    const single = buildHermesPrompt({ schemaVersion: 'efesto.hermes-mission.v1', mission: { goalTitle: 'grants', scope: { keywords: ['quiero', 'grants'] } } });
+    expect(single).toContain('Make exactly 1 web_search call, one per query below');
+    expect(single).toContain('Query 1: "grants"');
+    // only filler: the Goal title itself is the single query, never an invented one
+    const none = buildHermesPrompt({ schemaVersion: 'efesto.hermes-mission.v1', mission: { goalTitle: 'quiero', scope: { keywords: ['quiero'] } } });
+    expect(none).toContain('Core Goal terms: []');
+    expect(none).toContain('Query 1: "quiero"');
+    expect(buildHermesPrompt({ schemaVersion: 'efesto.hermes-mission.v1', mission: { goalTitle: '  ', scope: {} } })).toContain('Make 2 or 3 public web_search calls');
+    expect(goalCoreTerms({ scope: { keywords: Array.from({ length: 20 }, (_, i) => `k${i}`) } })).toHaveLength(8);
+  });
+
+  it('plans 2–3 queries only from the Goal words: location variant, no invented numbers, deduped, bounded', () => {
+    const plan = (goalTitle, scope) => planSearchQueries({ goalTitle, scope });
+    expect(plan('Quiero encontrar subvenciones para mi startup en Madrid', { location: 'Madrid' }))
+      .toEqual(['subvenciones startup madrid', 'startup madrid', 'subvenciones startup']);
+    // keywords carry the place already: no location duplicate, variants drop first/last term
+    expect(plan('x', { keywords: ['rust', 'ownership', 'guide', 'madrid'], location: 'Madrid' })).toEqual(['rust ownership guide madrid', 'ownership guide madrid', 'rust ownership guide']);
+    expect(plan('x', { keywords: ['rust', 'ownership', 'guide'], location: 'Valencia' })).toEqual(['rust ownership guide', 'rust ownership guide Valencia', 'ownership guide Valencia']);
+    expect(plan('x', { keywords: ['grant'], location: '' })).toEqual(['grant']);
+    // numbers only when the Goal has them; quotes and control characters cannot break the prompt line
+    expect(plan('x', { keywords: ['iphone', '15', 'oferta'] })).toEqual(['iphone 15 oferta', '15 oferta', 'iphone 15']);
+    expect(plan('say "hi"\u0007 now', {})).toEqual(['say hi now', 'hi now', 'say hi']);
+    expect(plan('', {})).toEqual([]);
+    expect(plan('x', { keywords: Array.from({ length: 12 }, (_, i) => `k${i}`) })[0]).toBe('k0 k1 k2 k3 k4 k5');
+    for (const query of plan('x', { keywords: ['a'.repeat(60), 'b'.repeat(60), 'c'.repeat(60)] })) expect(query.length).toBeLessThanOrEqual(160);
+  });
+
+  it('counts the findings diversification removes, by reason, and keeps the funnel adding up', () => {
+    const urls = ['https://a.example/1', 'https://a.example/1', 'https://a.example/2', 'https://www.a.example/3', 'https://b.example/1'];
+    const { findings, dropped } = diversifyFindingsWithCounts(urls.map((url) => ({ url })));
+    expect(findings.map((item) => item.url)).toEqual(['https://a.example/1', 'https://a.example/2', 'https://b.example/1']);
+    expect(dropped).toEqual({ duplicate: 1, per_domain_cap: 1 });
+    const many = Array.from({ length: 14 }, (_, i) => ({ url: `https://s${i}.example/` }));
+    expect(diversifyFindingsWithCounts(many).dropped).toEqual({ other: 4 });
+    expect(diversifyFindingsWithCounts([]).dropped).toEqual({});
+    const funnel = mergeFindingsFunnel({ findingsReturned: 6, dropped: { malformed_url: 1 } }, dropped);
+    expect(funnel).toEqual({ findingsReturned: 6, dropped: { malformed_url: 1, duplicate: 1, per_domain_cap: 1 } });
+    expect(funnel.findingsReturned - Object.values(funnel.dropped).reduce((a, b) => a + b, 0)).toBe(findings.length);
+  });
+
+  it('end to end: records the planned queries, what Hermes really sent (verbatim) and the funnel; the Kernel flags the rewrite', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'efesto-hermes-plan-'));
+    try {
+      const mission = { id: 'mission-plan', goalTitle: 'quiero empleo ryder delivery en españa', cadence: 'manual', scope: { categories: ['job'], keywords: ['quiero', 'empleo', 'ryder', 'delivery', 'españa'] } };
+      const planned = planSearchQueries(mission);
+      expect(planned).toEqual(['empleo ryder delivery españa', 'ryder delivery españa', 'empleo ryder delivery']);
+      const log = { tool_calls: [
+        { tool_name: 'web_search_tool', parameters: { query: planned[0], limit: 10 }, error: null, results_count: 10 },
+        // the model "fixed" the spelling and appended years: recorded as sent, not as planned
+        { tool_name: 'web_search_tool', parameters: { query: 'rider delivery españa 2025 2026', limit: 10 }, error: null, results_count: 9 },
+      ] };
+      const answer = { findings: [
+        { url: 'https://jobs.example/a' }, { url: 'https://jobs.example/a' }, { url: 'https://jobs.example/b' },
+        { url: 'https://jobs.example/c' }, { url: 'https://x.example/](https://y.example/z' }, { url: 'https://other.example/rider' },
+      ] };
+      await writeFile(join(home, 'chat'), `const fs = require('node:fs'); const path = require('node:path');
+fs.mkdirSync(path.join(process.env.HERMES_HOME, 'logs'), { recursive: true });
+fs.writeFileSync(path.join(process.env.HERMES_HOME, 'logs', 'web_tools_debug_plan.json'), ${JSON.stringify(JSON.stringify(log))});
+process.stdout.write(${JSON.stringify(JSON.stringify(answer))});
+`, 'utf8');
+      const result = await runHermesOneShot({ schemaVersion: 'efesto.hermes-mission.v1', mission }, { executable: process.execPath, hermesHome: home, timeoutMs: 4_000, env: { ...process.env, HERMES_HOME: home } });
+      expect(result.plannedQueries).toEqual(planned);
+      expect(result.searches.map((search) => search.query)).toEqual([planned[0], 'rider delivery españa 2025 2026']);
+      expect(result.findings.map((finding) => finding.url)).toEqual(['https://jobs.example/a', 'https://jobs.example/b', 'https://other.example/rider']);
+      expect(result.funnel).toEqual({ findingsReturned: 6, dropped: { malformed_url: 1, duplicate: 1, per_domain_cap: 1 } });
+      const stored = normalizeSearchTelemetry(adapterSearchTelemetry(result), { findingsSubmitted: result.findings.length });
+      expect(stored.searches.map((search) => [search.query, search.matchesPlan])).toEqual([[planned[0], true], ['rider delivery españa 2025 2026', false]]);
+      expect(stored.funnel).toEqual(result.funnel);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
   });
 
   it('isolates user customizations while keeping the official search backend available', () => {
@@ -81,6 +185,20 @@ describe('Hermes Efesto adapter', () => {
     expect(env).not.toHaveProperty('HERMES_ENABLE_PROJECT_PLUGINS');
     expect(env).not.toHaveProperty('HERMES_IGNORE_USER_CONFIG');
     expect(env.WEB_TOOLS_DEBUG).toBe('true');
+  });
+
+  it('keeps findings from varied domains: drops repeated URLs, at most 2 per domain, at most 10, never adds any', () => {
+    const urls = [
+      'https://www.jobs.example/a', 'https://jobs.example/b', 'https://jobs.example/c',
+      'https://www.jobs.example/a', 'https://news.example/1', 'not a url',
+      ...Array.from({ length: 12 }, (_, index) => `https://site${index}.example/`),
+    ];
+    const kept = diversifyFindings(urls.map((url) => ({ url })));
+    expect(kept.map((item) => item.url)).toEqual([
+      'https://www.jobs.example/a', 'https://jobs.example/b', 'https://news.example/1',
+      ...Array.from({ length: 7 }, (_, index) => `https://site${index}.example/`),
+    ]);
+    expect(diversifyFindings(undefined)).toEqual([]);
   });
 
   it('turns a Hermes web_tools debug log into search telemetry without guessing missing fields', async () => {
@@ -259,6 +377,7 @@ process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/a' 
       expect(route).toEqual({ default: 'nvidia/nemotron-test', provider: 'nvidia', base_url: 'https://example.invalid/v1' });
       expect(JSON.parse(await readFile(isolatedConfig, 'utf8'))).toEqual({
         agent: { max_turns: 4 },
+        auxiliary: AUXILIARY,
         model: { default: 'nvidia/nemotron-test', provider: 'nvidia', base_url: 'https://example.invalid/v1' },
       });
       expect(parseTopLevelHermesModelRoute('not-model: true\n')).toBeUndefined();
@@ -272,7 +391,7 @@ process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/a' 
     const directory = await mkdtemp(join(tmpdir(), 'efesto-hermes-config-test-'));
     try {
       const configPath = await prepareHermesHome(directory);
-      expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({ agent: { max_turns: 8 } });
+      expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({ agent: { max_turns: 8 }, auxiliary: AUXILIARY });
       await expect(prepareHermesHome(directory)).rejects.toMatchObject({ code: 'EEXIST' });
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -284,7 +403,7 @@ process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/a' 
     const invalidDirectory = await mkdtemp(join(tmpdir(), 'efesto-hermes-invalid-cap-test-'));
     try {
       const configPath = await prepareHermesHome(directory, 4);
-      expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({ agent: { max_turns: 4 } });
+      expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({ agent: { max_turns: 4 }, auxiliary: AUXILIARY });
       await expect(prepareHermesHome(invalidDirectory, 9)).rejects.toThrow('between 1 and 8');
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -298,6 +417,7 @@ process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/a' 
       const configPath = await prepareHermesHome(directory, 4, 'custom', 'qwen3.5:2b');
       expect(JSON.parse(await readFile(configPath, 'utf8'))).toEqual({
         agent: { max_turns: 4 },
+        auxiliary: AUXILIARY,
         model: { default: 'qwen3.5:2b', provider: 'custom' },
       });
     } finally {
