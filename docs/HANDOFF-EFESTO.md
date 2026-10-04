@@ -71,16 +71,23 @@ Efesto is a local-first "intelligence forge". Every Find goes through the same p
 
 The stack runs from `/workspace/ibos-forge-live`, branch `live/forge-telemetry`. That branch is **not pushed**. It is `8a2f7f6`, a merge of `forge-v2-build` (= #244 at the time) into the telemetry work, plus cherry-picks of the PR commits Lewis approved.
 
-At 16:40 it carries:
-- `0ed1290`, `4086cb8`, `ad13654`, `379b5fe` (#246), `b432fbb`, `7f57f88`, `4afeaf6`, `52c2b29` (live as `e87dac1`).
+At 16:45 the box was in this state. The live apply was stopped there by a scope cut.
+- **Source:** `live/forge-telemetry` is at `5f4825c`. That is the earlier cherry-picks (`0ed1290`, `4086cb8`, `ad13654`, `379b5fe`, `b432fbb`, `7f57f88`, `4afeaf6`, `52c2b29`) plus #245 `85b1bb7`, #246 `3361bac` and `39d653f`.
+- **Kernel :4310:** restarted on that source, so #245 telemetry `results` is live.
+- **Adapter:** #246 is live for the next mission the worker spawns.
+- **Dashboard :3311:** still the earlier build (`52c2b29` level). To finish the apply, run `scripts/live-box/restart3311.sh` under `with-pause.sh`. That puts `39d653f` (idle spider + result webs, approved by Lewis) live.
 
-`39d653f` plus #245 `85b1bb7` and #246 `3361bac` are being applied right after this doc. The status is in the PR #244 body.
+**Goal revision `37e86ab` is NOT on the live branch.**
 
-**To reconstruct the branch from pushed branches:**
-1. `git checkout -b live/forge-telemetry origin/feat/hermes-multi-query`. This includes #245.
-2. `git merge origin/feat/forge-live-view`.
-3. Revert or omit goal revision `37e86ab`.
-4. Resolve `forge-live-view.tsx` by keeping no `GoalEditSheet` / `onEditGoal` props.
+**To reproduce the live stack from GitHub alone:**
+- `feat/forge-live-view` (#244) already contains the spider, the result webs, the idle spider, the polish and goal revision. It is based on #241.
+- `feat/hermes-multi-query` (#246) contains #245.
+- Steps:
+  1. `git checkout -b live origin/feat/hermes-multi-query`
+  2. `git merge origin/feat/forge-live-view`
+  3. `git revert 37e86ab` to keep goal revision off until Lewis approves it.
+  4. On conflicts, keep both sides' features.
+- Then follow §5.
 
 ## 5. Running the live stack (box defaults)
 
@@ -155,7 +162,7 @@ Report: `/workspace/ref/forge-v3-polish/queue-report.json`.
 
 ## 8. Next steps
 
-1. Confirm the live apply of `39d653f` + #245 + #246 and its video (PR #244 body). The worker must be left unpaused and idle.
+1. Finish the live apply by rebuilding 3311 (§4). Record live videos at 1440 and 390 for Lewis. The worker must be left unpaused and idle.
 2. Fix the release-readiness check on #244. Ask Lewis whether to restore the smith asset or point the check at the new mark.
 3. Show Lewis goal revision `37e86ab` (video at 390 and 1440) and get an OK before it goes live.
 4. Model robustness: JSON-only output for qwen, and more free or local model options.
