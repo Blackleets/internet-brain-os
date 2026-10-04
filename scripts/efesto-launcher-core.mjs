@@ -11,6 +11,10 @@ export async function repairEfestoLauncher(options = {}) {
   await ops.ensureDirectories();
 
   if (before.kernel === 'ready' && before.pairing === 'paired') {
+    if (before.hermes !== 'ready') {
+      await ops.writeLog(`Efesto Kernel is healthy, but Hermes needs attention (${before.diagnostics?.hermes?.reason ?? before.hermes}); no duplicate Kernel process started.`);
+      return { started: false, status: before };
+    }
     await ops.writeLog('Efesto already ready; no duplicate Kernel process started.');
     return { started: false, status: before };
   }
@@ -127,14 +131,39 @@ async function startKernelProcess({ env, cwd, paths, showPairing = false }) {
   return { pid: child.pid };
 }
 
+export async function readRunningKernelBootstrap(localStatus, options = {}) {
+  const port = Number(localStatus?.diagnostics?.kernel?.port);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return undefined;
+  const fetchImpl = options.fetchImpl ?? fetch;
+  try {
+    const response = await fetchImpl(`http://127.0.0.1:${port}/bootstrap/status`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(options.bootstrapTimeoutMs ?? 3000),
+    });
+    if (!response.ok) return undefined;
+    const body = await response.json().catch(() => undefined);
+    if (!body || body.schemaVersion !== 'efesto.bootstrap-status.v1') return undefined;
+    return body;
+  } catch {
+    return undefined;
+  }
+}
+
 async function waitForReady(options = {}) {
   const deadline = Date.now() + Number(options.timeoutMs ?? 20_000);
   let latest;
   while (Date.now() < deadline) {
     latest = await inspectEfestoBootstrap(options);
-    if (latest.kernel === 'ready' || latest.kernel === 'port_conflict' || latest.kernel === 'failed') return latest;
+    if (latest.kernel === 'ready') {
+      // The one-click proxy exposes the internal Kernel bootstrap status. That process
+      // carries the authoritative HEPHAESTUS_HERMES_READ_ONLY_READY result produced by
+      // hermes-runtime.mjs, so prefer it over the launcher's presence-only Hermes probe.
+      return await readRunningKernelBootstrap(latest, options) ?? latest;
+    }
+    if (latest.kernel === 'port_conflict' || latest.kernel === 'failed') return latest;
     await sleep(250);
   }
+  if (latest?.kernel === 'ready') return await readRunningKernelBootstrap(latest, options) ?? latest;
   return latest ?? await inspectEfestoBootstrap(options);
 }
 
