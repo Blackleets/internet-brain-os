@@ -23,7 +23,14 @@ describe('G4 final automatic read-only adversarial contract', () => {
     const adapter = read('scripts/hermes-efesto-adapter.mjs');
     const worker = read('apps/local-kernel/hermes-mission-worker.mjs');
     const executor = read('apps/local-kernel/agent-mission-executor.mjs');
-    expect(adapter).toContain("['chat', '--query', prompt, '--quiet', '--max-turns', String(maxTurns), ...route, '--ignore-rules', '--toolsets', 'search']");
+    // Contract tightened on purpose (2026-10-04): the adapter runs the planned searches itself through
+    // Hermes's ddgs worker; Hermes only selects, with a toolset that has no tools and one iteration.
+    expect(adapter).toContain("['chat', '--query', prompt, '--quiet', '--max-turns', String(maxTurns), ...route, '--ignore-rules', '--toolsets', SELECTION_TOOLSETS]");
+    expect(adapter).toContain("const SELECTION_TOOLSETS = 'context_engine'");
+    expect(adapter).toContain('const SELECTION_TURNS = 1');
+    expect(adapter).toContain("const SEARCH_WORKER_MODULE = 'plugins.web.ddgs._search_worker'");
+    expect(adapter).toContain('env: searchWorkerEnvironment(env)');
+    expect(adapter).toContain("throw new Error('Hermes searched during the selection step')");
     expect(adapter).toContain("const MAX_AGENT_TURNS = 8");
     expect(adapter).toContain("flag: 'wx'");
     expect(adapter).toContain('HERMES_HOME: hermesHome');
