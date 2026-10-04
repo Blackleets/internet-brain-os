@@ -1,3 +1,4 @@
+import { currentGoalRevision } from './goal-execution-authorization.mjs';
 const AUTOMATIC_SEARCH_CAPABILITY = 'web.search';
 const PUBLIC_WEB_COMPOSITE_ALIAS = 'public_web_research';
 
@@ -98,8 +99,10 @@ function capabilityContext(goal) {
   }
 
   if (!Array.isArray(goal.categories)) return undefined;
+  const revision = legacyRevision(goal);
+  if (revision === undefined) return undefined;
   return {
-    revision: 1,
+    revision,
     approvalPolicy: 'legacy_none',
     allowedCapabilities: [AUTOMATIC_SEARCH_CAPABILITY],
     forbiddenCapabilities: [],
@@ -161,4 +164,9 @@ async function loadBuiltKernel() {
 
 function deny(reason) {
   return { allowed: false, reason };
+}
+
+/** Legacy Goals: revision 1 unless edited through POST /api/goals/:id/revisions. */
+function legacyRevision(goal) {
+  try { return currentGoalRevision(goal); } catch { return undefined; }
 }

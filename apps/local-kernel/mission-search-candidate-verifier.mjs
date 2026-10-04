@@ -1,3 +1,4 @@
+import { currentGoalRevision } from './goal-execution-authorization.mjs';
 import { createHash } from 'node:crypto';
 import { InboxError, MAX_PAGE_CONTEXT_VISIBLE_TEXT } from './page-context-inbox.mjs';
 import { classifyOpportunity } from './opportunity-classifier.mjs';
@@ -270,7 +271,9 @@ function capabilityContext(goal) {
     };
   }
   if (!goal || !Array.isArray(goal.categories)) return undefined;
-  return { revision: 1, approvalPolicy: 'legacy_none', allowedCapabilities: [READ_CAPABILITY], forbiddenCapabilities: [], allowedDataScopes: ['public_web'], forbiddenDataScopes: [] };
+  const revision = legacyRevision(goal);
+  if (revision === undefined) return undefined;
+  return { revision, approvalPolicy: 'legacy_none', allowedCapabilities: [READ_CAPABILITY], forbiddenCapabilities: [], allowedDataScopes: ['public_web'], forbiddenDataScopes: [] };
 }
 
 function projectVerifiedDocument(data, mission, candidate, document, opportunityProjector, options = {}) {
@@ -425,3 +428,8 @@ function conservativeAllowed(...sets) {
 }
 function union(...sets) { return [...new Set(sets.flatMap((values) => Array.isArray(values) ? values : []))]; }
 function safeMessage(error) { return String(error instanceof Error ? error.message : error).replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 240); }
+
+/** Legacy Goals: revision 1 unless edited through POST /api/goals/:id/revisions. */
+function legacyRevision(goal) {
+  try { return currentGoalRevision(goal); } catch { return undefined; }
+}

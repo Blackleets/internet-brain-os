@@ -99,6 +99,13 @@ describe('GoalSurfaceSnapshot v1', () => {
     expect(snapshot.mission?.workState).toBe('investigating');
   });
 
+  it('reports a revised legacy Goal at its Kernel revision with the revision time as updatedAt', () => {
+    const snapshot = buildGoalSurfaceSnapshot({ goal: legacyGoal({ revision: 3, revisedAt: '2026-10-04T10:00:00.000Z' }), observedAt });
+    expect(snapshot.goal).toMatchObject({ id: 'goal:legacy', revision: 3, updatedAt: '2026-10-04T10:00:00.000Z', compatibility: 'legacy_radar' });
+    expect(() => buildGoalSurfaceSnapshot({ goal: legacyGoal({ revision: 0 }), observedAt })).toThrow(GoalSurfaceSnapshotInputError);
+    expect(() => buildGoalSurfaceSnapshot({ goal: legacyGoal({ revision: 1.5 }), observedAt })).toThrow(GoalSurfaceSnapshotInputError);
+  });
+
   it('marks the radar Goal as an explicit compatibility representation', () => {
     const snapshot = buildGoalSurfaceSnapshot({ goal: legacyGoal(), observedAt });
     expect(snapshot.goal).toMatchObject({

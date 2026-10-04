@@ -95,6 +95,9 @@ function authorizationFields(goal, now, confirmationActor) {
   return confirmationActor ? { authorization: createGoalExecutionAuthorizationReceipt(goal, now, confirmationActor) } : {};
 }
 
+/** Queued / waiting, or running under a live lease. */
+export function isMissionActive(mission, now) { return isActive(mission, now); }
+
 function isActive(mission, now) {
   if (ACTIVE_STATUSES.has(mission.status)) return true;
   return mission.status === 'running'

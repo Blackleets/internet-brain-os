@@ -1,6 +1,7 @@
 'use client';
 
-import { Check, ChevronDown, Plug, RefreshCw, RotateCcw, Search } from 'lucide-react';
+import { Check, ChevronDown, Pencil, Plug, RefreshCw, RotateCcw, Search } from 'lucide-react';
+import { GoalEditSheet, type GoalEditRequest } from './goal-edit-sheet';
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ForgeMissionModel, ForgeModel, ForgeSource, ForgeStepState } from '../../lib/forge/forge-model';
 import { buildForgeStory, MAX_GRAPH_NODES, readFailureCode } from '../../lib/forge/forge-story';
@@ -21,11 +22,13 @@ type Props = {
   relaunchPending?: boolean;
   /** "Buscar más": confirms a new attempt that keeps earlier Finds/Evidence (model.searchMore). */
   onSearchMore?: (goalId: string) => void;
+  /** "Editar Goal": saves a Kernel Goal revision (model.editGoal); resolves true when the Kernel accepted it. */
+  onEditGoal?: (request: GoalEditRequest) => Promise<boolean>;
   /** Visible heading level context; Home uses h2 under its own title. */
   headingId?: string;
 };
 
-export function ForgeLiveView({ model, onConnect, onOpenFinds, onRelaunch, relaunchPending = false, onSearchMore, headingId = 'forge-live-title' }: Props) {
+export function ForgeLiveView({ model, onConnect, onOpenFinds, onRelaunch, relaunchPending = false, onSearchMore, onEditGoal, headingId = 'forge-live-title' }: Props) {
   const rootRef = useRef<HTMLElement>(null);
   const [narrow, setNarrow] = useState(true);
   const reducedMotion = useReducedMotion();
@@ -55,7 +58,7 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, onRelaunch, relau
     data-reduced-motion={reducedMotion ? 'true' : undefined}
     aria-labelledby={headingId}
   >
-    <ForgeHeader model={model} headingId={headingId} onConnect={onConnect} onRelaunch={onRelaunch} relaunchPending={relaunchPending} onSearchMore={onSearchMore} replaying={Boolean(mission && playing && reconstructing && mission.motion === 'settled')} />
+    <ForgeHeader model={model} headingId={headingId} onConnect={onConnect} onRelaunch={onRelaunch} relaunchPending={relaunchPending} onSearchMore={onSearchMore} onEditGoal={onEditGoal} replaying={Boolean(mission && playing && reconstructing && mission.motion === 'settled')} />
     {mission
       ? <ForgeBody key={mission.missionId} model={mission} narrow={narrow} reducedMotion={reducedMotion} onOpenFinds={onOpenFinds} onSearchMore={onSearchMore} searchMorePending={relaunchPending} onPlaying={setPlaying} onReconstructing={setReconstructing} />
       : <div className="forge-live-cold" aria-hidden="true"><div className="forge-live-stage is-cold"><p className="forge-slabel">La web · índice del buscador<span>fondo decorativo · no se cuenta</span></p></div></div>}
@@ -248,7 +251,9 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onSearchMore, se
   </div>;
 }
 
-function ForgeHeader({ model, headingId, onConnect, onRelaunch, relaunchPending, onSearchMore, replaying }: { model: ForgeModel; headingId: string; onConnect?: () => void; onRelaunch?: (goalId: string) => void; relaunchPending?: boolean; onSearchMore?: (goalId: string) => void; replaying: boolean }) {
+function ForgeHeader({ model, headingId, onConnect, onRelaunch, relaunchPending, onSearchMore, onEditGoal, replaying }: { model: ForgeModel; headingId: string; onConnect?: () => void; onRelaunch?: (goalId: string) => void; relaunchPending?: boolean; onSearchMore?: (goalId: string) => void; onEditGoal?: (request: GoalEditRequest) => Promise<boolean>; replaying: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const editButton = useRef<HTMLButtonElement>(null);
   if (model.kind === 'offline') {
     return <header className="forge-live-head">
       <div className="forge-live-goal">
@@ -274,7 +279,13 @@ function ForgeHeader({ model, headingId, onConnect, onRelaunch, relaunchPending,
   return <header className="forge-live-head">
     <div className="forge-live-goal">
       <p className="forge-live-kick"><small className="forge-live-eyebrow">GOAL · MISIÓN DEL KERNEL</small><span className="forge-live-id" title={model.missionId}>{shortId(model.missionId)}</span>{meta ? <span className="forge-bench-meta" data-replaying={replaying ? 'true' : undefined} title={meta.join('')}>{meta[0]}<span className="forge-meta-more">{meta[1]}</span></span> : null}</p>
-      <h2 id={headingId}>{model.goalTitle || 'Goal sin título'}</h2>
+      <div className="forge-live-title">
+        <h2 id={headingId}>{model.goalTitle || 'Goal sin título'}</h2>
+        {model.editGoal && onEditGoal ? <button ref={editButton} type="button" className="forge-live-edit" aria-haspopup="dialog" aria-expanded={editing} onClick={() => setEditing(true)}>
+          <span className="forge-live-edit-pill"><Pencil aria-hidden="true" /><span className="forge-live-edit-label">Editar Goal</span></span>
+        </button> : null}
+      </div>
+      {editing && model.editGoal && onEditGoal ? <GoalEditSheet goal={model.editGoal} onSave={onEditGoal} onClose={() => { setEditing(false); editButton.current?.focus(); }} /> : null}
       <p className="forge-live-phase"><i data-tone={phaseTone(model)} /><span><strong>{model.phaseLabel}<PhaseClock since={model.phaseSince} live={model.motion === 'active'} /></strong> {model.phaseDetail}</span></p>
       {model.relaunch && onSearchMore && model.searchMore ? <div className="forge-live-relaunch">
         {/* Stalled mission with "Buscar más" available: it re-queues the same Goal like Relanzar did, but

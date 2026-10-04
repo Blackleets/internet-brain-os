@@ -118,6 +118,12 @@ export interface LegacyGoal {
   priority: number;
   status: 'active' | 'paused' | 'completed';
   createdAt: string;
+  /**
+   * Set by the local Kernel's Goal revision path (POST /api/goals/:id/revisions); absent means 1.
+   * After a revision the id stays the historical identity (hash of the created content).
+   */
+  revision?: number;
+  revisedAt?: string;
 }
 
 export function migrateLegacyToUniversal(legacy: LegacyGoal, changedBy = 'migration'): UniversalGoal {

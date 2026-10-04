@@ -145,6 +145,11 @@ export type ForgeMissionModel = {
   searchMore?: { goalId: string };
   /** Earlier attempts kept by the Kernel (priorAttempts); absent when there are none. */
   prior?: ForgePriorAttempts;
+  /**
+   * "Editar Goal" (POST /api/goals/:id/revisions): the confirmed Goal's current text and Kernel
+   * revision. `blocked` is set while Hermes holds a live lease (the Kernel refuses the edit then).
+   */
+  editGoal?: { goalId: string; title: string; revision: number; blocked?: string };
 };
 
 export type ForgeModel =
@@ -206,6 +211,12 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
   const relaunch = canRelaunch(phase, surfaceMission.status, row, input.now ?? Date.now()) && input.surface.goal.id ? { goalId: input.surface.goal.id } : undefined;
   const searchMore = canSearchMore(phase, surfaceMission.status, row, input.now ?? Date.now()) && input.surface.goal.id ? { goalId: input.surface.goal.id } : undefined;
   const prior = buildPriorAttempts(row, evidence, input.opportunities, sources, goalTerms);
+  const editGoal = input.surface.goal.id ? {
+    goalId: input.surface.goal.id,
+    title: input.surface.goal.title,
+    revision: Number.isInteger(input.surface.goal.revision) && input.surface.goal.revision > 0 ? input.surface.goal.revision : 1,
+    ...(hasLiveLease(row, input.now ?? Date.now()) ? { blocked: 'Hermes está trabajando en este Goal. Podrás editarlo cuando termine el intento.' } : {}),
+  } : undefined;
   return {
     kind: 'mission',
     missionId: surfaceMission.id,
@@ -228,6 +239,7 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
     ...(relaunch ? { relaunch } : {}),
     ...(searchMore ? { searchMore } : {}),
     ...(prior ? { prior } : {}),
+    ...(editGoal ? { editGoal } : {}),
     summary: `${label}. ${counts.sources} ${plural(counts.sources, 'fuente', 'fuentes')}, ${counts.read} ${plural(counts.read, 'leída', 'leídas')}, ${counts.evidence} Evidence, ${counts.supported} con Kernel SUPPORT.${prior ? ` Intentos anteriores: ${prior.evidence} Evidence y ${prior.supported} con SUPPORT, conservados.` : ''}`,
   };
 }
@@ -235,6 +247,12 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
 const ACTIVE_PHASES = new Set<ForgePhase>(['waiting_agent', 'queued', 'searching', 'verifying']);
 
 /** Stalled by design in the Kernel: read without SUPPORT (or no page readable), status running, no live lease. */
+function hasLiveLease(row: MissionSummary | undefined, now: number): boolean {
+  if (!row || row.status !== 'running') return false;
+  const lease = Date.parse(str(row.leaseExpiresAt));
+  return Number.isFinite(lease) && lease > now;
+}
+
 function canRelaunch(phase: ForgePhase, status: string, row: MissionSummary | undefined, now: number): boolean {
   if (phase !== 'verified_unsupported' && phase !== 'read_failed_all') return false;
   if (status !== 'running' || !row) return false;

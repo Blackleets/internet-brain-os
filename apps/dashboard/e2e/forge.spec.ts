@@ -321,3 +321,56 @@ test('forge is honestly off without a Kernel and draws a still frame under reduc
   await expect(forge.getByLabel('Contadores de la misión')).toHaveCount(0);
   await expectNoHorizontalOverflow(page, 390);
 });
+
+for (const view of [{ shot: '390', width: 390, height: 844 }, { shot: 'desktop', width: 1440, height: 900 }]) {
+  test(`"Editar Goal" at ${view.width}px revises the confirmed Goal through the Kernel revision endpoint, keeping its Mission and Find`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: view.width, height: view.height });
+    let revised = false;
+    const revisedTitle = 'Fixture ownership and borrowing guide';
+    const revisedSurfaces = () => ({ ok: true, surfaces: [{ ...surfaces.surfaces[0], goal: { ...surfaces.surfaces[0].goal, title: revisedTitle, revision: 2, updatedAt: '2026-07-26T10:05:00.000Z' } }] });
+    await useForgeFixture(page);
+    await page.route('http://127.0.0.1:4100/api/goal-surfaces', (route) => fulfill(revised ? revisedSurfaces() : surfaces)(route));
+    const posted: unknown[] = [];
+    await page.route('http://127.0.0.1:4100/api/goals/goal-forge/revisions', async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      posted.push(route.request().postDataJSON());
+      revised = true;
+      await route.fulfill({ status: 200, headers: cors, body: JSON.stringify({ ok: true, changed: true, revision: 2, goal: { id: 'goal-forge', title: revisedTitle, revision: 2 } }) });
+    });
+    await page.goto('/');
+    await connect(page);
+    await openHome(page, view.width < 700);
+    const forge = page.locator('.forge-live');
+    const edit = forge.locator('header').getByRole('button', { name: 'Editar Goal' });
+    await expect(edit).toBeVisible();
+    expect((await edit.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await edit.click();
+    const dialog = page.getByRole('dialog', { name: 'Ajusta lo que buscas' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText('EDITAR GOAL · REVISIÓN 1 → 2')).toBeVisible();
+    await dialog.getByLabel('Texto del Goal').fill(revisedTitle);
+    await expect(dialog.getByLabel('Palabras clave de la próxima búsqueda')).toContainText('borrowing');
+    const save = dialog.getByRole('button', { name: 'Guardar revisión' });
+    await expect(save).toBeEnabled();
+    await page.waitForTimeout(400); // let the sheet's entry animation finish before measuring
+    const box = await dialog.boundingBox();
+    expect(box?.width ?? 0).toBeLessThanOrEqual(view.width);
+    if (view.width < 700) {
+      // Bottom sheet on a phone: anchored to the bottom edge, full width, 44px+ actions.
+      expect(Math.round((box?.y ?? 0) + (box?.height ?? 0))).toBe(view.height);
+      expect((await save.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+    await page.screenshot({ path: testInfo.outputPath(`goal-edit-${view.shot}.png`) });
+    if (process.env.GOAL_EDIT_SHOTS_DIR) await page.screenshot({ path: `${process.env.GOAL_EDIT_SHOTS_DIR}/goal-edit-${view.shot}.png` });
+    await save.click();
+    await expect.poll(() => posted.length).toBe(1);
+    expect(posted[0]).toEqual({ confirmed: true, title: revisedTitle, keywords: expect.arrayContaining(['ownership', 'borrowing']), expectedRevision: 1 });
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByText(/Goal revisado \(revisión 2\)\. Se conservan su misión, la Evidence y los Finds/)).toBeVisible();
+    await expect(forge.getByRole('heading', { name: revisedTitle })).toBeVisible();
+    // The same Mission and its gold Find stay on screen: nothing was re-run.
+    await expect(forge.locator('.forge-source[data-state="supported"]')).toHaveCount(1);
+    expect(posted).toHaveLength(1);
+    await expectNoHorizontalOverflow(page, view.width);
+  });
+}

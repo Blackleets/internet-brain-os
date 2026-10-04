@@ -1,5 +1,6 @@
 'use client';
 
+import type { GoalEditRequest } from './forge/goal-edit-sheet';
 import {
   Activity, Bot, BrainCircuit, ChevronRight, Database, Home, Menu, MoreHorizontal, Plus, RefreshCw, Settings,
   ShieldCheck, Sparkles, SquarePen, Target, X,
@@ -422,6 +423,31 @@ export default function EfestoProductShell() {
   }
 
   /**
+   * "Editar Goal": a Kernel Goal revision (POST /api/goals/:id/revisions). The Kernel only accepts it
+   * with the dashboard's interactive confirmation (its Origin) and keeps the Goal id, its Mission,
+   * earlier attempts, Evidence and Finds. Nothing runs: searching with the new text is "Buscar más".
+   */
+  async function reviseGoal(request: GoalEditRequest): Promise<boolean> {
+    if (!connection) { navigate('settings'); return false; }
+    try {
+      const client = new KernelClient({ ...connection, timeoutMs: 30_000 });
+      const response = await client.request(`/api/goals/${encodeURIComponent(request.goalId)}/revisions`, {
+        method: 'POST',
+        body: JSON.stringify({ confirmed: true, title: request.title, keywords: keywordsFromGoal(request.title), expectedRevision: request.expectedRevision }),
+      }, parseObject);
+      const revision = typeof response.revision === 'number' ? response.revision : undefined;
+      await refresh();
+      setToast(response.changed === false
+        ? 'El Goal ya decía eso: el Kernel no creó una revisión nueva.'
+        : `Goal revisado${revision ? ` (revisión ${revision})` : ''}. Se conservan su misión, la Evidence y los Finds. Pulsa «Buscar más» para buscar con el texto nuevo.`);
+      return true;
+    } catch {
+      setToast('El Kernel no aceptó la edición del Goal. El Goal y su misión siguen como estaban.');
+      return false;
+    }
+  }
+
+  /**
    * Same confirm endpoint and body as confirmGoal: the Kernel restarts a mission that is no longer
    * active. mode 'search_more' ("Buscar más") keeps the finished attempt, its Evidence and Finds.
    * The Kernel only accepts it with the dashboard's interactive confirmation (its Origin).
@@ -612,8 +638,8 @@ export default function EfestoProductShell() {
         <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection && snapshot?.readiness.kernel === 'online' ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{!connection ? 'Conectar' : snapshot?.readiness.kernel === 'online' ? 'Kernel listo' : 'Kernel sin respuesta'}</button></div>
       </header>
       <main id="efesto-main" ref={mainRef} tabIndex={-1} className="efesto-main">
-        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} navExpanded={navExpanded} supportedFinds={supportedFinds} forgeSupportedFindCount={forgeSupportedFindCount} missions={snapshot?.missions} forgeModel={forgeModel} onOpenFinds={() => navigate('finds')} onRelaunchMission={(goalId) => void relaunchMission(goalId)} relaunchPending={relaunchPending} onSearchMore={(goalId) => void relaunchMission(goalId, 'search_more')} onFindFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
-        {view === 'goals' ? <div className="missions-route"><GoalsView snapshot={snapshot} onNew={newGoal} onConnect={openSettings} forgeModel={forgeModel} onOpenFinds={() => navigate('finds')}  onRelaunchMission={(goalId) => void relaunchMission(goalId)} relaunchPending={relaunchPending} onSearchMore={(goalId) => void relaunchMission(goalId, 'search_more')} /><ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot?.productScorecard} /></div> : null}
+        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} navExpanded={navExpanded} supportedFinds={supportedFinds} forgeSupportedFindCount={forgeSupportedFindCount} missions={snapshot?.missions} forgeModel={forgeModel} onOpenFinds={() => navigate('finds')} onRelaunchMission={(goalId) => void relaunchMission(goalId)} relaunchPending={relaunchPending} onSearchMore={(goalId) => void relaunchMission(goalId, 'search_more')} onReviseGoal={reviseGoal} onFindFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
+        {view === 'goals' ? <div className="missions-route"><GoalsView snapshot={snapshot} onNew={newGoal} onConnect={openSettings} forgeModel={forgeModel} onOpenFinds={() => navigate('finds')}  onRelaunchMission={(goalId) => void relaunchMission(goalId)} relaunchPending={relaunchPending} onSearchMore={(goalId) => void relaunchMission(goalId, 'search_more')} onReviseGoal={reviseGoal} /><ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot?.productScorecard} /></div> : null}
         {view === 'finds' ? <FindsView opportunities={supportedFinds} missions={snapshot?.missions} connected={Boolean(connection)} onNewGoal={newGoal} onConnect={openSettings} onFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
         {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} onOpen={(record) => void openCase(record)} onNewGoal={newGoal} onConnect={openSettings} /> : null}
         {view === 'memory' ? <MemoryView connected={Boolean(connection)} /> : null}

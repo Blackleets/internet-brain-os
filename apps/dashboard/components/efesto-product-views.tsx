@@ -1,5 +1,6 @@
 'use client';
 
+import type { GoalEditRequest } from './forge/goal-edit-sheet';
 import { EfestoMark } from './brand/efesto-mark';
 import {
   Activity, Bot, BrainCircuit, Check, ChevronDown, ChevronRight, CircleOff, Database, ExternalLink, FileSearch,
@@ -42,7 +43,7 @@ const starterGoals = [
   'Ayúdame a tomar una decisión',
 ];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, navExpanded, supportedFinds = [], forgeSupportedFindCount = 0, missions, onFindFeedback, onOpenCase, forgeModel, onOpenFinds, onRelaunchMission, relaunchPending = false, onSearchMore }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, navExpanded, supportedFinds = [], forgeSupportedFindCount = 0, missions, onFindFeedback, onOpenCase, forgeModel, onOpenFinds, onRelaunchMission, relaunchPending = false, onSearchMore, onReviseGoal }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
   input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
@@ -62,6 +63,8 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   onRelaunchMission?: (goalId: string) => void;
   relaunchPending?: boolean;
   onSearchMore?: (goalId: string) => void;
+  /** "Editar Goal" on a confirmed Goal: a Kernel Goal revision (resolves true when accepted). */
+  onReviseGoal?: (request: GoalEditRequest) => Promise<boolean>;
 }) {
   // The forge replaces the "¿Qué estás buscando?" hero only while a real Kernel mission exists.
   const showForge = !chatMode && !preparedGoal && connected && forgeModel?.kind === 'mission';
@@ -168,7 +171,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
         <p className="forge-plan-boundary"><ShieldCheck /> Nada se ejecuta sin tu confirmación explícita.</p>
       </section> : <>
       {showForge && forgeModel ? <div className="forge-home-live">
-        <ForgeLiveView model={forgeModel} onOpenFinds={onOpenFinds} onRelaunch={onRelaunchMission} relaunchPending={relaunchPending} onSearchMore={onSearchMore} headingId="forge-home-live-title" />
+        <ForgeLiveView model={forgeModel} onOpenFinds={onOpenFinds} onRelaunch={onRelaunchMission} relaunchPending={relaunchPending} onSearchMore={onSearchMore} onEditGoal={onReviseGoal} headingId="forge-home-live-title" />
       </div> : null}
       {(supportedFinds.length || focusedMissionHasSupport) ? <section className="forge-home-finds" aria-label="Hallazgos respaldados por el Kernel">
         <header>
@@ -370,14 +373,14 @@ function ModelSelector({ providers, selectedProviderId, selectedModel, connected
   </div>;
 }
 
-export function GoalsView({ snapshot, onNew, onConnect, forgeModel, onOpenFinds, onRelaunchMission, relaunchPending = false, onSearchMore }: { snapshot?: OverviewSnapshot; onNew: () => void; onConnect?: () => void; forgeModel?: ForgeModel; onOpenFinds?: () => void; onRelaunchMission?: (goalId: string) => void; relaunchPending?: boolean; onSearchMore?: (goalId: string) => void }) {
+export function GoalsView({ snapshot, onNew, onConnect, forgeModel, onOpenFinds, onRelaunchMission, relaunchPending = false, onSearchMore, onReviseGoal }: { snapshot?: OverviewSnapshot; onNew: () => void; onConnect?: () => void; forgeModel?: ForgeModel; onOpenFinds?: () => void; onRelaunchMission?: (goalId: string) => void; relaunchPending?: boolean; onSearchMore?: (goalId: string) => void; onReviseGoal?: (request: GoalEditRequest) => Promise<boolean> }) {
   const missions = snapshot?.missions ?? [];
   const goals = snapshot?.goals ?? [];
   const missionFor = (goalId: string) => missions.find((mission) => mission.goalId === goalId);
   const orphanMissions = missions.filter((mission) => !goals.some((goal) => goal.id === mission.goalId));
   // The forge carries its own offline/empty truth (and Conectar action), so it replaces the
   // generic Empty card instead of stacking a second copy of the same message.
-  const forge = forgeModel ? <div className="goals-forge-live"><ForgeLiveView model={forgeModel} onConnect={onConnect} onOpenFinds={onOpenFinds} onRelaunch={onRelaunchMission} relaunchPending={relaunchPending} onSearchMore={onSearchMore} headingId="goals-forge-live-title" /></div> : null;
+  const forge = forgeModel ? <div className="goals-forge-live"><ForgeLiveView model={forgeModel} onConnect={onConnect} onOpenFinds={onOpenFinds} onRelaunch={onRelaunchMission} relaunchPending={relaunchPending} onSearchMore={onSearchMore} onEditGoal={onReviseGoal} headingId="goals-forge-live-title" /></div> : null;
   return <Workspace icon={Target} eyebrow="Goal → Misión → Evidencia" title="Objetivos" copy="Goals persistidos por el Kernel. Crear un Goal no autoriza red; la misión exige confirmación explícita." action={<button type="button" className="primary-action" onClick={onNew}><Target /> Nuevo Goal</button>}>
     {forge}
     {!snapshot ? (forge ? null : <Empty icon={CircleOff} title="Kernel sin conexión" copy="Conecta el Kernel para leer Goals y misiones reales." action={connectAction(onConnect)} />) : goals.length === 0 && missions.length === 0 ? (forge ? null : <Empty icon={Target} title="No hay Goals" copy="Crea un Goal; no simulamos ejecuciones vacías." action={newGoalAction(onNew)} />) : <div className="record-list">{goals.map((goal) => { const mission = missionFor(goal.id); return <article key={goal.id}><div className="record-icon"><Target /></div><div><strong>{goal.title}</strong><small>{goal.id}{mission ? ` · ${mission.id} · intento ${mission.attempt ?? 0}` : ''}</small></div><StatePill state={mission ? missionPillState(mission) : goal.status} /></article>; })}{orphanMissions.map((mission) => <article key={mission.id}><div className="record-icon"><Target /></div><div><strong>{mission.goalId}</strong><small>{mission.id} · intento {mission.attempt ?? 0}</small></div><StatePill state={missionPillState(mission)} /></article>)}</div>}

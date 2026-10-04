@@ -484,6 +484,24 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
         return send(response, 500, { ok: false, code: 'MISSION_EVIDENCE_FAILED' });
       }
     }
+    if (request.method === 'POST' && request.url?.startsWith('/api/goals/') && request.url.endsWith('/revisions')) {
+      // "Editar Goal": same interactive confirmation boundary as Mission confirmation (403 otherwise).
+      if (!goals?.revise) return send(response, 404, { ok: false, code: 'GOALS_UNAVAILABLE' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
+      try {
+        const goalId = decodePathId(request.url.slice('/api/goals/'.length, -'/revisions'.length));
+        if (goalId === null || !goalId) return send(response, 400, { ok: false, code: 'INVALID_PATH' });
+        const input = await readJson(request);
+        const confirmationActor = interactiveMissionConfirmationActor(origin, allowedDashboardOrigins);
+        const result = await goals.revise(goalId, input, { confirmationActor });
+        const obsidianNotes = result.changed && obsidianProjector?.syncGoals ? await obsidianProjector.syncGoals() : undefined;
+        if (result.changed) kernelEvents.publish('goal.revised', { goalId, revision: result.revision });
+        return send(response, 200, { ok: true, ...result, obsidianNotes });
+      } catch (error) {
+        if (error instanceof InboxError) return send(response, error.status, { ok: false, code: error.code, error: error.message });
+        return send(response, 500, { ok: false, code: 'GOAL_REVISION_FAILED' });
+      }
+    }
     if (request.method === 'POST' && request.url?.startsWith('/api/goals/') && request.url.endsWith('/missions')) {
       if (!agentMissions) return send(response, 404, { ok: false, code: 'AGENT_MISSIONS_UNAVAILABLE' });
       if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return send(response, 415, { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' });
