@@ -209,6 +209,7 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onPlaying, onRec
     </dl>
     <aside className="forge-live-panel" aria-label="Candidatos → Evidence">
       <header className="forge-panel-head"><h3>Candidatos → Evidence</h3><span ref={countRef} className="forge-panel-count">{model.counts.sources} de {model.counts.sources}</span></header>
+      {model.findingsFunnel ? <p className="forge-panel-funnel" title={funnelTitle(model.findingsFunnel)}>{funnelLine(model.findingsFunnel)}</p> : null}
       {visibleSources.length ? <ul className="forge-live-sources" aria-label={`Fuentes de la misión (${sources.length})`}>
         {visibleSources.map((source) => <li key={source.id} ref={setCardRef(source.id, finalStage(source))} className="forge-source" data-state={source.state}>
           <SourceCard source={source} goalTerms={model.goalTerms} onOpenFinds={onOpenFinds} />
@@ -294,6 +295,18 @@ function metaPill(model: ForgeMissionModel, replaying: boolean): [string, string
     return ['Búsqueda web terminada', `${returned} · ${model.counts.sources} ${model.counts.sources === 1 ? 'candidato real' : 'candidatos reales'}`];
   }
   return undefined;
+}
+
+const FUNNEL_REASON_LABELS: Record<string, string> = { malformed_url: 'URL mal formada', per_domain_cap: 'tope por dominio', duplicate: 'duplicado', other: 'otros' };
+
+/** "N hallazgos devueltos · M descartados": the adapter funnel exactly as the Kernel recorded it. */
+export function funnelLine(funnel: { returned: number; discarded: number }): string {
+  return `${funnel.returned} ${funnel.returned === 1 ? 'hallazgo devuelto' : 'hallazgos devueltos'} · ${funnel.discarded} ${funnel.discarded === 1 ? 'descartado' : 'descartados'}`;
+}
+
+function funnelTitle(funnel: { byReason: Record<string, number | undefined> }): string {
+  const parts = Object.entries(funnel.byReason).filter(([, n]) => n).map(([reason, n]) => `${FUNNEL_REASON_LABELS[reason] ?? reason}: ${n}`);
+  return parts.length ? `Descartados por el adaptador antes del Kernel — ${parts.join(' · ')}` : 'El adaptador no descartó ningún hallazgo';
 }
 
 function shortId(id: string): string {

@@ -196,6 +196,7 @@
 .forge-panel-head { display: flex; align-items: center; gap: 10px; padding: 2px 4px; }
 .forge-panel-head h3 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .01em; color: var(--v3-text2); }
 .forge-panel-count { margin-left: auto; font: 600 11px/1 var(--v3-mono); color: var(--v3-muted); font-variant-numeric: tabular-nums; }
+.forge-panel-funnel { margin: -6px 0 0; padding: 0 4px; font: 500 11px/1.4 var(--v3-mono); color: var(--v3-muted); font-variant-numeric: tabular-nums; }
 .forge-live-sources { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
 .forge-source article {
   position: relative; padding: 14px 16px 15px; border-radius: var(--v3-r3); background: var(--v3-surface); box-shadow: inset 0 0 0 1px var(--v3-line);

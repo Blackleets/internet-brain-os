@@ -110,6 +110,11 @@ export type ForgeMissionModel = {
    * Never inferred from the candidates.
    */
   searchResultCount?: number;
+  /**
+   * Adapter funnel the Kernel recorded (display-only, in searchTelemetry): how many findings Hermes
+   * returned and how many the adapter discarded before the Kernel, by reason. Absent when not recorded.
+   */
+  findingsFunnel?: ForgeFindingsFunnel;
   /** Kernel timestamp of the moment the current phase started (ISO), when the row has it. */
   phaseSince?: string;
   /** Honest next step for waiting/queued states. */
@@ -177,6 +182,7 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
   const resultCount = runs.length && runs.every((run) => run.resultCount !== undefined)
     ? runs.reduce((sum, run) => sum + (run.resultCount ?? 0), 0)
     : undefined;
+  const funnel = findingsFunnel(row);
   const relaunch = canRelaunch(phase, surfaceMission.status, row, input.now ?? Date.now()) && input.surface.goal.id ? { goalId: input.surface.goal.id } : undefined;
   return {
     kind: 'mission',
@@ -194,6 +200,7 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
     searchKeywords,
     search: { goal: goalTitle, keywords: searchKeywords, exactQueries: runs.map((run) => run.query), runs },
     ...(resultCount !== undefined ? { searchResultCount: resultCount } : {}),
+    ...(funnel ? { findingsFunnel: funnel } : {}),
     ...(phaseSince ? { phaseSince } : {}),
     ...(nextStep ? { nextStep } : {}),
     ...(relaunch ? { relaunch } : {}),
@@ -236,6 +243,29 @@ function missionKeywords(row?: MissionSummary): string[] {
 export type ForgeSearchRun = { query: string; resultCount?: number };
 
 export const SEARCH_TELEMETRY_SCHEMA = 'efesto.mission-search-telemetry.v1';
+
+export const FUNNEL_DROP_REASONS = ['malformed_url', 'per_domain_cap', 'duplicate', 'other'] as const;
+export type ForgeFunnelDropReason = (typeof FUNNEL_DROP_REASONS)[number];
+export type ForgeFindingsFunnel = { returned: number; discarded: number; byReason: Partial<Record<ForgeFunnelDropReason, number>> };
+
+/** The findings funnel in the Kernel's telemetry, validated again on read (bounded, adds up). */
+function findingsFunnel(row?: MissionSummary): ForgeFindingsFunnel | undefined {
+  const telemetry = asRow(row?.searchTelemetry);
+  if (!telemetry || telemetry.schemaVersion !== SEARCH_TELEMETRY_SCHEMA || telemetry.displayOnly !== true) return undefined;
+  const funnel = asRow(telemetry.funnel);
+  const count = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 20;
+  if (!funnel || !count(funnel.findingsReturned)) return undefined;
+  const dropped = asRow(funnel.dropped) ?? {};
+  const byReason: Partial<Record<ForgeFunnelDropReason, number>> = {};
+  let discarded = 0;
+  for (const [reason, value] of Object.entries(dropped)) {
+    if (!(FUNNEL_DROP_REASONS as readonly string[]).includes(reason) || !count(value)) return undefined;
+    if (value > 0) byReason[reason as ForgeFunnelDropReason] = value;
+    discarded += value;
+  }
+  if (discarded > funnel.findingsReturned) return undefined;
+  return { returned: funnel.findingsReturned, discarded, byReason };
+}
 
 /** The searches the Kernel recorded for this attempt (display-only), validated again on read. */
 function searchTelemetryRuns(row?: MissionSummary): ForgeSearchRun[] {

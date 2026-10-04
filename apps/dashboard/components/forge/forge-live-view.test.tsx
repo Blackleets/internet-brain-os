@@ -120,6 +120,27 @@ describe('ForgeLiveView', () => {
     expect(container.querySelector('.forge-bench-meta')?.textContent).toBe('Búsqueda web terminada · 19 resultados devueltos · 8 candidatos reales');
   });
 
+  it('shows "N hallazgos devueltos · M descartados" only when the Kernel recorded a valid funnel', () => {
+    const base = { schemaVersion: 'efesto.mission-search-telemetry.v1', displayOnly: true, recordedAt: '2026-10-03T09:01:00.000Z', searches: [{ query: 'rust ownership rules', limit: 10, resultCount: 10 }] };
+    const view = (searchTelemetry?: Record<string, unknown>) => render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row(searchTelemetry ? { searchTelemetry } : {}) })} />);
+    const { container, unmount } = view({ ...base, funnel: { findingsReturned: 12, dropped: { malformed_url: 1, duplicate: 1, per_domain_cap: 2 } } });
+    const line = container.querySelector('.forge-panel-funnel');
+    expect(line?.textContent).toBe('12 hallazgos devueltos · 4 descartados');
+    expect(line?.getAttribute('title')).toBe('Descartados por el adaptador antes del Kernel — URL mal formada: 1 · duplicado: 1 · tope por dominio: 2');
+    unmount();
+    const none = view({ ...base, funnel: { findingsReturned: 1, dropped: {} } });
+    expect(none.container.querySelector('.forge-panel-funnel')?.textContent).toBe('1 hallazgo devuelto · 0 descartados');
+    none.unmount();
+    // absent, unknown reason, out of bounds or not adding up: no line at all, never a guess
+    for (const funnel of [undefined, { findingsReturned: 2, dropped: { spam: 1 } }, { findingsReturned: 21 }, { findingsReturned: 1, dropped: { other: 2 } }, { findingsReturned: '3' }]) {
+      const other = view(funnel === undefined ? base : { ...base, funnel });
+      expect(other.container.querySelector('.forge-panel-funnel')).toBeNull();
+      other.unmount();
+    }
+    const noTelemetry = view();
+    expect(noTelemetry.container.querySelector('.forge-panel-funnel')).toBeNull();
+  });
+
   it('without search telemetry there is no query text and no result count, just "desde el Goal"', () => {
     const { container } = render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ searchQueries: ['legacy'], searchResultCount: 9 }) })} />);
     expect(container.querySelector('.forge-bench-q')?.textContent).toBe('«Rust ownership guide»');
