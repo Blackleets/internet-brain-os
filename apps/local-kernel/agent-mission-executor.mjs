@@ -9,6 +9,10 @@ const MAX_TELEMETRY_SEARCHES = 8;
 const MAX_TELEMETRY_QUERY_CHARS = 300;
 const MAX_TELEMETRY_LIMIT = 100;
 const MAX_TELEMETRY_RESULT_COUNT = 1000;
+const MAX_TELEMETRY_PLANNED_QUERIES = 3;
+// Funnel counts are bounded by the adapter contract (at most 20 findings per Hermes answer).
+const MAX_TELEMETRY_FINDINGS = 20;
+export const FUNNEL_DROP_REASONS = Object.freeze(['malformed_url', 'per_domain_cap', 'duplicate', 'other']);
 
 export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
   constructor(store, opportunityProjector, options = {}) {
@@ -37,7 +41,7 @@ export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
     const normalized = dedupeByUrl(input.findings.map(normalizeCandidate));
     // The digest (duplicate/idempotency check) covers the candidates only: telemetry is display-only.
     const digest = createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
-    const searchTelemetry = normalizeSearchTelemetry(input?.searchTelemetry);
+    const searchTelemetry = normalizeSearchTelemetry(input?.searchTelemetry, { findingsSubmitted: input.findings.length });
 
     return this.store.project(async (data) => {
       const missions = data.agentMissions ?? [];
@@ -95,20 +99,38 @@ export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
 }
 
 /**
- * Optional, display-only record of the public searches the agent reported making
- * ({ searches: [{ query, limit?, resultCount? }] }). Bounded and validated; anything invalid drops
- * the whole record (never the results). It never feeds Evidence, web.read or SUPPORT.
+ * Optional, display-only record of the agent's public search work:
+ *   { searches: [{ query, limit?, resultCount? }], plannedQueries?: string[],
+ *     funnel?: { findingsReturned, dropped: { malformed_url?, per_domain_cap?, duplicate?, other? } } }
+ * `searches` are the queries really sent; `plannedQueries` the ones the adapter asked for. The Kernel
+ * itself marks each search `matchesPlan` (exact match after whitespace collapse), so a rewritten
+ * query is visible. The funnel must add up: findingsReturned − dropped = findings submitted.
+ * Bounded and validated; anything invalid drops the whole record (never the results). It never
+ * feeds Evidence, web.read or SUPPORT.
  */
-export function normalizeSearchTelemetry(value) {
-  if (!isPlainObject(value) || !onlyKeys(value, ['searches'])) return undefined;
+export function normalizeSearchTelemetry(value, { findingsSubmitted } = {}) {
+  if (!isPlainObject(value) || !onlyKeys(value, ['searches', 'plannedQueries', 'funnel'])) return undefined;
   const { searches } = value;
-  if (!Array.isArray(searches) || searches.length === 0 || searches.length > MAX_TELEMETRY_SEARCHES) return undefined;
+  const hasPlan = value.plannedQueries !== undefined;
+  const hasFunnel = value.funnel !== undefined;
+  // No searches at all is only worth recording next to a plan or a funnel ("planned 3, sent 0").
+  if (!Array.isArray(searches) || searches.length > MAX_TELEMETRY_SEARCHES) return undefined;
+  if (searches.length === 0 && !hasPlan && !hasFunnel) return undefined;
+  let plannedQueries;
+  if (hasPlan) {
+    if (!Array.isArray(value.plannedQueries) || value.plannedQueries.length === 0 || value.plannedQueries.length > MAX_TELEMETRY_PLANNED_QUERIES) return undefined;
+    plannedQueries = [];
+    for (const planned of value.plannedQueries) {
+      const query = telemetryQuery(planned);
+      if (!query || plannedQueries.includes(query)) return undefined;
+      plannedQueries.push(query);
+    }
+  }
   const normalized = [];
   for (const search of searches) {
     if (!isPlainObject(search) || !onlyKeys(search, ['query', 'limit', 'resultCount'])) return undefined;
-    if (typeof search.query !== 'string') return undefined;
-    const query = search.query.replace(/\s+/g, ' ').trim();
-    if (!query || query.length > MAX_TELEMETRY_QUERY_CHARS || /[\u0000-\u001f\u007f]/.test(query)) return undefined;
+    const query = telemetryQuery(search.query);
+    if (!query) return undefined;
     const entry = { query };
     if (search.limit !== undefined) {
       if (!Number.isInteger(search.limit) || search.limit < 1 || search.limit > MAX_TELEMETRY_LIMIT) return undefined;
@@ -118,9 +140,48 @@ export function normalizeSearchTelemetry(value) {
       if (!Number.isInteger(search.resultCount) || search.resultCount < 0 || search.resultCount > MAX_TELEMETRY_RESULT_COUNT) return undefined;
       entry.resultCount = search.resultCount;
     }
+    if (plannedQueries) entry.matchesPlan = plannedQueries.includes(query);
     normalized.push(entry);
   }
-  return { schemaVersion: SEARCH_TELEMETRY_SCHEMA, displayOnly: true, searches: normalized };
+  let funnel;
+  if (hasFunnel) {
+    funnel = normalizeFunnel(value.funnel, findingsSubmitted);
+    if (!funnel) return undefined;
+  }
+  return {
+    schemaVersion: SEARCH_TELEMETRY_SCHEMA,
+    displayOnly: true,
+    searches: normalized,
+    ...(plannedQueries ? { plannedQueries } : {}),
+    ...(funnel ? { funnel } : {}),
+  };
+}
+
+function telemetryQuery(value) {
+  if (typeof value !== 'string') return undefined;
+  const query = value.replace(/\s+/g, ' ').trim();
+  if (!query || query.length > MAX_TELEMETRY_QUERY_CHARS || /[\u0000-\u001f\u007f]/.test(query)) return undefined;
+  return query;
+}
+
+function normalizeFunnel(value, findingsSubmitted) {
+  if (!isPlainObject(value) || !onlyKeys(value, ['findingsReturned', 'dropped'])) return undefined;
+  const count = (n) => Number.isInteger(n) && n >= 0 && n <= MAX_TELEMETRY_FINDINGS;
+  if (!count(value.findingsReturned)) return undefined;
+  const rawDropped = value.dropped ?? {};
+  if (!isPlainObject(rawDropped) || !onlyKeys(rawDropped, FUNNEL_DROP_REASONS)) return undefined;
+  const dropped = {};
+  let total = 0;
+  for (const reason of FUNNEL_DROP_REASONS) {
+    if (rawDropped[reason] === undefined) continue;
+    if (!count(rawDropped[reason])) return undefined;
+    dropped[reason] = rawDropped[reason];
+    total += rawDropped[reason];
+  }
+  if (total > value.findingsReturned) return undefined;
+  // The counts must describe this very batch, or they would misreport what happened.
+  if (!Number.isInteger(findingsSubmitted) || value.findingsReturned - total !== findingsSubmitted) return undefined;
+  return { findingsReturned: value.findingsReturned, dropped };
 }
 
 function withoutSearchTelemetry(mission) {
