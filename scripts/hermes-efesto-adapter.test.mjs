@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import {
   buildHermesArgs,
   buildHermesEnvironment,
+  selectionMaxTokens,
   buildSelectionPrompt,
   runPlannedSearches,
   runSearchWorker,
@@ -286,6 +287,18 @@ process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/a' 
     expect(env).not.toHaveProperty('HERMES_ENABLE_PROJECT_PLUGINS');
     expect(env).not.toHaveProperty('HERMES_IGNORE_USER_CONFIG');
     expect(env.WEB_TOOLS_DEBUG).toBe('true');
+    // The selection call has a bounded output budget so a runaway model fails fast.
+    expect(env.HERMES_MAX_TOKENS).toBe('2048');
+  });
+
+  it('bounds the selection output budget; an inherited HERMES_MAX_TOKENS cannot lift it', () => {
+    expect(selectionMaxTokens(undefined)).toBe(2048);
+    expect(selectionMaxTokens('1024')).toBe(1024);
+    expect(() => selectionMaxTokens('100')).toThrow(/between 512 and 8192/);
+    expect(() => selectionMaxTokens('99999')).toThrow();
+    expect(() => selectionMaxTokens('1.5')).toThrow();
+    const env = buildHermesEnvironment({ HERMES_MAX_TOKENS: '65536', HEPHAESTUS_HERMES_SELECTION_MAX_TOKENS: '1536' }, '/tmp/efesto-hermes-isolated');
+    expect(env.HERMES_MAX_TOKENS).toBe('1536');
   });
 
   it('keeps findings from varied domains: drops repeated URLs, at most 2 per domain, at most 10, never adds any', () => {

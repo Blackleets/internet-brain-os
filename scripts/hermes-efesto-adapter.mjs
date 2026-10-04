@@ -7,7 +7,15 @@ import { pathToFileURL } from 'node:url';
 
 const MAX_INPUT_BYTES = 128 * 1024;
 const MAX_OUTPUT_BYTES = 512 * 1024;
-const DEFAULT_TIMEOUT_MS = 12 * 60_000;
+// One attempt is one search round + one short selection call; 8 min leaves room for a slow local
+// model and fails the attempt early enough for the Kernel's bounded retries (3) to finish in time.
+const DEFAULT_TIMEOUT_MS = 8 * 60_000;
+// Output budget of the selection call (reasoning included). The answer is a JSON list of at most
+// 20 findings (~1k tokens). Without a cap a small local model can think until its context window
+// is full (run 6: 5,294 tokens, 5m49s, empty answer) and an attempt stalls for its whole timeout.
+const DEFAULT_SELECTION_MAX_TOKENS = 2048;
+const MIN_SELECTION_MAX_TOKENS = 512;
+const MAX_SELECTION_MAX_TOKENS = 8192;
 const MAX_TIMEOUT_MS = 25 * 60_000;
 const FORCE_KILL_DELAY_MS = 500;
 const MAX_AGENT_TURNS = 8;
@@ -256,6 +264,15 @@ export function buildHermesArgs(prompt, maxTurns = DEFAULT_AGENT_TURNS, provider
   return ['chat', '--query', prompt, '--quiet', '--max-turns', String(maxTurns), ...route, '--ignore-rules', '--toolsets', SELECTION_TOOLSETS];
 }
 
+export function selectionMaxTokens(value) {
+  if (value === undefined || value === null || value === '') return DEFAULT_SELECTION_MAX_TOKENS;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < MIN_SELECTION_MAX_TOKENS || parsed > MAX_SELECTION_MAX_TOKENS) {
+    throw new Error(`HEPHAESTUS_HERMES_SELECTION_MAX_TOKENS must be an integer between ${MIN_SELECTION_MAX_TOKENS} and ${MAX_SELECTION_MAX_TOKENS}`);
+  }
+  return parsed;
+}
+
 function normalizeRouteValue(value, label) {
   if (value === undefined || value === null || value === '') return undefined;
   if (typeof value !== 'string') throw new Error(`Hermes ${label} must be a string`);
@@ -270,6 +287,8 @@ export function buildHermesEnvironment(baseEnv, hermesHome) {
   const env = {
     ...baseEnv,
     HERMES_HOME: hermesHome,
+    // Hermes reads HERMES_MAX_TOKENS as the model's max output tokens for every call.
+    HERMES_MAX_TOKENS: String(selectionMaxTokens(baseEnv?.HEPHAESTUS_HERMES_SELECTION_MAX_TOKENS)),
     HERMES_ALLOW_PRIVATE_URLS: 'false',
     HERMES_IGNORE_RULES: '1',
     // Records each web_search call (query, limit, result count; no result content) to
