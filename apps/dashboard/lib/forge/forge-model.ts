@@ -527,7 +527,15 @@ function phaseCopy(phase: ForgePhase, counts: ForgeCounts, row?: MissionSummary)
   switch (phase) {
     case 'waiting_agent': return { label: 'Esperando a Hermes', detail: 'La misión está confirmada; el agente aún no está conectado.' };
     case 'queued': return { label: 'Misión en cola', detail: 'Confirmada por ti; el Kernel la guarda en cola para Hermes.' };
-    case 'searching': return { label: 'Buscando candidatos', detail: 'Hermes explora la web pública. Un candidato no es Evidence.' };
+    case 'searching': {
+      // Kernel retry of a failed attempt (bounded): say so instead of one long "Buscando" clock.
+      const attempt = Number(row?.attempt);
+      const failure = str(asRow(row?.lastFailure)?.reason);
+      if (Number.isInteger(attempt) && attempt > 1 && failure) {
+        return { label: `Buscando candidatos · intento ${attempt} de ${MAX_MISSION_ATTEMPTS}`, detail: `El intento anterior falló (${attemptFailureCopy(failure)}). Hermes lo vuelve a intentar.` };
+      }
+      return { label: 'Buscando candidatos', detail: 'Hermes explora la web pública. Un candidato no es Evidence.' };
+    }
     case 'verifying': return {
       label: 'Verificando fuentes',
       detail: counts.sources > 0
@@ -598,12 +606,24 @@ export function supportReason(code?: string): string {
   return SUPPORT_REASONS[code] ?? `Sin Kernel SUPPORT (motivo del Kernel: ${code})`;
 }
 
+/** The Kernel's bounded attempts per Mission (agent-missions MAX_ATTEMPTS). */
+const MAX_MISSION_ATTEMPTS = 3;
+
+export function attemptFailureCopy(reason: string): string {
+  if (/timed out|timeout/i.test(reason)) return 'Hermes tardó demasiado';
+  if (/lease expired/i.test(reason)) return 'Hermes no terminó a tiempo';
+  if (/findings/i.test(reason)) return 'Hermes devolvió una respuesta inválida';
+  return reason.length > 90 ? `${reason.slice(0, 89)}…` : reason;
+}
+
 export function readFailureReason(code?: string): string {
   if (!code) return 'El Kernel no pudo leer la página';
   const http = code.match(/HTTP\s+(\d{3})/i);
   if (http) return `No se pudo leer: HTTP ${http[1]}`;
   if (/empty content/i.test(code)) return 'No se pudo leer: contenido vacío';
   if (/timeout|timed out|abort/i.test(code)) return 'No se pudo leer: tiempo de espera agotado';
+  if (/bot-protection/i.test(code)) return 'No se pudo leer: el sitio mostró una comprobación anti-bots, no su contenido';
+  if (/private network/i.test(code)) return 'No se pudo leer: la dirección resolvió a una red privada y el Kernel no la lee';
   return `No se pudo leer: ${code}`;
 }
 

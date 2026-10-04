@@ -316,3 +316,21 @@ describe('displayText', () => {
     });
   });
 });
+
+describe('run 6 diagnostics: retried attempts and read failures say what happened', () => {
+  it('a Kernel retry after a timed-out attempt is labelled "intento N de 3" with the earlier failure', () => {
+    const retry = buildForgeModel({ connected: true, kernelOnline: true, surface: surface('investigating'), mission: row({ executionPhase: 'investigating', searchCandidates: [], attempt: 2, lastFailure: { reason: 'Hermes adapter exited with code 1: Hermes one-shot timed out', attempt: 1 } }) }) as ForgeMissionModel;
+    expect(retry.phase).toBe('searching');
+    expect(retry.phaseLabel).toBe('Buscando candidatos · intento 2 de 3');
+    expect(retry.phaseDetail).toBe('El intento anterior falló (Hermes tardó demasiado). Hermes lo vuelve a intentar.');
+    const invalid = buildForgeModel({ connected: true, kernelOnline: true, surface: surface('investigating'), mission: row({ executionPhase: 'investigating', searchCandidates: [], attempt: 3, lastFailure: { reason: 'Hermes adapter exited with code 1: Hermes must return { findings: [...] } with at most 20 findings' } }) }) as ForgeMissionModel;
+    expect(invalid.phaseDetail).toContain('Hermes devolvió una respuesta inválida');
+    const first = buildForgeModel({ connected: true, kernelOnline: true, surface: surface('investigating'), mission: row({ executionPhase: 'investigating', searchCandidates: [], attempt: 1 }) }) as ForgeMissionModel;
+    expect(first.phaseLabel).toBe('Buscando candidatos');
+  });
+
+  it('bot-protection and private-network read failures read in Spanish', () => {
+    expect(readFailureReason('web.read got a bot-protection check page instead of the page content')).toBe('No se pudo leer: el sitio mostró una comprobación anti-bots, no su contenido');
+    expect(readFailureReason('Private network URLs are not supported')).toBe('No se pudo leer: la dirección resolvió a una red privada y el Kernel no la lee');
+  });
+});

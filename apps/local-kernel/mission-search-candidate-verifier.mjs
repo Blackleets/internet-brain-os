@@ -1,3 +1,4 @@
+import { BROWSER_CHALLENGE_READ_REASON, isBrowserChallengePage } from './browser-challenge-page.mjs';
 import { currentGoalRevision } from './goal-execution-authorization.mjs';
 import { createHash } from 'node:crypto';
 import { InboxError, MAX_PAGE_CONTEXT_VISIBLE_TEXT } from './page-context-inbox.mjs';
@@ -45,6 +46,8 @@ export class MissionSearchCandidateVerifier {
           throw new Error(`web.read returned HTTP ${document.status}`);
         }
         if (typeof document.text !== 'string' || !document.text.trim()) throw new Error('web.read returned empty content');
+        // A bot wall is not the source: record a failed read, never Evidence (SUPPORT is unaffected).
+        if (isBrowserChallengePage(document.text)) throw new Error(BROWSER_CHALLENGE_READ_REASON);
         outcomes.push({ candidate, ok: true, document });
       } catch (error) {
         outcomes.push({ candidate, ok: false, reason: safeMessage(error) });
