@@ -32,6 +32,22 @@ describe('Hermes mission worker', () => {
     expect(body.findings).toHaveLength(1);
   });
 
+  it('passes the planned queries and the findings funnel through untouched for the Kernel to validate', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true, mission: { ...mission, status: 'running', executionPhase: 'verifying' } }) });
+    const searches = [{ query: 'empleo rider España 2025', limit: 10, resultCount: 10 }];
+    const plannedQueries = ['empleo rider españa', 'empleo rider'];
+    const funnel = { findingsReturned: 3, dropped: { malformed_url: 1, duplicate: 1 } };
+    const execute = vi.fn(async () => ({ findings: [{ url: 'https://example.com/job' }], searches, plannedQueries, funnel }));
+    await runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute });
+    expect(JSON.parse(fetchImpl.mock.calls[1][1].body).searchTelemetry).toEqual({ searches, plannedQueries, funnel });
+    // a plan without any sent search is still worth recording; a malformed plan or funnel is left out
+    expect(adapterSearchTelemetry({ plannedQueries: ['a'] })).toEqual({ searches: [], plannedQueries: ['a'] });
+    expect(adapterSearchTelemetry({ searches, plannedQueries: [1], funnel: [] })).toEqual({ searches });
+    expect(adapterSearchTelemetry({ searches, plannedQueries: ['a', 'b', 'c', 'd'] })).toEqual({ searches });
+  });
+
   it('omits search telemetry the adapter did not report or reported malformed, without failing the mission', async () => {
     expect(adapterSearchTelemetry({ findings: [] })).toBeUndefined();
     expect(adapterSearchTelemetry({ searches: [] })).toBeUndefined();

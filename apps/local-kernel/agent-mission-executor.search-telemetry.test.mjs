@@ -70,6 +70,66 @@ describe('per-mission search telemetry (display-only)', () => {
     expect(normalizeSearchTelemetry({ searches: [{ query: 'only the query' }] })).toEqual({ schemaVersion: SEARCH_TELEMETRY_SCHEMA, displayOnly: true, searches: [{ query: 'only the query' }] });
   });
 
+  it('marks each sent query against the adapter plan, so a rewritten query is visible, verbatim', async () => {
+    const { store, mission, executor, claim } = await claimed();
+    const plannedQueries = ['drill offer', 'drill offer Madrid'];
+    const sent = [
+      { query: 'drill offer', limit: 10, resultCount: 10 },
+      // the model rewrote the second planned query and appended a year
+      { query: 'cordless drill offer Madrid 2025', limit: 10, resultCount: 8 },
+    ];
+    await executor.complete(mission.id, { leaseId: claim.leaseId, resultKind: 'search_candidates', findings: [finding], searchTelemetry: { searches: sent, plannedQueries: [' drill  offer ', 'drill offer Madrid'] } });
+    const stored = (await store.read()).agentMissions[0];
+    expect(stored.searchTelemetry.plannedQueries).toEqual(plannedQueries);
+    expect(stored.searchTelemetry.searches).toEqual([
+      { query: 'drill offer', limit: 10, resultCount: 10, matchesPlan: true },
+      { query: 'cordless drill offer Madrid 2025', limit: 10, resultCount: 8, matchesPlan: false },
+    ]);
+    // An adapter cannot assert the match itself: matchesPlan is not an accepted input key.
+    expect(normalizeSearchTelemetry({ searches: [{ query: 'x', matchesPlan: true }], plannedQueries: ['y'] })).toBeUndefined();
+    // Without a plan nothing is marked; a plan with zero sent searches is still recorded.
+    expect(normalizeSearchTelemetry({ searches: [{ query: 'x' }] }).searches[0]).not.toHaveProperty('matchesPlan');
+    expect(normalizeSearchTelemetry({ searches: [], plannedQueries: ['drill offer'] })).toMatchObject({ searches: [], plannedQueries: ['drill offer'] });
+  });
+
+  it('records the findings funnel only when it adds up to the submitted batch, within bounds', async () => {
+    const { store, mission, executor, claim } = await claimed();
+    const funnel = { findingsReturned: 6, dropped: { malformed_url: 1, per_domain_cap: 2, duplicate: 2 } };
+    await executor.complete(mission.id, { leaseId: claim.leaseId, resultKind: 'search_candidates', findings: [finding], searchTelemetry: { searches, funnel } });
+    const stored = (await store.read()).agentMissions[0];
+    expect(stored.searchTelemetry.funnel).toEqual(funnel);
+    expect(stored.searchCandidates).toHaveLength(1);
+    const ok = (value, findingsSubmitted) => normalizeSearchTelemetry({ searches: [{ query: 'q' }], funnel: value }, { findingsSubmitted });
+    expect(ok({ findingsReturned: 3, dropped: {} }, 3)?.funnel).toEqual({ findingsReturned: 3, dropped: {} });
+    expect(ok({ findingsReturned: 0 }, 0)?.funnel).toEqual({ findingsReturned: 0, dropped: {} });
+    expect(ok({ findingsReturned: 20, dropped: { other: 10 } }, 10)?.funnel).toEqual({ findingsReturned: 20, dropped: { other: 10 } });
+    const invalid = [
+      [{ findingsReturned: 3, dropped: {} }, 2], // does not add up to the batch
+      [{ findingsReturned: 3, dropped: { duplicate: 1 } }, 3],
+      [{ findingsReturned: 3, dropped: {} }, undefined],
+      [{ findingsReturned: 21, dropped: { other: 21 } }, 0],
+      [{ findingsReturned: -1 }, 0],
+      [{ findingsReturned: 2.5 }, 0],
+      [{ findingsReturned: '3' }, 3],
+      [{ findingsReturned: 2, dropped: { duplicate: 3 } }, 0],
+      [{ findingsReturned: 2, dropped: { spam: 1 } }, 1],
+      [{ findingsReturned: 2, dropped: { duplicate: -1 } }, 3],
+      [{ findingsReturned: 2, dropped: [] }, 2],
+      [{ findingsReturned: 2, kept: 2 }, 2],
+      ['2', 2],
+    ];
+    for (const [value, submitted] of invalid) expect(ok(value, submitted)).toBeUndefined();
+    const plans = [
+      { searches: [], plannedQueries: [] },
+      { searches: [], plannedQueries: ['a', 'b', 'c', 'd'] },
+      { searches: [], plannedQueries: ['a', ' a '] },
+      { searches: [], plannedQueries: ['x'.repeat(301)] },
+      { searches: [], plannedQueries: [7] },
+      { searches: [], plannedQueries: 'a' },
+    ];
+    for (const value of plans) expect(normalizeSearchTelemetry(value)).toBeUndefined();
+  });
+
   it('records candidates normally when the telemetry is invalid', async () => {
     const { store, mission, executor, claim } = await claimed();
     await executor.complete(mission.id, { leaseId: claim.leaseId, resultKind: 'search_candidates', findings: [finding], searchTelemetry: { searches: [{ query: 'ok', limit: 'ten' }] } });

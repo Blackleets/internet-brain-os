@@ -113,15 +113,21 @@ function validateAdapterResult(value) {
   return value.findings;
 }
 /**
- * Display-only search telemetry from the adapter ({ searches: [{ query, limit?, resultCount? }] }).
- * Passed through for the Kernel to validate and store; a malformed shape is dropped here and
- * never fails the mission. It is not Evidence and plays no part in SUPPORT.
+ * Display-only search telemetry from the adapter:
+ * { searches: [{ query, limit?, resultCount? }], plannedQueries?: string[], funnel?: { findingsReturned, dropped } }.
+ * Passed through for the Kernel to validate (bounds, funnel arithmetic) and store; a malformed shape
+ * is dropped here and never fails the mission. It is not Evidence and plays no part in SUPPORT.
  */
 export function adapterSearchTelemetry(value) {
-  const searches = value?.searches;
-  if (!Array.isArray(searches) || searches.length === 0 || searches.length > 8) return undefined;
+  if (!value || typeof value !== 'object') return undefined;
+  const searches = value.searches === undefined ? [] : value.searches;
+  if (!Array.isArray(searches) || searches.length > 8) return undefined;
   if (!searches.every((item) => item && typeof item === 'object' && !Array.isArray(item) && typeof item.query === 'string')) return undefined;
-  return { searches };
+  const plannedQueries = Array.isArray(value.plannedQueries) && value.plannedQueries.length > 0 && value.plannedQueries.length <= 3
+    && value.plannedQueries.every((item) => typeof item === 'string') ? value.plannedQueries : undefined;
+  const funnel = value.funnel && typeof value.funnel === 'object' && !Array.isArray(value.funnel) ? value.funnel : undefined;
+  if (searches.length === 0 && !plannedQueries && !funnel) return undefined;
+  return { searches, ...(plannedQueries ? { plannedQueries } : {}), ...(funnel ? { funnel } : {}) };
 }
 function parseArgs(value) {
   if (!value) return [];
