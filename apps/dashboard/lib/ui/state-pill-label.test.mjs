@@ -28,6 +28,16 @@ test('completed-without-Evidence is Terminada sin Evidence, not Completado', () 
   assert.doesNotMatch(statePillLabel('completed_without_forge'), /Completado|Find SUPPORT|^completed$/i);
 });
 
+test('blocked mission states are actionable Spanish copy and remain fail-closed', () => {
+  assert.equal(statePillLabel('blocked'), 'Bloqueada');
+  assert.equal(statePillLabel('runtime_read_only_unverified'), 'Hermes requiere actualización segura');
+  assert.equal(statePillLabel('authorization_missing'), 'Falta autorización del Goal');
+  assert.equal(statePillLabel('authorization_revision_mismatch'), 'Goal requiere reautorización');
+  assert.equal(statePillLabel('goal_not_active'), 'Goal no activo');
+  assert.equal(statePillTone('runtime_read_only_unverified'), 'bad');
+  assert.equal(statePillTone('authorization_missing'), 'bad');
+});
+
 test('page.tsx → EfestoProductShell StatePill mounts the helper', () => {
   assert.match(views, /from ['"]\.\.\/lib\/ui\/state-pill-label\.mjs['"]/);
   assert.match(views, /statePillLabel\(/);
