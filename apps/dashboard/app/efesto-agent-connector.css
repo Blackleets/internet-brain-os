@@ -95,3 +95,6 @@
   .agent-test { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .agent-test .is-spinning { animation: none; } }
+/* The pill keeps "Kernel listo" on one line on phones; the view title gives way instead. */
+.connection-pill { flex: none; white-space: nowrap; }
+.efesto-topbar .top-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
