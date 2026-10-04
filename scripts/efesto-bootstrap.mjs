@@ -65,6 +65,17 @@ export async function probeHermes(env = process.env, options = {}) {
   const executable = env.HEPHAESTUS_HERMES_EXECUTABLE?.trim() || await resolveDefaultHermes(env, options);
   if (!executable) return { found: false, valid: false };
   try {
+    // When the one-click Kernel is running it already performed the authoritative
+    // chat --help certification in hermes-runtime.mjs. Reuse that fail-closed result
+    // so Settings/Readiness cannot claim "Hermes ready" while automatic missions are
+    // blocked by runtime_read_only_unverified.
+    if (env.HEPHAESTUS_HERMES_READ_ONLY_READY === '0') {
+      return { found: true, valid: false, executable, error: 'runtime_read_only_unverified' };
+    }
+    if (env.HEPHAESTUS_HERMES_READ_ONLY_READY === '1') {
+      return { found: true, valid: true, executable, mode: 'bounded_isolated_search_only' };
+    }
+
     const shouldValidate = options.validateHermes === true || env.EFESTO_VALIDATE_HERMES === '1';
     if (!shouldValidate) return { found: true, valid: true, executable };
     const runner = options.runHermesValidation ?? runCommand;
