@@ -308,6 +308,56 @@ test('forge live view on desktop: wide forge stage with the Candidatos → Evide
   await page.screenshot({ path: testInfo.outputPath('forge-desktop-1280x800.png') });
 });
 
+test('result webs and the idle spider: the pages the searches returned are named (never counted) and the crawler wanders once settled', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await useForgeFixture(page);
+  const searchTelemetry = { schemaVersion: 'efesto.mission-search-telemetry.v1', displayOnly: true, recordedAt: '2026-07-26T10:01:00.000Z', searches: [
+    { query: 'rust ownership fixture', limit: 10, resultCount: 3, results: [{ url: candidates[0].url, title: 'Fixture: Ownership' }, { url: 'https://returned.fixture.example/a', title: 'Returned page A (fixture)' }, { url: 'https://returned.fixture.example/b' }] },
+    { query: 'rust borrowing fixture', limit: 10, resultCount: 1, results: [{ url: 'https://other.fixture.example/', title: 'Returned page C (fixture)' }] },
+  ] };
+  await page.route('http://127.0.0.1:4100/api/agent-missions', fulfill({ ok: true, missions: [{ ...missions.missions[0], searchTelemetry }] }));
+  await page.goto('/');
+  await connect(page);
+  await openHome(page, false);
+  const forge = page.locator('.forge-live');
+  const canvas = forge.locator('canvas[data-webs]');
+  await expect(canvas).toHaveAttribute('data-webs', '4');
+  // display-only: the list names the 4 pages, no links
+  await expect(forge.locator('.forge-live-webs summary')).toHaveText(/Webs que devolvió la búsqueda\s*4/);
+  await expect(forge.locator('.forge-live-webs a')).toHaveCount(0);
+  // the pages get a short dwell per query before the picks, so the play-through is longer
+  await expect(forge.locator('.forge-source[data-state="supported"]')).toHaveAttribute('data-stage', 'gold', { timeout: 30_000 });
+  await expectHonestSources(page);
+  // the counters are still the 3 real candidates (the returned pages are never counted)
+  await expect(forge.locator('.forge-live-counters [data-k="candidates"] dd')).toHaveText('3', { timeout: 15_000 });
+  // settled: the decorative crawler is out on its own (walks, thinks, hides)
+  await expect(canvas).toHaveAttribute('data-idle', /^(walk|pause|hide)$/, { timeout: 25_000 });
+  const kinds = new Set<string>();
+  for (let i = 0; i < 40 && kinds.size < 2; i += 1) { kinds.add(await canvas.getAttribute('data-idle') ?? ''); await page.waitForTimeout(250); }
+  expect(kinds.size).toBeGreaterThanOrEqual(2);
+  await expectNoHorizontalOverflow(page, 1440);
+});
+
+test('reduced motion: no idle spider and no result-web animation, the panel list still names the pages', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await useForgeFixture(page);
+  const searchTelemetry = { schemaVersion: 'efesto.mission-search-telemetry.v1', displayOnly: true, recordedAt: '2026-07-26T10:01:00.000Z', searches: [
+    { query: 'rust ownership fixture', limit: 10, resultCount: 1, results: [{ url: 'https://returned.fixture.example/a', title: 'Returned page A (fixture)' }] },
+  ] };
+  await page.route('http://127.0.0.1:4100/api/agent-missions', fulfill({ ok: true, missions: [{ ...missions.missions[0], searchTelemetry }] }));
+  await page.goto('/');
+  await connect(page);
+  await openHome(page, true);
+  const forge = page.locator('.forge-live');
+  await expect(forge.locator('.forge-live-webs summary')).toHaveText(/Webs que devolvió la búsqueda\s*1/);
+  // phones draw no result webs on the canvas (compact list instead)
+  await expect(forge.locator('canvas[data-webs]')).toHaveAttribute('data-webs', '0');
+  await page.waitForTimeout(1500);
+  expect(await forge.locator('canvas[data-webs]').getAttribute('data-idle')).toBeFalsy();
+  await expectNoHorizontalOverflow(page, 390);
+});
+
 test('forge is honestly off without a Kernel and draws a still frame under reduced motion', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: 'reduce' });

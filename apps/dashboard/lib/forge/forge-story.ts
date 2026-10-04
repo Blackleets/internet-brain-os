@@ -26,6 +26,12 @@ export type StoryNode = {
   codeTone: 'ok' | 'bad' | 'none';
   findTitle?: string;
 };
+/**
+ * A page a search returned (display-only searchTelemetry): named around the spider, never a graph
+ * node, never counted as a candidate, Evidence or SUPPORT. `candidate` marks the ones Hermes also
+ * proposed as candidates (those still appear as real nodes on their own).
+ */
+export type StoryResult = { query: number; host: string; title?: string; candidate: boolean };
 export type LogTone = 'k' | 'txt' | 'ok' | 'bad' | 'au' | 'c';
 export type LogSeg = { tone: LogTone; text: string };
 export type LogCue =
@@ -53,6 +59,8 @@ export type ForgeStory = {
   resultCount?: number;
   nodes: StoryNode[];
   hiddenNodes: number;
+  /** Pages the recorded searches returned (≤30), only when the Kernel row carries them. */
+  results: StoryResult[];
   reach: StoryReach;
   log: LogLine[];
   counts: { candidates: number; evidence: number; supported: number };
@@ -67,6 +75,10 @@ export function buildForgeStory(model: ForgeMissionModel): ForgeStory {
   const all = model.sources.map(storyNode);
   const nodes = all.slice(0, MAX_GRAPH_NODES);
   const reach = storyReach(model);
+  const candidateUrls = new Set(model.sources.map((source) => source.url));
+  const results: StoryResult[] = exact.length ? runs.flatMap((run, index) => (run.results ?? []).map((result) => ({
+    query: index, host: result.host, ...(result.title ? { title: result.title } : {}), candidate: candidateUrls.has(result.url),
+  }))) : [];
   const log: LogLine[] = [];
   if (exact.length) {
     exact.forEach((text, index) => {
@@ -106,6 +118,7 @@ export function buildForgeStory(model: ForgeMissionModel): ForgeStory {
     ...(model.searchResultCount !== undefined ? { resultCount: model.searchResultCount } : {}),
     nodes,
     hiddenNodes: all.length - nodes.length,
+    results,
     reach,
     log,
     counts: { candidates: model.counts.sources, evidence: model.counts.evidence, supported: model.counts.supported },
@@ -157,6 +170,8 @@ function clip(text: string, max: number): string {
 
 export type StoryTimeline = {
   q0: number; q1: number; crawl0: number; spider0: number;
+  /** When the crawl edges start reaching the real candidates (crawl0, or after the result webs). */
+  nodes0: number;
   /** Per query: typing start / end in the chip, and when its result count comes back. */
   qa: number[]; qb: number[]; ra: number[];
   pick: number[]; pull: number[]; read: number[];
@@ -166,19 +181,35 @@ export type StoryTimeline = {
   hold: Record<StoryReach, number>;
 };
 
-export function storyTimeline(story: Pick<ForgeStory, 'nodes'> & { query?: { all: string[] } }): StoryTimeline {
+/**
+ * opts.resultWebs: the renderer draws the pages each search returned around the spider (desktop,
+ * only when the Kernel row carries them). Then every query's results get a short dwell before the
+ * next query types, and the spider starts picking candidates after the last one.
+ */
+export function storyTimeline(story: Pick<ForgeStory, 'nodes'> & { query?: { all: string[] } }, opts: { resultWebs?: boolean } = {}): StoryTimeline {
   const n = story.nodes.length;
   const q0 = 0.8;
   const q1 = 1.9;
   const crawl0 = 2.0;
-  const spider0 = 4.25;
   // The first query types before the crawl; every further query Hermes recorded (up to the telemetry
   // cap of 8) types while it crawls, faster when there are many, and all are typed before the spider.
   const queries = Math.max(1, Math.min(8, story.query?.all.length ?? 1));
-  const step = queries > 1 ? Math.min(0.85, 1.9 / (queries - 1)) : 0;
   const qa = [q0], qb = [q1];
-  for (let i = 1; i < queries; i += 1) { qa.push(crawl0 + 0.1 + (i - 1) * step); qb.push(crawl0 + 0.1 + (i - 1) * step + step * 0.65); }
-  const ra = qb.map((end) => end + 0.35);
+  let ra: number[];
+  let spider0 = 4.25;
+  let nodes0 = crawl0;
+  if (opts.resultWebs) {
+    // each query's returned pages stay named for a dwell before the next query types
+    const dwell = queries <= 3 ? 2 : Math.max(1, 6 / queries);
+    ra = [q1 + 0.35];
+    for (let i = 1; i < queries; i += 1) { const a = ra[i - 1] + dwell; qa.push(a); qb.push(a + 0.55); ra.push(a + 0.9); }
+    spider0 = Math.max(spider0, ra[queries - 1] + dwell + 0.4);
+    nodes0 = Math.max(crawl0, spider0 - 2);
+  } else {
+    const step = queries > 1 ? Math.min(0.85, 1.9 / (queries - 1)) : 0;
+    for (let i = 1; i < queries; i += 1) { qa.push(crawl0 + 0.1 + (i - 1) * step); qb.push(crawl0 + 0.1 + (i - 1) * step + step * 0.65); }
+    ra = qb.map((end) => end + 0.35);
+  }
   const pickStep = n ? clampNum(2.4 / n, 0.3, 0.6) : 0;
   const pick = story.nodes.map((_, k) => spider0 + pickStep * (k + 1));
   const pickEnd = n ? pick[n - 1] : spider0;
@@ -195,7 +226,7 @@ export function storyTimeline(story: Pick<ForgeStory, 'nodes'> & { query?: { all
   const find = strike.length ? strike[strike.length - 1] + 0.9 : verdict + 0.4;
   const end = find + 2.2;
   return {
-    q0, q1, crawl0, spider0, qa, qb, ra, pick, pull, read, strike, strikeNode, verdict, find, end,
+    q0, q1, crawl0, spider0, nodes0, qa, qb, ra, pick, pull, read, strike, strikeNode, verdict, find, end,
     // idle holds before the query is typed (no search yet); searching holds before the crawl reaches any
     // real node (the spider roams the decorative graph meanwhile).
     hold: { idle: q0 - 0.3, searching: crawl0 - 0.05, candidates: read0 - 0.15, final: end },

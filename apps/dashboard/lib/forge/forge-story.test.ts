@@ -102,6 +102,34 @@ describe('forge story (spider graph + forge.log)', () => {
     for (let i = 1; i < 7; i += 1) expect(t7.qa[i]).toBeGreaterThanOrEqual(t7.qb[i - 1] - 1e-9);
   });
 
+  it('carries the pages the searches returned as display-only results (never nodes) and gives them a dwell only when drawn', () => {
+    const searchTelemetry = { schemaVersion: 'efesto.mission-search-telemetry.v1', displayOnly: true, recordedAt: '2026-10-03T09:01:00.000Z', searches: [
+      { query: 'empleo conductor', limit: 10, resultCount: 2, results: [{ url: 'https://www.drive.example/es-es/e/drive/barcelona/', title: 'Drive' }, { url: 'https://jobs.example/c', title: 'Jobs' }] },
+      { query: 'trabajo conductor Barcelona', limit: 10, resultCount: 1, results: [{ url: 'https://otro.example/' }] },
+      { query: 'conductor vtc', limit: 10, resultCount: 0 },
+    ] };
+    const story = buildForgeStory(mission('forged', { searchTelemetry }));
+    expect(story.results).toEqual([
+      { query: 0, host: 'drive.example', title: 'Drive', candidate: true },
+      { query: 0, host: 'jobs.example', title: 'Jobs', candidate: false },
+      { query: 1, host: 'otro.example', candidate: false },
+    ]);
+    // nodes stay the real candidates only
+    expect(story.nodes.map((node) => node.host).sort()).toEqual(['drive.example', 'es.blocked.example', 'es.nodns.example', 'portal.example']);
+    expect(buildForgeStory(mission('forged')).results).toEqual([]);
+    const plain = storyTimeline(story);
+    const webs = storyTimeline(story, { resultWebs: true });
+    expect(plain.spider0).toBe(4.25);
+    expect(plain.nodes0).toBe(plain.crawl0);
+    // the candidates are crawled after the pages were named, just before the spider picks them
+    expect(webs.nodes0).toBeGreaterThan(webs.ra[2]);
+    expect(webs.nodes0).toBeLessThan(webs.spider0);
+    expect(webs.spider0).toBeGreaterThan(webs.ra[2] + 1.9);
+    for (let i = 1; i < 3; i += 1) expect(webs.qa[i]).toBeGreaterThanOrEqual(webs.ra[i - 1] + 1.9);
+    const ordered = [webs.q0, webs.q1, webs.ra[0], webs.qa[1], webs.ra[1], webs.qa[2], webs.ra[2], webs.spider0, ...webs.pick, ...webs.pull, ...webs.read, webs.find, webs.end];
+    for (let i = 1; i < ordered.length; i += 1) expect(ordered[i]).toBeGreaterThan(ordered[i - 1]);
+  });
+
   it('while the Kernel verifies, holds after the candidates fell in and says the batch is in progress, with no per-page claim', () => {
     const story = buildForgeStory(mission('verifying', { status: 'running', executionPhase: 'verifying', verificationResults: [] }));
     expect(story.reach).toBe('candidates');

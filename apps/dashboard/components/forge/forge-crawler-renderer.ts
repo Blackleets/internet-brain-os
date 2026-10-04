@@ -9,6 +9,11 @@
  *   tagged with its Kernel code; gold + hammer strike + ingot = a real Kernel SUPPORT.
  * Atmosphere (dust, the decorative web graph labelled "fondo decorativo · no se cuenta", glow,
  * embers, steam, bloom) carries no data and is never counted.
+ * - result webs (desktop): the pages each recorded search returned (host · title, display-only
+ *   searchTelemetry), named around the spider as it explores; never a node, never counted;
+ * - idle spider: with no search running (queued/waiting, or after the play-through settled) the
+ *   crawler wanders the decorative index on its own, pausing and hiding behind nodes. Decorative,
+ *   unlabelled, off with reduced motion.
  *
  * Clock: the story time t plays to the hold of the current data reach (idle → searching →
  * candidates → final) and waits there until the Kernel data moves on; then it continues. A new
@@ -46,11 +51,16 @@ type R = { x: number; y: number; w: number; h: number; cx: number; cy: number };
 type RGB = [number, number, number];
 type BgNode = { x: number; y: number; p: number; z: number; hub: boolean };
 type GNode = P & { k: number; via: BgNode; crawl: P[]; delay: number; side: 1 | -1; leaf?: { dx: number; dy: number } };
+/** A page a search returned: where it is named (desktop), its query and its slot in that query. */
+type Web = P & { q: number; j: number; side: 1 | -1; text: string; cand: boolean };
+type IdleSeg = { kind: 'walk' | 'pause' | 'hide'; a: number; b: number; t0: number; t1: number; dx: number; dy: number };
 type Geo = {
   W: number; H: number; S: R; mob: boolean; chip: R; bar: P; s: number; floorY: number; q: P;
   band: { x0: number; x1: number; y0: number; y1: number };
   cells: Map<string, R>; cards: Map<string, R>; tray: { x: number; y: number; w: number } | null;
   nodes: GNode[]; rest: P;
+  /** Result webs and the spot the spider explores for each query (desktop, only with results). */
+  webs: Web[]; hubs: P[];
 };
 
 const EM_SCALE = 0.25;
@@ -59,6 +69,11 @@ const EMBER: RGB = [238, 135, 72], MOLTEN: RGB = [255, 122, 42], HOT: RGB = [255
 const GOLD: RGB = [245, 196, 81], STEEL: RGB = [196, 205, 216], ASH: RGB = [122, 115, 109];
 /** Decorative exploration probes: a dim, cool tone that no real-data element uses. */
 const PROBE: RGB = [118, 172, 214];
+/** Result webs: a neutral silver, distinct from candidates (ember), Evidence (molten) and SUPPORT (gold). */
+const WEB: RGB = [200, 196, 190];
+/** Where the spider explores for query i (u in the crawl band). */
+const HUB_U = [0.3, 0.7, 0.5, 0.2, 0.8, 0.4, 0.6, 0.5];
+export const MAX_RESULT_WEBS = 30;
 export const PROBE_COUNT = 10;
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
@@ -175,7 +190,7 @@ export class ForgeCrawlerRenderer {
     const reachOrder: StoryReach[] = ['idle', 'searching', 'candidates', 'final'];
     const back = prev && reachOrder.indexOf(story.reach) < reachOrder.indexOf(prev.reach);
     this.story = story;
-    this.tl = storyTimeline(story);
+    this.tl = storyTimeline(story, { resultWebs: this.websOn && story.results.length > 0 });
     if (restart || back || !prev) { this.t = 0; this.stages.clear(); this.replaying = restart; }
     else if (!prev.query.exact && story.query.exact && this.t >= this.tl.q0 && this.t < this.tl.crawl0) {
       // Live: Hermes' real queries (Kernel search telemetry) arrive while the chip still shows the Goal.
@@ -225,6 +240,12 @@ export class ForgeCrawlerRenderer {
     }
     const chip = this.el.chip ? rel(this.el.chip) : { x: S.cx - 60, y: S.y + 20, w: 120, h: 34, cx: S.cx, cy: S.y + 37 };
     const funnel = this.el.funnel ? rel(this.el.funnel) : undefined;
+    const websOn = !mob && this.story.results.length > 0;
+    if (websOn !== this.websOn || !this.tl) {
+      this.websOn = websOn;
+      this.tl = storyTimeline(this.story, { resultWebs: websOn && this.story.results.length > 0 });
+      if (this.hooks.reducedMotion()) this.t = this.tl.hold[this.story.reach];
+    }
     const s = mob ? 0.62 : clamp(S.w / 790, 0.78, 0.96);
     const floorY = mob || !funnel ? S.y + S.h - 6 : funnel.y - 10;
     const bar = { x: S.cx + (mob ? 0 : 50 * (s / 0.96)), y: floorY - 160 * s };
@@ -250,8 +271,25 @@ export class ForgeCrawlerRenderer {
       for (let i = 0; i <= CRAWL_N; i += 1) { const w2 = i / CRAWL_N, a2 = 1 - w2; crawl.push({ x: a2 * a2 * q.x + 2 * a2 * w2 * via.x + w2 * w2 * x, y: a2 * a2 * q.y + 2 * a2 * w2 * via.y + w2 * w2 * y }); }
       return { x, y, k, via, crawl, delay: (Math.abs(x - q.x) / (S.w / 2)) * 0.9 + k * 0.03, side, ...(hasLeaf ? { leaf: { dx: lf[0], dy: lf[1] } } : {}) };
     });
+    const hubs: P[] = [], webs: Web[] = [];
+    if (websOn) {
+      const nq = Math.min(8, this.story.query.all.length);
+      for (let i = 0; i < nq; i += 1) hubs.push({ x: lerp(band.x0, band.x1, HUB_U[i]), y: lerp(band.y0, band.y1, 0.42) });
+      const perQuery = new Map<number, number>();
+      for (const res of this.story.results.slice(0, MAX_RESULT_WEBS)) {
+        if (res.query >= hubs.length) continue;
+        const j = perQuery.get(res.query) ?? 0; perQuery.set(res.query, j + 1);
+        if (j >= 10) continue;
+        const H0 = hubs[res.query], side: 1 | -1 = j % 2 ? 1 : -1, row = Math.floor(j / 2);
+        const y0 = lerp(band.y0 - 22, band.y1 + 8, (row + 0.5) / 5), x0 = H0.x + side * (40 + 14 * Math.abs(row - 2));
+        const snap = this.nearestNode(x0, y0, 16) ?? { x: x0, y: y0 };
+        const room = side > 0 ? S.x + S.w - 16 - (snap.x + 10) : snap.x - 10 - (S.x + 16);
+        const text = this.fit(res.title ? `${res.host} · ${res.title}` : res.host, 10, Math.min(260, room));
+        webs.push({ x: snap.x, y: snap.y, q: res.query, j, side, text, cand: res.candidate });
+      }
+    }
     this.G = {
-      W, H, S, mob, chip, bar, s, floorY, q, band, cells, cards, nodes,
+      W, H, S, mob, chip, bar, s, floorY, q, band, cells, cards, nodes, webs, hubs,
       tray: mob ? null : { x: bar.x + 178 * s, y: floorY - 18, w: 92 },
       rest: { x: q.x + (mob ? -120 : -230), y: q.y + (mob ? 8 : 14) },
     };
@@ -259,9 +297,13 @@ export class ForgeCrawlerRenderer {
     this.tickerLinesKey = '';
     // Anvil body box in fx-canvas (forge body) coordinates, for layout checks: nothing may cover it.
     this.fxCanvas.dataset.anvil = [bar.x - 174 * s, bar.y - 3 * s, 318 * s, 123 * s].map((v) => Math.round(v)).join(',');
+    this.buildIdleAvoid();
+    // layout probes for e2e: how many result webs are drawn (desktop)
+    this.fxCanvas.dataset.webs = String(webs.length);
     this.draw();
   }
   private bgSig = '';
+  private websOn = false;
 
   setVisibility(visible: boolean) { this.visible = visible; this.kick(); }
   setOnScreen(onScreen: boolean) { this.onScreen = onScreen; this.kick(); }
@@ -519,7 +561,7 @@ export class ForgeCrawlerRenderer {
     }
     // crawl edges from the query to each real candidate through one decorative index node
     for (const r of nodes) {
-      const t0 = T.crawl0 + r.delay, u = clamp((t - t0) / 0.75);
+      const t0 = T.nodes0 + r.delay, u = clamp((t - t0) / 0.75);
       if (u <= 0) continue;
       const picked = t > T.pick[r.k];
       const v = r.via, shownN = Math.max(2, Math.round(u * CRAWL_N) + 1);
@@ -529,7 +571,7 @@ export class ForgeCrawlerRenderer {
     }
     // candidate nodes
     for (const r of nodes) {
-      const t0 = T.crawl0 + r.delay + 0.75, on = clamp((t - t0) / 0.25);
+      const t0 = T.nodes0 + r.delay + 0.75, on = clamp((t - t0) / 0.25);
       if (on <= 0) continue;
       const tag = clamp((t - T.pick[r.k]) / 0.3);
       if (t > T.pull[r.k] + 0.05) { this.glow(r.x, r.y, 6, ASH, 0.5); fx.fillStyle = rgba([120, 110, 100], 0.7); fx.beginPath(); fx.arc(r.x, r.y, 1.6, 0, 7); fx.fill(); continue; }
@@ -547,9 +589,18 @@ export class ForgeCrawlerRenderer {
       this.line([{ x: r.x, y: r.y }, { x: lx, y: ly }], HOT, 0.6 * a, 0.8, 3);
       this.glow(lx, ly, 7, HOT, 0.7 * a); fx.fillStyle = rgba(WHITE, a); fx.fillRect(lx - 1.2, ly - 1.2, 2.4, 2.4);
     }
+    // pages the searches returned (desktop): silk threads + silver nodes around the exploring spider
+    if (G.webs.length) this.drawWebs(t);
     // the spider (Hermes' crawler)
     const spider = this.spiderAt(t, holdSearch);
-    if (spider) this.drawSpider(spider.p, spider.a, spider.walk);
+    if (spider) this.drawSpider(spider.p, spider.a, spider.walk, holdSearch ? () => spider.p : (tt) => this.spiderTrack(tt));
+    // idle: no search running (queued/waiting, or the play-through settled): the crawler wanders
+    else if (!this.hooks.reducedMotion()) {
+      // after a play-through it starts once the forge has settled (never during the real-data story)
+      const level = reach === 'idle' ? 1 : reach === 'final' ? clamp((t - (T.end - 1)) / 1) : 0;
+      if (level > 0) this.drawIdleSpider(level);
+      else this.markIdle('');
+    }
 
     // pull: the candidate falls as a spark into the anvil
     let heat = 0.22 + 0.05 * Math.sin(A * 2.3);
@@ -684,6 +735,7 @@ export class ForgeCrawlerRenderer {
       const x = r.x + r.leaf.dx + 9;
       this.label(this.fit(sn[r.k].path, 10, S.x + S.w - 12 - x), x, r.y + r.leaf.dy, a, { align: 'left', size: 10, col: [170, 158, 146] });
     }
+    if (G.webs.length) this.drawWebLabels(t);
     if (spider && spider.tag > 0) this.label('hermes · crawler', spider.p.x, spider.p.y - (mob ? 20 : 26), spider.tag * 0.9, { align: 'center', size: mob ? 9 : 10, col: [245, 205, 130] });
     let aj = 0;
     for (let k = 0; k < n; k += 1) {
@@ -717,6 +769,11 @@ export class ForgeCrawlerRenderer {
     }
     const n = G.nodes.length;
     const pickEnd = n ? T.pick[n - 1] : T.spider0;
+    if (G.hubs.length && t < T.spider0 && t > T.crawl0) {
+      // the searches return: the crawler explores, and each query's pages are named around it
+      const a = clamp((t - T.crawl0) / 0.4);
+      return { p: this.spiderTrack(t), a, tag: a, walk: t };
+    }
     const a = clamp((t - T.spider0 + 0.3) / 0.4) * (1 - clamp((t - (pickEnd + 1.6)) / 0.9));
     if (a <= 0.01) return undefined;
     const tag = clamp((t - T.spider0) / 0.4) * (1 - clamp((t - (pickEnd + 1.4)) / 0.6));
@@ -733,6 +790,184 @@ export class ForgeCrawlerRenderer {
     this.roamCache = { key, pts };
     return pts;
   }
+  /** The spider's real-data track: exploring the result webs (desktop, with results), then the picks. */
+  private spiderTrack(t: number): P & { dx: number; dy: number } {
+    const G = this.G!, T = this.tl!;
+    if (!G.hubs.length || t >= T.spider0) return this.spiderPos(t);
+    // q → hub 0 (arrives with the results of query 0) … hub k, then back to the query to pick
+    const stops: { at: number; p: P }[] = [{ at: T.crawl0, p: G.q }];
+    G.hubs.forEach((h, i) => { if (i > 0) stops.push({ at: T.qa[i] ?? T.crawl0, p: G.hubs[i - 1] }); stops.push({ at: T.ra[i] ?? T.crawl0, p: h }); });
+    stops.push({ at: T.spider0 - 1.1, p: G.hubs[G.hubs.length - 1] }, { at: T.spider0, p: G.q });
+    if (t <= stops[0].at) return { ...G.q, dx: 0, dy: 1 };
+    for (let i = 1; i < stops.length; i += 1) {
+      const A0 = stops[i - 1], B0 = stops[i];
+      if (t > B0.at) continue;
+      const a = A0.p, b = B0.p, dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+      if (len < 1) {
+        // dwell: the crawler sways in place while the pages come back
+        const w = Math.sin((t - A0.at) * 1.7) * 5;
+        return { x: a.x + w, y: a.y + Math.sin((t - A0.at) * 2.3) * 2, dx: Math.cos(w * 0.2), dy: Math.sin(w * 0.2) };
+      }
+      const u = easeInOut(clamp((t - A0.at) / Math.max(0.01, B0.at - A0.at))), bow = Math.sin(u * Math.PI) * 22 * (i % 2 ? 1 : -1);
+      return { x: lerp(a.x, b.x, u) - (dy / len) * bow, y: lerp(a.y, b.y, u) + (dx / len) * bow, dx: dx / len, dy: dy / len };
+    }
+    return { ...G.q, dx: 0, dy: 1 };
+  }
+  /** When query i's pages stop being named: when the next query types, or before the picks. */
+  private webEnd(qi: number): number {
+    const T = this.tl!, G = this.G!;
+    return qi + 1 < G.hubs.length ? (T.qa[qi + 1] ?? T.spider0) + 0.3 : T.spider0 - 0.6;
+  }
+  private drawWebs(t: number) {
+    const G = this.G!, T = this.tl!, fx = this.fx;
+    for (const w of G.webs) {
+      const ap = (T.ra[w.q] ?? Infinity) + 0.07 * w.j;
+      if (t < ap) continue;
+      const on = clamp((t - ap) / 0.25), named = on * (1 - clamp((t - this.webEnd(w.q)) / 0.5));
+      const h = G.hubs[w.q], grow = easeOut(clamp((t - ap) / 0.35));
+      if (named > 0.01) this.line([h, { x: lerp(h.x, w.x, grow), y: lerp(h.y, w.y, grow) }], WEB, 0.22 * named, 0.7);
+      const a = 0.28 + 0.6 * named;
+      this.glow(w.x, w.y, 5 + 4 * named, w.cand ? EMBER : WEB, 0.35 * a, 0.15);
+      fx.strokeStyle = rgba(w.cand ? [236, 170, 130] : WEB, a); fx.lineWidth = 1;
+      fx.beginPath(); fx.arc(w.x, w.y, 2.4, 0, 7); fx.stroke();
+    }
+  }
+  private drawWebLabels(t: number) {
+    const G = this.G!, T = this.tl!;
+    for (const w of G.webs) {
+      const ap = (T.ra[w.q] ?? Infinity) + 0.07 * w.j;
+      if (t < ap + 0.1) continue;
+      const a = clamp((t - ap - 0.1) / 0.25) * (1 - clamp((t - this.webEnd(w.q)) / 0.5));
+      if (a <= 0.01) continue;
+      this.label(w.text, w.x + w.side * 8, w.y, a * 0.9, { align: w.side > 0 ? 'left' : 'right', size: 10, col: [196, 190, 182] });
+    }
+  }
+
+  // ------------------------------------------------------------------ idle spider (decorative)
+  private idleSegs: IdleSeg[] = [];
+  private idleRng = rng(71);
+  private idleKey = '';
+  private idleOk(k: number): boolean {
+    const G = this.G!, n = this.BGN[k];
+    // desktop: the upper part of the band, away from the threads that run from the anvil to the cards
+    const yMax = G.mob ? G.band.y1 + 10 : lerp(G.band.y0, G.band.y1, 0.7);
+    if (!n || n.x < G.band.x0 || n.x > G.band.x1 || n.y < G.band.y0 - 14 || n.y > yMax) return false;
+    if (Math.hypot(n.x - G.bar.x, n.y - G.bar.y) < 150 * G.s) return false;
+    for (const r of G.nodes) if (Math.hypot(n.x - r.x, n.y - r.y) < 22) return false;
+    // never on a real-data thread (Kernel reads from the anvil to the cards)
+    for (const a of this.idleAvoid) if (Math.abs(n.x - a.x) < 28 && Math.abs(n.y - a.y) < 28) return false;
+    return true;
+  }
+  private idleAvoid: P[] = [];
+  private buildIdleAvoid() {
+    this.idleAvoid = [];
+    const sn = this.story?.nodes ?? [];
+    let sj = 0;
+    sn.forEach((node, k) => {
+      if (node.outcome === 'pending' || node.outcome === 'unread') return;
+      const p = this.readPath(node, k, node.outcome === 'support' ? sj++ : -1);
+      if (p) for (let i = 0; i <= 24; i += 1) this.idleAvoid.push(bez(p, i / 24));
+    });
+  }
+  private idlePick(near?: P, far = false): number {
+    const r = this.idleRng, N = this.BGN;
+    let best = -1, bd = far ? -1 : 1e12;
+    for (let tries = 0; tries < 40; tries += 1) {
+      const k = Math.floor(r() * N.length); if (!this.idleOk(k)) continue;
+      if (!near) return k;
+      const d = Math.hypot(N[k].x - near.x, N[k].y - near.y);
+      if (far ? d > bd : d < bd) { bd = d; best = k; }
+    }
+    return best;
+  }
+  private idleNext(prev: IdleSeg): IdleSeg {
+    const r = this.idleRng, N = this.BGN, at = prev.b, t0 = prev.t1, mob = this.G!.mob;
+    if (prev.kind === 'walk') {
+      const x = r();
+      // thinking: stops on a node for a moment
+      if (x < 0.2) return { kind: 'pause', a: at, b: at, t0, t1: t0 + 1.3 + r() * 1.7, dx: prev.dx, dy: prev.dy };
+      // hides behind a node and reappears further away
+      if (x < 0.32 && N[at]) {
+        const to = this.idlePick(N[at], true);
+        if (to >= 0) return { kind: 'hide', a: at, b: to, t0, t1: t0 + 2.4 + r() * 1.4, dx: prev.dx, dy: prev.dy };
+      }
+    }
+    const from = prev.kind === 'walk' ? prev.a : -1;
+    let opts = (this.ADJ[at] ?? []).filter((k) => k !== from && this.idleOk(k));
+    if (!opts.length) opts = (this.ADJ[at] ?? []).filter((k) => this.idleOk(k));
+    if (!opts.length) {
+      const to = this.idlePick();
+      return { kind: 'hide', a: at, b: to >= 0 ? to : at, t0, t1: t0 + 2.2, dx: prev.dx, dy: prev.dy };
+    }
+    // keep a heading: prefer the neighbour straight ahead, sometimes turn
+    opts.sort((u, v) => ((N[v].x - N[at].x) * prev.dx + (N[v].y - N[at].y) * prev.dy) / (Math.hypot(N[v].x - N[at].x, N[v].y - N[at].y) || 1)
+      - ((N[u].x - N[at].x) * prev.dx + (N[u].y - N[at].y) * prev.dy) / (Math.hypot(N[u].x - N[at].x, N[u].y - N[at].y) || 1));
+    const to = opts[r() < 0.62 ? 0 : Math.floor(r() * opts.length)];
+    const dx = N[to].x - N[at].x, dy = N[to].y - N[at].y, len = Math.hypot(dx, dy) || 1;
+    return { kind: 'walk', a: at, b: to, t0, t1: t0 + Math.max(0.3, len / (mob ? 30 : 40)), dx: dx / len, dy: dy / len };
+  }
+  /** Extends the wander so it covers [A - 1.5 s, A + 1 s] (legs look a little into the past). */
+  private idleRoute(A: number): boolean {
+    if (this.BGN.length < 4) return false;
+    if (this.idleKey !== this.bgSig || !this.idleSegs.length || this.idleSegs[this.idleSegs.length - 1].t1 < A - 2) {
+      this.idleKey = this.bgSig;
+      const start = this.idlePick();
+      if (start < 0) return false;
+      this.idleSegs = [{ kind: 'hide', a: start, b: start, t0: A - 0.6, t1: A + 0.6, dx: 1, dy: 0 }];
+    }
+    let guard = 0;
+    while (this.idleSegs[this.idleSegs.length - 1].t1 < A + 1 && guard++ < 64) this.idleSegs.push(this.idleNext(this.idleSegs[this.idleSegs.length - 1]));
+    while (this.idleSegs.length > 2 && this.idleSegs[1].t1 < A - 1.5) this.idleSegs.shift();
+    return true;
+  }
+  private idleAt(A: number): { p: P & { dx: number; dy: number }; a: number; think: number; walk: number; seg: IdleSeg } {
+    const N = this.BGN, segs = this.idleSegs;
+    const seg = segs.find((g) => A >= g.t0 && A < g.t1) ?? (A < segs[0].t0 ? segs[0] : segs[segs.length - 1]);
+    const a = N[seg.a], b = N[seg.b], d = seg.t1 - seg.t0, u = clamp((A - seg.t0) / (d || 1));
+    if (seg.kind === 'walk') {
+      const k = lerp(u, smooth(u), 0.6);
+      return { p: { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), dx: seg.dx, dy: seg.dy }, a: 1, think: 0, walk: A, seg };
+    }
+    if (seg.kind === 'pause') {
+      const think = clamp((A - seg.t0) / 0.35) * clamp((seg.t1 - A) / 0.3);
+      return { p: { x: a.x, y: a.y + Math.sin(A * 2.2) * 0.6, dx: seg.dx, dy: seg.dy }, a: 1, think, walk: seg.t0, seg };
+    }
+    // hide: fades into node a, gone for a while, fades back in on node b
+    const out = clamp((A - seg.t0) / 0.5), back = clamp((A - (seg.t1 - 0.5)) / 0.5), mid = A < (seg.t0 + seg.t1) / 2;
+    const at = mid ? a : b;
+    return { p: { x: at.x, y: at.y, dx: seg.dx, dy: seg.dy }, a: mid ? 1 - out : back, think: 0, walk: mid ? seg.t0 : seg.t1, seg };
+  }
+  private drawIdleSpider(level: number) {
+    const A = this.ambient;
+    if (!this.idleRoute(A)) return;
+    const st = this.idleAt(A), N = this.BGN, fx = this.fx, mob = this.G!.mob;
+    if (st.seg.kind === 'hide') {
+      // the node it hides behind (and the one it reappears from) brightens a little
+      const k = A < (st.seg.t0 + st.seg.t1) / 2 ? st.seg.a : st.seg.b, n = N[k], g = 1 - st.a;
+      this.glow(n.x, n.y, mob ? 9 : 12, HOT, 0.35 * g * level, 0.2);
+      fx.fillStyle = rgba([240, 210, 175], 0.75 * g * level); fx.beginPath(); fx.arc(n.x, n.y, mob ? 2.2 : 2.8, 0, 7); fx.fill();
+    }
+    this.markIdle(st.seg.kind);
+    const a = st.a * level * 0.72;
+    if (a > 0.02) this.drawSpider(st.p, a, st.walk, (tt) => this.idleAt(tt).p);
+    if (st.think > 0.01 && a > 0.02) {
+      // thinking: three dots above it, lighting in turn
+      const y = st.p.y - (mob ? 15 : 19);
+      for (let i = 0; i < 3; i += 1) {
+        const on = 0.35 + 0.65 * Math.max(0, Math.sin(A * 4 - i * 0.9));
+        fx.fillStyle = rgba([245, 214, 150], on * st.think * a); fx.beginPath(); fx.arc(st.p.x + (i - 1) * (mob ? 4.5 : 5.5), y, mob ? 1.2 : 1.5, 0, 7); fx.fill();
+      }
+    }
+  }
+  /** e2e probe: the idle spider's current move (walk | pause | hide), empty when it is not out. */
+  private markIdle(kind: string) { if ((this.fxCanvas.dataset.idle ?? '') !== kind) this.fxCanvas.dataset.idle = kind; }
+  /** Probe for tests/e2e: the idle spider's current state (decorative). */
+  idleProbe(): { kind: IdleSeg['kind']; x: number; y: number; a: number } | undefined {
+    if (!this.idleSegs.length) return undefined;
+    const st = this.idleAt(this.ambient);
+    return { kind: st.seg.kind, x: st.p.x, y: st.p.y, a: st.a };
+  }
+
   private spiderPos(t: number): P & { dx: number; dy: number } {
     const G = this.G!, T = this.tl!;
     const st: P[] = [G.q, ...G.nodes, G.rest];
@@ -758,10 +993,9 @@ export class ForgeCrawlerRenderer {
     }
     return best;
   }
-  private drawSpider(p: P & { dx: number; dy: number }, a: number, walk: number) {
+  private drawSpider(p: P & { dx: number; dy: number }, a: number, walk: number, pos: (tt: number) => P) {
     const G = this.G!, fx = this.fx, mob = G.mob;
     const L = mob ? 22 : 32, ang = Math.atan2(p.dy, p.dx);
-    const pos = (tt: number) => (this.story?.reach === 'searching' && this.t >= (this.tl?.hold.searching ?? 0) - 0.01 ? this.spiderAt(0, true)!.p : this.spiderPos(tt));
     for (let i = 0; i < 8; i += 1) {
       const side = i < 4 ? 1 : -1, k = i % 4, la = ang + side * (0.55 + k * 0.55);
       const phase = (i % 2) * 0.09, stepT = Math.floor((walk + phase) / 0.18) * 0.18 - phase, lift = clamp((walk - stepT) / 0.07);

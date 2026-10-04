@@ -339,7 +339,17 @@ function missionKeywords(row?: MissionSummary): string[] {
   return out;
 }
 
-export type ForgeSearchRun = { query: string; resultCount?: number };
+/**
+ * One web page a search returned, as the adapter recorded it in the display-only searchTelemetry
+ * (efesto.mission-search-telemetry.v1, Kernel-validated). Display only: it is not a candidate, not
+ * Evidence and never SUPPORT; the forge only names it (host + title), it never links or reads it.
+ */
+export type ForgeSearchResult = { url: string; host: string; title?: string };
+export type ForgeSearchRun = { query: string; resultCount?: number; results?: ForgeSearchResult[] };
+
+/** Bounds the dashboard applies again on read (the Kernel enforces the same on write). */
+export const SEARCH_RESULTS_PER_RUN = 10;
+export const SEARCH_RESULTS_TOTAL = 30;
 
 export const SEARCH_TELEMETRY_SCHEMA = 'efesto.mission-search-telemetry.v1';
 
@@ -371,14 +381,43 @@ function searchTelemetryRuns(row?: MissionSummary): ForgeSearchRun[] {
   const telemetry = asRow(row?.searchTelemetry);
   if (!telemetry || telemetry.schemaVersion !== SEARCH_TELEMETRY_SCHEMA || telemetry.displayOnly !== true || !Array.isArray(telemetry.searches)) return [];
   const runs: ForgeSearchRun[] = [];
+  let total = 0;
   for (const item of telemetry.searches.slice(0, 8)) {
     const search = asRow(item);
     const query = str(search?.query);
     if (!search || !query || query.length > 300) continue;
     const count = search.resultCount;
-    runs.push(typeof count === 'number' && Number.isInteger(count) && count >= 0 && count <= 1000 ? { query, resultCount: count } : { query });
+    const run: ForgeSearchRun = typeof count === 'number' && Number.isInteger(count) && count >= 0 && count <= 1000 ? { query, resultCount: count } : { query };
+    const results = searchResults(search.results, Math.min(SEARCH_RESULTS_PER_RUN, run.resultCount ?? SEARCH_RESULTS_PER_RUN, SEARCH_RESULTS_TOTAL - total));
+    total += results.length;
+    runs.push(results.length ? { ...run, results } : run);
   }
   return runs;
+}
+
+/**
+ * The pages one search returned, re-validated on read: public http(s) URLs without credentials,
+ * bounded, deduplicated, titles decoded and stripped of control characters. Anything else is skipped.
+ */
+function searchResults(value: unknown, max: number): ForgeSearchResult[] {
+  if (!Array.isArray(value) || max <= 0) return [];
+  const out: ForgeSearchResult[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (out.length >= max) break;
+    const row = asRow(item);
+    const url = str(row?.url);
+    if (!url || url.length > 2048 || seen.has(url)) continue;
+    let parsed: URL;
+    try { parsed = new URL(url); } catch { continue; }
+    if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || parsed.username || parsed.password || !parsed.hostname.includes('.')) continue;
+    if (/^\d+(\.\d+){3}$/.test(parsed.hostname) || parsed.hostname.startsWith('[')) continue;
+    seen.add(url);
+    const raw = str(row?.title).replace(/[\u0000-\u001f\u007f-\u009f]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const title = raw ? displayText(raw).slice(0, 160) : '';
+    out.push({ url, host: parsed.hostname.replace(/^www\./, ''), ...(title ? { title } : {}) });
+  }
+  return out;
 }
 
 function phaseTimestamp(phase: ForgePhase, row: MissionSummary | undefined, mission: NonNullable<GoalSurface['mission']>): string | undefined {

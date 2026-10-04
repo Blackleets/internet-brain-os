@@ -120,6 +120,29 @@ describe('ForgeLiveView', () => {
     expect(container.querySelector('.forge-bench-meta')?.textContent).toBe('Búsqueda web terminada · 19 resultados devueltos · 8 candidatos reales');
   });
 
+  it('lists the pages each search returned (host + title, no links) only when the Kernel row carries them', () => {
+    const base = { schemaVersion: 'efesto.mission-search-telemetry.v1', displayOnly: true, recordedAt: '2026-10-03T09:01:00.000Z' };
+    const view = (searches: unknown[]) => render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ searchTelemetry: { ...base, searches } }) })} />);
+    const { container, unmount } = view([
+      { query: 'rust ownership rules', limit: 10, resultCount: 2, results: [{ url: 'https://doc.rust-lang.org/book/ch04-01.html', title: 'What is Ownership?' }, { url: 'https://www.reddit.com/r/rust/x' }] },
+      { query: 'rust borrow checker guide', limit: 10, resultCount: 0 },
+    ]);
+    const webs = container.querySelector('.forge-live-webs') as HTMLElement;
+    expect(webs.querySelector('summary')?.textContent).toBe('Webs que devolvió la búsqueda 2');
+    expect(webs.hasAttribute('open')).toBe(false);
+    expect(webs.querySelectorAll('section')).toHaveLength(1);
+    expect([...webs.querySelectorAll('li')].map((li) => li.textContent)).toEqual(['doc.rust-lang.orgWhat is Ownership?', 'reddit.com']);
+    expect(webs.querySelector('a')).toBeNull();
+    expect(container.querySelector('.lg-web')).toBeTruthy();
+    // still display-only: the counters are the real candidates / Evidence / SUPPORT
+    expect((container.querySelector('.forge-live-counters [data-k="candidates"] dd') as HTMLElement).textContent).toBe('8');
+    unmount();
+    const none = view([{ query: 'rust ownership rules', limit: 10, resultCount: 10 }]);
+    expect(none.container.querySelector('.forge-live-webs')).toBeNull();
+    expect(none.container.querySelector('.lg-web')).toBeNull();
+    none.unmount();
+  });
+
   it('shows "N hallazgos devueltos · M descartados" only when the Kernel recorded a valid funnel', () => {
     const base = { schemaVersion: 'efesto.mission-search-telemetry.v1', displayOnly: true, recordedAt: '2026-10-03T09:01:00.000Z', searches: [{ query: 'rust ownership rules', limit: 10, resultCount: 10 }] };
     const view = (searchTelemetry?: Record<string, unknown>) => render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row(searchTelemetry ? { searchTelemetry } : {}) })} />);

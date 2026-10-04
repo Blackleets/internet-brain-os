@@ -489,3 +489,20 @@
 /* Phones: the log follows the real candidate cards so the gold Find stays in the first viewport. */
 .forge-live[data-layout='narrow'] .forge-live-panel > .forge-ticker { order: 1; }
 .forge-live[data-layout='narrow'] .forge-live-panel > :is(.forge-live-more, .forge-live-searchmore, .forge-live-prior, .forge-live-legend, .forge-live-replay, .forge-live-rm) { order: 2; }
+/* Pages each recorded search returned (display-only telemetry): named, never linked, never counted. */
+.forge-live-legend li i.lg-web { width: 7px; height: 7px; border-radius: 50%; background: none; box-shadow: inset 0 0 0 1px rgba(200, 196, 190, .85); }
+.forge-live-webs { padding: 9px 12px; border-radius: var(--v3-r3); background: var(--v3-bg2); box-shadow: inset 0 0 0 1px var(--v3-line); }
+.forge-live-webs summary { display: flex; align-items: center; gap: 8px; min-height: 22px; cursor: pointer; list-style: none; font: 600 11px/1.3 var(--v3-mono); letter-spacing: .08em; color: var(--v3-dim); text-transform: uppercase; }
+.forge-live-webs summary::-webkit-details-marker { display: none; }
+.forge-live-webs summary b { padding: 1px 7px; border-radius: 999px; background: rgba(200, 196, 190, .1); color: #d8d2ca; font-weight: 600; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.forge-live-webs summary::after { content: '+'; margin-left: auto; font-size: 13px; }
+.forge-live-webs[open] summary::after { content: '–'; }
+.forge-live-webs-note { margin: 6px 0 4px; font-size: 12px; line-height: 1.4; color: var(--v3-muted); }
+.forge-live-webs section { margin-top: 8px; }
+.forge-live-webs h4 { display: flex; gap: 6px; margin: 0 0 4px; font: 500 12px/1.4 var(--v3-mono); color: var(--v3-text, #e9e1d8); overflow-wrap: anywhere; }
+.forge-live-webs h4 span { flex: none; color: var(--v3-dim); }
+.forge-live-webs ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+.forge-live-webs li { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 8px; align-items: baseline; font-size: 12px; line-height: 1.4; color: var(--v3-muted); }
+.forge-live-webs li b { font: 550 11px/1.4 var(--v3-mono); color: #d2ccc4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+.forge-live-webs li span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.forge-live[data-layout='narrow'] .forge-live-panel > .forge-live-webs { order: 1; }

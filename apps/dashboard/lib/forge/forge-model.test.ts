@@ -228,6 +228,40 @@ describe('displayText', () => {
     }
   });
 
+  it('names the pages each search returned only from the Kernel telemetry: bounded, public http(s), sanitized, display-only', () => {
+    const telemetry = (searches: unknown[]) => ({ schemaVersion: 'efesto.mission-search-telemetry.v1', displayOnly: true, recordedAt: '2026-10-03T09:00:40.000Z', searches });
+    const many = Array.from({ length: 14 }, (_, i) => ({ url: `https://www.site${i}.example/p${i}`, title: `Página ${i}` }));
+    const model = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ searchTelemetry: telemetry([
+      { query: 'q1', limit: 10, resultCount: 10, results: [
+        { url: 'https://www.brevo.com/es/blog/herramientas-ventas/', title: 'Herramientas &amp; ventas\u0007 2026\n' },
+        { url: 'https://www.brevo.com/es/blog/herramientas-ventas/', title: 'repetida' },
+        { url: 'ftp://files.example/x' }, { url: 'https://user:pw@secret.example/' }, { url: 'http://10.0.0.1/admin' }, { url: 'http://localhost/x' }, { url: 'not a url' }, { title: 'sin url' },
+        { url: 'https://iebschool.com/hub/x' },
+      ] },
+      { query: 'q2', limit: 10, resultCount: 3, results: many },
+      { query: 'q3', limit: 10, resultCount: 10, results: many },
+      { query: 'q4', limit: 10, resultCount: 10, results: many },
+      { query: 'q5', limit: 10, resultCount: 10, results: many },
+    ]) }) }));
+    const [r1, r2, r3, r4, r5] = model.search.runs;
+    expect(r1.results).toEqual([
+      { url: 'https://www.brevo.com/es/blog/herramientas-ventas/', host: 'brevo.com', title: 'Herramientas & ventas 2026' },
+      { url: 'https://iebschool.com/hub/x', host: 'iebschool.com' },
+    ]);
+    // never more than the search's own count, 10 per search, 30 in total
+    expect(r2.results).toHaveLength(3);
+    expect(r3.results).toHaveLength(10);
+    expect(r4.results).toHaveLength(10);
+    expect(r5.results).toHaveLength(30 - 2 - 3 - 10 - 10);
+    // display-only: the result pages never become sources, Evidence or SUPPORT
+    expect(model.sources.some((source) => source.url.includes('brevo.com'))).toBe(false);
+    const without = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ searchTelemetry: telemetry([{ query: 'q1', limit: 10, resultCount: 10 }]) }) }));
+    expect(model.counts).toEqual(without.counts);
+    // without results in the record, nothing is named
+    const plain = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ searchTelemetry: telemetry([{ query: 'q1', resultCount: 4, results: 'nope' }]) }) }));
+    expect(plain.search.runs).toEqual([{ query: 'q1', resultCount: 4 }]);
+  });
+
   it('gives queued missions a next step and the time they have been waiting, never a search claim', () => {
     const queued = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('queued'), mission: row({ status: 'queued', executionPhase: 'queued', searchCandidates: undefined }) }));
     expect(queued.phase).toBe('queued');

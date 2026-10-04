@@ -3,7 +3,7 @@
 import { Check, ChevronDown, Pencil, Plug, RefreshCw, RotateCcw, Search } from 'lucide-react';
 import { GoalEditSheet, type GoalEditRequest } from './goal-edit-sheet';
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { ForgeMissionModel, ForgeModel, ForgeSource, ForgeStepState } from '../../lib/forge/forge-model';
+import type { ForgeMissionModel, ForgeModel, ForgeSearchRun, ForgeSource, ForgeStepState } from '../../lib/forge/forge-model';
 import { buildForgeStory, MAX_GRAPH_NODES, readFailureCode } from '../../lib/forge/forge-story';
 import { goalTermSegments } from '../../lib/forge/goal-terms';
 import { ForgeCrawlerRenderer, type CrawlerStage } from './forge-crawler-renderer';
@@ -218,6 +218,7 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onSearchMore, se
       <div className="forge-ticker" aria-hidden="true"><div className="forge-ticker-ttl"><i /><i /><i />&nbsp;forge.log</div><div ref={tickerRef} className="forge-ticker-lines" /></div>
       <header className="forge-panel-head"><h3>Candidatos → Evidence</h3><span ref={countRef} className="forge-panel-count">{model.counts.sources} de {model.counts.sources}</span></header>
       {model.findingsFunnel ? <p className="forge-panel-funnel" title={funnelTitle(model.findingsFunnel)}>{funnelLine(model.findingsFunnel)}</p> : null}
+      <ResultWebs runs={model.search.runs} />
       {visibleSources.length ? <ul className="forge-live-sources" aria-label={`Fuentes de la misión (${sources.length})`}>
         {visibleSources.map((source) => <li key={source.id} ref={setCardRef(source.id, finalStage(source))} className="forge-source" data-state={source.state}>
           <SourceCard source={source} goalTerms={model.goalTerms} onOpenFinds={onOpenFinds} />
@@ -242,6 +243,7 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onSearchMore, se
           <li><i className="lg-steel" />Acero = leída, sin SUPPORT</li>
           <li><i className="lg-ash" />Ceniza = no leída, con su motivo</li>
           <li><i className="lg-probe" />Pulsos azules = exploración decorativa, no son candidatos</li>
+          {story.results.length ? <li><i className="lg-web" />Plata = web que devolvió la búsqueda (solo se nombra; no se lee ni cuenta)</li> : null}
         </ul>
         <p>Datos reales de la misión ({countWord(model.counts.sources, 'candidato', 'candidatos')}, {model.counts.evidence} Evidence, {model.counts.supported} SUPPORT){story.nodes.length < sources.length ? ` · el grafo dibuja ${MAX_GRAPH_NODES}` : ''}. El grafo de fondo es decorativo.</p>
         {reducedMotion ? <p className="forge-live-rm">Movimiento reducido: se muestra el estado final, sin animación.</p> : null}
@@ -251,6 +253,26 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onSearchMore, se
       </button> : null}
     </aside>
   </div>;
+}
+
+/**
+ * The pages each recorded search returned (display-only searchTelemetry): named, never linked,
+ * never read, never Evidence or SUPPORT. Rendered only when the Kernel row carries them.
+ */
+function ResultWebs({ runs }: { runs: readonly ForgeSearchRun[] }) {
+  const groups = runs.map((run, index) => ({ run, index })).filter(({ run }) => run.results?.length);
+  const total = groups.reduce((sum, { run }) => sum + (run.results?.length ?? 0), 0);
+  if (!total) return null;
+  return <details className="forge-live-webs">
+    <summary>Webs que devolvió la búsqueda <b>{total}</b></summary>
+    <p className="forge-live-webs-note">Lo que devolvió el buscador. Solo se nombra; el Kernel lee únicamente los candidatos.</p>
+    {groups.map(({ run, index }) => <section key={index} aria-label={`Búsqueda ${index + 1}`}>
+      <h4><span>{index + 1}</span>«{run.query}»</h4>
+      <ol>
+        {run.results!.map((result) => <li key={result.url} title={result.url}><b>{result.host}</b>{result.title ? <span>{result.title}</span> : null}</li>)}
+      </ol>
+    </section>)}
+  </details>;
 }
 
 function ForgeHeader({ model, headingId, onConnect, onRelaunch, relaunchPending, onSearchMore, onEditGoal, replaying }: { model: ForgeModel; headingId: string; onConnect?: () => void; onRelaunch?: (goalId: string) => void; relaunchPending?: boolean; onSearchMore?: (goalId: string) => void; onEditGoal?: (request: GoalEditRequest) => Promise<boolean>; replaying: boolean }) {
