@@ -374,3 +374,29 @@ for (const view of [{ shot: '390', width: 390, height: 844 }, { shot: 'desktop',
     await expectNoHorizontalOverflow(page, view.width);
   });
 }
+
+for (const size of [{ width: 390, height: 844, mobile: true }, { width: 360, height: 780, mobile: true }, { width: 1280, height: 720, mobile: false }, { width: 1440, height: 900, mobile: false }]) {
+  test(`forge.log never covers the anvil at ${size.width}×${size.height}`, async ({ page }) => {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await useForgeFixture(page);
+    await page.goto('/');
+    await connect(page);
+    await openHome(page, size.mobile);
+    await expect(page.locator('.forge-live-fx')).toHaveAttribute('data-anvil', /^-?\d+,-?\d+,\d+,\d+$/);
+    const boxes = await page.evaluate(() => {
+      const fx = document.querySelector('.forge-live-fx') as HTMLCanvasElement;
+      const origin = fx.getBoundingClientRect();
+      const [x, y, w, h] = (fx.dataset.anvil ?? '').split(',').map(Number);
+      const anvil = { left: origin.left + x, top: origin.top + y, right: origin.left + x + w, bottom: origin.top + y + h };
+      const t = (document.querySelector('.forge-ticker') as HTMLElement).getBoundingClientRect();
+      const stage = (document.querySelector('.forge-live-stage') as HTMLElement).getBoundingClientRect();
+      return { anvil, ticker: { left: t.left, top: t.top, right: t.right, bottom: t.bottom }, stage: { left: stage.left, top: stage.top, right: stage.right, bottom: stage.bottom } };
+    });
+    const intersects = (a: typeof boxes.anvil, b: typeof boxes.anvil) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    expect(intersects(boxes.anvil, boxes.ticker)).toBe(false);
+    // the log is outside the stage entirely (side panel on desktop, below the stage on phones)
+    expect(intersects(boxes.stage, boxes.ticker)).toBe(false);
+    // the anvil itself is inside the visible stage
+    expect(boxes.anvil.left >= boxes.stage.left - 1 && boxes.anvil.right <= boxes.stage.right + 1 && boxes.anvil.bottom <= boxes.stage.bottom + 1).toBe(true);
+  });
+}

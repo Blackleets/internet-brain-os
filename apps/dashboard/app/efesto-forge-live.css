@@ -478,3 +478,14 @@
 @keyframes goal-edit-rise { from { opacity: 0; transform: translateY(10px) scale(.985); } }
 @keyframes goal-edit-sheet-up { from { transform: translateY(100%); } }
 @media (prefers-reduced-motion: reduce) { .goal-edit-scrim, .goal-edit-sheet { animation: none; } }
+
+/* forge.log out of the stage: top of the side panel on desktop, under the counters on phones. */
+.forge-live-panel > .forge-ticker { position: relative; left: auto; bottom: auto; top: auto; transform: none; z-index: auto; flex: none; width: auto; max-width: none; }
+.forge-live-panel > .forge-ticker .forge-ticker-lines { min-height: 68px; }
+.forge-live[data-layout='narrow'] .forge-live-panel > .forge-ticker { position: relative; left: auto; top: auto; bottom: auto; transform: none; width: auto; max-width: none; margin: 2px 0 2px; padding: 8px 12px; text-align: left; background: rgba(10, 8, 7, .6); box-shadow: inset 0 0 0 1px var(--v3-line); border-radius: 10px; font-size: 11px; line-height: 16px; }
+.forge-live[data-layout='narrow'] .forge-live-panel > .forge-ticker .forge-ticker-lines { min-height: 16px; }
+/* Decorative exploration legend swatch (cool, dim: never real data). */
+.forge-live-legend li i.lg-probe { height: 0; border-top: 1px dashed rgba(118, 172, 214, .75); background: none; }
+/* Phones: the log follows the real candidate cards so the gold Find stays in the first viewport. */
+.forge-live[data-layout='narrow'] .forge-live-panel > .forge-ticker { order: 1; }
+.forge-live[data-layout='narrow'] .forge-live-panel > :is(.forge-live-more, .forge-live-searchmore, .forge-live-prior, .forge-live-legend, .forge-live-replay, .forge-live-rm) { order: 2; }

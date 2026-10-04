@@ -205,7 +205,6 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onSearchMore, se
           {model.nextStep ? <p className="forge-bench-next">{model.nextStep}</p> : null}
         </div> : null}
       </div>
-      <div className="forge-ticker" aria-hidden="true"><div className="forge-ticker-ttl"><i /><i /><i />&nbsp;forge.log</div><div ref={tickerRef} className="forge-ticker-lines" /></div>
       <div className="forge-live-anvil" aria-hidden="true" />
     </div>
     <dl ref={funnelRef} className="forge-live-counters" aria-label="Contadores de la misión" data-cells={story.resultCount !== undefined ? 4 : 3}>
@@ -215,6 +214,8 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onSearchMore, se
       <div data-k="support" data-on="true" className="is-support"><dt>SUPPORT</dt><dd>{model.counts.supported}</dd></div>
     </dl>
     <aside className="forge-live-panel" aria-label="Candidatos → Evidence">
+      {/* forge.log lives beside the stage (below it on phones) so it never covers the anvil or the web. */}
+      <div className="forge-ticker" aria-hidden="true"><div className="forge-ticker-ttl"><i /><i /><i />&nbsp;forge.log</div><div ref={tickerRef} className="forge-ticker-lines" /></div>
       <header className="forge-panel-head"><h3>Candidatos → Evidence</h3><span ref={countRef} className="forge-panel-count">{model.counts.sources} de {model.counts.sources}</span></header>
       {model.findingsFunnel ? <p className="forge-panel-funnel" title={funnelTitle(model.findingsFunnel)}>{funnelLine(model.findingsFunnel)}</p> : null}
       {visibleSources.length ? <ul className="forge-live-sources" aria-label={`Fuentes de la misión (${sources.length})`}>
@@ -240,6 +241,7 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onSearchMore, se
           <li><i className="lg-gold" />Oro = Kernel SUPPORT → Find</li>
           <li><i className="lg-steel" />Acero = leída, sin SUPPORT</li>
           <li><i className="lg-ash" />Ceniza = no leída, con su motivo</li>
+          <li><i className="lg-probe" />Pulsos azules = exploración decorativa, no son candidatos</li>
         </ul>
         <p>Datos reales de la misión ({countWord(model.counts.sources, 'candidato', 'candidatos')}, {model.counts.evidence} Evidence, {model.counts.supported} SUPPORT){story.nodes.length < sources.length ? ` · el grafo dibuja ${MAX_GRAPH_NODES}` : ''}. El grafo de fondo es decorativo.</p>
         {reducedMotion ? <p className="forge-live-rm">Movimiento reducido: se muestra el estado final, sin animación.</p> : null}

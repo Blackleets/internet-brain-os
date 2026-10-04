@@ -57,6 +57,9 @@ const EM_SCALE = 0.25;
 const CRAWL_N = 24;
 const EMBER: RGB = [238, 135, 72], MOLTEN: RGB = [255, 122, 42], HOT: RGB = [255, 214, 160], WHITE: RGB = [255, 248, 232];
 const GOLD: RGB = [245, 196, 81], STEEL: RGB = [196, 205, 216], ASH: RGB = [122, 115, 109];
+/** Decorative exploration probes: a dim, cool tone that no real-data element uses. */
+const PROBE: RGB = [118, 172, 214];
+export const PROBE_COUNT = 10;
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 const easeOut = (k: number) => 1 - Math.pow(1 - k, 3);
@@ -129,6 +132,11 @@ export class ForgeCrawlerRenderer {
   private G?: Geo;
   private BGN: BgNode[] = [];
   private BGE: [number, number][] = [];
+  private ADJ: number[][] = [];
+  private probes: { from: number; to: number; prev: number; u: number; speed: number; hops: number; life: number; trail: number[] }[] = [];
+  private flashes = new Map<number, number>();
+  private probeClock = 0;
+  private probeRng = rng(29);
   private DUST: { x: number; y: number; z: number; p: number }[] = [];
   private story?: ForgeStory;
   private tl?: StoryTimeline;
@@ -249,6 +257,8 @@ export class ForgeCrawlerRenderer {
     };
     this.domKey = '';
     this.tickerLinesKey = '';
+    // Anvil body box in fx-canvas (forge body) coordinates, for layout checks: nothing may cover it.
+    this.fxCanvas.dataset.anvil = [bar.x - 174 * s, bar.y - 3 * s, 318 * s, 123 * s].map((v) => Math.round(v)).join(',');
     this.draw();
   }
   private bgSig = '';
@@ -279,6 +289,10 @@ export class ForgeCrawlerRenderer {
       near.sort((u, v) => u[1] - v[1]);
       for (const [j] of near.slice(0, a.hub ? 4 : 2)) this.BGE.push([i, j]);
     }
+    this.ADJ = N.map(() => []);
+    for (const [i, j] of this.BGE) { this.ADJ[i].push(j); this.ADJ[j].push(i); }
+    this.probes = [];
+    this.flashes.clear();
     const rd = rng(5);
     this.DUST = [];
     const count = Math.round((S.w * S.h) / (mob ? 200 : 280));
@@ -308,6 +322,67 @@ export class ForgeCrawlerRenderer {
       }
       return dc;
     });
+  }
+  /**
+   * ~10 walkers hop node→node along the decorative index edges, each leaving a short fading trail with
+   * a travelling packet; nodes flash where a probe lands. Purely ambient: the count is fixed and never
+   * derived from candidates, the tone is cool/dim (PROBE) and nothing here is ever labelled or counted.
+   */
+  private drawProbes(level: number) {
+    const G = this.G!, N = this.BGN, fx = this.fx;
+    const dt = Math.max(0, Math.min(0.05, this.ambient - this.probeClock));
+    this.probeClock = this.ambient;
+    if (level <= 0.01 || N.length < 4) { if (level <= 0.01) this.probes = []; return; }
+    const r = this.probeRng, q = G.q;
+    const inBand = (k: number) => N[k].y < G.bar.y - 30 && N[k].y > G.chip.y + G.chip.h + 4;
+    const nearQuery = () => {
+      let best = 0, bd = 1e12;
+      for (let tries = 0; tries < 24; tries += 1) {
+        const k = Math.floor(r() * N.length); if (!inBand(k)) continue;
+        const d = Math.hypot(N[k].x - q.x, N[k].y - q.y) * (0.6 + r() * 0.8); if (d < bd) { bd = d; best = k; }
+      }
+      return best;
+    };
+    while (this.probes.length < PROBE_COUNT) {
+      const from = nearQuery(), to = this.ADJ[from]?.[0] ?? from;
+      this.probes.push({ from, to, prev: -1, u: r() * 0.9, speed: 2.2 + r() * 1.6, hops: 0, life: 6 + Math.floor(r() * 6), trail: [from] });
+    }
+    for (const p of this.probes) {
+      p.u += dt * p.speed;
+      while (p.u >= 1) {
+        p.u -= 1; p.hops += 1;
+        this.flashes.set(p.to, this.ambient);
+        p.trail.push(p.to); if (p.trail.length > 4) p.trail.shift();
+        if (p.hops >= p.life) { const from = nearQuery(); p.from = from; p.to = from; p.prev = -1; p.hops = 0; p.life = 6 + Math.floor(r() * 6); p.trail = [from]; }
+        const options = (this.ADJ[p.to] ?? []).filter((k) => k !== p.prev && k !== p.from && inBand(k));
+        // drift outward from the query: prefer the neighbour that moves away from it
+        options.sort((a, b) => Math.hypot(N[b].x - q.x, N[b].y - q.y) - Math.hypot(N[a].x - q.x, N[a].y - q.y));
+        const pick = options.length ? options[r() < 0.6 ? 0 : Math.floor(r() * options.length)] : p.from;
+        p.prev = p.from; p.from = p.to; p.to = pick;
+      }
+    }
+    // node flashes (decay 0.9 s)
+    fx.fillStyle = rgba(PROBE, 0.5 * level);
+    for (const [k, at] of this.flashes) {
+      const age = this.ambient - at; if (age > 0.9 || age < 0) { this.flashes.delete(k); continue; }
+      const a = (1 - age / 0.9) * level, n = N[k];
+      fx.strokeStyle = rgba(PROBE, 0.55 * a); fx.lineWidth = 1;
+      fx.beginPath(); fx.arc(n.x, n.y, 2 + age * 9, 0, 7); fx.stroke();
+      fx.fillStyle = rgba(PROBE, 0.7 * a); fx.fillRect(n.x - 1.2, n.y - 1.2, 2.4, 2.4);
+    }
+    // trails + packets
+    fx.lineCap = 'round';
+    for (const p of this.probes) {
+      const a = N[p.from], b = N[p.to], hx = a.x + (b.x - a.x) * p.u, hy = a.y + (b.y - a.y) * p.u;
+      const pts = [...p.trail.slice(0, -1).map((k) => N[k]), a];
+      for (let i = 0; i < pts.length - 1; i += 1) {
+        const al = ((i + 1) / pts.length) * 0.3 * level;
+        fx.strokeStyle = rgba(PROBE, al); fx.lineWidth = 1; fx.beginPath(); fx.moveTo(pts[i].x, pts[i].y); fx.lineTo(pts[i + 1].x, pts[i + 1].y); fx.stroke();
+      }
+      fx.strokeStyle = rgba(PROBE, 0.58 * level); fx.lineWidth = 1.2; fx.beginPath(); fx.moveTo(a.x, a.y); fx.lineTo(hx, hy); fx.stroke();
+      this.glow(hx, hy, 6, PROBE, 0.5 * level, 0);
+      fx.fillStyle = rgba([210, 232, 248], 0.85 * level); fx.fillRect(hx - 1.1, hy - 1.1, 2.2, 2.2);
+    }
   }
   private gridKey(x: number, y: number) { return Math.floor(x / this.gridCell) * 4096 + Math.floor(y / this.gridCell); }
 
@@ -432,6 +507,16 @@ export class ForgeCrawlerRenderer {
 
     const nodes = G.nodes, sn = story.nodes, n = nodes.length;
     const pickEnd = n ? T.pick[n - 1] : T.spider0;
+    // Decorative exploration (never data): cool probes hop across the background index while Hermes
+    // searches and, dimmer, while the Kernel verifies. Drawn under every real-data stroke.
+    if (!this.hooks.reducedMotion()) {
+      const rampIn = clamp((t - T.q1) / 0.6);
+      const probeLevel = holdSearch ? 1
+        : reach === 'searching' ? rampIn
+          : reach === 'candidates' ? (t < pickEnd ? rampIn : 0.5)
+            : rampIn * (1 - clamp((t - pickEnd) / 0.8));
+      this.drawProbes(probeLevel);
+    }
     // crawl edges from the query to each real candidate through one decorative index node
     for (const r of nodes) {
       const t0 = T.crawl0 + r.delay, u = clamp((t - t0) / 0.75);
