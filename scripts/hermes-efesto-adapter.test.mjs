@@ -18,6 +18,7 @@ import {
   parseTopLevelHermesModelRoute,
   collectHermesSearchTelemetry,
   parseHermesSearchCalls,
+  parseHermesFindingsWithFunnel,
   isWellFormedWebUrl,
   recoverWebUrl,
 } from './hermes-efesto-adapter.mjs';
@@ -138,6 +139,7 @@ process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/a' 
       const result = await runHermesOneShot(payload, { executable: process.execPath, hermesHome: isolated, timeoutMs: 4_000, env: { ...process.env, HERMES_HOME: isolated } });
       expect(result.findings.map((finding) => finding.url)).toEqual(['https://example.com/a']);
       expect(result.searches).toEqual(SAMPLE_SEARCHES);
+      expect(result.funnel).toEqual({ findingsReturned: 1, dropped: {} });
       // The run's debug log is consumed: nothing is left in the isolated home.
       expect(await readdir(join(isolated, 'logs'))).toEqual([]);
       await writeFile(join(quietHome, 'chat'), "process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/b' }] }));\n", 'utf8');
@@ -437,6 +439,20 @@ process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/a' 
     ] }));
     expect(parsed.findings.map((finding) => finding.url)).toEqual(['https://www.opcionempleo.com/compania/McDonald%27s', 'https://jobs.example/rider']);
     expect(parsed.findings[0].title).toBe('Public source: www.opcionempleo.com');
+  });
+
+  it('counts what Hermes returned and what the adapter dropped as malformed, without keeping dropped content', () => {
+    const answer = JSON.stringify({ findings: [
+      { url: 'https://www.opcionempleo.com/](https://www.opcionempleo.com/compania/x' },
+      { url: 'https://a.example/](https://b.example/page' },
+      { url: 'https://jobs.example/rider' },
+    ] });
+    const parsed = parseHermesFindingsWithFunnel(answer);
+    expect(parsed.funnel).toEqual({ findingsReturned: 3, dropped: { malformed_url: 1 } });
+    expect(parsed.findings.map((finding) => finding.url)).toEqual(['https://www.opcionempleo.com/compania/x', 'https://jobs.example/rider']);
+    expect(JSON.stringify(parsed.funnel)).not.toContain('b.example');
+    expect(parseHermesFindings(answer)).toEqual({ findings: parsed.findings });
+    expect(parseHermesFindingsWithFunnel('{"findings":[]}').funnel).toEqual({ findingsReturned: 0, dropped: {} });
   });
 
   it('rejects non-web URL-only findings', () => {

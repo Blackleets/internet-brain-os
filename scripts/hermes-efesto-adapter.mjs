@@ -109,6 +109,14 @@ export function normalizeHermesExecutable(value) {
 }
 
 export function parseHermesFindings(text) {
+  return { findings: parseHermesFindingsWithFunnel(text).findings };
+}
+
+/**
+ * Same parse, plus the display-only findings funnel: how many findings Hermes returned and how
+ * many the adapter dropped, by reason. Only counts; no URL or text from a dropped finding is kept.
+ */
+export function parseHermesFindingsWithFunnel(text) {
   if (typeof text !== 'string' || !text.trim()) throw new Error('Hermes returned empty output');
   const trimmed = text.trim();
   const withoutThinking = trimmed.replace(/^(?:<think>[\s\S]*?<\/think>\s*)+/i, '');
@@ -137,7 +145,10 @@ export function parseHermesFindings(text) {
   }
   // A finding whose http(s) URL is malformed and cannot be recovered unambiguously is dropped, not
   // guessed; the Kernel rejects any URL that is not well-formed, so it would otherwise fail the batch.
-  return { findings: parsed.findings.map((finding, index) => normalizeFinding(finding, index)).filter(Boolean) };
+  const normalized = parsed.findings.map((finding, index) => normalizeFinding(finding, index));
+  const findings = normalized.filter(Boolean);
+  const malformed = normalized.length - findings.length;
+  return { findings, funnel: { findingsReturned: parsed.findings.length, dropped: malformed ? { malformed_url: malformed } : {} } };
 }
 
 /**
@@ -513,7 +524,7 @@ export function runHermesProcess({ executable, args, timeoutMs, env, cwd }) {
       if (code !== 0) {
         return finish(new Error(processFailure('Hermes', code, stderr)));
       }
-      try { finish(undefined, parseHermesFindings(stdout)); }
+      try { finish(undefined, parseHermesFindingsWithFunnel(stdout)); }
       catch (error) { finish(error); }
     });
   });
