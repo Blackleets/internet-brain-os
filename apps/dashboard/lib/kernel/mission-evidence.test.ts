@@ -20,6 +20,12 @@ describe('parseMissionEvidence', () => {
     expect(() => parseMissionEvidence({ ...body, evidence: [{ ...body.evidence[0], supported: 'yes' }] })).toThrow(MissionEvidenceContractError);
   });
 
+  it('keeps the Kernel priorAttempt mark only when it is exactly true', () => {
+    expect(parseMissionEvidence({ ...body, evidence: [{ ...body.evidence[0], priorAttempt: true }] }).evidence[0].priorAttempt).toBe(true);
+    expect(parseMissionEvidence({ ...body, evidence: [{ ...body.evidence[0], priorAttempt: 'yes' }] }).evidence[0]).not.toHaveProperty('priorAttempt');
+    expect(parseMissionEvidence(body).evidence[0]).not.toHaveProperty('priorAttempt');
+  });
+
   it('keeps a null excerpt as no quote', () => {
     expect(parseMissionEvidence({ ...body, evidence: [{ ...body.evidence[0], excerpt: null }] }).evidence[0].excerpt).toBeNull();
   });

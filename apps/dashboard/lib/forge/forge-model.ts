@@ -59,6 +59,19 @@ export type ForgeSource = {
   findTitle?: string;
   /** Goal subject terms present in the Kernel Evidence excerpt/title (display mirror, not the verdict). */
   goalTerms?: string[];
+  /** From an earlier attempt kept by "Buscar más" (Mission priorAttempts); not counted in this attempt. */
+  priorAttempt?: true;
+};
+
+/**
+ * What earlier attempts of this Mission left (Kernel priorAttempts, kept by "Buscar más"): only
+ * pages the Kernel read. Never added to the current attempt's counters.
+ */
+export type ForgePriorAttempts = {
+  attempts: number;
+  sources: ForgeSource[];
+  evidence: number;
+  supported: number;
 };
 
 export type ForgePhase =
@@ -125,6 +138,13 @@ export type ForgeMissionModel = {
    * confirm it again through the same Goal mission endpoint the dashboard uses to confirm a Goal.
    */
   relaunch?: { goalId: string };
+  /**
+   * Set when the Mission finished an attempt and nobody is working it: "Buscar más" confirms a new
+   * attempt (mode search_more) that keeps earlier Finds and Evidence and adds to them.
+   */
+  searchMore?: { goalId: string };
+  /** Earlier attempts kept by the Kernel (priorAttempts); absent when there are none. */
+  prior?: ForgePriorAttempts;
 };
 
 export type ForgeModel =
@@ -184,6 +204,8 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
     : undefined;
   const funnel = findingsFunnel(row);
   const relaunch = canRelaunch(phase, surfaceMission.status, row, input.now ?? Date.now()) && input.surface.goal.id ? { goalId: input.surface.goal.id } : undefined;
+  const searchMore = canSearchMore(phase, surfaceMission.status, row, input.now ?? Date.now()) && input.surface.goal.id ? { goalId: input.surface.goal.id } : undefined;
+  const prior = buildPriorAttempts(row, evidence, input.opportunities, sources, goalTerms);
   return {
     kind: 'mission',
     missionId: surfaceMission.id,
@@ -204,7 +226,9 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
     ...(phaseSince ? { phaseSince } : {}),
     ...(nextStep ? { nextStep } : {}),
     ...(relaunch ? { relaunch } : {}),
-    summary: `${label}. ${counts.sources} ${plural(counts.sources, 'fuente', 'fuentes')}, ${counts.read} ${plural(counts.read, 'leída', 'leídas')}, ${counts.evidence} Evidence, ${counts.supported} con Kernel SUPPORT.`,
+    ...(searchMore ? { searchMore } : {}),
+    ...(prior ? { prior } : {}),
+    summary: `${label}. ${counts.sources} ${plural(counts.sources, 'fuente', 'fuentes')}, ${counts.read} ${plural(counts.read, 'leída', 'leídas')}, ${counts.evidence} Evidence, ${counts.supported} con Kernel SUPPORT.${prior ? ` Intentos anteriores: ${prior.evidence} Evidence y ${prior.supported} con SUPPORT, conservados.` : ''}`,
   };
 }
 
@@ -216,6 +240,63 @@ function canRelaunch(phase: ForgePhase, status: string, row: MissionSummary | un
   if (status !== 'running' || !row) return false;
   const lease = Date.parse(str(row.leaseExpiresAt));
   return !(Number.isFinite(lease) && lease > now);
+}
+
+const SEARCH_MORE_PHASES = new Set<ForgePhase>(['forged', 'research_completed', 'verified_unsupported', 'read_failed_all', 'completed_empty', 'completed_without_evidence', 'failed']);
+
+/**
+ * Mirrors the Kernel's search_more gate (display only; the Kernel decides): the Mission is not
+ * queued/waiting, has no live lease, and already ran an attempt.
+ */
+function canSearchMore(phase: ForgePhase, status: string, row: MissionSummary | undefined, now: number): boolean {
+  if (!SEARCH_MORE_PHASES.has(phase) || !row) return false;
+  if (status === 'queued' || status === 'waiting_for_agent') return false;
+  const lease = Date.parse(str(row.leaseExpiresAt));
+  if (status === 'running' && Number.isFinite(lease) && lease > now) return false;
+  return Boolean(str(row.completedAt) || str(row.verifyingAt) || str(row.failedAt) || arrayOfRows(row.verificationResults).length);
+}
+
+const MAX_PRIOR_SOURCES = 20;
+
+/** Pages the Kernel read in earlier attempts (newest attempt first), minus any the current attempt shows. */
+function buildPriorAttempts(
+  row: MissionSummary | undefined,
+  evidence: ForgeEvidenceLoad,
+  opportunities: readonly OpportunitySummary[] | undefined,
+  current: readonly ForgeSource[],
+  goalTerms: readonly string[],
+): ForgePriorAttempts | undefined {
+  const attempts = arrayOfRows(row?.priorAttempts);
+  if (!row || !attempts.length) return undefined;
+  const records = evidence.status === 'available' ? evidence.records : [];
+  const recordById = new Map(records.map((item) => [item.id, item]));
+  const seenUrls = new Set(current.map((item) => item.url));
+  const seenEvidence = new Set(current.map((item) => item.evidenceId).filter(Boolean));
+  const sources: ForgeSource[] = [];
+  for (const attempt of [...attempts].reverse()) {
+    for (const result of arrayOfRows(attempt.verificationResults)) {
+      if (sources.length >= MAX_PRIOR_SOURCES) break;
+      if (str(result.status) !== 'verified') continue;
+      const id = str(result.candidateId);
+      const url = str(result.sourceUrl);
+      const evidenceId = str(result.evidenceId);
+      const location = splitUrl(url);
+      if (!id || !location || seenUrls.has(url) || (evidenceId && seenEvidence.has(evidenceId))) continue;
+      seenUrls.add(url);
+      if (evidenceId) seenEvidence.add(evidenceId);
+      const source = { ...sourceFrom(`prior:${id}`, url, location, undefined, result, evidence, recordById, row, opportunities), priorAttempt: true as const };
+      const present = goalTermsPresent([source.quote, source.evidenceTitle], goalTerms);
+      if (present.length) source.goalTerms = present;
+      sources.push(source);
+    }
+  }
+  sources.sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state]);
+  return {
+    attempts: attempts.length,
+    sources,
+    evidence: sources.filter((item) => Boolean(item.evidenceId)).length,
+    supported: sources.filter((item) => item.state === 'supported').length,
+  };
 }
 
 const NEXT_STEPS: Partial<Record<ForgePhase, string>> = {
@@ -395,7 +476,7 @@ function sourceFrom(
 function countSources(sources: readonly ForgeSource[], evidence: ForgeEvidenceLoad): ForgeCounts {
   const read = sources.filter((item) => item.state === 'supported' || item.state === 'unsupported' || item.state === 'evidence').length;
   const evidenceCount = evidence.status === 'available'
-    ? evidence.records.length
+    ? evidence.records.filter((item) => item.priorAttempt !== true).length
     : sources.filter((item) => Boolean(item.evidenceId)).length;
   return {
     sources: sources.length,

@@ -172,7 +172,8 @@ body, .efesto-product { font-family: var(--v3-sans); background: var(--v3-bg); }
   .efesto-product.has-tabbar .forge-surface,
   .efesto-product.has-tabbar.efesto-home-active .efesto-main { height: calc(100dvh - 64px - env(safe-area-inset-bottom)); }
   .efesto-product.has-tabbar .efesto-stage { height: calc(100dvh - 64px - env(safe-area-inset-bottom)); }
-  .efesto-product.has-tabbar .efesto-toast { bottom: calc(76px + env(safe-area-inset-bottom)); }
+  /* above the tab bar; top: auto so the toast is not stretched between top and bottom */
+  .efesto-product.has-tabbar .efesto-toast { top: auto; bottom: calc(76px + env(safe-area-inset-bottom)); }
   .efesto-product .forge-surface.has-forge .forge-scroll > .forge-composer-zone { width: calc(100% - 24px); }
   .efesto-tabbar {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;

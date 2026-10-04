@@ -261,5 +261,58 @@ describe('displayText', () => {
       expect(model.relaunch).toBeUndefined();
     });
   });
-});
 
+  describe('"Buscar más" (search_more keeps earlier attempts)', () => {
+    const now = Date.parse('2026-10-03T10:00:00.000Z');
+    const forgedRow = row({ status: 'completed', executionPhase: 'forged', completedAt: '2026-10-03T09:03:00.000Z', verificationResults: forgedResults });
+
+    it('is offered once an attempt finished and nobody works the Mission, never while queued, searching or leased', () => {
+      const forged = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('forged', { status: 'completed' }), mission: forgedRow, now }));
+      expect(forged.searchMore).toEqual({ goalId: 'goal:1' });
+      const unsupported = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ verificationResults: [forgedResults[1]] }), now }));
+      expect(unsupported.phase).toBe('verified_unsupported');
+      expect(unsupported.searchMore).toEqual({ goalId: 'goal:1' });
+      const leased = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ verificationResults: [forgedResults[1]], leaseExpiresAt: '2026-10-03T10:05:00.000Z' }), now }));
+      expect(leased.searchMore).toBeUndefined();
+      const queued = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('queued', { status: 'queued' }), mission: row({ status: 'queued', executionPhase: 'queued', searchCandidates: undefined }), now }));
+      expect(queued.searchMore).toBeUndefined();
+      const searching = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('investigating'), mission: row({ executionPhase: 'investigating', searchCandidates: undefined }), now }));
+      expect(searching.searchMore).toBeUndefined();
+      expect(mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('forged', { status: 'completed' }), now })).searchMore).toBeUndefined();
+    });
+
+    it('shows the kept attempt\'s SUPPORT and Evidence apart, without adding them to the new attempt\'s counters', () => {
+      const prior = [{
+        startedAt: '2026-10-03T09:00:00.000Z', status: 'completed', executionPhase: 'forged',
+        searchCandidates: candidates.map(({ id, url, title, status }) => ({ id, url, title, status })),
+        verificationResults: forgedResults,
+      }];
+      const newCandidate = { id: 'n1', url: 'https://new.example/taladro', title: 'Hermes: nuevo', status: 'pending_verification' };
+      const current = row({ status: 'queued', executionPhase: 'queued', searchCandidates: undefined, verificationResults: undefined, priorAttempts: prior, knownSourceUrls: [candidates[0].url] });
+      const evidence = { status: 'available' as const, records: records.map((item) => ({ ...item, priorAttempt: true as const })) };
+      const queued = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('queued', { status: 'queued' }), mission: current, evidence, opportunities: [find], now }));
+      expect(queued.counts).toEqual({ sources: 0, read: 0, evidence: 0, supported: 0 });
+      expect(queued.prior).toMatchObject({ attempts: 1, supported: 1, evidence: 2 });
+      expect(queued.prior?.sources.map((item) => [item.url, item.state, item.priorAttempt])).toEqual([
+        [candidates[0].url, 'supported', true],
+        [candidates[1].url, 'unsupported', true],
+      ]);
+      expect(queued.prior?.sources[0]).toMatchObject({ findTitle: 'Taladro percutor 18 V — Tools', quote: 'Taladro percutor 18 V por 109,90 €' });
+      expect(queued.summary).toContain('Intentos anteriores: 2 Evidence y 1 con SUPPORT, conservados.');
+
+      // The new attempt brings a new page and the earlier one again: the earlier one shows once, in the current attempt.
+      const again = row({ searchCandidates: [newCandidate, { ...candidates[1] }], verificationResults: [
+        { candidateId: 'n1', status: 'verified', evidenceId: 'e9', sourceUrl: newCandidate.url, supported: true },
+        { candidateId: 'c2', status: 'verified', evidenceId: 'e2', sourceUrl: candidates[1].url, supported: false, supportReason: 'insufficient_term_coverage' },
+      ], priorAttempts: prior });
+      const withNew = { status: 'available' as const, records: [{ ...records[0], id: 'e9', candidateId: 'n1', sourceUrl: newCandidate.url }, records[1], { ...records[0], priorAttempt: true as const }] };
+      const verifying = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: again, evidence: withNew, opportunities: [find], now }));
+      expect(verifying.counts).toEqual({ sources: 2, read: 2, evidence: 2, supported: 1 });
+      expect(verifying.prior?.sources.map((item) => item.url)).toEqual([candidates[0].url]);
+    });
+
+    it('has no prior section for a Mission that never searched more', () => {
+      expect(mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('forged', { status: 'completed' }), mission: forgedRow, now })).prior).toBeUndefined();
+    });
+  });
+});

@@ -27,6 +27,8 @@ export type MissionEvidenceRecord = {
   supported: boolean;
   supportReason?: string;
   excerpt: MissionEvidenceExcerpt | null;
+  /** Kept from an earlier attempt of the same Mission ("Buscar más"); still this Mission's Evidence. */
+  priorAttempt?: true;
 };
 
 export type MissionEvidence = {
@@ -76,6 +78,7 @@ function parseRecord(value: unknown, path: string): MissionEvidenceRecord {
     supported: item.supported,
     ...(typeof item.supportReason === 'string' && item.supportReason ? { supportReason: item.supportReason.slice(0, 80) } : {}),
     excerpt: parseExcerpt(item.excerpt, `${path}.excerpt`),
+    ...(item.priorAttempt === true ? { priorAttempt: true as const } : {}),
   };
 }
 

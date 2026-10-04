@@ -204,4 +204,28 @@ describe('ForgeLiveView', () => {
     rerender(<ForgeLiveView model={leased} onRelaunch={onRelaunch} />);
     expect(screen.queryByRole('button', { name: /Relanza/ })).toBeNull();
   });
+
+  it('offers "Buscar más" for a finished Mission and shows kept attempts apart, marked "intento anterior"', () => {
+    const onSearchMore = vi.fn();
+    const onRelaunch = vi.fn();
+    const forgedResults = [{ candidateId: 'c0', status: 'verified', evidenceId: 'e0', sourceUrl: candidates[0].url, supported: true }];
+    const forged = buildForgeModel({ connected: true, kernelOnline: true, surface: { ...surface('forged'), mission: { ...surface('forged').mission!, status: 'completed' } }, mission: row({ status: 'completed', executionPhase: 'forged', completedAt: '2026-10-03T09:05:00.000Z', searchCandidates: candidates.slice(0, 1), verificationResults: forgedResults }) });
+    const { rerender } = render(<ForgeLiveView model={forged} onSearchMore={onSearchMore} onRelaunch={onRelaunch} />);
+    expect(screen.queryByRole('button', { name: 'Relanzar misión' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Buscar más' }).getAttribute('aria-describedby')).toBeTruthy();
+    expect(screen.getByText(/Los Finds y la Evidence guardados se conservan; lo nuevo se suma/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar más' }));
+    expect(onSearchMore).toHaveBeenCalledWith('goal:1');
+    rerender(<ForgeLiveView model={forged} onSearchMore={onSearchMore} relaunchPending />);
+    expect((screen.getByRole('button', { name: 'Enviando…' }) as HTMLButtonElement).disabled).toBe(true);
+
+    const prior = [{ status: 'completed', executionPhase: 'forged', searchCandidates: [], verificationResults: forgedResults }];
+    const queued = buildForgeModel({ connected: true, kernelOnline: true, surface: { ...surface('queued'), mission: { ...surface('queued').mission!, status: 'queued' } }, mission: row({ status: 'queued', executionPhase: 'queued', searchCandidates: undefined, priorAttempts: prior }) });
+    rerender(<ForgeLiveView model={queued} onSearchMore={onSearchMore} />);
+    expect(screen.queryByRole('button', { name: 'Buscar más' })).toBeNull();
+    const kept = screen.getByRole('list', { name: 'Fuentes de intentos anteriores (1)' });
+    expect(within(kept).getByText('intento anterior')).toBeTruthy();
+    expect(screen.getByText(/Intento anterior · 1 SUPPORT · 1 Evidence/)).toBeTruthy();
+    expect(screen.getByLabelText('Contadores de la misión').textContent).toBe('candidatos0Evidence0SUPPORT0');
+  });
 });

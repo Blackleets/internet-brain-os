@@ -1,7 +1,7 @@
 'use client';
 
-import { Check, ChevronDown, Plug, RefreshCw, RotateCcw } from 'lucide-react';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Check, ChevronDown, Plug, RefreshCw, RotateCcw, Search } from 'lucide-react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ForgeMissionModel, ForgeModel, ForgeSource, ForgeStepState } from '../../lib/forge/forge-model';
 import { buildForgeStory, MAX_GRAPH_NODES, readFailureCode } from '../../lib/forge/forge-story';
 import { goalTermSegments } from '../../lib/forge/goal-terms';
@@ -19,11 +19,13 @@ type Props = {
   /** Re-confirms a mission the Kernel left read without SUPPORT and without a lease (model.relaunch). */
   onRelaunch?: (goalId: string) => void;
   relaunchPending?: boolean;
+  /** "Buscar más": confirms a new attempt that keeps earlier Finds/Evidence (model.searchMore). */
+  onSearchMore?: (goalId: string) => void;
   /** Visible heading level context; Home uses h2 under its own title. */
   headingId?: string;
 };
 
-export function ForgeLiveView({ model, onConnect, onOpenFinds, onRelaunch, relaunchPending = false, headingId = 'forge-live-title' }: Props) {
+export function ForgeLiveView({ model, onConnect, onOpenFinds, onRelaunch, relaunchPending = false, onSearchMore, headingId = 'forge-live-title' }: Props) {
   const rootRef = useRef<HTMLElement>(null);
   const [narrow, setNarrow] = useState(true);
   const reducedMotion = useReducedMotion();
@@ -55,14 +57,15 @@ export function ForgeLiveView({ model, onConnect, onOpenFinds, onRelaunch, relau
   >
     <ForgeHeader model={model} headingId={headingId} onConnect={onConnect} onRelaunch={onRelaunch} relaunchPending={relaunchPending} replaying={Boolean(mission && playing && reconstructing && mission.motion === 'settled')} />
     {mission
-      ? <ForgeBody key={mission.missionId} model={mission} narrow={narrow} reducedMotion={reducedMotion} onOpenFinds={onOpenFinds} onPlaying={setPlaying} onReconstructing={setReconstructing} />
+      ? <ForgeBody key={mission.missionId} model={mission} narrow={narrow} reducedMotion={reducedMotion} onOpenFinds={onOpenFinds} onSearchMore={onSearchMore} searchMorePending={relaunchPending} onPlaying={setPlaying} onReconstructing={setReconstructing} />
       : <div className="forge-live-cold" aria-hidden="true"><div className="forge-live-stage is-cold"><p className="forge-slabel">La web · índice del buscador<span>fondo decorativo · no se cuenta</span></p></div></div>}
     <p className="forge-sr-only" aria-live="polite" aria-atomic="true">{model.summary}</p>
   </section>;
 }
 
-function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onPlaying, onReconstructing }: {
+function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onSearchMore, searchMorePending = false, onPlaying, onReconstructing }: {
   model: ForgeMissionModel; narrow: boolean; reducedMotion: boolean; onOpenFinds?: () => void;
+  onSearchMore?: (goalId: string) => void; searchMorePending?: boolean;
   onPlaying: (value: boolean) => void; onReconstructing: (value: boolean) => void;
 }) {
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -84,6 +87,7 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onPlaying, onRec
   const [legendOpen, setLegendOpen] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [replayTick, setReplayTick] = useState(0);
+  const searchMoreNoteId = useId();
 
   const story = useMemo(() => buildForgeStory(model), [model]);
   const sources = model.sources;
@@ -218,6 +222,13 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onPlaying, onRec
       {hiddenCount > 0 || expanded ? <button type="button" className="forge-live-more" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
         {expanded ? 'Mostrar menos fuentes' : `Ver ${hiddenCount} ${hiddenCount === 1 ? 'fuente más' : 'fuentes más'}`}<ChevronDown aria-hidden="true" />
       </button> : null}
+      {model.searchMore && onSearchMore ? <div className="forge-live-searchmore">
+        <button type="button" className="forge-live-relaunch-btn forge-live-searchmore-btn" disabled={searchMorePending} aria-describedby={searchMoreNoteId} onClick={() => { if (model.searchMore) onSearchMore(model.searchMore.goalId); }}>
+          <Search aria-hidden="true" />{searchMorePending ? 'Enviando…' : 'Buscar más'}
+        </button>
+        <p id={searchMoreNoteId}>Otro intento de Hermes con el mismo Goal. Los Finds y la Evidence guardados se conservan; lo nuevo se suma.</p>
+      </div> : null}
+      {model.prior ? <PriorAttempts prior={model.prior} goalTerms={model.goalTerms} onOpenFinds={onOpenFinds} /> : null}
       <details className="forge-live-legend" open={legendOpen} onToggle={(event) => setLegendOpen(event.currentTarget.open)}>
         <summary>Leyenda</summary>
         <ul>
@@ -318,6 +329,20 @@ function countWord(count: number, one: string, many: string): string {
 }
 
 /** Final visual stage of a card when no play-through runs (reduced motion, no canvas, beyond the graph). */
+/** Earlier attempts the Kernel kept ("Buscar más"): their read pages, outside this attempt's counters. */
+function PriorAttempts({ prior, goalTerms, onOpenFinds }: { prior: NonNullable<ForgeMissionModel['prior']>; goalTerms: string[]; onOpenFinds?: () => void }) {
+  const title = `${prior.attempts === 1 ? 'Intento anterior' : `${prior.attempts} intentos anteriores`} · ${prior.supported} SUPPORT · ${prior.evidence} Evidence`;
+  return <details className="forge-live-prior" open={prior.supported > 0}>
+    <summary>{title}<span className="forge-live-prior-note">conservados</span></summary>
+    {prior.sources.length ? <ul className="forge-live-sources" aria-label={`Fuentes de intentos anteriores (${prior.sources.length})`}>
+      {prior.sources.map((source) => <li key={source.id} className="forge-source" data-state={source.state} data-stage={finalStage(source)} data-prior="true">
+        <p className="forge-source-prior-tag">intento anterior</p>
+        <SourceCard source={source} goalTerms={goalTerms} onOpenFinds={onOpenFinds} />
+      </li>)}
+    </ul> : <p className="forge-live-nosources">Los intentos anteriores no dejaron páginas leídas por el Kernel.</p>}
+  </details>;
+}
+
 function finalStage(source: ForgeSource): CrawlerStage {
   switch (source.state) {
     case 'supported': return 'gold';

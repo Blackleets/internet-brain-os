@@ -195,6 +195,54 @@ test('a mission the Kernel left read without SUPPORT and without a lease can be 
   await expect(page.getByText('Misión relanzada: el Kernel la puso en cola para Hermes.')).toBeVisible();
 });
 
+test('"Buscar más" on a forged mission posts search_more through the dashboard confirm path and keeps the earlier Find on screen', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const forgedMission = { ...missions.missions[0], completedAt: '2026-07-26T10:03:00.000Z' };
+  // TEST FIXTURE: what the Kernel returns after search_more (new attempt queued, the forged one kept).
+  const kept = { ...forgedMission, status: 'queued', executionPhase: 'queued', attempt: 0, searchMode: 'search_more', searchCandidates: undefined, verificationResults: undefined,
+    knownSourceUrls: [candidates[0].url, candidates[1].url],
+    priorAttempts: [{ status: 'completed', executionPhase: 'forged', searchCandidates: candidates.map(({ id, url, title, status }) => ({ id, url, title, status })), verificationResults }] };
+  const keptSurface = { ...surfaces.surfaces[0], mission: { ...surfaces.surfaces[0].mission, status: 'queued', executionPhase: 'queued', workState: 'queued' } };
+  let searched = false;
+  await page.route('http://127.0.0.1:4100/api/agent-missions', (route) => fulfill({ ok: true, missions: [searched ? kept : forgedMission] })(route));
+  await page.route('http://127.0.0.1:4100/api/goal-surfaces', (route) => fulfill(searched ? { ok: true, surfaces: [keptSurface] } : surfaces)(route));
+  await page.route(`http://127.0.0.1:4100/api/agent-missions/${MISSION}/evidence`, (route) => fulfill(searched
+    ? { ...evidence, evidence: evidence.evidence.map((item) => ({ ...item, priorAttempt: true })) }
+    : evidence)(route));
+  await page.route('http://127.0.0.1:4100/api/opportunities', fulfill(opportunities));
+  const posted: unknown[] = [];
+  await page.route('http://127.0.0.1:4100/api/goals/goal-forge/missions', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    posted.push(route.request().postDataJSON());
+    searched = true;
+    await route.fulfill({ status: 201, headers: cors, body: JSON.stringify({ ok: true, mission: kept }) });
+  });
+  await page.goto('/');
+  await connect(page);
+  await openHome(page, true);
+  const forge = page.locator('.forge-live');
+  const searchMore = forge.getByRole('button', { name: 'Buscar más' });
+  await expect(searchMore).toBeVisible();
+  await expect(forge.getByRole('button', { name: 'Relanzar misión' })).toHaveCount(0);
+  expect((await searchMore.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+  await searchMore.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath('forge-search-more-button-390x844.png') });
+  await searchMore.click();
+  await expect.poll(() => posted.length).toBe(1);
+  expect(posted[0]).toEqual({ confirmed: true, agent: 'hermes', cadence: 'manual', mode: 'search_more' });
+  await expect(page.getByText(/Buscar más: el Kernel puso un nuevo intento en cola para Hermes/)).toBeVisible();
+  await expect(forge.getByRole('button', { name: 'Buscar más' })).toHaveCount(0);
+  const prior = forge.locator('.forge-live-prior');
+  await expect(prior).toContainText('Intento anterior · 1 SUPPORT · 2 Evidence');
+  await expect(prior.locator('.forge-source[data-state="supported"]')).toHaveCount(1);
+  await expect(prior.getByText(/Fixture excerpt: ownership is a set of rules/)).toBeVisible();
+  // The new attempt's counters start empty: the kept Find is not counted again.
+  await expect(forge.getByLabel('Contadores de la misión')).not.toContainText(/[0-9]/);
+  await prior.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath('forge-search-more-390x844.png') });
+  await expectNoHorizontalOverflow(page, 390);
+});
+
 for (const size of [{ width: 360, height: 780 }, { width: 390, height: 844 }, { width: 430, height: 932 }]) {
   test(`forge phone polish at ${size.width}×${size.height}: steps, anvil, funnel and the gold Find in the first viewport, full-text cards, 44px targets`, async ({ page }, testInfo) => {
     await page.setViewportSize(size);
