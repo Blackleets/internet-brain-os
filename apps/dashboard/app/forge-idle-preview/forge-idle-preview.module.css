@@ -1,0 +1,154 @@
+.page {
+  min-height: 100svh;
+  background:
+    radial-gradient(1000px 560px at 50% 8%, rgba(124, 61, 28, .10), transparent 72%),
+    #070605;
+  color: #eee6de;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.shell { min-height: 100svh; }
+.topbar {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 18px;
+  padding: 0 24px;
+  border-bottom: 1px solid rgba(255, 219, 190, .08);
+  background: rgba(8, 7, 6, .88);
+  backdrop-filter: blur(16px);
+}
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; letter-spacing: .22em; }
+.brand b { font-size: 15px; }
+.brandMark {
+  width: 34px; height: 34px; display: grid; place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(235, 129, 70, .16), rgba(235, 129, 70, .04));
+  box-shadow: inset 0 0 0 1px rgba(235, 129, 70, .3), 0 0 24px rgba(235, 129, 70, .08);
+  color: #e7864d; font-size: 20px;
+}
+.mode {
+  display: inline-flex; padding: 5px; border-radius: 16px;
+  background: #11100e; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+  color: #706b66;
+}
+.mode span, .mode strong { padding: 10px 18px; border-radius: 12px; font-size: 14px; }
+.mode strong { color: #f1e7dd; background: #24160f; box-shadow: inset 0 0 0 1px rgba(220, 115, 62, .5); }
+.kernelPill { justify-self: end; display: flex; align-items: center; gap: 8px; color: #8a837c; font-size: 12px; }
+.kernelPill i { width: 7px; height: 7px; border-radius: 50%; background: #544f4a; }
+
+.content { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 52px 0 40px; }
+.copy { text-align: center; max-width: 760px; margin: 0 auto 28px; }
+.copy > small { color: #b77656; font: 700 11px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .16em; }
+.copy h1 { margin: 14px 0 10px; font-size: clamp(34px, 5vw, 62px); line-height: .98; letter-spacing: -.045em; font-weight: 650; }
+.copy p { max-width: 680px; margin: 0 auto; color: #8f8882; font-size: 15px; line-height: 1.65; }
+.truthRow { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px 16px; margin-top: 18px; color: #817a73; font: 600 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
+.truthRow span { display: inline-flex; align-items: center; gap: 7px; }
+.truthDot { width: 6px; height: 6px; border-radius: 50%; background: #d97642; box-shadow: 0 0 12px rgba(217,118,66,.7); }
+
+.forgeCard {
+  overflow: hidden;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #0d0b09, #090806);
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 190, .08), 0 24px 80px rgba(0,0,0,.45);
+}
+.forgeHead { display: flex; justify-content: space-between; gap: 18px; padding: 18px 20px 14px; border-bottom: 1px solid rgba(255, 220, 190, .07); }
+.forgeHead small { color: #c37752; font: 700 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .14em; }
+.forgeHead h2 { margin: 7px 0 5px; font-size: 24px; line-height: 1.1; font-weight: 650; }
+.forgeHead p { margin: 0; color: #7f7871; font-size: 13px; }
+.previewBadge { align-self: start; padding: 7px 9px; border-radius: 8px; border: 1px dashed rgba(223, 187, 157, .28); color: #81756b; font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .10em; }
+
+.stage {
+  position: relative;
+  height: min(58vw, 560px);
+  min-height: 430px;
+  overflow: hidden;
+  background:
+    radial-gradient(52% 38% at 50% 84%, rgba(204, 82, 25, .16), transparent 72%),
+    radial-gradient(60% 56% at 55% 36%, rgba(114, 86, 65, .07), transparent 70%),
+    linear-gradient(#090806, #070605);
+}
+.web { position: absolute; inset: 0; opacity: .9; }
+.web::before, .web::after { content: ''; position: absolute; inset: 11% 12% 18%; border: 1px solid rgba(150, 139, 128, .11); border-radius: 46% 54% 42% 58% / 58% 42% 56% 44%; transform: rotate(-8deg); }
+.web::after { inset: 18% 20% 26%; transform: rotate(14deg); border-color: rgba(150,139,128,.08); }
+.ringA, .ringB, .ringC { position: absolute; border: 1px solid rgba(145, 135, 125, .09); border-radius: 50%; }
+.ringA { width: 38%; aspect-ratio: 1; left: 9%; top: 8%; }
+.ringB { width: 30%; aspect-ratio: 1; right: 12%; top: 18%; }
+.ringC { width: 24%; aspect-ratio: 1; left: 39%; top: 25%; }
+.lineA, .lineB, .lineC { position: absolute; height: 1px; transform-origin: left center; background: linear-gradient(90deg, rgba(130,120,110,.04), rgba(165,150,138,.16), rgba(130,120,110,.03)); }
+.lineA { width: 42%; left: 12%; top: 38%; transform: rotate(8deg); }
+.lineB { width: 38%; left: 36%; top: 27%; transform: rotate(31deg); }
+.lineC { width: 36%; right: 7%; top: 49%; transform: rotate(-24deg); }
+.node1, .node2, .node3, .node4, .node5, .node6 { position: absolute; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: #413a34; box-shadow: 0 0 0 5px rgba(90,80,70,.05); }
+.node1 { left: 16%; top: 34%; } .node2 { left: 31%; top: 21%; } .node3 { left: 43%; top: 42%; }
+.node4 { left: 64%; top: 26%; } .node5 { left: 76%; top: 47%; } .node6 { left: 84%; top: 29%; }
+.ambientLabel { position: absolute; right: 18px; top: 16px; color: #6f665e; text-align: right; font: 700 9px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .14em; }
+.ambientLabel span { color: #514a44; letter-spacing: .02em; font-weight: 500; }
+
+.spider {
+  position: absolute; left: 24%; top: 34%; width: 24px; height: 24px;
+  animation: spiderPath 14s cubic-bezier(.4,0,.2,1) infinite alternate;
+  filter: drop-shadow(0 0 8px rgba(118, 172, 214, .12));
+}
+.spiderBody { position: absolute; left: 8px; top: 6px; width: 9px; height: 11px; border-radius: 50% 50% 46% 46%; background: #a8a29c; box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); }
+.spiderBody::before { content: ''; position: absolute; left: 2px; top: -4px; width: 5px; height: 5px; border-radius: 50%; background: #aaa39c; }
+.spider > i:not(.spiderBody) { position: absolute; width: 10px; height: 1px; background: #847d77; transform-origin: 100% 50%; }
+.leg1 { left: 0; top: 5px; transform: rotate(25deg); } .leg2 { left: -1px; top: 9px; transform: rotate(4deg); }
+.leg3 { left: 0; top: 13px; transform: rotate(-20deg); } .leg4 { left: 2px; top: 16px; transform: rotate(-42deg); }
+.leg5 { right: -1px; top: 5px; transform-origin: 0 50% !important; transform: rotate(-25deg); } .leg6 { right: -2px; top: 9px; transform-origin: 0 50% !important; transform: rotate(-4deg); }
+.leg7 { right: -1px; top: 13px; transform-origin: 0 50% !important; transform: rotate(20deg); } .leg8 { right: 1px; top: 16px; transform-origin: 0 50% !important; transform: rotate(42deg); }
+
+.anvilWrap { position: absolute; left: 50%; bottom: 94px; width: 240px; height: 136px; transform: translateX(-50%); }
+.heatHalo { position: absolute; left: 50%; bottom: -24px; width: 260px; height: 100px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(220, 91, 30, .20), rgba(220,91,30,.04) 45%, transparent 72%); filter: blur(10px); animation: breathe 4.6s ease-in-out infinite; }
+.anvilTop { position: absolute; left: 18px; top: 20px; width: 204px; height: 38px; border-radius: 8px 14px 6px 6px; background: linear-gradient(180deg, #8a8179, #504943 54%, #28231f); box-shadow: 0 14px 28px rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.16), inset 0 -2px 0 rgba(0,0,0,.3); }
+.anvilTop::before { content: ''; position: absolute; left: -44px; top: 2px; width: 66px; height: 30px; background: linear-gradient(180deg, #716961, #3f3934); clip-path: polygon(0 38%, 100% 0, 100% 100%, 0 66%); }
+.anvilTop::after { content: ''; position: absolute; right: -34px; top: 6px; width: 44px; height: 24px; background: linear-gradient(180deg, #746d66, #3a3530); clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.anvilStem { position: absolute; left: 89px; top: 54px; width: 66px; height: 50px; background: linear-gradient(90deg, #27231f, #524a43 45%, #2a2521); clip-path: polygon(10% 0, 90% 0, 74% 100%, 26% 100%); }
+.anvilBase { position: absolute; left: 53px; bottom: 12px; width: 134px; height: 20px; border-radius: 8px 8px 5px 5px; background: linear-gradient(180deg, #4d463f, #26211e); box-shadow: 0 10px 22px rgba(0,0,0,.5); }
+.ember1, .ember2, .ember3 { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #df7e46; box-shadow: 0 0 8px #df7e46; animation: ember 3.8s ease-out infinite; }
+.ember1 { left: 105px; top: 18px; animation-delay: 0s; } .ember2 { left: 128px; top: 28px; animation-delay: 1.2s; } .ember3 { left: 76px; top: 34px; animation-delay: 2.1s; }
+
+.statusCard { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(520px, calc(100% - 36px)); padding: 12px 14px; border-radius: 14px; background: rgba(13, 11, 9, .82); backdrop-filter: blur(12px); box-shadow: inset 0 0 0 1px rgba(255, 221, 190, .08), 0 14px 34px rgba(0,0,0,.32); }
+.statusCard > span { display: flex; align-items: center; gap: 7px; color: #cf7a4e; font: 700 9px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .14em; }
+.statusCard > span i { width: 6px; height: 6px; border-radius: 50%; background: #d67944; box-shadow: 0 0 10px rgba(214,121,68,.65); animation: breathe 3.2s ease-in-out infinite; }
+.statusCard b { display: block; margin-top: 7px; font-size: 14px; font-weight: 600; }
+.statusCard small { display: block; margin-top: 4px; color: #77706a; font-size: 11px; line-height: 1.45; }
+
+.goalBox { margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 18px; border-radius: 18px; background: #0d0c0a; box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+.goalBox small { color: #ac7051; font: 700 9px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .14em; }
+.goalBox p { margin: 5px 0 0; color: #807970; font-size: 13px; }
+.goalBox button { flex: none; min-height: 42px; padding: 0 16px; border: 0; border-radius: 12px; background: #1b1714; box-shadow: inset 0 0 0 1px rgba(223,126,71,.22); color: #8d7c70; font-weight: 600; }
+
+@keyframes breathe { 50% { opacity: .45; transform: scale(.96); } }
+@keyframes ember { 0% { transform: translate(0, 0); opacity: 0; } 18% { opacity: 1; } 100% { transform: translate(18px, -68px); opacity: 0; } }
+@keyframes spiderPath { 0% { transform: translate(0, 0) rotate(-7deg); } 25% { transform: translate(150px, -36px) rotate(5deg); } 55% { transform: translate(290px, 30px) rotate(-3deg); } 78% { transform: translate(430px, -26px) rotate(4deg); } 100% { transform: translate(520px, 34px) rotate(-5deg); } }
+
+@media (max-width: 760px) {
+  .topbar { min-height: 66px; grid-template-columns: 1fr auto; padding: 0 16px; }
+  .mode { order: 3; grid-column: 1 / -1; justify-self: center; margin-bottom: 8px; }
+  .kernelPill { font-size: 0; }
+  .kernelPill::after { content: 'offline'; font-size: 10px; font-family: ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
+  .content { width: 100%; padding: 34px 0 24px; }
+  .copy { padding: 0 18px; margin-bottom: 22px; }
+  .copy h1 { font-size: 38px; }
+  .copy p { font-size: 14px; }
+  .forgeCard { border-radius: 0; box-shadow: inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(255,255,255,.05); }
+  .forgeHead { padding: 15px 16px 12px; }
+  .forgeHead h2 { font-size: 20px; }
+  .forgeHead p { max-width: 250px; line-height: 1.45; }
+  .previewBadge { font-size: 8px; padding: 6px 7px; }
+  .stage { min-height: 470px; height: 470px; }
+  .ambientLabel { right: 12px; top: 12px; font-size: 8px; }
+  .spider { left: 12%; top: 28%; transform: scale(.9); animation-name: spiderPathMobile; }
+  .anvilWrap { bottom: 118px; transform: translateX(-50%) scale(.82); }
+  .statusCard { bottom: 20px; }
+  .goalBox { margin: 14px 14px 0; align-items: flex-start; flex-direction: column; }
+  .goalBox button { width: 100%; }
+}
+
+@keyframes spiderPathMobile { 0% { transform: translate(0, 0) scale(.9); } 35% { transform: translate(110px, -24px) scale(.9); } 70% { transform: translate(205px, 18px) scale(.9); } 100% { transform: translate(255px, -18px) scale(.9); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .spider, .heatHalo, .ember1, .ember2, .ember3, .statusCard > span i { animation: none !important; }
+}
