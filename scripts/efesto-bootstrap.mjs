@@ -49,7 +49,10 @@ export async function inspectEfestoBootstrap(options = {}) {
 export async function probeKernel(baseUrl, port, options = {}) {
   const fetchImpl = options.fetchImpl ?? fetch;
   try {
-    const response = await fetchImpl(`${baseUrl}/status`, { signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS) });
+    const response = await fetchImpl(`${baseUrl}/status`, {
+      redirect: 'error',
+      signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+    });
     const payload = await response.json().catch(() => ({}));
     return {
       reachable: true,

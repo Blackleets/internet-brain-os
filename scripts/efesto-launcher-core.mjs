@@ -143,6 +143,7 @@ export async function readRunningKernelBootstrap(localStatus, options = {}) {
   try {
     const response = await fetchImpl(`http://127.0.0.1:${port}/bootstrap/status`, {
       cache: 'no-store',
+      redirect: 'error',
       signal: AbortSignal.timeout(options.bootstrapTimeoutMs ?? 3000),
     });
     if (!response.ok) return undefined;
