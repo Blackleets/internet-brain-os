@@ -17,7 +17,7 @@ const at = (ms) => new Date(T0.getTime() + ms);
 describe('describeAgent: connection states only from Kernel-observed facts', () => {
   it('never → history → seen → online → working, each from a real fact', () => {
     expect(describeAgent('hermes', { now: T0 }).state).toBe('never');
-    const finished = { id: 'm1', agent: 'hermes', status: 'completed', executionPhase: 'forged', claimedAt: '2026-10-03T09:00:00.000Z', forgedAt: '2026-10-03T09:05:00.000Z' };
+    const finished = { id: 'm1', agent: 'hermes', status: 'completed', executionPhase: 'forged', claimedAt: '2026-10-03T09:00:00.000Z', forgedAt: '2026-10-03T09:05:00.000Z', verificationResults: [{ candidateId: 'c1', status: 'verified', evidenceId: 'evidence:1', supported: true }] };
     const history = describeAgent('hermes', { now: T0, missions: [finished] });
     expect(history).toMatchObject({ state: 'history', lastClaimAt: finished.claimedAt, lastMission: { id: 'm1', phase: 'forged', at: finished.forgedAt } });
     expect(describeAgent('hermes', { now: at(AGENT_ONLINE_WINDOW_MS + 1), contact: { lastSeenAt: T0.toISOString(), lastSeenVia: 'poll' } }).state).toBe('seen');
@@ -30,6 +30,23 @@ describe('describeAgent: connection states only from Kernel-observed facts', () 
     const expired = { id: 'm3', agent: 'hermes', status: 'running', leaseId: 'l', claimedAt: T0.toISOString(), leaseExpiresAt: at(1_000).toISOString() };
     expect(describeAgent('hermes', { now: at(2_000), missions: [expired] }).state).toBe('history');
     expect(describeAgent('hermes', { now: T0, missions: [{ id: 'x', agent: 'other', claimedAt: T0.toISOString() }] }).state).toBe('never');
+  });
+
+  it('never reports a last Mission as forged without a Kernel SUPPORT verdict on fetched Evidence', () => {
+    const base = { agent: 'hermes', status: 'completed', claimedAt: '2026-10-03T09:00:00.000Z', completedAt: '2026-10-03T09:05:00.000Z' };
+    // Public discovery with zero candidates / snippet-only result: completed, but nothing was forged.
+    expect(describeAgent('hermes', { now: T0, missions: [{ ...base, id: 'empty' }] }).lastMission.phase).toBe('completed_without_forge');
+    // A forged stamp with no supported verificationResults (or HTTP 200 read without SUPPORT) is not a Find.
+    const unsupported = { ...base, id: 'ash', executionPhase: 'forged', forgedAt: base.completedAt, verificationResults: [{ candidateId: 'c', status: 'verified', evidenceId: 'evidence:jwt', supported: false }] };
+    expect(describeAgent('hermes', { now: T0, missions: [unsupported] }).lastMission.phase).toBe('completed_without_forge');
+    expect(describeAgent('hermes', { now: T0, missions: [{ ...base, id: 'stamp', executionPhase: 'forged', forgedAt: base.completedAt }] }).lastMission.phase).toBe('completed_without_forge');
+    const supportedNoEvidence = { ...unsupported, id: 'noev', verificationResults: [{ candidateId: 'c', status: 'verified', supported: true }] };
+    expect(describeAgent('hermes', { now: T0, missions: [supportedNoEvidence] }).lastMission.phase).toBe('completed_without_forge');
+    const forged = { ...unsupported, id: 'gold', verificationResults: [{ candidateId: 'c', status: 'verified', evidenceId: 'evidence:drill', supported: true }] };
+    expect(describeAgent('hermes', { now: T0, missions: [forged] }).lastMission.phase).toBe('forged');
+    // Non-completed Missions keep their real phase; a stray forged phase on them is never echoed.
+    expect(describeAgent('hermes', { now: T0, missions: [{ ...base, id: 'f', status: 'failed', executionPhase: 'failed', failedAt: base.completedAt }] }).lastMission.phase).toBe('failed');
+    expect(describeAgent('hermes', { now: T0, missions: [{ ...base, id: 'r', status: 'running', executionPhase: 'forged' }] }).lastMission.phase).toBe('running');
   });
 
   it('counts queued missions waiting for the agent', () => {

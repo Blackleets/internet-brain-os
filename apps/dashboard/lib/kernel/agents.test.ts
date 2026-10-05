@@ -34,6 +34,16 @@ describe('agentConnectionCopy', () => {
   });
 });
 
+describe('agentConnectionCopy: last Mission phase never reads as finished work without Kernel SUPPORT', () => {
+  const history = (phase: string) => agentConnectionCopy({ ...base, state: 'history', kernelStartedAt: '2026-10-04T10:00:00.000Z', lastMission: { id: 'm', phase, at: '2026-10-04T10:39:47.000Z' } }, true, NOW).detail;
+  it('a completed Mission without a forge is "terminada sin Evidence", not "completada"', () => {
+    expect(history('completed')).toContain('(terminada sin Evidence)');
+    expect(history('completed')).not.toContain('completada');
+    expect(history('completed_without_forge')).toContain('(terminada sin Evidence)');
+    expect(history('forged')).toContain('(forjada)');
+  });
+});
+
 describe('connectionTestResult: passes only on a recent Kernel-observed contact', () => {
   it('fails for history/seen/never and when the Kernel does not publish agents', () => {
     expect(connectionTestResult({ ...base, state: 'history' }, true, NOW).ok).toBe(false);

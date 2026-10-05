@@ -48,6 +48,22 @@ function lastActivity(mission) {
   return candidates[0]?.value;
 }
 
+function hasKernelSupport(mission) {
+  return Array.isArray(mission?.verificationResults) && mission.verificationResults.some((item) => item?.supported === true
+    && typeof item.evidenceId === 'string' && item.evidenceId.trim().length > 0);
+}
+
+/**
+ * The last Mission's phase as the Kernel can prove it. "forged" only when the Mission completed with a
+ * Kernel SUPPORT verdict on fetched Evidence; any other completion (no candidates, snippet-only, HTTP 200
+ * read without SUPPORT, a bare forged stamp) is `completed_without_forge`, never finished work.
+ */
+function provenPhase(mission) {
+  if (mission.status === 'completed') return mission.executionPhase === 'forged' && hasKernelSupport(mission) ? 'forged' : 'completed_without_forge';
+  if (mission.executionPhase === 'forged') return mission.status;
+  return mission.executionPhase ?? mission.status;
+}
+
 /**
  * One agent's connection as the Kernel can prove it. States:
  * - working: a Mission of this agent holds a live lease right now;
@@ -82,7 +98,7 @@ export function describeAgent(agent, { contact = {}, missions = [], now = new Da
     lastResultAt: contact.lastResultAt,
     lastFailureAt: contact.lastFailureAt,
     activeMission: active ? { id: active.id, goalTitle: active.goalTitle, attempt: active.attempt, claimedAt: active.claimedAt, leaseExpiresAt: active.leaseExpiresAt } : undefined,
-    lastMission: last ? { id: last.id, goalTitle: last.goalTitle, phase: last.executionPhase ?? last.status, at: lastActivity(last) } : undefined,
+    lastMission: last ? { id: last.id, goalTitle: last.goalTitle, phase: provenPhase(last), at: lastActivity(last) } : undefined,
     queuedMissions: queued,
   };
 }
