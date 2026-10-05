@@ -344,31 +344,28 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
   }
   const references = { caseId, evidenceId };
   let opportunity;
-  // Fail-closed: only classify/project Opportunity when evidenceSupportsGoal already passed.
+  // Fail-closed: only classify/project a Find after evidenceSupportsGoal passed. SUPPORT is the
+  // authority for existence; the heuristic classifier may label the Find but cannot discard it on
+  // a category mismatch with the confirmed Goal scope.
   if (options.promoteOpportunity === true) {
-    const classified = classifyOpportunity(context, references);
-    if (!(classified.status === 'opportunity' && mission.scope?.categories?.length && !mission.scope.categories.includes(classified.opportunity.category))) {
-      // SUPPORT already passed: a page the lead classifier does not recognise still becomes the
-      // Goal's Find instead of forging a Mission with zero Finds.
-      const projected = typeof opportunityProjector.projectSupportedInto === 'function'
-        ? opportunityProjector.projectSupportedInto(nextData, context, references, { scopeCategories: mission.scope?.categories ?? [] })
-        : opportunityProjector.projectInto(nextData, context, references);
-      nextData = projected.data;
-      opportunity = projected.result;
-      if (opportunity?.status === 'opportunity' && opportunity.opportunity?.id) {
-        const stamped = {
-          ...opportunity.opportunity,
-          supported: true,
-          supportReason: options.supportReason ?? 'supported',
-        };
-        nextData = {
-          ...nextData,
-          opportunities: (nextData.opportunities ?? []).map((item) => (
-            item?.id === stamped.id ? stamped : item
-          )),
-        };
-        opportunity = { ...opportunity, opportunity: stamped };
-      }
+    const projected = typeof opportunityProjector.projectSupportedInto === 'function'
+      ? opportunityProjector.projectSupportedInto(nextData, context, references, { scopeCategories: mission.scope?.categories ?? [] })
+      : opportunityProjector.projectInto(nextData, context, references);
+    nextData = projected.data;
+    opportunity = projected.result;
+    if (opportunity?.status === 'opportunity' && opportunity.opportunity?.id) {
+      const stamped = {
+        ...opportunity.opportunity,
+        supported: true,
+        supportReason: options.supportReason ?? 'supported',
+      };
+      nextData = {
+        ...nextData,
+        opportunities: (nextData.opportunities ?? []).map((item) => (
+          item?.id === stamped.id ? stamped : item
+        )),
+      };
+      opportunity = { ...opportunity, opportunity: stamped };
     }
   }
   return { data: nextData, result: { caseId, evidenceId, duplicate, sourceUrl, opportunity } };
