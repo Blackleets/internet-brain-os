@@ -51,6 +51,10 @@ describe('describeAgent: connection states only from Kernel-observed facts', () 
 
   it('counts queued missions waiting for the agent', () => {
     expect(describeAgent('hermes', { now: T0, missions: [{ id: 'q', agent: 'hermes', status: 'queued' }] }).queuedMissions).toBe(1);
+    // Missions parked until Hermes is ready are exactly what "esperan a un agente" must count.
+    expect(describeAgent('hermes', { now: T0, missions: [{ id: 'w', agent: 'hermes', status: 'waiting_for_agent' }, { id: 'q', agent: 'hermes', status: 'queued' }] }).queuedMissions).toBe(2);
+    // Terminal Missions never inflate the waiting count.
+    expect(describeAgent('hermes', { now: T0, missions: [{ id: 'c', agent: 'hermes', status: 'completed' }, { id: 'f', agent: 'hermes', status: 'failed' }] }).queuedMissions).toBe(0);
   });
 
   it('AgentPresence only accepts known agents and contact kinds', () => {

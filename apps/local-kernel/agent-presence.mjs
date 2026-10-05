@@ -79,7 +79,7 @@ export function describeAgent(agent, { contact = {}, missions = [], now = new Da
   const claimed = own.filter((mission) => time(mission.claimedAt) !== undefined)
     .sort((a, b) => (time(lastActivity(b)) ?? 0) - (time(lastActivity(a)) ?? 0));
   const last = claimed[0];
-  const queued = own.filter((mission) => (mission.status === 'queued' || mission.status === 'waiting') && !hasLiveLease(mission, nowMs)).length;
+  const queued = own.filter((mission) => (mission.status === 'queued' || mission.status === 'waiting_for_agent') && !hasLiveLease(mission, nowMs)).length;
   const seenMs = time(contact.lastSeenAt);
   const state = active ? 'working'
     : seenMs !== undefined && nowMs - seenMs <= windowMs ? 'online'
