@@ -470,3 +470,5 @@ Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.
 ## Update rule
 
 Replace stale facts here when the verified baseline, blocker, next priority or recovery procedure changes. Do not turn this file into an append-only diary.
+
+- Internal candidate identity advanced to `0.1.0-internal.82` for integrated Hermes model identity, source logos and vault diagnostic preservation. Previous `.81` artifacts are frozen; `.82` requires qualification on its exact commit and founder Windows UAT. `publicLaunchApproved=false`.

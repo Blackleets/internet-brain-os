@@ -729,3 +729,5 @@ This completes the web-first design slice. Responsive mobile use is included thr
 
 - Focused bootstrap/launcher checks 31/31 before adding the explicit collision case; final vault regression 4/4. Full suite 270 files / 1815 tests passed, including that collision test.
 - Typecheck, production build, architecture, constitution, release-readiness and diff checks passed. No dependencies changed. Windows CI/package qualification remains required for the published preservation head.
+
+- Internal candidate identity advanced to `0.1.0-internal.82` for integrated Hermes model identity, source logos and vault diagnostic preservation. Previous `.81` artifacts are frozen; `.82` requires qualification on its exact commit and founder Windows UAT. `publicLaunchApproved=false`.

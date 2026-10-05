@@ -119,3 +119,5 @@ All meaningful project changes should be recorded here.
 
 - Replace the fixed-name overwrite/delete probe with a unique exclusive owner-private temporary file. Preserve historical probe-named user files and concurrent diagnostic isolation.
 - #256 and #258 integrated in main after exact-head CI, packaged Windows checks and authentic Hermes 14/14. Founder-PC UAT remains outstanding.
+
+- Internal candidate identity advanced to `0.1.0-internal.82` for integrated Hermes model identity, source logos and vault diagnostic preservation. Previous `.81` artifacts are frozen; `.82` requires qualification on its exact commit and founder Windows UAT. `publicLaunchApproved=false`.
