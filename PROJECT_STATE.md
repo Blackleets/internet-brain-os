@@ -23,15 +23,13 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 
 ## Current internal baseline — 2026-10-05
 
-- PR #254 is merged to main at `79ebdb1eb609ba05d3a1574d52b1e2e30a0b9562`, integrating the prior Forge, search, notification and reliability improvement chain. Older OPEN/candidate statements below describe historical checkpoints, not current integration status.
-- Windows First Run `37297336341`, Windows Launcher `37297333868` and Internal Test Package `37297333623` succeeded before integration. This is automated qualification, not founder-PC installation or manual UAT.
-- Authentic Hermes run `37297333680` failed before Efesto build/L1-L7: the downloaded model no longer matched the old `324d162be6ca` pin. No acceptance report was generated. The identity gate correctly blocked the changed artifact.
-- PR #256 (`fix/efesto-live-model-identity`) selects explicit `qwen3.5:2b-q8_0` and the full reviewed registry manifest SHA-256 `0689d44085e06d165161a8a9a1731344278cfb5aade63a3c3dbdb48ab54b130a`. Provisioning rejects missing/duplicate model rows, malformed or different full digests and absent tool capability. No automatic repinning is allowed.
-- Registry review: https://ollama.com/library/qwen3.5:2b-q8_0 and https://registry.ollama.ai/v2/library/qwen3.5/manifests/2b-q8_0 on 2026-10-05. Downloaded manifest hash was verified locally; its model/projector layers match the failed run's download. New artifact inference behavior and live L1-L7 still require qualification.
-- PR #256 exact head `4026455f6016158d306b611b38382f0e7a2317c7`: CI `37318713328`, Internal Test Package `37318713368`, authentic Hermes `37318713439` succeeded. Sanitized live job `111791968962` proves 14/14, attempt=1, 7 candidates, 7 verified Evidence and 5 Kernel SUPPORT Finds; L6 resolves all 5 to fetched Evidence. This is isolated-run evidence, not founder-PC UAT. #256 remains a separate PR until integrated.
-- Follow-on branch `improve/efesto-source-logos` adds bundled original GitHub/VS Code source marks and the original Hermes favicon to the agent connector. Unknown sources or failed local image loads render initials. Only exact reviewed hostname matches receive a brand; no favicon service or automatic source requests. Source statuses and crawler rendering stay unchanged.
-- Founder Windows installation and packaged manual UAT remain unverified. Website/agent logos remain pending. Crawler, SUPPORT, stores, memory authority and publicLaunchApproved=false are preserved by this correction.
-- Rollback: revert this identity correction; keep #254 and user data intact. Resume with exact-SHA CI/live qualification, then exact-installed Windows UAT, then source/agent logos.
+- Main is `60aded6f4d7aeb4eb43efdf44086b5ffbf6cd9ae`: #254 improvement chain, #256 live model identity correction (merged `685f1d5`) and #258 original local source/Hermes logos are integrated. Their branches are retained. Historical OPEN/candidate statements below do not describe this integration state.
+- #256 exact head `4026455`: CI `37318713328`, package `37318713368` and authentic Hermes `37318713439` succeeded (14/14, attempt=1, 7 verified Evidence, 5 SUPPORT Finds).
+- #258 exact head `94da1bb`: CI `37321018834` succeeded, including 32 browser tests. Package `37321019367` passed exact-artifact install/repair on Windows 2022/2025. Authentic Hermes `37321019144`, job `111799808879`, succeeded (14/14, attempt=1, 4 verified Evidence, 2 SUPPORT Finds with fetched provenance). These are isolated automated results, not founder-PC UAT or post-merge proof.
+- The live workflow checks explicit `qwen3.5:2b-q8_0` full reviewed SHA-256 `0689d44085e06d165161a8a9a1731344278cfb5aade63a3c3dbdb48ab54b130a`; no automatic repinning. Source identity assets are local original GitHub/VS Code/Hermes files with retained provenance. Unknown or failed assets use initials; no runtime favicon service or SUPPORT changes.
+- Follow-on `fix/efesto-vault-probe-preservation` repairs the Obsidian diagnostic's fixed `.efesto-write-test` overwrite/delete behavior with unique, exclusively opened owner-private probes. The diagnostic may still create a temporary write probe; it is not described as read-only. No user store migration or crawler/Kernel authority change.
+- Founder Windows version/installation and exact-package manual UAT remain unverified. publicLaunchApproved=false. Finish qualification of this preservation fix, then compare the exact installed PC identity with the qualified main/package before repair/UAT. Additional logos/providers need real assets/adapters.
+- Rollback: revert only the preservation fix; preserve merged #256/#258, branches and user files.
 
 ## Current checkpoint - 2026-10-03
 
@@ -472,3 +470,5 @@ Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.
 ## Update rule
 
 Replace stale facts here when the verified baseline, blocker, next priority or recovery procedure changes. Do not turn this file into an append-only diary.
+
+- Internal candidate identity advanced to `0.1.0-internal.82` for integrated Hermes model identity, source logos and vault diagnostic preservation. Previous `.81` artifacts are frozen; `.82` requires qualification on its exact commit and founder Windows UAT. `publicLaunchApproved=false`.

@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
-import { access, constants, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { access, constants, mkdir, open, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { createConnection } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
@@ -92,13 +93,19 @@ export async function probeObsidian({ env = process.env, config = {}, paths, opt
   const configuredPath = env.HEPHAESTUS_OBSIDIAN_DIR ?? config.obsidianDir;
   if (!configuredPath) return { configured: false };
   const vaultPath = resolve(configuredPath);
-  const probePath = join(vaultPath, '.efesto-write-test');
+  const probePath = join(vaultPath, `.efesto-write-test-${randomUUID()}`);
   try {
     if (options.writeObsidianProbe) await options.writeObsidianProbe({ vaultPath, probePath });
     else {
       await mkdir(vaultPath, { recursive: true });
-      await writeFile(probePath, 'efesto write probe\n', { flag: 'w' });
-      await rm(probePath, { force: true });
+      // Never overwrite or remove an existing vault entry, even on a collision.
+      const handle = await open(probePath, 'wx', 0o600);
+      try {
+        await handle.writeFile('efesto write probe\n');
+      } finally {
+        try { await handle.close(); }
+        finally { await rm(probePath, { force: true }); }
+      }
     }
     return { configured: true, writable: true, path: vaultPath, error: undefined, vaultRelativePath: config.obsidianLabel ?? 'configured vault' };
   } catch (error) {
