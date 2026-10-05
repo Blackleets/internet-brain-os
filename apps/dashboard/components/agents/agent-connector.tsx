@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Bot, Check, ChevronRight, Copy, PlugZap, RefreshCw, X } from 'lucide-react';
 import type { AgentStatus, AgentsSnapshot } from '../../lib/kernel/agents';
 import { agentConnectionCopy, connectionTestResult } from '../../lib/kernel/agent-connection-copy';
+import { SourceMark } from '../brand/source-mark';
 
 export type ShellKind = 'bash' | 'powershell';
 
@@ -103,7 +104,7 @@ export function AgentConnector({ connected, kernelUrl, agents, onConnectKernel, 
 
   return <div className="agent-connector">
     <section className="agent-status" data-tone={copy.tone} aria-labelledby={statusId}>
-      <span className="agent-status-mark" aria-hidden="true"><Bot /><i /></span>
+      <span className="agent-status-mark" aria-hidden="true">{hermes?.id === 'hermes' ? <SourceMark url="https://hermes-agent.nousresearch.com" /> : <Bot />}<i /></span>
       <div>
         <small>HERMES AGENT · ESTADO DEL KERNEL</small>
         <h3 id={statusId}>{copy.title}</h3>

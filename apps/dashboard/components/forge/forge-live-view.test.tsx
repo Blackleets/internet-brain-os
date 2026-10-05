@@ -22,6 +22,15 @@ const row = (extra: Record<string, unknown> = {}) => ({ id: MISSION_ID, goalId: 
 afterEach(() => cleanup());
 
 describe('ForgeLiveView', () => {
+  it('adds only a local source identity and preserves candidate state and link', () => {
+    const url = 'https://github.com/git-guides';
+    const { container } = render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ searchCandidates: [{ ...candidates[0], url }] }) })} />);
+    const link = screen.getByRole('link', { name: /Abrir fuente github.com/ });
+    expect(link.getAttribute('href')).toBe(url);
+    expect(link.querySelector('img')?.getAttribute('src')).toBe('/brand/sources/github.png');
+    expect(container.querySelector('.forge-source')?.getAttribute('data-state')).toBe('candidate');
+    expect(container.querySelector('.forge-badge-final')?.textContent).toBe('CANDIDATO');
+  });
   it('renders an honest offline forge with a working connect action and no sources or numbers', () => {
     const onConnect = vi.fn();
     render(<ForgeLiveView model={buildForgeModel({ connected: false, kernelOnline: false })} onConnect={onConnect} />);

@@ -43,6 +43,32 @@ async function useForgeFixture(page: Page): Promise<void> {
   await page.route('http://127.0.0.1:4100/api/opportunities', fulfill(opportunities));
 }
 
+for (const width of [390, 1280]) {
+  test(`source marks stay local and preserve SUPPORT at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const remoteRequests: string[] = [];
+    page.on('request', (request) => {
+      const host = new URL(request.url()).hostname;
+      if (host !== '127.0.0.1' && host !== 'localhost') remoteRequests.push(host);
+    });
+    const branded = (value: unknown) => JSON.parse(JSON.stringify(value).replaceAll('docs.fixture.example/ownership', 'github.com/git-guides').replaceAll('docs.fixture.example', 'github.com'));
+    await useForgeFixture(page);
+    await page.route('http://127.0.0.1:4100/api/agent-missions', fulfill(branded(missions)));
+    await page.route(`http://127.0.0.1:4100/api/agent-missions/${MISSION}/evidence`, fulfill(branded(evidence)));
+    await page.route('http://127.0.0.1:4100/api/opportunities', fulfill(branded(opportunities)));
+    await page.goto('/');
+    await connect(page);
+    await openHome(page, width < 760);
+    const supported = page.locator('.forge-source[data-state="supported"]');
+    await expect(supported.locator('.efesto-source-mark img')).toHaveAttribute('src', '/brand/sources/github.png');
+    await expect.poll(() => supported.locator('img').evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+    await expect(page.locator('.forge-source[data-state="unsupported"] .efesto-source-mark')).toHaveText('BL');
+    await expectNoHorizontalOverflow(page, width);
+    expect(remoteRequests).toEqual([]);
+  });
+}
+
 async function connect(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Conectar Kernel' }).first().click();
   await page.getByRole('textbox', { name: 'URL del Kernel', exact: true }).fill('http://127.0.0.1:4100');
