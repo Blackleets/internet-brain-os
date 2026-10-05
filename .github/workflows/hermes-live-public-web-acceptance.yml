@@ -47,8 +47,8 @@ jobs:
       OLLAMA_VERSION: 0.32.8
       OLLAMA_ARCHIVE_SHA256: c10b76c39cb72908cc92dff314e80e32736c03f1287efb4b39e0b70fd600cc64
       OLLAMA_BIN: /tmp/efesto-ollama-runtime/bin/ollama
-      OLLAMA_MODEL: qwen3.5:2b
-      OLLAMA_MODEL_ID: 324d162be6ca
+      OLLAMA_MODEL: qwen3.5:2b-q8_0
+      OLLAMA_MODEL_ID: 0689d44085e06d165161a8a9a1731344278cfb5aade63a3c3dbdb48ab54b130a
       OLLAMA_HOST: 127.0.0.1:11434
       OLLAMA_CONTEXT_LENGTH: 8192
     steps:
@@ -121,17 +121,14 @@ jobs:
             exit 1
           fi
           "${OLLAMA_BIN}" pull "${OLLAMA_MODEL}"
-          actual_model_id="$(curl --fail --silent --show-error "http://${OLLAMA_HOST}/api/tags" \
-            | jq --raw-output --arg model "${OLLAMA_MODEL}" '.models[] | select(.name == $model) | .digest' \
-            | cut -c1-12)"
-          if [ "${actual_model_id}" != "${OLLAMA_MODEL_ID}" ]; then
-            echo "::error::Pulled model identity did not match the reviewed Qwen3 artifact"
-            exit 1
-          fi
-          curl --fail --silent --show-error "http://${OLLAMA_HOST}/api/show" \
+          curl --fail --silent --show-error --max-time 30 "http://${OLLAMA_HOST}/api/tags" \
+            --output /tmp/efesto-ollama-tags.json
+          curl --fail --silent --show-error --max-time 30 "http://${OLLAMA_HOST}/api/show" \
             --header 'content-type: application/json' \
             --data "{\"model\":\"${OLLAMA_MODEL}\"}" \
-            | jq --exit-status '.capabilities | index("tools")' >/dev/null
+            --output /tmp/efesto-ollama-show.json
+          node scripts/hermes-live-model-identity.mjs \
+            /tmp/efesto-ollama-tags.json /tmp/efesto-ollama-show.json
 
       - name: Install and build Efesto
         shell: bash

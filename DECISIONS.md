@@ -117,3 +117,7 @@ Implications: Example chips only fill the composer. Goal create still does not a
 ## 2026-10-05 — qualify the existing Forge candidate before extending scope
 
 Start from the latest #252 reliability head, preserving the complete #251 search/telemetry/SUPPORT stack. Treat incomplete Kernel replies and redirects as transport failures, retain persisted reconciliation and avoid UI completion inferred from HTTP success. Improve recovery/accessibility through existing Goal revision contracts. No new authority, dependency, user data migration or public-release claim is justified. Rollback is a revert of this additive candidate commit.
+
+## 2026-10-05 — Reviewed full live model identity
+
+The mutable qwen3.5:2b alias changed and correctly failed provisioning in run 37297333680. Select the explicit Q8_0 variant, review its public registry manifest and verify its full SHA-256 locally and in the disposable workflow. Never automatically accept a new digest. Inference compatibility requires a fresh live run; no SUPPORT threshold, worker budget or founder data changes. Rollback reverts only this provisioning correction.
