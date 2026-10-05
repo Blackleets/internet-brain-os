@@ -104,3 +104,8 @@ All meaningful project changes should be recorded here.
 - Reject redirects for authenticated worker/dashboard transport and distinguish dashboard body timeouts from invalid JSON.
 - Recover Goal editing after save rejection, retain text, prevent duplicate submissions and contain modal keyboard focus.
 - Preserve Forge v3 crawler visuals, SUPPORT and all existing private records; document qualification and rollback plan.
+
+## 2026-10-05 — Hermes live model identity correction
+
+- Select explicit Qwen3.5 2B Q8_0 with reviewed full SHA-256 instead of a stale 12-character alias pin.
+- Reject ambiguous model metadata and missing tools before authentic Hermes acceptance. Preserve all Kernel gates and public-launch block.

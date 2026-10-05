@@ -284,3 +284,7 @@ Replay Lab also provides a local real-capture import boundary. The operator sele
 ## 2026-10-05 candidate transport and Goal editor reliability
 
 Authenticated dashboard JSON/NDJSON calls and worker bookkeeping reject redirects. The worker retains response-body aborts as timeouts, rejects missing leased mission identities before invoking an adapter, and confirms the same mission is persisted as verifying/completed before reporting submission success. Lost responses still reconcile against persisted Kernel records; no client gains SUPPORT or memory authority. The dashboard distinguishes body timeouts from malformed JSON. Goal revision editing retains text on unconfirmed save, restores controls, prevents overlapping submissions and contains keyboard focus; it still uses the same revision-bound Kernel endpoint and requires separate research confirmation.
+
+## 2026-10-05 live inference provisioning identity
+
+The disposable live workflow selects an explicit Q8_0 tag and checks the entire reviewed SHA-256 through scripts/hermes-live-model-identity.mjs before Hermes runs. Missing, duplicate, malformed or mismatched identities and absent tools fail closed. This is provisioning verification only, not proof of inference or Kernel SUPPORT; Kernel authority and stored records are unchanged.

@@ -686,3 +686,21 @@ This completes the web-first design slice. Responsive mobile use is included thr
 
 ### Do not forget
 - The crawler/spider/anvil/canvas, packages/kernel/src/evidence/support.ts, memory authority, query selection and existing records are unchanged. No new dependency, paid service or authority. publicLaunchApproved remains false. Rollback is a revert of this improvement commit; do not revert the #252 baseline.
+
+## Handoff 2026-10-05 — Codex live model identity
+
+- Base main 79ebdb1 (#254 merged), branch fix/efesto-live-model-identity. Founder requested autonomous continuation.
+- Confirmed failed run 37297333680 job 111721560210 stopped at model provisioning; build and live acceptance skipped. Registry manifest for explicit qwen3.5:2b-q8_0 hashes to 0689d44085e06d165161a8a9a1731344278cfb5aade63a3c3dbdb48ab54b130a. Its model/projector layer IDs match the failed download.
+- Replaced mutable alias/short pin with explicit variant/full digest, added tested fail-closed metadata verifier and updated current state. No crawler, SUPPORT, user store or authority edits.
+- Validate focused tests, full suite, architecture, types and build; publish correction as PR and inspect exact-SHA workflows. New artifact tools/inference and real L1-L7 remain unproven until that run. Windows installation/UAT and source/agent logos remain outstanding; publicLaunchApproved=false.
+- Rollback: revert this correction, preserve #254. No claim of founder-PC control or installation.
+
+### Fresh local validation for the identity correction
+
+- Focused tests 15/15; full Vitest 268 files / 1799 tests passed.
+- Typecheck, production build, architecture, constitution and release-readiness checks passed. Generated next-env.d.ts change was restored.
+- Full live inference, exact-SHA CI/browser/Windows/package checks and installed-PC manual UAT are separate and still pending.
+
+### Publication authorization
+
+- Founder explicitly authorized publishing fix/efesto-live-model-identity to Blackleets/internet-brain-os and opening its PR on 2026-10-05. The prior automatic push rejection is resolved by that authorization. Exact-SHA CI and live acceptance must still be reviewed; publication does not certify the Windows installation or public launch.

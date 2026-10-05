@@ -21,13 +21,15 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 - Search snippet/agent text ≠ Evidence.
 - Responsive mobile-width support does not imply phone → PC Kernel authority.
 
-## Active improvement candidate — 2026-10-05
+## Current internal baseline — 2026-10-05
 
-- Founder authorized additive improvements without deleting existing behavior or data. Active branch `improve/efesto-reliability-review` starts from PR #252 head `a258ca3b5bb7a9aece4f7679711f0addec6e5809`, including the #251 Forge v3 candidate. These changes are not installed on the founder PC or merged to main.
-- Worker body-reading timeouts remain visible; malformed/unleased claims and unconfirmed submission responses cannot fabricate execution/completion. Authenticated worker/dashboard requests reject redirects. Dashboard body timeouts retain TIMEOUT classification.
-- Goal editing retains typed text and recovers after rejected saves, prevents duplicate submissions, and wraps keyboard focus within the modal. Desktop/mobile browser regression assertions are included.
-- Crawler/spider/anvil/canvas and `packages/kernel/src/evidence/support.ts` remain unchanged; no store migration/deletion or new dependency/authority. `publicLaunchApproved` remains false.
-- Detailed plan and rollback: `docs/efesto-improvement-plan-2026-10-05.md`. See the latest `LLM_HANDOFF.md` entry for exact validation and remaining environment/UAT limits.
+- PR #254 is merged to main at `79ebdb1eb609ba05d3a1574d52b1e2e30a0b9562`, integrating the prior Forge, search, notification and reliability improvement chain. Older OPEN/candidate statements below describe historical checkpoints, not current integration status.
+- Windows First Run `37297336341`, Windows Launcher `37297333868` and Internal Test Package `37297333623` succeeded before integration. This is automated qualification, not founder-PC installation or manual UAT.
+- Authentic Hermes run `37297333680` failed before Efesto build/L1-L7: the downloaded model no longer matched the old `324d162be6ca` pin. No acceptance report was generated. The identity gate correctly blocked the changed artifact.
+- Branch `fix/efesto-live-model-identity` selects explicit `qwen3.5:2b-q8_0` and the full reviewed registry manifest SHA-256 `0689d44085e06d165161a8a9a1731344278cfb5aade63a3c3dbdb48ab54b130a`. Provisioning rejects missing/duplicate model rows, malformed or different full digests and absent tool capability. No automatic repinning is allowed.
+- Registry review: https://ollama.com/library/qwen3.5:2b-q8_0 and https://registry.ollama.ai/v2/library/qwen3.5/manifests/2b-q8_0 on 2026-10-05. Downloaded manifest hash was verified locally; its model/projector layers match the failed run's download. New artifact inference behavior and live L1-L7 still require qualification.
+- Founder Windows installation and packaged manual UAT remain unverified. Website/agent logos remain pending. Crawler, SUPPORT, stores, memory authority and publicLaunchApproved=false are preserved by this correction.
+- Rollback: revert this identity correction; keep #254 and user data intact. Resume with exact-SHA CI/live qualification, then exact-installed Windows UAT, then source/agent logos.
 
 ## Current checkpoint - 2026-10-03
 
@@ -453,7 +455,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 
 ## What remains
 
-1. PR #241 OPEN: never merge without Lewis's explicit go-ahead. Live UAT-D / UAT A-F on an isolated Kernel store remain unrun (#238 is already merged) and are Lewis's call.
+1. Qualify the model-identity correction on one unchanged SHA. #254 has integrated the improvement chain; installed-PC UAT-D / UAT A-F remain outstanding.
 2. Packaged UAT-1 to UAT-6 on an immutable artifact after the seal is honest.
 3. Local scorecard (Useful Find Rate) after that.
 4. `publicLaunchApproved` stays false until UAT on the exact candidate.
