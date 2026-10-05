@@ -3,6 +3,7 @@ import { InboxError } from './page-context-inbox.mjs';
 import { enrichGoalIntent, GOAL_CATEGORIES } from './goal-intent-enrichment.mjs';
 import { createGoalExecutionAuthorizationReceipt, currentGoalRevision } from './goal-execution-authorization.mjs';
 import { isMissionActive } from './agent-missions.mjs';
+import { settleStrandedVerification } from './mission-verification-settlement.mjs';
 
 const ALLOWED_CATEGORIES = new Set(GOAL_CATEGORIES);
 const MAX_REVISION_HISTORY = 20;
@@ -30,7 +31,10 @@ export class GoalManager {
    * - The revision number increases by one (legacy Goals start at 1), so Mission authorization
    *   receipts issued for the earlier revision no longer match (automatic continuation denies
    *   `authorization_revision_mismatch`) until the user confirms again ("Buscar más").
-   * - A Mission with a live Hermes lease blocks the revision (409); a queued / waiting Mission is
+   * - A Mission with a live Hermes lease, or with search candidates still awaiting Kernel web.read
+   *   verification (running/verifying, no lease), blocks the revision (409). Revising under a pending
+   *   batch made the verifier deny authorization_revision_mismatch and strand the Mission as
+   *   running/verifying + verificationBlock with no way out. A queued / waiting Mission is
    *   re-scoped to the new text and re-authorized by the same interactive confirmation.
    * - Finished Missions, their priorAttempts, Evidence and Finds are never touched.
    */
@@ -72,6 +76,9 @@ export class GoalManager {
       const goalMissions = missions.filter((mission) => mission.goalId === goalId);
       if (goalMissions.some((mission) => mission.status === 'running' && isMissionActive(mission, now))) {
         throw new InboxError('GOAL_MISSION_RUNNING', 'Hermes is working on this Goal; edit it when the attempt finishes', 409);
+      }
+      if (goalMissions.some((mission) => isVerificationPending(mission, now))) {
+        throw new InboxError('GOAL_MISSION_RUNNING', 'The Kernel is verifying this Goal\'s search candidates; edit it when the verification finishes', 409);
       }
       const decidedAt = now.toISOString();
       const revised = {
@@ -169,6 +176,16 @@ function validateGoalContent(input) {
 
   const location = input.location === undefined ? undefined : clean(input.location, 80);
   return { title, categories, keywords, location: location || undefined };
+}
+
+/**
+ * Candidates the Kernel still has to verify under the Mission's current authorization receipt.
+ * Not pending: a verification already blocked by policy (it will not run again), or a stranded one
+ * that the next Mission list settles as failed.
+ */
+function isVerificationPending(mission, now) {
+  if (mission?.status !== 'running' || mission.executionPhase !== 'verifying' || mission.verificationBlock) return false;
+  return settleStrandedVerification(mission, now) === mission;
 }
 
 function goalContent(goal) {
