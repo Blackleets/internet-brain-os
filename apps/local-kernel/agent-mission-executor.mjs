@@ -367,7 +367,9 @@ function isPrivateIpv4Literal(host) {
   if ([a, b, c, d].some((part) => part < 0 || part > 255)) return true;
   return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254)
     || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)
-    || (a === 100 && b >= 64 && b <= 127) || a >= 224;
+    || (a === 100 && b >= 64 && b <= 127) || a >= 224
+    // Special-purpose (IANA): 192.0.0.0/24 IETF protocol, 198.18.0.0/15 benchmarking.
+    || (a === 192 && b === 0 && c === 0) || (a === 198 && (b === 18 || b === 19));
 }
 
 function refuseSnippetCompletion() {
