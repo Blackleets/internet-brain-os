@@ -731,3 +731,9 @@ This completes the web-first design slice. Responsive mobile use is included thr
 - Typecheck, production build, architecture, constitution, release-readiness and diff checks passed. No dependencies changed. Windows CI/package qualification remains required for the published preservation head.
 
 - Internal candidate identity advanced to `0.1.0-internal.82` for integrated Hermes model identity, source logos and vault diagnostic preservation. Previous `.81` artifacts are frozen; `.82` requires qualification on its exact commit and founder Windows UAT. `publicLaunchApproved=false`.
+
+## 2026-10-05 — Read-only installation identity
+
+Add `node scripts/efesto-install-identity.mjs` / `pnpm efesto:identity` to report internal version, exact checkout/archive commit and clean/modified checkout state without exposing paths, filenames, credentials or performing runtime/vault/network probes. `BUILD_COMMIT.txt` is expanded by Git archive through export-subst. Reject parent-repository identity for nested packages and keep legacy/malformed identity unknown. Identity is not authenticity or readiness; verify the package SHA256 separately. Candidate `.83` replaces frozen `.82` for this new behavior; public launch remains blocked. #259 merged as f635676 after all five workflows passed. Founder-PC UAT remains outstanding. Rollback this slice only.
+
+Validation for identity slice: focused 9/9, full 271 files / 1820 tests; typecheck, production build, architecture, constitution, release checks and diff check passed. Exact published ZIP identity and Windows install/repair await new-head CI. Local test proves export-subst archive identity; no Windows or founder-PC pass is claimed. No dependencies added.

@@ -11,6 +11,8 @@ Founder/internal validation only. Automated green is necessary but not sufficien
 - Public launch approved: **no**.
 - Every previously used internal candidate is frozen and **must never be reused**. Any behavior, validation, UI, installer or packaging change advances `INTERNAL_RELEASE.json`.
 
+For installations that include the identity command (internal `.83` onward), before choosing an update action run `node scripts/efesto-install-identity.mjs` from the installed Efesto folder (or `pnpm efesto:identity`). This reads code identity only; it does not start or repair the Kernel, probe the vault, read tokens or check runtime readiness. `source=git_checkout` reports clean/modified state without filenames; `source=git_archive` reports the archived commit marker; legacy packages remain unknown. Compare the commit with the matching successful workflow and verify the external ZIP SHA256SUMS separately: the marker itself is not proof of authenticity.
+
 ## UAT-1 — clean Windows install
 
 On a clean Windows profile, extract the exact candidate and run `Install Efesto.cmd`.
