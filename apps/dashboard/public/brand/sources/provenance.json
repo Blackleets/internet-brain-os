@@ -1,0 +1,23 @@
+{
+  "purpose": "Source identity only; no endorsement, integration readiness or SUPPORT authority. Served locally; no runtime favicon requests.",
+  "assets": [
+    {
+      "file": "github.png",
+      "source": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+      "retrievedAt": "2026-10-05",
+      "sha256": "6d6ef7bede0416b6ebee2014be5852576dbce89235fe16ea5c44ed01bd522132"
+    },
+    {
+      "file": "vscode.png",
+      "source": "https://raw.githubusercontent.com/microsoft/vscode/main/resources/linux/code.png",
+      "retrievedAt": "2026-10-05",
+      "sha256": "a51653af6534e0637d91b55ebd5f63f989302071d67a0724e48adfc16624b0a7"
+    },
+    {
+      "file": "hermes.ico",
+      "source": "https://github.com/NousResearch/hermes-agent/blob/main/website/static/img/favicon.ico",
+      "retrievedAt": "2026-10-05",
+      "sha256": "a5765ffc24a7f1f149ffe0732e2a67e78d3fb578f563271de7ad19aa188fda7a"
+    }
+  ]
+}

@@ -704,3 +704,15 @@ This completes the web-first design slice. Responsive mobile use is included thr
 ### Publication authorization
 
 - Founder explicitly authorized publishing fix/efesto-live-model-identity to Blackleets/internet-brain-os and opening its PR on 2026-10-05. The prior automatic push rejection is resolved by that authorization. Exact-SHA CI and live acceptance must still be reviewed; publication does not certify the Windows installation or public launch.
+
+## Handoff 2026-10-05 — Source logos after authentic Hermes qualification
+
+- #256 exact head 4026455: CI 37318713328, package 37318713368 and authentic Hermes 37318713439 succeeded. Read job 111791968962: full reviewed digest/tools passed; L1-L7 14/14, attempt=1, 7 candidates/Evidence, 5 SUPPORT Finds with fetched provenance. Not Windows UAT.
+- Follow-on improve/efesto-source-logos starts from origin/fix/efesto-live-model-identity (same tree as locally validated correction). Uses repository Efesto Product UI contract.
+- Added locally served original GitHub/VS Code/Hermes identity assets with URL/hash provenance, exact parsed host lookup, local failure fallback, and source/agent integration. No crawler, SUPPORT, store, provider or authority changes. Unit and desktop/mobile browser regressions cover brand spoofing, fallback and no remote icon requests.
+- Next: qualify this UI slice, integrate qualified PRs through the existing review flow, then exact-installed Windows UAT. Other source/agent brands require real assets/adapters; do not claim every brand or Muse is integrated. publicLaunchApproved=false.
+
+### Source identity validation
+
+- Focused source/Forge/connector tests 34/34 passed; full suite 269 files / 1811 tests passed. Typecheck, architecture, release-readiness and production build passed.
+- Local browser run could not launch: Chromium headless shell is not installed. No browser pass is claimed; added desktop/mobile local-network-only assertions await exact-SHA CI. Generated next-env and next dev agent files were excluded from the change.

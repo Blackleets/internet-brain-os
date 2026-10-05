@@ -109,3 +109,8 @@ All meaningful project changes should be recorded here.
 
 - Select explicit Qwen3.5 2B Q8_0 with reviewed full SHA-256 instead of a stale 12-character alias pin.
 - Reject ambiguous model metadata and missing tools before authentic Hermes acceptance. Preserve all Kernel gates and public-launch block.
+
+## 2026-10-05 — Private source identity
+
+- Show bundled original GitHub and VS Code marks beside Forge source domains and original Hermes favicon beside Kernel agent status.
+- Add local initials fallback and exact-hostname brand matching without remote favicon services. Preserve SUPPORT, source actions, mission history and crawler behavior.

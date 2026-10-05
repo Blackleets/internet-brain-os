@@ -121,3 +121,7 @@ Start from the latest #252 reliability head, preserving the complete #251 search
 ## 2026-10-05 — Reviewed full live model identity
 
 The mutable qwen3.5:2b alias changed and correctly failed provisioning in run 37297333680. Select the explicit Q8_0 variant, review its public registry manifest and verify its full SHA-256 locally and in the disposable workflow. Never automatically accept a new digest. Inference compatibility requires a fresh live run; no SUPPORT threshold, worker budget or founder data changes. Rollback reverts only this provisioning correction.
+
+## 2026-10-05 — Curated local brand assets
+
+Prefer downloaded original marks with source/hash provenance over runtime favicon services, which would disclose researched domains. Unknown hosts use initials rather than invented logos. Limit this slice to existing Forge source cards and the actual Hermes connector; no new providers or claims of integration. Rollback reverts this presentation slice without deleting Evidence or changing #256.

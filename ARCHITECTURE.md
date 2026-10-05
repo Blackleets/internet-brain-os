@@ -288,3 +288,7 @@ Authenticated dashboard JSON/NDJSON calls and worker bookkeeping reject redirect
 ## 2026-10-05 live inference provisioning identity
 
 The disposable live workflow selects an explicit Q8_0 tag and checks the entire reviewed SHA-256 through scripts/hermes-live-model-identity.mjs before Hermes runs. Missing, duplicate, malformed or mismatched identities and absent tools fail closed. This is provisioning verification only, not proof of inference or Kernel SUPPORT; Kernel authority and stored records are unchanged.
+
+## Local source identity assets
+
+Forge source cards and the Hermes agent connector may render curated original assets served from dashboard/public/brand/sources. Exact parsed hostname matching protects branding; unknown or failed assets fall back to inert initials. The UI performs no source favicon requests or third-party domain disclosure. Logos convey identity only, with SUPPORT/state unchanged. provenance.json retains retrieval URLs and SHA-256; no Kernel or crawler changes.
