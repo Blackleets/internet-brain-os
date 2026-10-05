@@ -97,3 +97,10 @@ All meaningful project changes should be recorded here.
 - Added .gitignore for Node/TypeScript
 - Added placeholder source files and tsconfig for each package
 - Validation: pnpm install, typecheck, test, and build all pass
+
+## 2026-10-05 — Efesto reliability improvement candidate
+
+- Preserve Kernel response-body deadlines and reject malformed/unleased worker responses instead of inventing completion.
+- Reject redirects for authenticated worker/dashboard transport and distinguish dashboard body timeouts from invalid JSON.
+- Recover Goal editing after save rejection, retain text, prevent duplicate submissions and contain modal keyboard focus.
+- Preserve Forge v3 crawler visuals, SUPPORT and all existing private records; document qualification and rollback plan.

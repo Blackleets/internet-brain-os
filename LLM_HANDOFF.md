@@ -647,3 +647,42 @@ This completes the web-first design slice. Responsive mobile use is included thr
 - Not UAT. Real-Kernel screenshots used manually submitted candidates via the agent result contract, not the Hermes runtime. `publicLaunchApproved` remains false.
 - Observed outside this branch's scope: the SUPPORT gate passed docs.python.org classes tutorial for Goal "Rust lifetimes explained" (title word "explained" counted as a goal term; "rust" absent); Kernel web.read stored python.org homepage `rawText` as undecoded binary; some stored page titles keep HTML entities.
 
+
+## Handoff 2026-10-05 - Codex Efesto reliability review
+
+### What I changed
+- Started from latest PR #252 head a258ca3 (including #251 Forge v3), not stale main. Founder authorized additive autonomous improvements without deleting existing behavior/data.
+- Preserved worker response-body deadlines, rejected malformed/unleased claim responses before adapter execution, and required same-mission persisted confirmation before submission success.
+- Rejected redirects for authenticated worker and dashboard JSON/NDJSON calls; preserved dashboard body timeout classification.
+- Recovered Goal editing after rejected/unconfirmed saves with retained text and safe alerts, single-flight submission, read-only pending input and keyboard focus containment.
+- Added unit, browser and Gherkin regressions plus a detailed improvement/qualification plan.
+
+### Files changed
+- apps/local-kernel/hermes-mission-worker.mjs and its test.
+- apps/dashboard/lib/kernel/client.ts and its test.
+- apps/dashboard/components/forge/goal-edit-sheet.tsx and its test; e2e/forge.spec.ts.
+- docs/efesto-improvement-plan-2026-10-05.md; tests/acceptance/efesto-recoverable-transport.feature.
+- PROJECT_STATE.md, ARCHITECTURE.md, CHANGELOG.md, DECISIONS.md and this handoff.
+
+### Why I changed it
+- Prevent unbounded or falsely successful transport states and allow safe recovery from failed Goal saves while preserving the working Forge.
+
+### Tests or checks performed
+- Pinned pnpm 11.11.0 frozen-lockfile install; no dependency/lockfile change.
+- Focused final regressions: 45/45 passed.
+- Final full suite: 267 files / 1789 tests passed.
+- Typecheck, architecture guard, release-readiness contract, production dashboard build and extension build/package passed.
+- Strict production audit: no known vulnerabilities.
+- SQLite persistence: 7/7 passed; Hermes smoke, altered-replay attack smoke and Replay Lab API smoke passed.
+- Local Chromium download failed repeatedly with invalid/truncated ZIP; no local browser pass is claimed. Existing CI browser suite now includes desktop/mobile dialog Tab containment checks.
+
+### Risks / uncertainties
+- main, the hosted dashboard and the founder's Windows installation are not updated by this candidate branch.
+- New browser/Windows CI and exact-package UAT must be checked against the published SHA. Synthetic and smoke tests are not authentic Hermes or manual UAT.
+- Local runtime records used by tests were isolated; no founder store was accessed or migrated.
+
+### Next recommended step
+- Verify this PR's exact-SHA CI/browser/Windows/package runs, then integrate only the qualified candidate through the existing stack. Follow docs/efesto-improvement-plan-2026-10-05.md for exact-installation UAT and measured next improvements.
+
+### Do not forget
+- The crawler/spider/anvil/canvas, packages/kernel/src/evidence/support.ts, memory authority, query selection and existing records are unchanged. No new dependency, paid service or authority. publicLaunchApproved remains false. Rollback is a revert of this improvement commit; do not revert the #252 baseline.

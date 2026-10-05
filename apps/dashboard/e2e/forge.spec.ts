@@ -402,6 +402,12 @@ for (const view of [{ shot: '390', width: 390, height: 844 }, { shot: 'desktop',
     await expect(dialog.getByLabel('Palabras clave de la próxima búsqueda')).toContainText('borrowing');
     const save = dialog.getByRole('button', { name: 'Guardar revisión' });
     await expect(save).toBeEnabled();
+    const close = dialog.getByRole('button', { name: 'Cerrar edición' });
+    await save.focus();
+    await page.keyboard.press('Tab');
+    await expect(close).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(save).toBeFocused();
     await page.waitForTimeout(400); // let the sheet's entry animation finish before measuring
     const box = await dialog.boundingBox();
     expect(box?.width ?? 0).toBeLessThanOrEqual(view.width);

@@ -154,6 +154,26 @@ describe('KernelClient', () => {
     } satisfies Pick<KernelClientError, 'name' | 'code'>);
   });
 
+  it('reports a response-body deadline as TIMEOUT rather than malformed JSON', async () => {
+    const client = clientWith(async (_input, init) => ({ ok: true, status: 200,
+      json: () => new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(init.signal?.reason), { once: true });
+      }),
+    }) as Response, 20);
+    await expect(client.get('/api/cases', (value) => value)).rejects.toMatchObject({ code: 'TIMEOUT' });
+  });
+
+  it('refuses redirects for both JSON and streaming authenticated requests', async () => {
+    const redirects: Array<RequestRedirect | undefined> = [];
+    const client = clientWith(async (_input, init) => {
+      redirects.push(init?.redirect);
+      return new Response('{}\n');
+    });
+    await client.get('/api/cases', (value) => value);
+    await client.streamNdjson('/api/chat/stream', {}, () => {});
+    expect(redirects).toEqual(['error', 'error']);
+  });
+
   it.each(['/health', '/status', '/bootstrap/status'])('removes a caller-provided token from the public %s route', async (path) => {
     let headers: Headers | undefined;
     const client = clientWith(async (_input, init) => {

@@ -113,3 +113,7 @@ Decision: The authenticated Efesto dashboard primary navigation is Inicio, Objet
 Reason: The previous Home defaulted to Chat and mixed mission/system internals into the primary nav, which hid the Goal to confirmation to Evidence path.
 
 Implications: Example chips only fill the composer. Goal create still does not authorize network. Green checks and confidence appear only from persisted Kernel fields. This is not UAT, public launch, or live Hermes L1 to L7 proof.
+
+## 2026-10-05 — qualify the existing Forge candidate before extending scope
+
+Start from the latest #252 reliability head, preserving the complete #251 search/telemetry/SUPPORT stack. Treat incomplete Kernel replies and redirects as transport failures, retain persisted reconciliation and avoid UI completion inferred from HTTP success. Improve recovery/accessibility through existing Goal revision contracts. No new authority, dependency, user data migration or public-release claim is justified. Rollback is a revert of this additive candidate commit.

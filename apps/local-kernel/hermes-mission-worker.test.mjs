@@ -121,6 +121,50 @@ describe('Hermes mission worker', () => {
       .rejects.toThrow('Kernel request timed out after 50 ms');
   }, 5_000);
 
+  it('bounds a stalled response body and preserves its timeout during failure reporting', async () => {
+    const stalledBody = (_url, init) => Promise.resolve({ ok: true, status: 200, json: () => new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true });
+    }) });
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ mission }) })
+      .mockImplementationOnce(stalledBody)
+      .mockImplementationOnce(stalledBody)
+      .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true }) });
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl,
+      execute: async () => ({ findings: [] }), requestTimeoutMs: 50 }))
+      .resolves.toMatchObject({ status: 'failed', reported: true, reason: 'Kernel request timed out after 50 ms' });
+    expect(fetchImpl.mock.calls.every(([, init]) => init.redirect === 'error')).toBe(true);
+  });
+
+  it('does not execute an adapter after a malformed claim response', async () => {
+    const execute = vi.fn();
+    const fetchImpl = vi.fn(async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('Unexpected HTML'); } }));
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute }))
+      .rejects.toThrow('Kernel returned invalid JSON with HTTP 200');
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it.each([{}, { mission: null }, { mission: { id: 'mission:1' } }])
+    ('never starts an adapter without a Kernel-issued lease: %j', async (body) => {
+      const execute = vi.fn();
+      const fetchImpl = vi.fn(async () => ({ ok: true, status: 200, json: async () => body }));
+      await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute }))
+        .rejects.toThrow('Kernel did not return a leased mission');
+      expect(execute).not.toHaveBeenCalled();
+    });
+
+  it.each([{}, { mission: { ...mission, status: 'queued' } }, { mission: { id: 'mission:other', status: 'completed' } }])
+    ('does not invent completion from an unconfirmed submission: %j', async (body) => {
+      const fetchImpl = vi.fn()
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ mission }) })
+        .mockResolvedValueOnce({ ok: true, status: 202, json: async () => body })
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ missions: [] }) })
+        .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true }) });
+      await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl,
+        execute: async () => ({ findings: [] }) }))
+        .resolves.toMatchObject({ status: 'failed', reported: true, reason: 'Kernel did not confirm candidate submission' });
+    });
+
   it('does not report a timeout until the adapter process has actually stopped', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'efesto-worker-timeout-test-'));
     const fixture = join(directory, 'ignore-term.mjs');

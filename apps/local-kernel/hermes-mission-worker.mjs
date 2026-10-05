@@ -25,6 +25,10 @@ export async function runHermesMissionWorker(options = {}) {
   }, true);
   if (!claimed) return { status: 'idle' };
   const mission = claimed.mission;
+  if (!mission || typeof mission.id !== 'string' || !mission.id.trim()
+    || typeof mission.leaseId !== 'string' || !mission.leaseId.trim()) {
+    throw new Error('Kernel did not return a leased mission');
+  }
   try {
     const timeoutMs = options.timeoutMs ?? configuredTimeout(process.env.HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
     const result = await execute(command, args, mission, { timeoutMs });
@@ -39,6 +43,12 @@ export async function runHermesMissionWorker(options = {}) {
       const reconciled = await reconcileSettledMission(request, baseUrl, apiToken, mission.id);
       if (reconciled) return { status: missionWorkerStatus(reconciled), mission: reconciled };
       throw error;
+    }
+    if (!completed.mission || completed.mission.id !== mission.id
+      || !(completed.mission.status === 'completed' || completed.mission.executionPhase === 'verifying')) {
+      const reconciled = await reconcileSettledMission(request, baseUrl, apiToken, mission.id);
+      if (reconciled) return { status: missionWorkerStatus(reconciled), mission: reconciled };
+      throw new Error('Kernel did not confirm candidate submission');
     }
     return { status: missionWorkerStatus(completed.mission), mission: completed.mission };
   } catch (error) {
@@ -100,21 +110,30 @@ function adapterFailure(code, stderr) {
 }
 
 async function kernelRequest(fetchImpl, url, token, init, allowEmpty = false, timeoutMs = DEFAULT_KERNEL_REQUEST_TIMEOUT_MS) {
-  let response;
   try {
-    response = await fetchImpl(url, {
+    const response = await fetchImpl(url, {
       ...init,
       headers: { 'x-hephaestus-token': token, ...(init.body ? { 'content-type': 'application/json' } : {}) },
+      // Authenticated local bookkeeping must never follow a redirect to another origin.
+      redirect: 'error',
       signal: AbortSignal.timeout(timeoutMs),
     });
+    if (allowEmpty && response.status === 204) return undefined;
+    let body;
+    try {
+      body = await response.json();
+    } catch (error) {
+      if (error?.name === 'TimeoutError' || error?.name === 'AbortError') throw error;
+      throw new Error(`Kernel returned invalid JSON with HTTP ${response.status}`);
+    }
+    if (!response.ok) throw new Error(typeof body?.error === 'string' ? body.error : `Kernel request failed with HTTP ${response.status}`);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('Kernel returned an invalid response');
+    return body;
   } catch (error) {
+    // The same request deadline covers the response body, not only the headers.
     if (error?.name === 'TimeoutError' || error?.name === 'AbortError') throw new Error(`Kernel request timed out after ${timeoutMs} ms`);
     throw error;
   }
-  if (allowEmpty && response.status === 204) return undefined;
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error ?? `Kernel request failed with HTTP ${response.status}`);
-  return body;
 }
 
 async function reconcileSettledMission(request, baseUrl, token, missionId) {

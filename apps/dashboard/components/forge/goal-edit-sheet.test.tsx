@@ -73,6 +73,41 @@ describe('"Editar Goal" (Kernel Goal revision)', () => {
     expect(onEditGoal).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps Tab and Shift+Tab inside the edit dialog', () => {
+    render(<ForgeLiveView model={model()} onEditGoal={async () => true} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Goal' }));
+    const first = screen.getByRole('button', { name: 'Cerrar edición' });
+    const field = screen.getByLabelText('Texto del Goal');
+    const cancel = screen.getByRole('button', { name: 'Cancelar' });
+    cancel.focus();
+    fireEvent.keyDown(cancel, { key: 'Tab' });
+    expect(document.activeElement).toBe(first);
+    first.focus();
+    fireEvent.keyDown(first, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(cancel);
+    fireEvent.change(field, { target: { value: 'empleo de rider en Madrid' } });
+    const save = screen.getByRole('button', { name: 'Guardar revisión' });
+    save.focus();
+    fireEvent.keyDown(save, { key: 'Tab' });
+    expect(document.activeElement).toBe(first);
+  });
+
+  it('retains edited text and recovers the controls after a rejected save, without leaking diagnostics', async () => {
+    const onEditGoal = vi.fn().mockRejectedValueOnce(new Error('private-token-secret')).mockResolvedValueOnce(true);
+    render(<ForgeLiveView model={model()} onEditGoal={onEditGoal} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Goal' }));
+    const field = screen.getByLabelText('Texto del Goal') as HTMLTextAreaElement;
+    fireEvent.change(field, { target: { value: 'empleo de rider en Madrid' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar revisión' }));
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy());
+    expect(field.value).toBe('empleo de rider en Madrid');
+    expect(screen.getByRole('alert').textContent).not.toContain('private-token-secret');
+    expect((screen.getByRole('button', { name: 'Guardar revisión' }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar revisión' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(onEditGoal).toHaveBeenCalledTimes(2);
+  });
+
   it('while Hermes holds a lease the dialog explains why and cannot save; too-short text cannot save', () => {
     const onEditGoal = vi.fn(async () => true);
     const { unmount } = render(<ForgeLiveView model={model({ leaseExpiresAt: '2026-10-04T10:05:00.000Z' })} onEditGoal={onEditGoal} />);

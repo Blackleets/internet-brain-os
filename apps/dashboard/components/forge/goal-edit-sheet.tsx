@@ -26,6 +26,10 @@ export function GoalEditSheet({ goal, onSave, onClose }: Props) {
   const titleId = useId();
   const noteId = useId();
   const fieldId = useId();
+  const errorId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const savingRef = useRef(false);
+  const [saveError, setSaveError] = useState<string>();
   const [text, setText] = useState(goal.title);
   const [pending, setPending] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
@@ -45,20 +49,39 @@ export function GoalEditSheet({ goal, onSave, onClose }: Props) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (disabled) return;
+    if (disabled || savingRef.current) return;
+    savingRef.current = true;
     setPending(true);
-    const ok = await onSave({ goalId: goal.goalId, title: normalized, expectedRevision: goal.revision });
-    setPending(false);
-    if (ok) onClose();
+    setSaveError(undefined);
+    try {
+      const ok = await onSave({ goalId: goal.goalId, title: normalized, expectedRevision: goal.revision });
+      if (ok) onClose();
+      else setSaveError('No se ha confirmado el guardado. Tu texto sigue aquí; revisa la conexión o la revisión del Goal antes de reintentar.');
+    } catch {
+      setSaveError('No se ha confirmado el guardado. Tu texto sigue aquí; revisa la conexión antes de reintentar.');
+    } finally {
+      savingRef.current = false;
+      setPending(false);
+    }
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Escape' && !pending) { event.stopPropagation(); onClose(); }
+    if (event.key !== 'Tab') return;
+    const controls = [...(dialogRef.current?.querySelectorAll<HTMLButtonElement | HTMLTextAreaElement>('button, textarea') ?? [])]
+      .filter((control) => !control.disabled);
+    const first = controls[0], last = controls[controls.length - 1];
+    if (!first || !last) { event.preventDefault(); dialogRef.current?.focus(); return; }
+    if (event.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) {
+      event.preventDefault(); last.focus();
+    } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialogRef.current)) {
+      event.preventDefault(); first.focus();
+    }
   }
 
   const sheet = <div className="goal-edit-root" onKeyDown={onKeyDown}>
     <div className="goal-edit-scrim" aria-hidden="true" onClick={() => { if (!pending) onClose(); }} />
-    <div className="goal-edit-sheet" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={noteId}>
+    <div ref={dialogRef} tabIndex={-1} className="goal-edit-sheet" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={saveError ? `${noteId} ${errorId}` : noteId}>
       <span className="goal-edit-grip" aria-hidden="true" />
       <header className="goal-edit-head">
         <div>
@@ -69,7 +92,7 @@ export function GoalEditSheet({ goal, onSave, onClose }: Props) {
       </header>
       <form onSubmit={submit}>
         <label className="goal-edit-label" htmlFor={fieldId}>Texto del Goal</label>
-        <textarea id={fieldId} ref={field} className="goal-edit-field" rows={3} maxLength={MAX_TITLE} value={text}
+        <textarea id={fieldId} ref={field} className="goal-edit-field" readOnly={pending} rows={3} maxLength={MAX_TITLE} value={text}
           onChange={(event) => setText(event.target.value)} aria-invalid={tooShort ? 'true' : undefined} />
         <p className="goal-edit-count" aria-live="polite">{normalized.length}/{MAX_TITLE}</p>
         <div className="goal-edit-keywords" aria-label="Palabras clave de la próxima búsqueda">
@@ -81,6 +104,7 @@ export function GoalEditSheet({ goal, onSave, onClose }: Props) {
           <li><Check aria-hidden="true" />Se conservan el Goal, su misión, los intentos anteriores, la Evidence y los Finds.</li>
           <li><Check aria-hidden="true" />No ejecuta nada: para buscar con el texto nuevo, confirma «Buscar más» después.</li>
         </ul>
+        {saveError ? <p id={errorId} className="goal-edit-blocked" role="alert">{saveError}</p> : null}
         {goal.blocked ? <p className="goal-edit-blocked" role="status">{goal.blocked}</p> : null}
         <div className="goal-edit-actions">
           <button type="button" className="goal-edit-cancel" disabled={pending} onClick={onClose}>Cancelar</button>

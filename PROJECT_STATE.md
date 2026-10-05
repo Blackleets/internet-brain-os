@@ -21,6 +21,14 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 - Search snippet/agent text ≠ Evidence.
 - Responsive mobile-width support does not imply phone → PC Kernel authority.
 
+## Active improvement candidate — 2026-10-05
+
+- Founder authorized additive improvements without deleting existing behavior or data. Active branch `improve/efesto-reliability-review` starts from PR #252 head `a258ca3b5bb7a9aece4f7679711f0addec6e5809`, including the #251 Forge v3 candidate. These changes are not installed on the founder PC or merged to main.
+- Worker body-reading timeouts remain visible; malformed/unleased claims and unconfirmed submission responses cannot fabricate execution/completion. Authenticated worker/dashboard requests reject redirects. Dashboard body timeouts retain TIMEOUT classification.
+- Goal editing retains typed text and recovers after rejected saves, prevents duplicate submissions, and wraps keyboard focus within the modal. Desktop/mobile browser regression assertions are included.
+- Crawler/spider/anvil/canvas and `packages/kernel/src/evidence/support.ts` remain unchanged; no store migration/deletion or new dependency/authority. `publicLaunchApproved` remains false.
+- Detailed plan and rollback: `docs/efesto-improvement-plan-2026-10-05.md`. See the latest `LLM_HANDOFF.md` entry for exact validation and remaining environment/UAT limits.
+
 ## Current checkpoint - 2026-10-03
 
 - GitHub `main` includes squash-merge PR #243 `f225af0` (Next 16.3.8 for GHSA-vcvr-r3jv-pc5j, Turbopack root fix, and Kernel-SUPPORT-passing Mission pages promoted as Finds with `promotedBy: 'kernel_support'`; pages that fail SUPPORT still create no Find). Vercel production deployed from it.
