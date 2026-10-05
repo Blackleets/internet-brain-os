@@ -26,8 +26,18 @@ export async function repairEfestoLauncher(options = {}) {
       return { started: false, status: before };
     }
     await ops.writeLog('Pairing is required; safely restarting the owned Kernel to issue a fresh one-time pairing code.');
-    await ops.stopOwnedProcess(kernel.pid);
-    if (ops.waitForStopped) await ops.waitForStopped();
+    const stop = await ops.stopOwnedProcess(kernel.pid);
+    if (stop?.stopped === false) {
+      await ops.writeLog('Pairing recovery stopped: the owned Kernel stop request failed.');
+      return { started: false, status: before, reason: 'stop_failed' };
+    }
+    if (ops.waitForStopped) {
+      const afterStop = await ops.waitForStopped();
+      if (afterStop?.kernel === 'ready') {
+        await ops.writeLog('Pairing recovery stopped: Kernel shutdown was not confirmed before the deadline.');
+        return { started: false, status: afterStop, reason: 'stop_not_confirmed' };
+      }
+    }
     before = await ops.inspect();
   }
 
@@ -47,7 +57,11 @@ export async function shutdownEfestoLauncher(options = {}) {
   const status = await ops.inspect();
   const kernel = status.diagnostics?.kernel ?? {};
   if (kernel.pid && kernel.owned === true && kernel.verified === true) {
-    await ops.stopOwnedProcess(kernel.pid);
+    const stop = await ops.stopOwnedProcess(kernel.pid);
+    if (stop?.stopped === false) {
+      await ops.writeLog('Efesto Kernel stop request failed; launcher process record retained.');
+      return { stopped: false, status, reason: 'stop_failed' };
+    }
     await ops.writeLog('Efesto Kernel shutdown requested for owned launcher process.');
     return { stopped: true, status };
   }
@@ -82,8 +96,9 @@ export function launcherOps(options = {}) {
     waitForReady: () => waitForReady({ ...options, env, cwd, paths }),
     waitForStopped: () => waitForStopped({ ...options, env, cwd, paths }),
     stopOwnedProcess: async (pid) => {
-      await stopLauncherProcessTree(pid, options);
-      await rm(paths.pidFile, { force: true });
+      const result = await stopLauncherProcessTree(pid, options);
+      if (result.stopped) await rm(paths.pidFile, { force: true });
+      return result;
     },
     openEfesto: () => openEfesto(env),
   };
