@@ -716,3 +716,16 @@ This completes the web-first design slice. Responsive mobile use is included thr
 
 - Focused source/Forge/connector tests 34/34 passed; full suite 269 files / 1811 tests passed. Typecheck, architecture, release-readiness and production build passed.
 - Local browser run could not launch: Chromium headless shell is not installed. No browser pass is claimed; added desktop/mobile local-network-only assertions await exact-SHA CI. Generated next-env and next dev agent files were excluded from the change.
+
+## Handoff 2026-10-05 — Integrated baseline and vault preservation
+
+- Integrated #256 as 685f1d5, then #258 as 60aded6, using expected exact-head guards and normal merges; no branches removed. Main tree matches the validated logo candidate.
+- #258 CI 37321018834 and package 37321019367 passed (32 browser tests, exact-package Windows 2022/2025 install-repair). Live 37321019144 job 111799808879 passed 14/14 with 4 candidates/verified Evidence, 2 SUPPORT Finds, attempt=1 and fetched provenance. No installed-PC UAT or public launch claimed.
+- New branch fix/efesto-vault-probe-preservation starts from main 60aded6. During installation diagnostic review, found probeObsidian overwrites/removes fixed .efesto-write-test. Corrected with UUID name, exclusive owner-private open and owned-handle cleanup; no crawler, SUPPORT, domain authority, secrets or store changes.
+- Scoped target: scripts/efesto-bootstrap.mjs, vault regression tests/Gherkin and continuity docs. Risk: temporary cleanup can truthfully fail if vault IO fails; rollback is this slice only. Diagnostic performs a temporary write, so do not call existing launcher status read-only.
+- Founder Windows installation still inaccessible from this execution environment; diagnose actual PC identity before updating. publicLaunchApproved=false.
+
+### Fresh preservation validation
+
+- Focused bootstrap/launcher checks 31/31 before adding the explicit collision case; final vault regression 4/4. Full suite 270 files / 1815 tests passed, including that collision test.
+- Typecheck, production build, architecture, constitution, release-readiness and diff checks passed. No dependencies changed. Windows CI/package qualification remains required for the published preservation head.

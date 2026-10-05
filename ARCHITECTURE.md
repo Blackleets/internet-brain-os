@@ -292,3 +292,7 @@ The disposable live workflow selects an explicit Q8_0 tag and checks the entire 
 ## Local source identity assets
 
 Forge source cards and the Hermes agent connector may render curated original assets served from dashboard/public/brand/sources. Exact parsed hostname matching protects branding; unknown or failed assets fall back to inert initials. The UI performs no source favicon requests or third-party domain disclosure. Logos convey identity only, with SUPPORT/state unchanged. provenance.json retains retrieval URLs and SHA-256; no Kernel or crawler changes.
+
+## Vault diagnostic ownership
+
+The local Obsidian write diagnostic creates a UUID-named probe with exclusive open and owner-private permissions, writes through its owned handle and removes only that probe after closing. Collision/open failure cannot trigger deletion. Existing vault entries and concurrent diagnostics remain independent. This is a temporary write diagnostic, not a read-only operation; no Kernel authority or source store changes.

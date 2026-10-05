@@ -125,3 +125,7 @@ The mutable qwen3.5:2b alias changed and correctly failed provisioning in run 37
 ## 2026-10-05 — Curated local brand assets
 
 Prefer downloaded original marks with source/hash provenance over runtime favicon services, which would disclose researched domains. Unknown hosts use initials rather than invented logos. Limit this slice to existing Forge source cards and the actual Hermes connector; no new providers or claims of integration. Rollback reverts this presentation slice without deleting Evidence or changing #256.
+
+## 2026-10-05 — Exclusive vault diagnostic files
+
+The prior write check could overwrite and remove an existing .efesto-write-test entry. Use a unique name and exclusive open; cleanup occurs only after acquiring ownership and closing the handle. Existing validation behavior and configured-vault semantics remain compatible. Tests retain original contents and run eight concurrent checks. Rollback is a scoped code revert; no migration.
