@@ -129,3 +129,7 @@ Prefer downloaded original marks with source/hash provenance over runtime favico
 ## 2026-10-05 — Exclusive vault diagnostic files
 
 The prior write check could overwrite and remove an existing .efesto-write-test entry. Use a unique name and exclusive open; cleanup occurs only after acquiring ownership and closing the handle. Existing validation behavior and configured-vault semantics remain compatible. Tests retain original contents and run eight concurrent checks. Rollback is a scoped code revert; no migration.
+
+## 2026-10-05 — Read-only installation identity
+
+Add `node scripts/efesto-install-identity.mjs` / `pnpm efesto:identity` to report internal version, exact checkout/archive commit and clean/modified checkout state without exposing paths, filenames, credentials or performing runtime/vault/network probes. `BUILD_COMMIT.txt` is expanded by Git archive through export-subst. Reject parent-repository identity for nested packages and keep legacy/malformed identity unknown. Identity is not authenticity or readiness; verify the package SHA256 separately. Candidate `.83` replaces frozen `.82` for this new behavior; public launch remains blocked. #259 merged as f635676 after all five workflows passed. Founder-PC UAT remains outstanding. Rollback this slice only.

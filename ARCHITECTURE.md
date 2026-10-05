@@ -296,3 +296,7 @@ Forge source cards and the Hermes agent connector may render curated original as
 ## Vault diagnostic ownership
 
 The local Obsidian write diagnostic creates a UUID-named probe with exclusive open and owner-private permissions, writes through its owned handle and removes only that probe after closing. Collision/open failure cannot trigger deletion. Existing vault entries and concurrent diagnostics remain independent. This is a temporary write diagnostic, not a read-only operation; no Kernel authority or source store changes.
+
+## 2026-10-05 — Read-only installation identity
+
+Add `node scripts/efesto-install-identity.mjs` / `pnpm efesto:identity` to report internal version, exact checkout/archive commit and clean/modified checkout state without exposing paths, filenames, credentials or performing runtime/vault/network probes. `BUILD_COMMIT.txt` is expanded by Git archive through export-subst. Reject parent-repository identity for nested packages and keep legacy/malformed identity unknown. Identity is not authenticity or readiness; verify the package SHA256 separately. Candidate `.83` replaces frozen `.82` for this new behavior; public launch remains blocked. #259 merged as f635676 after all five workflows passed. Founder-PC UAT remains outstanding. Rollback this slice only.

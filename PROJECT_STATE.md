@@ -23,13 +23,11 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 
 ## Current internal baseline — 2026-10-05
 
-- Main is `60aded6f4d7aeb4eb43efdf44086b5ffbf6cd9ae`: #254 improvement chain, #256 live model identity correction (merged `685f1d5`) and #258 original local source/Hermes logos are integrated. Their branches are retained. Historical OPEN/candidate statements below do not describe this integration state.
-- #256 exact head `4026455`: CI `37318713328`, package `37318713368` and authentic Hermes `37318713439` succeeded (14/14, attempt=1, 7 verified Evidence, 5 SUPPORT Finds).
-- #258 exact head `94da1bb`: CI `37321018834` succeeded, including 32 browser tests. Package `37321019367` passed exact-artifact install/repair on Windows 2022/2025. Authentic Hermes `37321019144`, job `111799808879`, succeeded (14/14, attempt=1, 4 verified Evidence, 2 SUPPORT Finds with fetched provenance). These are isolated automated results, not founder-PC UAT or post-merge proof.
-- The live workflow checks explicit `qwen3.5:2b-q8_0` full reviewed SHA-256 `0689d44085e06d165161a8a9a1731344278cfb5aade63a3c3dbdb48ab54b130a`; no automatic repinning. Source identity assets are local original GitHub/VS Code/Hermes files with retained provenance. Unknown or failed assets use initials; no runtime favicon service or SUPPORT changes.
-- Follow-on `fix/efesto-vault-probe-preservation` repairs the Obsidian diagnostic's fixed `.efesto-write-test` overwrite/delete behavior with unique, exclusively opened owner-private probes. The diagnostic may still create a temporary write probe; it is not described as read-only. No user store migration or crawler/Kernel authority change.
-- Founder Windows version/installation and exact-package manual UAT remain unverified. publicLaunchApproved=false. Finish qualification of this preservation fix, then compare the exact installed PC identity with the qualified main/package before repair/UAT. Additional logos/providers need real assets/adapters.
-- Rollback: revert only the preservation fix; preserve merged #256/#258, branches and user files.
+- Main is `f635676c90ef414233296e93c6e29342fe3e3f87`: #254, #256 (reviewed full Hermes model identity), #258 (original bundled logos) and #259 (exclusive Obsidian diagnostic probes) are integrated. Historical OPEN/candidate statements below are frozen checkpoints.
+- #259 exact head `a7a603a24dc5259dd75db134c76637023c30c76e`, internal `.82`: CI `37323902526`, package `37323902680`, launcher `37323902997`, first-run `37323902390` and authentic Hermes `37323902377` succeeded. Package install/repair passed Windows 2022/2025; live job `111809612254` passed 14/14, attempt=1. Local suite passed 270 files / 1815 tests. These are exact-head automated results, not founder-PC UAT or post-merge qualification.
+- Follow-on branch `feat/efesto-install-identity`, internal `.83`: add a read-only installation identity command and export-subst build commit marker. Code identity does not establish runtime readiness or package authenticity. Older packages without the marker remain unknown. No token/config/vault reads, network probes, runtime startup or repair.
+- Founder Windows installation and exact-package manual UAT remain unverified; `publicLaunchApproved=false`. Finish candidate qualification, then obtain the installed identity before selecting update/repair actions. The araña, Kernel authority, SUPPORT and user stores stay unchanged.
+- Rollback: revert only the identity command and archive marker; preserve prior integrations and user data. `.82` is frozen and must not be reused.
 
 ## Current checkpoint - 2026-10-03
 

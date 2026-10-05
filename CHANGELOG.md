@@ -121,3 +121,7 @@ All meaningful project changes should be recorded here.
 - #256 and #258 integrated in main after exact-head CI, packaged Windows checks and authentic Hermes 14/14. Founder-PC UAT remains outstanding.
 
 - Internal candidate identity advanced to `0.1.0-internal.82` for integrated Hermes model identity, source logos and vault diagnostic preservation. Previous `.81` artifacts are frozen; `.82` requires qualification on its exact commit and founder Windows UAT. `publicLaunchApproved=false`.
+
+## 2026-10-05 — Read-only installation identity
+
+Add `node scripts/efesto-install-identity.mjs` / `pnpm efesto:identity` to report internal version, exact checkout/archive commit and clean/modified checkout state without exposing paths, filenames, credentials or performing runtime/vault/network probes. `BUILD_COMMIT.txt` is expanded by Git archive through export-subst. Reject parent-repository identity for nested packages and keep legacy/malformed identity unknown. Identity is not authenticity or readiness; verify the package SHA256 separately. Candidate `.83` replaces frozen `.82` for this new behavior; public launch remains blocked. #259 merged as f635676 after all five workflows passed. Founder-PC UAT remains outstanding. Rollback this slice only.
