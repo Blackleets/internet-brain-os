@@ -1,0 +1,24 @@
+// Mobile screenshot of the Finds (Hallazgos) view on the live dashboard (read-only).
+import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
+const require = createRequire('/workspace/ibos-forge-live/apps/dashboard/package.json');
+const { chromium } = require('@playwright/test');
+const token = readFileSync('/tmp/forge-kernel-token', 'utf8').trim();
+const [base, out, full] = process.argv.slice(2);
+const browser = await chromium.launch();
+const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+const page = await context.newPage();
+await page.goto(base, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Conectar Kernel' }).first().click();
+await page.getByRole('textbox', { name: 'URL del Kernel', exact: true }).fill('http://127.0.0.1:4310');
+await page.getByLabel('Token privado', { exact: true }).fill(token);
+await page.getByRole('button', { name: 'Autorizar dispositivo', exact: true }).click();
+await page.waitForTimeout(1500);
+const closeToast = page.getByRole('button', { name: 'Cerrar aviso' });
+if (await closeToast.count()) await closeToast.first().click().catch(() => {});
+await page.evaluate(() => [...document.querySelectorAll('.efesto-sidebar nav button, .efesto-sidebar button')].find((b) => b.textContent.trim().startsWith('Hallazgos'))?.click());
+await page.waitForTimeout(2500);
+const titles = await page.evaluate(() => [...document.querySelectorAll('main h2, main h3, main strong')].map((e) => e.textContent.trim()).filter(Boolean).slice(0, 40));
+await page.screenshot({ path: out, fullPage: full === 'full' });
+console.log(JSON.stringify(titles));
+await browser.close();

@@ -42,6 +42,7 @@ export class KernelClient {
       const response = await this.fetcher(url, {
         ...init,
         cache: 'no-store',
+        redirect: 'error',
         headers: this.headersFor(url, init),
         signal: request.signal,
       });
@@ -54,6 +55,8 @@ export class KernelClient {
         body = await response.json();
         return parse(body);
       } catch (error) {
+        if (request.timedOut()) throw new KernelClientError('TIMEOUT');
+        if (request.signal.aborted) throw error;
         if (error instanceof KernelClientError) throw error;
         throw new KernelClientError('INVALID_RESPONSE');
       }
@@ -73,6 +76,7 @@ export class KernelClient {
       const response = await this.fetcher(url, {
         ...init,
         cache: 'no-store',
+        redirect: 'error',
         headers: this.headersFor(url, {
           ...init,
           headers: { ...Object.fromEntries(new Headers(init.headers)), accept: 'application/x-ndjson' },

@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { writeFile } from 'node:fs/promises';
+import { appendFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { detectHermesRuntime } from '../apps/local-kernel/hermes-runtime.mjs';
 import {
@@ -7,12 +7,13 @@ import {
   sleep, startKernel, stopKernel, waitForHealth,
 } from './hermes-acceptance-lib.mjs';
 import {
-  checkAuthorityFieldsIgnored, checkConsentRequired, checkDeduplication,
+  checkAuthorityFieldsIgnored, checkConsentRequired, checkDeduplication, checkLegacyFindingsRefused,
   checkHostileUrlsRejected, checkInvalidLeaseRejected, checkOversizedPayloadRejected,
   checkReplayIdempotentAfterCompletion, checkTerminalStateOwnedByKernel,
   checkUnauthenticatedAccessRejected,
 } from './hermes-acceptance-checks.mjs';
 import { assessLivePublicWebJourney, isHonestBlockedMissionOutcome } from './hermes-live-journey-assessment.mjs';
+import { classifyAcceptanceFailure, summarizeLiveVerification } from './hermes-live-journey-assessment.mjs';
 
 const PORT = Number(process.env.HEPHAESTUS_ACCEPTANCE_PORT ?? 4310);
 const INTERNAL_PORT = Number(process.env.HEPHAESTUS_ACCEPTANCE_INTERNAL_PORT ?? 4311);
@@ -66,6 +67,7 @@ export async function runAcceptance(options = {}) {
   let kernel;
   const checks = [];
   let blocked;
+  let verification;
 
   try {
     if (!portFree) throw new Error(`Acceptance port ${PORT} is already in use`);
@@ -112,6 +114,7 @@ export async function runAcceptance(options = {}) {
         passed: Number(outcome.attempt ?? 0) <= 3,
         detail: `attempt=${outcome.attempt ?? 0}`,
       });
+      verification = summarizeLiveVerification(outcome);
       const journey = await readLiveJourney(baseUrl, token, goalId, outcome);
       checks.push(...assessLivePublicWebJourney(journey));
     } else {
@@ -142,6 +145,7 @@ export async function runAcceptance(options = {}) {
         ].includes(key)),
         detail: `fields=${Object.keys(boundary.claim).join(',')}`,
       });
+      checks.push(await checkLegacyFindingsRefused(boundary));
       checks.push(await checkHostileUrlsRejected(boundary));
       checks.push(await checkInvalidLeaseRejected(boundary));
       checks.push(await checkOversizedPayloadRejected(boundary));
@@ -174,7 +178,10 @@ export async function runAcceptance(options = {}) {
     blocked,
     checks: all.map((check) => ({ ...check, detail: redact(check.detail) })),
     kernelLogTail: (kernel?.logs ?? []).slice(-15),
+    ...(verification ? { verification: verification.map((item) => ({ ...item, source: redact(item.source), reason: redact(item.reason) })) } : {}),
   };
+  // Reporting only: labels why a run failed; ok / exit code above are unchanged.
+  report.failureClass = classifyAcceptanceFailure({ mode: report.mode, ok: report.ok, blocked, checks: report.checks, verification: report.verification });
   await writeFile(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8').catch(() => {});
   return report;
 }
@@ -248,7 +255,17 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   for (const check of report.checks) {
     console.log(`${check.passed ? 'PASS' : 'FAIL'}  ${check.id} ${check.name} — ${check.detail}`);
   }
+  for (const item of report.verification ?? []) {
+    console.log(`VERIFY  ${item.status} ${item.supported ? 'SUPPORT' : 'no-support'} reason=${item.reason} source=${item.source}`);
+  }
   if (report.blocked) console.log(`BLOCKED: ${report.blocked}`);
   console.log(`\n${report.ok ? 'ACCEPTANCE OK' : 'ACCEPTANCE NOT PROVEN'}: ${report.passed}/${report.total} checks in mode ${report.mode}.`);
+  if (report.failureClass) {
+    const line = `FAILURE CLASS: ${report.failureClass.class} — ${report.failureClass.summary}`;
+    console.log(line);
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      await appendFile(process.env.GITHUB_STEP_SUMMARY, `### Hermes acceptance: ${report.failureClass.class}\n\n${report.failureClass.summary}\n\nFailed checks: ${report.failureClass.failedChecks.join(', ') || 'n/a'}\n`, 'utf8').catch(() => {});
+    }
+  }
   process.exitCode = report.ok ? 0 : 1;
 }

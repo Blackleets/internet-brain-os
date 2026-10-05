@@ -77,14 +77,22 @@ async function main() {
 
   const kernelCheck = checks.find((check) => check.name === 'Kernel URL' && check.ok);
   if (kernelCheck && token) {
+    // Authenticated check: /status is public, so it cannot prove the token. The ping requires the
+    // token and also tells the Kernel (and the dashboard's Agentes view) that this worker reached it.
     try {
-      const response = await fetch(`${kernelCheck.detail}/status`, {
+      const response = await fetch(`${kernelCheck.detail}/api/agents/hermes/ping`, {
+        method: 'POST',
         headers: { 'x-hephaestus-token': token },
         signal: AbortSignal.timeout(3000),
       });
-      response.ok
-        ? pass('Kernel reachability', `HTTP ${response.status}`)
-        : fail('Kernel reachability', `HTTP ${response.status}`);
+      if (response.ok) pass('Kernel reachability', `HTTP ${response.status}; token accepted; the dashboard now shows this worker as connected`);
+      else if (response.status === 401) fail('Kernel reachability', 'HTTP 401: the Kernel rejected this token; copy the current kernel-api-token');
+      else if (response.status === 404) {
+        const status = await fetch(`${kernelCheck.detail}/status`, { signal: AbortSignal.timeout(3000) });
+        status.ok
+          ? pass('Kernel reachability', `HTTP ${status.status} (older Kernel without the agent ping; token not verified)`)
+          : fail('Kernel reachability', `HTTP ${status.status}`);
+      } else fail('Kernel reachability', `HTTP ${response.status}`);
     } catch {
       fail('Kernel reachability', 'Kernel is not reachable; start it with pnpm kernel:serve');
     }

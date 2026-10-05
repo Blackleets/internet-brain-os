@@ -31,7 +31,11 @@ export function currentGoalRevision(goal) {
     if (!Number.isInteger(revision) || revision < 1) throw new Error('Universal Goal revision is invalid');
     return revision;
   }
-  return 1;
+  // Legacy Goals start at revision 1; POST /api/goals/:id/revisions increments `revision`.
+  if (goal?.revision === undefined) return 1;
+  const revision = Number(goal.revision);
+  if (!Number.isInteger(revision) || revision < 1) throw new Error('Goal revision is invalid');
+  return revision;
 }
 
 function normalizeDate(value) {

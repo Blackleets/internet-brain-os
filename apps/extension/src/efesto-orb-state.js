@@ -19,21 +19,37 @@ export function deriveEfestoOrbState({ enabled = false, kernel = 'offline', serv
   if (mission.status === 'running') return base('researching', 'Hermes researching', 'Hermes holds a live lease for public-source discovery.', { enabled, active: true, smithActive: true, services: { hermesReady, obsidian }, mission });
   if (mission.status === 'queued') return base('queued', 'Preparing mission', 'The Kernel has queued this mission for Hermes.', { enabled, active: true, smithActive: false, services: { hermesReady, obsidian }, mission });
   if (mission.status === 'completed' && (mission.executionPhase === 'forged' || mission.workState === 'forged')) {
-    // Fail-close orb label/detail to Kernel SUPPORT (same honesty as Living Forge /
-    // presentMission / forgeCycleCompleteDetail). Forged with zero SUPPORT Finds must
-    // not keep branding "Forge complete" as if a Find were sealed.
+    // Fail-close orb label/detail AND chrome state to Kernel SUPPORT (same honesty as
+    // Living Forge / presentMission / #mission-progress). Forged with zero SUPPORT Finds
+    // must not keep branding "Forge complete" or paint green data-state=completed —
+    // Completado-lookalike chrome while copy says Research completed. Mirror
+    // completed-without-Evidence: show ledger summary under research_completed (neutral).
     const finds = countSupportedFinds(mission?.verificationResults);
     const forgedCopy = finds > 0
       ? {
+          state: 'completed',
           label: finds === 1 ? 'A Kernel SUPPORT Find was forged' : 'Kernel SUPPORT Finds were forged',
           detail: finds === 1
             ? '1 Find passed Kernel SUPPORT. Inspect the Evidence.'
             : `${finds} Finds passed Kernel SUPPORT. Inspect the Evidence.`,
         }
-      : { label: 'Research completed', detail: 'No Find passed Kernel SUPPORT.' };
-    return base('completed', forgedCopy.label, forgedCopy.detail, { enabled, active: false, smithActive: false, services: { hermesReady, obsidian }, mission, summary: missionSummary(mission), obsidianReceipt: obsidianReceipt(mission, obsidian) });
+      : {
+          state: 'research_completed',
+          label: 'Research completed',
+          detail: 'No Find passed Kernel SUPPORT.',
+        };
+    return base(forgedCopy.state, forgedCopy.label, forgedCopy.detail, { enabled, active: false, smithActive: false, services: { hermesReady, obsidian }, mission, summary: missionSummary(mission), obsidianReceipt: obsidianReceipt(mission, obsidian) });
   }
-  if (mission.status === 'completed') return base('idle', 'START EFESTO', 'No active mission is present.', { enabled, active: false, smithActive: false, services: { hermesReady, obsidian } });
+  // Fail-close Central Forge orb (#forge-power-label via renderForgePowerView):
+  // bare completed (no forged Evidence) must not keep START EFESTO / "No active mission"
+  // while Living Forge / #mission-state / Home already say Research ended without Evidence /
+  // Terminada sin Evidence. Neutral completed_without_forge chrome (not green completed).
+  if (mission.status === 'completed') {
+    return base('completed_without_forge', 'Research ended without Evidence', 'The bounded attempt finished. No Kernel-sealed Evidence was forged.', {
+      enabled, active: false, smithActive: false, services: { hermesReady, obsidian }, mission,
+      summary: missionSummary(mission), obsidianReceipt: obsidianReceipt(mission, obsidian),
+    });
+  }
   if (TERMINAL_STATUSES.has(mission.status) || ACTIVE_STATUSES.has(mission.status)) return base(String(mission.status), String(mission.status), 'Inspect the mission ledger.', { enabled, active: false, smithActive: false, services: { hermesReady, obsidian }, mission });
   return base('idle', 'START EFESTO', 'No active mission is present.', { enabled, active: false, smithActive: false, services: { hermesReady, obsidian } });
 }

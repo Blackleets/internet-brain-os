@@ -1,6 +1,8 @@
 const ACTIVE_REFRESH_MS = 1000;
 const QUEUED_REFRESH_MS = 3000;
 const IDLE_REFRESH_MS = 10000;
+// Same rule as the dashboard: one blip is a restart, two consecutive failures mean offline.
+const UNREACHABLE_AFTER_FAILURES = 2;
 
 export function agentHubRefreshDelay(missions = []) {
   const latest = newestByCreation(missions);
@@ -22,7 +24,10 @@ export function createAgentHubRefresher(options) {
   const isVisible = options.isVisible ?? (() => true);
   const scheduleTimer = options.setTimer ?? setTimeout;
   const cancelTimer = options.clearTimer ?? clearTimeout;
+  const onKernelReachability = options.onKernelReachability ?? (() => {});
   let timer;
+  let consecutiveFailures = 0;
+  let unreachable = false;
   let stopped = true;
   let refreshing = false;
   let missions = [];
@@ -35,7 +40,7 @@ export function createAgentHubRefresher(options) {
   function schedule() {
     cancelScheduled();
     if (stopped || !isVisible()) return;
-    timer = scheduleTimer(run, agentHubRefreshDelay(missions));
+    timer = scheduleTimer(run, unreachable ? IDLE_REFRESH_MS : agentHubRefreshDelay(missions));
   }
 
   async function run() {
@@ -45,12 +50,26 @@ export function createAgentHubRefresher(options) {
     try {
       const next = await refresh();
       if (Array.isArray(next)) missions = next;
+      consecutiveFailures = 0;
+      if (unreachable) {
+        unreachable = false;
+        notify(true);
+      }
     } catch {
-      // Preserve the last observable state and retry on the existing bounded cadence.
+      // Preserve the last observable state and retry; after repeated failures say so and back off.
+      consecutiveFailures += 1;
+      if (!unreachable && consecutiveFailures >= UNREACHABLE_AFTER_FAILURES) {
+        unreachable = true;
+        notify(false);
+      }
     } finally {
       refreshing = false;
       schedule();
     }
+  }
+
+  function notify(online) {
+    try { onKernelReachability(online); } catch { /* UI callback must not stop the refresh loop */ }
   }
 
   return {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildKernelChildEnv, repairEfestoLauncher, shutdownEfestoLauncher, stopLauncherProcessTree } from './efesto-launcher-core.mjs';
+import { buildKernelChildEnv, readRunningKernelBootstrap, repairEfestoLauncher, shutdownEfestoLauncher, stopLauncherProcessTree } from './efesto-launcher-core.mjs';
 
 function harness(overrides = {}) {
   const calls = [];
@@ -24,12 +24,12 @@ function harness(overrides = {}) {
 
 const ready = {
   kernel: 'ready', hermes: 'ready', obsidian: 'ready', pairing: 'paired', overall: 'ready',
-  diagnostics: { kernel: { pid: 111, owned: true, verified: true } }, actions: [], message: 'ready',
+  diagnostics: { kernel: { pid: 111, owned: true, verified: true, port: 4000 } }, actions: [], message: 'ready',
 };
 
 const pairingRequired = {
   kernel: 'ready', hermes: 'ready', obsidian: 'ready', pairing: 'required', overall: 'needs_setup',
-  diagnostics: { kernel: { pid: 111, owned: true, verified: true } }, actions: [], message: 'pair extension',
+  diagnostics: { kernel: { pid: 111, owned: true, verified: true, port: 4000 } }, actions: [], message: 'pair extension',
 };
 
 describe('Efesto Windows launcher core', () => {
@@ -48,6 +48,43 @@ describe('Efesto Windows launcher core', () => {
     const result = await repairEfestoLauncher({ ops });
     expect(result.started).toBe(false);
     expect(calls.map((call) => call[0])).not.toContain('startKernel');
+  });
+
+  it('does not duplicate a healthy paired Kernel when Hermes needs attention', async () => {
+    const invalidHermes = {
+      ...ready,
+      hermes: 'invalid',
+      overall: 'needs_setup',
+      diagnostics: { ...ready.diagnostics, hermes: { reason: 'runtime_read_only_unverified' } },
+    };
+    const { calls, ops } = harness({ status: invalidHermes });
+    const result = await repairEfestoLauncher({ ops });
+    expect(result).toMatchObject({ started: false, status: { kernel: 'ready', hermes: 'invalid' } });
+    expect(calls.map((call) => call[0])).not.toContain('startKernel');
+    expect(calls.some((call) => call[0] === 'log' && /Hermes needs attention/.test(call[1]))).toBe(true);
+  });
+
+  it('reads authoritative bootstrap readiness through the running one-click Kernel', async () => {
+    const runtimeStatus = {
+      schemaVersion: 'efesto.bootstrap-status.v1',
+      kernel: 'ready', hermes: 'invalid', obsidian: 'ready', pairing: 'paired', overall: 'needs_setup',
+      diagnostics: { hermes: { reason: 'runtime_read_only_unverified' } }, actions: [], message: 'Hermes needs update',
+    };
+    const calls = [];
+    const result = await readRunningKernelBootstrap(ready, {
+      fetchImpl: async (url) => {
+        calls.push(String(url));
+        return Response.json(runtimeStatus);
+      },
+    });
+    expect(result).toEqual(runtimeStatus);
+    expect(calls).toEqual(['http://127.0.0.1:4000/bootstrap/status']);
+  });
+
+  it('ignores malformed runtime bootstrap responses and keeps the local fallback available', async () => {
+    await expect(readRunningKernelBootstrap(ready, {
+      fetchImpl: async () => Response.json({ ok: true }),
+    })).resolves.toBeUndefined();
   });
 
   it('safely restarts an owned verified Kernel when pairing is still required', async () => {

@@ -219,13 +219,17 @@ function normalizeGoal(value: UniversalGoal | LegacyGoal): NormalizedGoal {
     throw new GoalSurfaceSnapshotInputError('goal.contractVersion is unsupported.');
   }
   const legacyStatus = requireEnum(value.status, ['active', 'paused', 'completed'] as const, 'goal.status');
+  // Legacy Goals are revision 1 until the Kernel's Goal revision path edits them.
+  if (value.revision !== undefined && (!Number.isSafeInteger(value.revision) || Number(value.revision) < 1)) {
+    throw new GoalSurfaceSnapshotInputError('goal.revision must be a positive safe integer.');
+  }
   return {
     id,
     title,
     status: legacyStatus,
-    revision: 1,
+    revision: value.revision === undefined ? 1 : Number(value.revision),
     createdAt,
-    updatedAt: createdAt,
+    updatedAt: value.revisedAt === undefined ? createdAt : requireDateTime(value.revisedAt, 'goal.revisedAt'),
     compatibility: 'legacy_radar',
     autonomyLevel: 'assisted',
     approvalPolicy: 'none',

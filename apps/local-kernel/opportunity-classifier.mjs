@@ -149,20 +149,20 @@ export function classifyOpportunity(input, references = {}) {
 }
 
 /**
- * Goal -> Evidence -> Kernel SUPPORT -> Find. When Kernel SUPPORT (evidenceSupportsGoal on the
- * fetched page) already proved a mission page covers the user's Goal, the generic opportunity
- * classifier must not silently drop it: it only recognises lead-shaped pages (offers, jobs,
- * grants...), so factual or documentation Goals ("Is Tesla listed?", "official Git docs") forged
- * a Mission with zero Finds. Callers must only use this after SUPPORT passed; it never runs or
- * relaxes the SUPPORT gate. Nothing is invented: relevance stays the classifier's own (possibly
- * zero) score, reasons stay the classifier's own signals, and promotedBy records why it exists.
+ * Goal -> Evidence -> Kernel SUPPORT -> Find. Once Kernel SUPPORT has proved that a fetched page
+ * covers the user's Goal, the generic opportunity classifier only labels the Find; it cannot make
+ * the Find disappear or move it outside a confirmed Goal scope. Callers must use this only after
+ * SUPPORT passed. SUPPORT itself remains unchanged and authoritative.
  */
 export function classifySupportedGoalFind(input, references = {}, { scopeCategories = [] } = {}) {
   const classified = classifyOpportunity(input, references);
-  if (classified.status === 'opportunity') return classified;
+  const scoped = OPPORTUNITY_CATEGORIES.find((category) => Array.isArray(scopeCategories) && scopeCategories.includes(category.id));
+  // Preserve the normal classifier exactly when there is no recognised scope constraint, or when
+  // its category already agrees with that scope.
+  if (classified.status === 'opportunity' && (!scoped || classified.opportunity.category === scoped.id)) return classified;
+
   const context = validatePageContext(input);
   const searchable = `${context.title}\n${context.description ?? ''}\n${context.visibleText}`;
-  const scoped = OPPORTUNITY_CATEGORIES.find((category) => Array.isArray(scopeCategories) && scopeCategories.includes(category.id));
   const signal = scoped ? scoreCategory(scoped, searchable) : undefined;
   const sourceUrl = context.canonicalUrl ?? context.url;
   const fingerprint = createHash('sha256').update(`${references.evidenceId ?? ''}\n${sourceUrl}`).digest('hex');
@@ -178,10 +178,10 @@ export function classifySupportedGoalFind(input, references = {}, { scopeCategor
       title: context.title,
       sourceUrl,
       sourceHost: new URL(sourceUrl).hostname,
-      relevance: signal?.score ?? classified.score ?? 0,
+      relevance: signal?.score ?? (classified.status === 'ordinary_evidence' ? classified.score : 0) ?? 0,
       reasons: signal?.reasons ?? [],
       deadlineText: extractDeadline(searchable),
-      nextAction: 'Open the source and confirm it answers your Goal',
+      nextAction: scoped?.nextAction ?? 'Open the source and confirm it answers your Goal',
       promotedBy: 'kernel_support',
       status: 'new',
       detectedAt: context.capturedAt,
@@ -220,7 +220,7 @@ export class OpportunityProjector {
         const ranking = rankOpportunity(item, { goalMatches, learnedAdjustment, now, missions });
         return { ...item, goalMatches, learnedAdjustment, ranking, personalizedRelevance: ranking.score };
       })
-      .sort((left, right) => right.personalizedRelevance - left.personalizedRelevance || right.detectedAt.localeCompare(left.detectedAt))
+      .sort((left, right) => right.ranking.orderingScore - left.ranking.orderingScore || right.detectedAt.localeCompare(left.detectedAt))
       .slice(0, Math.max(1, Math.min(Number(limit) || 20, 100)));
   }
 }

@@ -65,7 +65,8 @@ requireCondition(projectState.includes('Authentic Hermes v0.19.0 runtime accepta
 requireCondition(projectState.includes('Goal-first shell'), 'canonical state does not record the Goal-first UI baseline');
 requireCondition(projectState.includes('living-forge'), 'canonical state does not record the living-forge visual baseline');
 requireCondition(await exists('apps/dashboard/app/efesto-forge-visual.css'), 'living-forge visual layer is missing');
-requireCondition(await exists('apps/dashboard/public/efesto-smith.svg'), 'Efesto pixel-smith identity is missing');
+requireCondition(await exists('apps/dashboard/components/brand/efesto-mark.tsx'), 'Efesto node-flame brand component is missing');
+requireCondition(await exists('apps/dashboard/app/icon.svg'), 'Efesto node-flame app icon is missing');
 requireCondition(projectState.includes('The **public release light is separate**'), 'canonical state does not separate implementation readiness from public-launch approval');
 requireCondition(internalRelease.channel === 'internal', 'release channel is not internal');
 requireCondition(internalRelease.publicLaunchApproved === false, 'public launch must remain blocked during internal qualification');

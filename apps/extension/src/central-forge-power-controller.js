@@ -117,7 +117,16 @@ export function createForgePowerController({
       if (!shouldCreateMission({ enabled, kernel, goals, completedGoalIds: [...completed], mission: latest })) {
         if (!selectNextGoal(goals, [...completed])) {
           await storage.set({ efestoForgeEnabled: false, efestoForgeCompletedGoals: [] });
-          renderForgePowerView(elements, deriveEfestoOrbState({ enabled: false, kernel, services, mission: latest }), goals.length ? forgeCycleCompleteDetail(latest) : 'Create a Goal, then start the forge.');
+          // Fail-close end-of-cycle chrome: enabled:false short-circuits deriveEfestoOrbState to
+          // START EFESTO / idle and drops research_completed / completed_without_forge honesty
+          // (fc0442b) the moment the forge auto-pauses. Derive terminal state with enabled:true,
+          // then mark the control paused so zero-SUPPORT forged / bare completed stay off Completado.
+          const terminalView = deriveEfestoOrbState({ enabled: true, kernel, services, mission: latest });
+          renderForgePowerView(
+            elements,
+            { ...terminalView, enabled: false },
+            goals.length ? forgeCycleCompleteDetail(latest) : 'Create a Goal, then start the forge.',
+          );
           state.currentOrbState = elements.powerButton?.dataset.state ?? 'idle';
         }
         return;
@@ -160,18 +169,22 @@ export function renderForgePowerView(elements = {}, view, overrideDetail) {
   powerButton.setAttribute('aria-label', enabled ? 'Pause Efesto after current work' : view.action ?? 'Start Efesto');
   powerLabel.textContent = view.action && view.state === 'failed' ? view.action : view.label;
   powerDetail.textContent = overrideDetail ?? view.detail;
+  // Green Living Forge success only for Kernel SUPPORT Completado (state completed).
+  // research_completed (zero-SUPPORT forged) and completed_without_forge (bare completed)
+  // must stay idle — not celebrate. Ledger may still show zeros.
+  const terminalLedger = view.state === 'completed' || view.state === 'research_completed' || view.state === 'completed_without_forge';
   applyLivingForgeActivity(livingForge, view.smithActive ? (view.state === 'verifying' ? 'verifying' : 'working') : view.state === 'completed' ? 'success' : view.state === 'failed' ? 'error' : 'idle');
   setText('#forge-orb-elapsed', view.elapsedLabel ?? 'No active mission');
   setText('#forge-orb-heartbeat', view.heartbeatLabel ?? 'No heartbeat yet');
   if (orbMeta) orbMeta.hidden = !view.active;
-  if (orbSummary) orbSummary.hidden = view.state !== 'completed';
+  if (orbSummary) orbSummary.hidden = !terminalLedger;
   if (view.summary) {
     setText('#forge-summary-received', String(view.summary.received));
     setText('#forge-summary-evidence', String(view.summary.evidenceCreated));
     setText('#forge-summary-opportunities', String(view.summary.opportunitiesForged));
     setText('#forge-summary-obsidian', String(view.summary.obsidianNotesWritten));
   }
-  renderObsidianReceipt(obsidianReceipt, view.state === 'completed' ? view.obsidianReceipt : undefined);
+  renderObsidianReceipt(obsidianReceipt, terminalLedger ? view.obsidianReceipt : undefined);
 }
 
 function renderObsidianReceipt(obsidianReceipt, receipt) {

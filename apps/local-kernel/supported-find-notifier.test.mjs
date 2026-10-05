@@ -172,7 +172,8 @@ describe('MissionSearchCandidateVerifier NotificationGateway wire', () => {
     });
     const result = await verifier.verify(mission.id);
     expect(result.mission.status).not.toBe('completed');
-    expect(result.mission.executionPhase).toBe('verifying');
+    // Settled without a Find (never Completado): read, no Kernel SUPPORT.
+    expect(result.mission).toMatchObject({ status: 'failed', executionPhase: 'failed', lastFailure: { code: 'verified_without_support' } });
     expect(await notifications.list()).toHaveLength(0);
   });
 });

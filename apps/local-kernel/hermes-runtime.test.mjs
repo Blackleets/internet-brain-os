@@ -56,7 +56,7 @@ describe('Hermes automatic read-only capability probe', () => {
       ready: true,
       mode: 'bounded_isolated_search_only',
       executable: runtime.executable,
-      requiredArgs: ['chat', '--query', '<prompt>', '--quiet', '--max-turns', '<bounded>', '--ignore-rules', '--toolsets', 'search'],
+      requiredArgs: ['chat', '--query', '<prompt>', '--quiet', '--max-turns', '<bounded>', '--ignore-rules', '--toolsets', 'context_engine'],
     });
   });
 

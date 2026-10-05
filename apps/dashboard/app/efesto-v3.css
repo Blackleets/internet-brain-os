@@ -1,0 +1,197 @@
+/* EFESTO v3 design system: one shell, ember/gold on a warm near-black, Geist + Geist Mono.
+   Loaded last; it only restyles existing product structure (no new product state). */
+
+:root {
+  --v3-bg: #080706;
+  --v3-bg2: #0c0a09;
+  --v3-surface: #110f0d;
+  --v3-surface2: #171411;
+  --v3-surface3: #1e1a16;
+  --v3-line: rgba(255, 205, 165, .07);
+  --v3-line2: rgba(255, 205, 165, .12);
+  --v3-text: #f5efe8;
+  --v3-text2: #cfc6bc;
+  --v3-muted: #9a9189;
+  --v3-dim: #6b645e;
+  --v3-ember: #ee8748;
+  --v3-molten: #ff7a2a;
+  --v3-gold: #f5c451;
+  --v3-gold2: #ffdc8f;
+  --v3-steel: #d5dbe2;
+  --v3-rust: #e3765f;
+  --v3-ash: #7a736d;
+  --v3-ok: #8fd19e;
+  --v3-sans: var(--font-geist), Geist, Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --v3-mono: var(--font-geist-mono), 'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --v3-r1: 8px;
+  --v3-r2: 12px;
+  --v3-r3: 16px;
+  --v3-r4: 22px;
+}
+
+/* ---------- brand lockup (logo C) ---------- */
+.efesto-lockup { display: inline-flex; min-width: 0; align-items: center; gap: 11px; }
+.efesto-lockup > svg { flex: none; }
+.efesto-lockup-words { display: block; min-width: 0; }
+.efesto-lockup-words strong { display: block; color: var(--v3-text); font-family: var(--v3-sans); font-size: 15px; font-weight: 650; letter-spacing: .17em; line-height: 1.1; }
+.efesto-lockup-words small { display: block; margin-top: 3px; color: var(--v3-muted); font: 500 10px/1 var(--v3-mono); letter-spacing: .06em; white-space: nowrap; }
+.efesto-lockup.is-compact { gap: 9px; }
+.efesto-lockup.is-compact .efesto-lockup-words strong { font-size: 13.5px; letter-spacing: .16em; }
+.efesto-product.sidebar-collapsed .efesto-brand .efesto-lockup-words { display: none; }
+@media (max-width: 720px) {
+  .efesto-product.sidebar-collapsed .efesto-brand .efesto-lockup-words { display: block; }
+}
+.forge-agent-mark { border: 0; background: transparent; }
+.forge-agent-mark svg, .forge-empty-mark svg, .forge-message-avatar svg { display: block; }
+
+/* ---------- v3 tokens over the shell's legacy palette ---------- */
+:root {
+  --forge-bg: #080706;
+  --forge-sidebar-bg: #0b0908;
+  --forge-surface: #080706;
+  --forge-panel: #110f0d;
+  --forge-panel-raised: #171411;
+  --forge-line: rgba(255, 205, 165, .08);
+  --forge-line-strong: rgba(255, 205, 165, .14);
+  --forge-text: #f5efe8;
+  --forge-muted: #9a9189;
+  --forge-dim: #6b645e;
+  --forge-accent: #ee8748;
+  --forge-accent-hover: #f5a06a;
+  --forge-accent-soft: #26170f;
+  --forge-sidebar: 252px;
+}
+body, .efesto-product { font-family: var(--v3-sans); background: var(--v3-bg); }
+
+/* ---------- sidebar (desktop) ---------- */
+.efesto-product .efesto-sidebar { gap: 16px; padding: 18px 14px 14px; background: linear-gradient(#0d0b0a, #0a0908); border-right: 1px solid var(--v3-line); }
+.efesto-product .efesto-brand { min-height: 44px; margin: 0; }
+.efesto-product .efesto-brand > button:first-child { padding: 2px 6px 6px; background: transparent; }
+.efesto-product .efesto-brand > button:first-child:hover { background: transparent; }
+.efesto-product .sidebar-actions { display: flex; gap: 8px; margin: 0; }
+.efesto-product .sidebar-actions .new-goal {
+  flex: 1; display: flex; align-items: center; gap: 10px; height: 42px; min-width: 0; margin: 0; padding: 0 12px; border: 0; border-radius: var(--v3-r2);
+  background: linear-gradient(#2a1a10, #1e130c); box-shadow: inset 0 0 0 1px rgba(238, 135, 72, .42), 0 8px 24px rgba(255, 122, 42, .08);
+  color: #ffe6d2; font: 600 14px/1 var(--v3-sans);
+}
+.efesto-product .sidebar-actions .new-goal:hover { background: linear-gradient(#33200f, #24160d); }
+.efesto-product .sidebar-actions .new-goal svg { width: 18px; height: 18px; color: #ffe6d2; }
+.efesto-product .sidebar-actions .new-chat {
+  flex: none; display: grid; place-items: center; width: 42px; height: 42px; margin: 0; padding: 0; border: 0; border-radius: var(--v3-r2);
+  background: var(--v3-surface); box-shadow: inset 0 0 0 1px var(--v3-line2); color: var(--v3-muted);
+}
+.efesto-product .sidebar-actions .new-chat:hover { color: var(--v3-text); background: var(--v3-surface2); }
+.efesto-product .sidebar-actions .new-chat svg { width: 17px; height: 17px; }
+.efesto-product .sidebar-actions .new-chat span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.efesto-product .efesto-sidebar .nav-label { display: block; margin: 0 0 8px; padding: 0 10px; font: 600 10px/1 var(--v3-mono); letter-spacing: .14em; color: var(--v3-dim); text-transform: uppercase; }
+.efesto-product .efesto-sidebar nav { gap: 2px; margin: 0; padding: 0; }
+.efesto-product .efesto-sidebar nav .nav-group { display: grid; gap: 2px; }
+.efesto-product .efesto-sidebar nav button { display: flex; align-items: center; gap: 12px; height: 38px; min-height: 38px; padding: 0 10px; border-radius: 10px; color: var(--v3-text2); font-size: 14px; font-weight: 450; background: transparent; box-shadow: none; }
+.efesto-product .efesto-sidebar nav button:hover { background: var(--v3-surface); color: var(--v3-text); }
+.efesto-product .efesto-sidebar nav button.active { background: var(--v3-surface2); color: var(--v3-text); box-shadow: inset 2px 0 0 var(--v3-ember); }
+.efesto-product .efesto-sidebar nav svg { width: 18px; height: 18px; color: currentColor; stroke-width: 1.7; }
+.efesto-product .efesto-sidebar nav button.active svg { color: var(--v3-ember); }
+.efesto-product .efesto-sidebar nav span { font-size: 14px; }
+.efesto-product .efesto-sidebar nav b { margin-left: auto; padding: 4px 6px; border-radius: 6px; background: var(--v3-surface3); color: var(--v3-muted); font: 600 11px/1 var(--v3-mono); }
+.efesto-product .sidebar-goals ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.efesto-product .sidebar-goals button {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 10px; background: transparent; cursor: pointer;
+  color: var(--v3-text2); font: 400 13px/17px var(--v3-sans); text-align: left;
+}
+.efesto-product .sidebar-goals button:hover { background: var(--v3-surface); }
+.efesto-product .sidebar-goals button.active { background: rgba(245, 196, 81, .06); }
+.efesto-product .sidebar-goals i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--v3-ash); }
+.efesto-product .sidebar-goals i[data-tone='gold'] { background: var(--v3-gold); box-shadow: 0 0 8px rgba(245, 196, 81, .8); }
+.efesto-product .sidebar-goals i[data-tone='hot'] { background: var(--v3-ember); box-shadow: 0 0 8px rgba(238, 135, 72, .8); }
+.efesto-product .sidebar-goals i[data-tone='alert'] { background: var(--v3-rust); }
+.efesto-product .sidebar-goals span { min-width: 0; }
+.efesto-product .sidebar-goals strong { display: block; font-weight: 450; color: inherit; overflow-wrap: anywhere; }
+.efesto-product .sidebar-goals small { display: block; margin-top: 1px; font: 500 10.5px/1.3 var(--v3-mono); color: var(--v3-muted); }
+.efesto-product .efesto-sidebar .sidebar-spacer { flex: 1; min-height: 8px; }
+.efesto-product .efesto-sidebar nav.sidebar-system { display: grid; gap: 0; }
+.efesto-product .efesto-sidebar nav.sidebar-system button { height: 34px; min-height: 34px; gap: 10px; color: var(--v3-muted); font-size: 13px; }
+.efesto-product .efesto-sidebar nav.sidebar-system svg { width: 16px; height: 16px; }
+.efesto-product .efesto-sidebar nav.sidebar-system span { font-size: 13px; }
+.efesto-product .kernel-summary { display: flex; align-items: center; gap: 10px; min-height: 0; margin: 0; padding: 11px 12px; border: 0; border-radius: var(--v3-r2); background: var(--v3-surface); box-shadow: inset 0 0 0 1px var(--v3-line); }
+.efesto-product .kernel-summary:hover { background: var(--v3-surface2); }
+.efesto-product .kernel-summary .kernel-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--v3-ash); box-shadow: none; }
+.efesto-product .kernel-summary .kernel-dot.online { background: var(--v3-ok); box-shadow: 0 0 10px rgba(143, 209, 158, .6); }
+.efesto-product .kernel-summary strong { color: var(--v3-text); font-size: 13px; font-weight: 600; }
+.efesto-product .kernel-summary small { margin-top: 1px; color: var(--v3-muted); font: 500 10.5px/1.4 var(--v3-mono); }
+.efesto-product .kernel-summary > svg { width: 15px; height: 15px; color: var(--v3-dim); }
+.efesto-product.sidebar-collapsed .sidebar-goals, .efesto-product.sidebar-collapsed .efesto-sidebar .nav-label, .efesto-product.sidebar-collapsed .sidebar-actions .new-chat,
+.efesto-product.sidebar-collapsed .efesto-sidebar nav.sidebar-system span { display: none; }
+.efesto-product.sidebar-collapsed .sidebar-actions .new-goal { justify-content: center; padding: 0; }
+
+/* ---------- top bar (crumb · Chat/Goal · state) ---------- */
+.efesto-product .forge-surface { grid-template-rows: 58px minmax(0, 1fr) auto; background: var(--v3-bg); }
+.efesto-product .forge-surface-bar { padding: 0 22px; gap: 12px; background: rgba(8, 7, 6, .82); border-bottom: 1px solid var(--v3-line); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.efesto-product .forge-menu-button { color: var(--v3-muted); }
+.efesto-product .forge-menu-button:hover { background: var(--v3-surface); color: var(--v3-text); }
+.forge-menu-brand { display: none; }
+.efesto-product .forge-product-title .forge-agent-mark { display: none; }
+.efesto-product .forge-product-title .forge-crumb { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--v3-muted); font-size: 13.5px; white-space: nowrap; }
+.efesto-product .forge-product-title .forge-crumb i { font-style: normal; color: var(--v3-dim); }
+.efesto-product .forge-product-title .forge-crumb strong { display: inline; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--v3-text); font-size: 13.5px; font-weight: 600; }
+.efesto-product .forge-mode-switcher { gap: 3px; padding: 3px; border: 0; border-radius: var(--v3-r2); background: var(--v3-surface); box-shadow: inset 0 0 0 1px var(--v3-line); }
+.efesto-product .forge-mode-switcher button { gap: 7px; height: 32px; min-width: 0; padding: 0 14px; border-radius: 9px; background: transparent; color: var(--v3-muted); font: 600 13.5px/1 var(--v3-sans); box-shadow: none; }
+.efesto-product .forge-mode-switcher button:hover { color: var(--v3-text); }
+.efesto-product .forge-mode-switcher button.active { background: linear-gradient(#2c1b10, #21140c); color: #fff1e4; box-shadow: inset 0 0 0 1px rgba(238, 135, 72, .45); }
+.efesto-product .forge-mode-switcher svg { width: 16px; height: 16px; }
+.efesto-product .forge-mode-switcher button.active svg { color: var(--v3-ember); }
+.efesto-product .forge-state-action { height: 36px; max-width: 100%; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; box-shadow: inset 0 0 0 1px var(--v3-line); color: var(--v3-text2); font: 500 12.5px/1 var(--v3-sans); }
+.efesto-product .forge-state-action:hover { background: var(--v3-surface); }
+.efesto-product .forge-state-action > span { max-width: none; }
+.efesto-product .efesto-topbar { background: rgba(8, 7, 6, .82); border-bottom: 1px solid var(--v3-line); }
+
+/* the forge fills the first viewport; the composer follows it in the scroll */
+.efesto-product .forge-surface.has-forge .forge-scroll { padding-bottom: 24px; }
+.efesto-product .forge-surface.has-forge .forge-scroll > .forge-composer-zone { width: min(820px, calc(100% - 48px)); margin: 8px auto 0; }
+
+/* ---------- phone: compact header, bottom tabs ---------- */
+.efesto-tabbar { display: none; }
+@media (max-width: 720px) {
+  .efesto-product .forge-surface { grid-template-rows: 56px minmax(0, 1fr) auto; }
+  .efesto-product .forge-surface-bar { grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; padding: 0 10px 0 8px; }
+  .efesto-product .forge-surface-leading { min-width: 0; }
+  .efesto-product .forge-menu-button { display: flex; width: auto; height: 44px; flex: none; align-items: center; margin: 0; padding: 0 6px; }
+  .efesto-product .forge-menu-button .forge-menu-icon { display: none; }
+  .efesto-product .forge-menu-brand { display: flex; align-items: center; gap: 9px; }
+  .efesto-product .forge-menu-brand svg { width: 30px; height: 30px; }
+  .efesto-product .forge-menu-brand b { color: var(--v3-text); font: 650 13.5px/1 var(--v3-sans); letter-spacing: .16em; }
+  .efesto-product .forge-product-title { display: none; }
+  .efesto-product .forge-mode-switcher { justify-self: center; }
+  .efesto-product .forge-mode-switcher button { height: 38px; padding: 0 13px; font-size: 13px; }
+  .efesto-product .forge-mode-switcher svg { display: none; }
+  .efesto-product .forge-state-action { width: 44px; height: 44px; padding: 0; justify-content: center; }
+  .efesto-product .forge-state-action { position: relative; border-radius: 12px; color: var(--v3-text2); }
+  .efesto-product .forge-state-action > span { display: none; }
+  .efesto-product .forge-state-action > svg { display: block; width: 17px; height: 17px; flex: 0 0 17px; }
+  .efesto-product .forge-state-action > i { display: block; position: absolute; top: 10px; right: 10px; width: 7px; height: 7px; margin: 0; box-shadow: 0 0 0 2px var(--v3-bg, #0b0a09); }
+
+  .efesto-product.has-tabbar .forge-surface,
+  .efesto-product.has-tabbar.efesto-home-active .efesto-main { height: calc(100dvh - 64px - env(safe-area-inset-bottom)); }
+  .efesto-product.has-tabbar .efesto-stage { height: calc(100dvh - 64px - env(safe-area-inset-bottom)); }
+  /* above the tab bar; top: auto so the toast is not stretched between top and bottom */
+  .efesto-product.has-tabbar .efesto-toast { top: auto; bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .efesto-product .forge-surface.has-forge .forge-scroll > .forge-composer-zone { width: calc(100% - 24px); }
+  .efesto-tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+    height: calc(64px + env(safe-area-inset-bottom)); padding: 6px 6px env(safe-area-inset-bottom);
+    background: rgba(10, 8, 7, .88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--v3-line);
+  }
+  .efesto-tabbar button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0; min-height: 48px; padding: 0; border: 0; border-radius: 10px; background: none; color: var(--v3-dim); font: 550 10.5px/1 var(--v3-sans); cursor: pointer; }
+  .efesto-tabbar button svg { width: 20px; height: 20px; stroke-width: 1.7; }
+  .efesto-tabbar button.active { color: var(--v3-text); }
+  .efesto-tabbar button.active svg { color: var(--v3-ember); }
+  .efesto-tabbar button:focus-visible { outline: 2px solid var(--v3-ember); outline-offset: -2px; }
+}
+
+/* forge kick on wide: one line, the pill gives way */
+.forge-live[data-layout='wide'] .forge-live-kick { flex-wrap: nowrap; }
+.forge-live-kick .forge-live-eyebrow, .forge-live-kick .forge-live-id { flex: none; white-space: nowrap; }
+.forge-live[data-layout='wide'] .forge-bench-meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; line-height: 16px; }
+.forge-live[data-layout='wide'] .forge-bench-meta::before { display: inline-block; margin-right: 8px; vertical-align: 1px; }
+.forge-live[data-layout='narrow'] .forge-bench-meta:not([data-replaying]) { display: none; }
+.forge-live[data-layout='narrow'] .forge-meta-more { display: none; }

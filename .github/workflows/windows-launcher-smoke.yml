@@ -8,6 +8,7 @@ on:
       - 'apps/local-kernel/**'
       - 'scripts/efesto-*.mjs'
       - 'scripts/install-efesto.ps1'
+      - 'scripts/build-hermes-safe-runtime-fixture.ps1'
       - 'Efesto Launcher.cmd'
       - 'Install Efesto.cmd'
       - 'INTERNAL_RELEASE.json'
@@ -17,6 +18,7 @@ on:
       - 'apps/local-kernel/**'
       - 'scripts/efesto-*.mjs'
       - 'scripts/install-efesto.ps1'
+      - 'scripts/build-hermes-safe-runtime-fixture.ps1'
       - 'Efesto Launcher.cmd'
       - 'Install Efesto.cmd'
       - 'INTERNAL_RELEASE.json'
@@ -51,9 +53,13 @@ jobs:
           New-Item -ItemType Directory -Force -Path $vaultDir | Out-Null
           Set-Content -Path (Join-Path $dataDir 'kernel-api-token') -Value ('a' * 64) -NoNewline
 
+          $hermesFixture = Join-Path $env:RUNNER_TEMP 'efesto-hermes-safe-runtime.exe'
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-hermes-safe-runtime-fixture.ps1 -OutputPath $hermesFixture
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path $hermesFixture)) { throw 'Unable to build the CI-only safe Hermes fixture.' }
+
           $env:HEPHAESTUS_DATA_DIR = $dataDir
           $env:HEPHAESTUS_OBSIDIAN_DIR = $vaultDir
-          $env:HEPHAESTUS_HERMES_EXECUTABLE = (Get-Command node).Source
+          $env:HEPHAESTUS_HERMES_EXECUTABLE = $hermesFixture
           $env:HEPHAESTUS_PAIRING = '0'
 
           try {
@@ -107,9 +113,13 @@ jobs:
           New-Item -ItemType Directory -Force -Path $vaultDir | Out-Null
           Set-Content -Path (Join-Path $dataDir 'kernel-api-token') -Value ('b' * 64) -NoNewline
 
+          $hermesFixture = Join-Path $env:RUNNER_TEMP 'efesto-hermes-safe-runtime.exe'
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-hermes-safe-runtime-fixture.ps1 -OutputPath $hermesFixture
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path $hermesFixture)) { throw 'Unable to build the CI-only safe Hermes fixture.' }
+
           $env:HEPHAESTUS_DATA_DIR = $dataDir
           $env:HEPHAESTUS_OBSIDIAN_DIR = $vaultDir
-          $env:HEPHAESTUS_HERMES_EXECUTABLE = (Get-Command node).Source
+          $env:HEPHAESTUS_HERMES_EXECUTABLE = $hermesFixture
           $env:HEPHAESTUS_PAIRING = '0'
 
           $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 4001)
@@ -168,9 +178,13 @@ jobs:
           New-Item -ItemType Directory -Force -Path $vaultDir | Out-Null
           Set-Content -Path (Join-Path $dataDir 'kernel-api-token') -Value ('c' * 64) -NoNewline
 
+          $hermesFixture = Join-Path $env:RUNNER_TEMP 'efesto-hermes-safe-runtime.exe'
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-hermes-safe-runtime-fixture.ps1 -OutputPath $hermesFixture
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path $hermesFixture)) { throw 'Unable to build the CI-only safe Hermes fixture.' }
+
           $env:HEPHAESTUS_DATA_DIR = $dataDir
           $env:HEPHAESTUS_OBSIDIAN_DIR = $vaultDir
-          $env:HEPHAESTUS_HERMES_EXECUTABLE = (Get-Command node).Source
+          $env:HEPHAESTUS_HERMES_EXECUTABLE = $hermesFixture
           # Keep pairing-session output disabled in CI; missing registry still makes pairing status required.
           $env:HEPHAESTUS_PAIRING = '0'
 

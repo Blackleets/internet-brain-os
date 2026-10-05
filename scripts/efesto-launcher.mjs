@@ -22,6 +22,12 @@ function printStatus(status) {
   console.log(JSON.stringify(status.diagnostics, null, 2));
 }
 
+export function launcherRuntimeNeedsAttention(status) {
+  if (!status || typeof status !== 'object') return true;
+  if (status.overall === 'failed') return true;
+  return ['missing', 'invalid', 'failed'].includes(status.hermes);
+}
+
 async function main(argv = process.argv.slice(2)) {
   const command = argv[0] ?? 'repair';
   const obsidianDir = arg('--obsidian-dir');
@@ -35,8 +41,15 @@ async function main(argv = process.argv.slice(2)) {
     printStatus(result.status);
     if (result.status.overall === 'ready') {
       console.log('Ready for daily use: open the extension and press the central Efesto orb.');
+    } else if (result.status.hermes === 'invalid') {
+      console.log('Hermes is installed but its bounded search-only runtime is not certified. Update Hermes, then run Repair again.');
+    } else if (result.status.hermes === 'missing') {
+      console.log('Hermes is required for Goal research. Install/configure Hermes, then run Repair again.');
     }
-    if (result.status.overall === 'failed') process.exitCode = 1;
+    // Pairing and optional Obsidian setup may legitimately keep overall=needs_setup,
+    // but an absent/incompatible Hermes runtime cannot be advertised as a successful
+    // one-click installation because confirmed Goal missions would fail closed.
+    if (launcherRuntimeNeedsAttention(result.status)) process.exitCode = 1;
     return;
   }
   if (command === 'open') {

@@ -1,4 +1,5 @@
 import { readLocalProductCohort } from './product-cohort.mjs';
+import { VERIFIED_WITHOUT_SUPPORT } from './mission-verification-settlement.mjs';
 
 const POSITIVE_SIGNALS = new Set(['useful', 'saved']);
 const NEGATIVE_SIGNALS = new Set(['dismissed', 'not_interested']);
@@ -84,6 +85,8 @@ export function buildProductValueScorecard(data = {}, options = {}) {
     : {};
   const localActivationObserved = executedGoalIds.size > 0;
   const localRepeatObserved = executedGoalIds.size > 1;
+  const verifiedWithoutSupportSettlements = missions.filter(isVerifiedWithoutSupportSettlement).length;
+  const technicalMissionFailures = missions.filter(isTechnicalMissionFailure).length;
 
   return {
     schemaVersion: PRODUCT_SCORECARD_SCHEMA_VERSION,
@@ -123,7 +126,12 @@ export function buildProductValueScorecard(data = {}, options = {}) {
       goalToNotificationDeliveryRate: unavailableMetric('ratio', 'notification_delivery_ledger_unavailable'),
     },
     guardrails: {
-      missionFailureRate: ratioMetric(missions.filter((mission) => mission?.status === 'failed').length, missions.length, 'no_missions'),
+      // `verified_without_support` is an honest research outcome: web.read worked but no page
+      // supported the Goal. Keep it failed/non-Completado on the Mission, but do not report it as
+      // a technical failure. It remains in the denominator and the exclusion count is explicit.
+      missionFailureRate: ratioMetric(technicalMissionFailures, missions.length, 'no_missions', {
+        verifiedWithoutSupportExcluded: verifiedWithoutSupportSettlements,
+      }),
       findDismissalNotInterestedRate: ratioMetric(negativeFindIds.size, goalLinkedFinds.size, 'no_goal_linked_finds'),
       alteredReplayAcceptance: unavailableMetric('count', 'security_event_ledger_unavailable', { target: 0 }),
       unauthorizedMemoryAdmission: unavailableMetric('count', 'security_event_ledger_unavailable', { target: 0 }),
@@ -147,6 +155,14 @@ function isKernelForgedMission(mission) {
   return mission.executionPhase === 'forged'
     || mission.workState === 'forged'
     || (typeof mission.forgedAt === 'string' && mission.forgedAt.length > 0);
+}
+
+function isVerifiedWithoutSupportSettlement(mission) {
+  return mission?.status === 'failed' && mission?.lastFailure?.code === VERIFIED_WITHOUT_SUPPORT;
+}
+
+function isTechnicalMissionFailure(mission) {
+  return mission?.status === 'failed' && !isVerifiedWithoutSupportSettlement(mission);
 }
 
 /**

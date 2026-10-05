@@ -710,6 +710,11 @@
   background: var(--forge-green);
 }
 
+/* Zero-SUPPORT forged / completed-without-Evidence → research_completed: dim dot, not Completado green. */
+.forge-state-action.phase-research_completed i {
+  background: #67676e;
+}
+
 .forge-state-action.phase-thinking i,
 .forge-state-action.phase-queued i,
 .forge-state-action.phase-investigating i,
@@ -2495,4 +2500,13 @@
 }
 .evidence-receipts > article .evidence-disclosure {
   grid-column: 1 / -1;
-}
+}/* Kernel id chip: kind + first 8 hex, full id in title / copy (Finds provenance). */
+.kernel-id-chip { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; vertical-align: middle; border-radius: 6px; background: rgba(255, 205, 165, .06); box-shadow: inset 0 0 0 1px rgba(255, 205, 165, .12); font-family: var(--v3-mono, ui-monospace, monospace); font-size: 11px; line-height: 1; color: #d9d2ca; }
+.kernel-id-chip .kid-label, .kernel-id-chip .kid-open { display: inline-flex; align-items: center; gap: 5px; min-height: 24px; padding: 0 2px 0 7px; border: 0; background: none; color: inherit; font: inherit; }
+.kernel-id-chip .kid-open { cursor: pointer; color: #e1a077; }
+.kernel-id-chip .kid-kind { color: #8f8a85; text-transform: lowercase; }
+.kernel-id-chip .kid-copy { display: inline-grid; place-items: center; grid-auto-flow: column; gap: 3px; min-width: 28px; min-height: 28px; padding: 0 5px; border: 0; border-radius: 5px; background: none; color: #8f8a85; cursor: pointer; font: inherit; }
+.kernel-id-chip .kid-copy:hover, .kernel-id-chip .kid-copy:focus-visible { color: #e9e1d8; background: rgba(255, 205, 165, .08); }
+.kernel-id-chip .kid-copy svg { width: 12px; height: 12px; }
+.kernel-id-chip .kid-copied { font-size: 10px; color: #9fd3a8; }
+.find-provenance dd.find-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }

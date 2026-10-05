@@ -1,7 +1,10 @@
+import { BROWSER_CHALLENGE_READ_REASON, isBrowserChallengePage } from './browser-challenge-page.mjs';
+import { currentGoalRevision } from './goal-execution-authorization.mjs';
 import { createHash } from 'node:crypto';
 import { InboxError, MAX_PAGE_CONTEXT_VISIBLE_TEXT } from './page-context-inbox.mjs';
 import { classifyOpportunity } from './opportunity-classifier.mjs';
 import { queueSupportedFindNotifications } from './supported-find-notifier.mjs';
+import { isSettledVerification, settleVerificationWithoutFind } from './mission-verification-settlement.mjs';
 
 const READ_CAPABILITY = 'web.read';
 
@@ -21,7 +24,7 @@ export class MissionSearchCandidateVerifier {
   async verify(missionId) {
     const initial = await this.store.read();
     const initialMission = findMission(initial, missionId);
-    if (initialMission.status === 'completed' && initialMission.verificationDigest) {
+    if (isSettledVerification(initialMission)) {
       await this.#notifySupportedFinds(initialMission);
       return { mission: initialMission, evidence: [], idempotent: true };
     }
@@ -44,6 +47,8 @@ export class MissionSearchCandidateVerifier {
           throw new Error(`web.read returned HTTP ${document.status}`);
         }
         if (typeof document.text !== 'string' || !document.text.trim()) throw new Error('web.read returned empty content');
+        // A bot wall is not the source: record a failed read, never Evidence (SUPPORT is unaffected).
+        if (isBrowserChallengePage(document.text)) throw new Error(BROWSER_CHALLENGE_READ_REASON);
         outcomes.push({ candidate, ok: true, document });
       } catch (error) {
         outcomes.push({ candidate, ok: false, reason: safeMessage(error) });
@@ -52,7 +57,7 @@ export class MissionSearchCandidateVerifier {
 
     const fresh = await this.store.read();
     const freshMission = findMission(fresh, missionId);
-    if (freshMission.status === 'completed' && freshMission.verificationDigest) {
+    if (isSettledVerification(freshMission)) {
       await this.#notifySupportedFinds(freshMission);
       return { mission: freshMission, evidence: [], idempotent: true };
     }
@@ -75,7 +80,7 @@ export class MissionSearchCandidateVerifier {
       const missions = data.agentMissions ?? [];
       const index = missions.findIndex((item) => item.id === missionId);
       const current = missions[index];
-      if (current?.status === 'completed' && current.verificationDigest) {
+      if (isSettledVerification(current)) {
         return { changed: false, data, result: { mission: current, evidence: [], idempotent: true } };
       }
       requireSameCandidateBatch(expectedMission, current);
@@ -149,13 +154,13 @@ export class MissionSearchCandidateVerifier {
           limitation: 'Kernel web.read verification completed; only fetched page content became Evidence',
           resultSummary,
         }
+        // No Kernel SUPPORT: settle explicitly (failed, never Completado) instead of leaving an
+        // ownerless running/verifying Mission behind.
         : {
-          ...current,
-          status: 'running',
-          executionPhase: 'verifying',
+          ...settleVerificationWithoutFind(current, verificationResults, now),
           verificationResults,
+          verificationDigest: digest,
           searchCandidates,
-          limitation: 'Kernel web.read retrieved page content as Evidence; none of the pages support the Goal, so investigation remains incomplete',
           resultSummary,
         };
       delete nextMission.verificationBlock;
@@ -176,10 +181,16 @@ export class MissionSearchCandidateVerifier {
       const current = missions[index];
       requireSameCandidateBatch(expectedMission, current);
       const verificationResults = outcomes.map((item) => ({ candidateId: item.candidate.id, status: 'verification_failed', reason: item.reason }));
+      const searchCandidates = current.searchCandidates.map((candidate) => {
+        const result = verificationResults.find((item) => item.candidateId === candidate.id);
+        return result ? { ...candidate, ...result } : candidate;
+      });
+      // Every read failed: settle as failed (code web_read_failed) instead of an ownerless verifying Mission.
       const next = {
-        ...current,
+        ...settleVerificationWithoutFind(current, verificationResults, this.now().toISOString()),
         verificationResults,
-        limitation: 'Kernel web.read verification failed for all candidates; retry remains safe',
+        verificationDigest: verificationSealDigest(current.searchCandidateDigest, verificationResults),
+        searchCandidates,
         resultSummary: { received: current.searchCandidates.length, evidenceCreated: 0, opportunitiesPromoted: 0 },
       };
       const updated = [...missions];
@@ -270,7 +281,9 @@ function capabilityContext(goal) {
     };
   }
   if (!goal || !Array.isArray(goal.categories)) return undefined;
-  return { revision: 1, approvalPolicy: 'legacy_none', allowedCapabilities: [READ_CAPABILITY], forbiddenCapabilities: [], allowedDataScopes: ['public_web'], forbiddenDataScopes: [] };
+  const revision = legacyRevision(goal);
+  if (revision === undefined) return undefined;
+  return { revision, approvalPolicy: 'legacy_none', allowedCapabilities: [READ_CAPABILITY], forbiddenCapabilities: [], allowedDataScopes: ['public_web'], forbiddenDataScopes: [] };
 }
 
 function projectVerifiedDocument(data, mission, candidate, document, opportunityProjector, options = {}) {
@@ -331,31 +344,28 @@ function projectVerifiedDocument(data, mission, candidate, document, opportunity
   }
   const references = { caseId, evidenceId };
   let opportunity;
-  // Fail-closed: only classify/project Opportunity when evidenceSupportsGoal already passed.
+  // Fail-closed: only classify/project a Find after evidenceSupportsGoal passed. SUPPORT is the
+  // authority for existence; the heuristic classifier may label the Find but cannot discard it on
+  // a category mismatch with the confirmed Goal scope.
   if (options.promoteOpportunity === true) {
-    const classified = classifyOpportunity(context, references);
-    if (!(classified.status === 'opportunity' && mission.scope?.categories?.length && !mission.scope.categories.includes(classified.opportunity.category))) {
-      // SUPPORT already passed: a page the lead classifier does not recognise still becomes the
-      // Goal's Find instead of forging a Mission with zero Finds.
-      const projected = typeof opportunityProjector.projectSupportedInto === 'function'
-        ? opportunityProjector.projectSupportedInto(nextData, context, references, { scopeCategories: mission.scope?.categories ?? [] })
-        : opportunityProjector.projectInto(nextData, context, references);
-      nextData = projected.data;
-      opportunity = projected.result;
-      if (opportunity?.status === 'opportunity' && opportunity.opportunity?.id) {
-        const stamped = {
-          ...opportunity.opportunity,
-          supported: true,
-          supportReason: options.supportReason ?? 'supported',
-        };
-        nextData = {
-          ...nextData,
-          opportunities: (nextData.opportunities ?? []).map((item) => (
-            item?.id === stamped.id ? stamped : item
-          )),
-        };
-        opportunity = { ...opportunity, opportunity: stamped };
-      }
+    const projected = typeof opportunityProjector.projectSupportedInto === 'function'
+      ? opportunityProjector.projectSupportedInto(nextData, context, references, { scopeCategories: mission.scope?.categories ?? [] })
+      : opportunityProjector.projectInto(nextData, context, references);
+    nextData = projected.data;
+    opportunity = projected.result;
+    if (opportunity?.status === 'opportunity' && opportunity.opportunity?.id) {
+      const stamped = {
+        ...opportunity.opportunity,
+        supported: true,
+        supportReason: options.supportReason ?? 'supported',
+      };
+      nextData = {
+        ...nextData,
+        opportunities: (nextData.opportunities ?? []).map((item) => (
+          item?.id === stamped.id ? stamped : item
+        )),
+      };
+      opportunity = { ...opportunity, opportunity: stamped };
     }
   }
   return { data: nextData, result: { caseId, evidenceId, duplicate, sourceUrl, opportunity } };
@@ -425,3 +435,8 @@ function conservativeAllowed(...sets) {
 }
 function union(...sets) { return [...new Set(sets.flatMap((values) => Array.isArray(values) ? values : []))]; }
 function safeMessage(error) { return String(error instanceof Error ? error.message : error).replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 240); }
+
+/** Legacy Goals: revision 1 unless edited through POST /api/goals/:id/revisions. */
+function legacyRevision(goal) {
+  try { return currentGoalRevision(goal); } catch { return undefined; }
+}

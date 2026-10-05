@@ -1,0 +1,103 @@
+/* EFESTO v3 legibility floor (polish pass, Oct 2026).
+   Loaded after efesto-v3.css. It does not change layout or identity: it only lifts text that
+   fell under ~10.5px or under WCAG AA 4.5:1 on the warm near-black surfaces. Decorative
+   strokes keep their original tones; only text colours move. */
+
+:root {
+  /* #6b645e/#7a736d measured 3.1–4.3:1 on surface2; these hold ≥4.5:1 on every v3 surface
+     up to surface3 (#1e1a16) while staying below --v3-muted so hierarchy survives. */
+  --v3-dim: #8a827a;
+  --forge-dim: #8a827a;
+  --v3-ash: #8f877f;
+  --ef-dim: #8a827a;
+}
+
+/* ---------- micro labels (uppercase mono kickers) ---------- */
+.efesto-product .workspace-heading small,
+.efesto-product .find-provenance dt,
+.efesto-product .find-next small,
+.efesto-product .lead-label,
+.efesto-product .find-card > header > span,
+.efesto-product .forge-home-finds > header > small,
+.efesto-product .state-pill,
+.efesto-product .provider-form label,
+.efesto-product .readiness-row > span,
+.efesto-product .readiness-row > strong,
+.efesto-product .agent-contract > span > b,
+.efesto-product .case-list > header > span,
+.efesto-product .case-list > header > b,
+.efesto-product .model-list > header > span,
+.efesto-product .model-list > header > b {
+  font-size: 10.5px;
+}
+.efesto-product .find-provenance dt,
+.efesto-product .find-next small,
+.efesto-product .agent-contract > span > b { color: var(--v3-muted); }
+
+/* ---------- meta / body text ---------- */
+.efesto-product .record-list > article > div > small,
+.efesto-product .case-list > button > span > small,
+.efesto-product .find-card > p,
+.efesto-product .find-signals,
+.efesto-product .find-provenance dd,
+.efesto-product .provenance-link,
+.efesto-product .find-source,
+.efesto-product .agent-contract > span,
+.efesto-product .local-first-status,
+.efesto-product .private-status,
+.efesto-product .scorecard-metric > p { font-size: 11.5px; }
+.efesto-product .record-list > article > div > small,
+.efesto-product .case-list > button > span > small,
+.efesto-product .find-card > p,
+.efesto-product .find-signals,
+.efesto-product .local-first-status,
+.efesto-product .private-status,
+.efesto-product .scorecard-metric > p,
+.efesto-product .empty-state p { color: var(--v3-muted); }
+.efesto-product .find-next strong { font-size: 12.5px; line-height: 1.4; }
+.efesto-product .find-actions button { font-size: 12px; }
+
+/* Evidence titles wrap to two lines instead of ellipsizing to one on phones. */
+.efesto-product .case-list > button > span > strong {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 12.5px;
+  line-height: 1.35;
+  white-space: normal;
+  text-overflow: clip;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+/* Long content-addressed ids are data, not prose: left-aligned, wrapped, never centred. */
+.efesto-product .find-provenance dd { text-align: left; overflow-wrap: anywhere; }
+
+/* ---------- mobile tab bar ---------- */
+.efesto-product .efesto-tabbar button { font-size: 11px; }
+
+/* ---------- forge live view ---------- */
+.forge-live .forge-source-path { color: var(--v3-muted); }
+.forge-live .forge-live-legend summary { font-size: 10.5px; color: var(--v3-muted); }
+.forge-live .forge-live-legend p { color: var(--v3-muted); }
+.forge-live .forge-live-replay { color: var(--v3-text2); }
+.forge-live .forge-bench-meta { font-size: 10.5px; }
+.forge-live .forge-source-prior-tag { font-size: 10.5px; }
+.forge-live .forge-ticker-ttl { color: var(--v3-muted); font-size: 10.5px; }
+.forge-live[data-layout='narrow'] .forge-bench-meta { font-size: 10.5px; }
+.forge-live[data-layout='narrow'] .forge-slabel { font-size: 10px; }
+.forge-live[data-layout='narrow'] .forge-chip-tag { height: 18px; font-size: 10px; }
+
+/* ---------- composer, agent and settings kickers ---------- */
+.efesto-product .forge-shortcut { font-size: 10.5px; color: var(--v3-muted); }
+.efesto-product .forge-composer-hint { font-size: 11px; }
+.efesto-product .agent-hero small,
+.efesto-product .connection-card header small,
+.efesto-product .settings-card header small,
+.efesto-product .readiness-card header small,
+.efesto-product .hermes-copy small,
+.efesto-product .integration-brand + div small { font-size: 10.5px; color: var(--v3-muted); }
+.efesto-product .workspace-action { font-size: 12px; }
+.forge-live .forge-chip-tag { font-size: 10px; }
+.efesto-product .readiness-card > a { font-size: 12px; }

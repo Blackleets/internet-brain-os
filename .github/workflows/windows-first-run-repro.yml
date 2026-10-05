@@ -8,6 +8,7 @@ on:
       - 'packages/shared/**'
       - 'scripts/efesto-*.mjs'
       - 'scripts/install-efesto.ps1'
+      - 'scripts/build-hermes-safe-runtime-fixture.ps1'
       - 'Efesto Launcher.cmd'
       - '.github/workflows/windows-first-run-repro.yml'
       - 'INTERNAL_RELEASE.json'
@@ -21,6 +22,7 @@ on:
       - 'packages/shared/**'
       - 'scripts/efesto-*.mjs'
       - 'scripts/install-efesto.ps1'
+      - 'scripts/build-hermes-safe-runtime-fixture.ps1'
       - 'Efesto Launcher.cmd'
       - '.github/workflows/windows-first-run-repro.yml'
       - 'INTERNAL_RELEASE.json'
@@ -55,8 +57,10 @@ jobs:
           New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
 
           $hermesDir = Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent\venv\Scripts'
+          $hermesPath = Join-Path $hermesDir 'hermes.exe'
           New-Item -ItemType Directory -Force -Path $hermesDir | Out-Null
-          Copy-Item -Force (Get-Command node).Source (Join-Path $hermesDir 'hermes.exe')
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-hermes-safe-runtime-fixture.ps1 -OutputPath $hermesPath
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path $hermesPath)) { throw 'Unable to build the CI-only safe Hermes fixture.' }
 
           $env:HEPHAESTUS_DATA_DIR = $dataDir
           Remove-Item Env:HEPHAESTUS_OBSIDIAN_DIR -ErrorAction SilentlyContinue
@@ -112,8 +116,12 @@ jobs:
           New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
           Set-Content -Path (Join-Path $dataDir 'kernel-api-token') -Value ('d' * 64) -NoNewline
 
+          $hermesFixture = Join-Path $env:RUNNER_TEMP 'efesto-hermes-safe-runtime.exe'
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-hermes-safe-runtime-fixture.ps1 -OutputPath $hermesFixture
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path $hermesFixture)) { throw 'Unable to build the CI-only safe Hermes fixture.' }
+
           $env:HEPHAESTUS_DATA_DIR = $dataDir
-          $env:HEPHAESTUS_HERMES_EXECUTABLE = (Get-Command node).Source
+          $env:HEPHAESTUS_HERMES_EXECUTABLE = $hermesFixture
           $env:HEPHAESTUS_HERMES_SECRET = 'uat-existing-local-boundary-secret'
           $env:HEPHAESTUS_PAIRING = '0'
           Remove-Item Env:HEPHAESTUS_OBSIDIAN_DIR -ErrorAction SilentlyContinue

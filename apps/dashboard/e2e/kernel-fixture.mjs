@@ -12,7 +12,7 @@ const fixtures = {
     message: 'Efesto is ready.', diagnostics: { kernel: { reachable: true }, hermes: { found: true }, obsidian: { configured: true }, pairing: { paired: true } },
     actions: [{ id: 'open_efesto', label: 'Open Efesto', recoverable: false }],
   },
-  cases: { ok: true, cases: [{ id: 'case-1', title: 'Supplier research', status: 'active' }] },
+  cases: { ok: true, cases: [{ id: 'case-1', title: 'Supplier research', status: 'active' }, { id: 'case-encoded-title', title: '9. Classes &#8212; Python 3.14 documentation for supplier onboarding &amp; research', status: 'draft' }] },
   goals: { ok: true, goals: [{ id: 'goal-1', title: 'Find AI clients', priority: 3, status: 'active', createdAt: '2026-07-26T10:00:00.000Z' }] },
   missions: { ok: true, missions: [{ id: 'mission-1', goalId: 'goal-1', goalTitle: 'Find AI clients', status: 'running', executionPhase: 'investigating', attempt: 1, createdAt: '2026-07-26T10:00:00.000Z', verificationResults: [{ candidateId: 'cand-1', status: 'verified', evidenceId: 'evidence-1', sourceUrl: 'https://clients.example/projects/ai-automation', supported: true, supportReason: 'supported' }] }, { id: 'mission-forged', goalId: 'goal-1', goalTitle: 'Find AI clients', status: 'completed', executionPhase: 'forged', attempt: 1, createdAt: '2026-07-26T10:01:00.000Z', verificationResults: [{ candidateId: 'cand-1', status: 'verified', evidenceId: 'evidence-1', sourceUrl: 'https://clients.example/projects/ai-automation', supported: true, supportReason: 'supported' }] }] },
   goalSurfaces: { ok: true, surfaces: [{
@@ -63,6 +63,9 @@ const fixtures = {
   },
 };
 
+let agentContact;
+const fixtureStartedAt = new Date().toISOString();
+
 const routes = new Map([
   ['/health', fixtures.health], ['/status', fixtures.status], ['/bootstrap/status', fixtures.bootstrap],
   ['/api/cases', fixtures.cases], ['/api/goals', fixtures.goals], ['/api/agent-missions', fixtures.missions], ['/api/goal-surfaces', fixtures.goalSurfaces],
@@ -80,8 +83,23 @@ const server = createServer((request, response) => {
   };
 
   if (request.method === 'OPTIONS') { response.writeHead(204, headers).end(); return; }
+  if (request.method === 'POST' && path === '/__fixture/reset-agents') { agentContact = undefined; response.writeHead(204, headers).end(); return; }
   if (path.startsWith('/api/') && request.headers['x-hephaestus-token'] !== token) { response.writeHead(401, headers).end(JSON.stringify({ ok: false })); return; }
 
+  // Agent presence mimics the Kernel contract (efesto.agents.v1): only a non-browser ping counts.
+  if (request.method === 'POST' && path === '/api/agents/hermes/ping') {
+    if (request.headers.origin) { response.writeHead(403, headers).end(JSON.stringify({ ok: false, code: 'AGENT_PING_BROWSER_FORBIDDEN' })); return; }
+    agentContact = new Date().toISOString();
+    response.writeHead(200, headers).end(JSON.stringify({ ok: true, agent: 'hermes', recordedAt: agentContact })); return;
+  }
+  if (request.method === 'GET' && path === '/api/agents') {
+    const online = agentContact && Date.now() - Date.parse(agentContact) < 120_000;
+    response.writeHead(200, headers).end(JSON.stringify({ ok: true, schemaVersion: 'efesto.agents.v1', kernelStartedAt: fixtureStartedAt, onlineWindowMs: 120_000, agents: [{
+      id: 'hermes', label: 'Hermes Agent', state: online ? 'online' : 'history', kernelStartedAt: fixtureStartedAt, onlineWindowMs: 120_000,
+      ...(agentContact ? { lastSeenAt: agentContact, lastSeenVia: 'ping', lastPingAt: agentContact } : {}),
+      lastClaimAt: '2026-07-26T10:00:00.000Z', lastMission: { id: 'mission-1', goalTitle: 'Find AI automation clients', phase: 'forged', at: '2026-07-26T10:01:00.000Z' }, queuedMissions: 0,
+    }] })); return;
+  }
   if (request.method === 'POST' && path === '/api/goals') {
     response.writeHead(200, headers).end(JSON.stringify({ ok: true, goal: { id: 'goal-e2e', title: 'Auditar fuentes públicas' } })); return;
   }
@@ -104,6 +122,16 @@ const server = createServer((request, response) => {
   }
   if (request.method !== 'GET') { response.writeHead(405, headers).end(); return; }
 
+  if (path === '/api/events') {
+    // Live Kernel event stream: the dashboard subscribes for immediate refresh hints.
+    response.writeHead(200, { ...headers, 'content-type': 'text/event-stream; charset=utf-8', connection: 'keep-alive' });
+    response.write(': connected\n\n');
+    return;
+  }
+  if (path === '/api/agent-missions/mission-1/evidence') {
+    // TEST FIXTURE: Kernel Evidence projection for the forge live view (excerpt is fixture text).
+    response.writeHead(200, headers).end(JSON.stringify({ ok: true, schemaVersion: 'efesto.mission-evidence.v1', sourceOfTruth: 'kernel', missionId: 'mission-1', evidence: [{ id: 'evidence-1', candidateId: 'cand-1', caseId: 'case-1', sourceUrl: 'https://clients.example/projects/ai-automation', title: 'AI automation project · fixture page', capturedAt: '2026-07-26T10:02:00.000Z', contentHash: 'fixture-hash', extractionMethod: 'kernel-web-read-v1', supported: true, supportReason: 'supported', excerpt: { text: 'Fixture excerpt: we are looking for an AI automation partner for client onboarding.', anchor: 'goal_term', truncatedStart: false, truncatedEnd: false } }], limits: { maxRecords: 20, maxExcerptChars: 280 } })); return;
+  }
   if (path === '/api/browser/case/case-1') {
     response.writeHead(200, headers).end(JSON.stringify({ ok: true, case: { id: 'case-1', title: 'Supplier research' }, evidence: [{ id: 'evidence-1', summary: 'Public supplier evidence', sourceUrl: 'https://supplier.example/source', confidence: 0.93, capturedAt: '2026-07-26T10:02:00.000Z', tags: ['public'] }] })); return;
   }
@@ -114,5 +142,5 @@ const server = createServer((request, response) => {
 });
 
 server.once('error', (error) => { console.error(error); process.exitCode = 1; });
-for (const signal of ['SIGINT', 'SIGTERM']) server.once(signal, () => server.close(() => process.exit(0)));
+for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { server.close(() => process.exit(0)); server.closeAllConnections(); });
 server.listen(port, host);

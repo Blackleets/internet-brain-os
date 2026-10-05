@@ -1,4 +1,4 @@
-import { after, before, describe, it } from 'node:test';
+import { afterAll as after, beforeAll as before, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';

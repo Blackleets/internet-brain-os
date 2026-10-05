@@ -5,6 +5,10 @@ const MAX_OUTPUT_BYTES = 512 * 1024;
 const DEFAULT_TIMEOUT_MS = 15 * 60_000;
 const MAX_TIMEOUT_MS = 30 * 60_000;
 const FORCE_KILL_DELAY_MS = 500;
+// Kernel calls here are local bookkeeping (claim, submit candidates, report failure, read state).
+// Without a bound a stalled Kernel left the worker awaiting forever, and the one-click runtime
+// never retried that Mission because its activeRuns entry never settled.
+const DEFAULT_KERNEL_REQUEST_TIMEOUT_MS = 60_000;
 
 export async function runHermesMissionWorker(options = {}) {
   const baseUrl = normalizeLoopback(options.baseUrl ?? process.env.HEPHAESTUS_KERNEL_URL ?? 'http://127.0.0.1:4000');
@@ -13,33 +17,53 @@ export async function runHermesMissionWorker(options = {}) {
   const args = options.args ?? parseArgs(process.env.HEPHAESTUS_HERMES_ARGS_JSON);
   const fetchImpl = options.fetchImpl ?? fetch;
   const execute = options.execute ?? executeAdapter;
-  const claimed = await request(fetchImpl, `${baseUrl}/api/agent-missions/claim`, apiToken, {
+  const requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_KERNEL_REQUEST_TIMEOUT_MS;
+  const request = (url, token, init, allowEmpty) => kernelRequest(fetchImpl, url, token, init, allowEmpty, requestTimeoutMs);
+  const claimed = await request(`${baseUrl}/api/agent-missions/claim`, apiToken, {
     method: 'POST',
     ...(options.missionId ? { body: JSON.stringify({ missionId: options.missionId }) } : {}),
   }, true);
   if (!claimed) return { status: 'idle' };
   const mission = claimed.mission;
+  if (!mission || typeof mission.id !== 'string' || !mission.id.trim()
+    || typeof mission.leaseId !== 'string' || !mission.leaseId.trim()) {
+    throw new Error('Kernel did not return a leased mission');
+  }
   try {
     const timeoutMs = options.timeoutMs ?? configuredTimeout(process.env.HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
     const result = await execute(command, args, mission, { timeoutMs });
     const findings = validateAdapterResult(result);
+    const searchTelemetry = adapterSearchTelemetry(result);
     let completed;
     try {
-      completed = await request(fetchImpl, `${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, apiToken, {
-        method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, resultKind: 'search_candidates', findings }),
+      completed = await request(`${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/results`, apiToken, {
+        method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, resultKind: 'search_candidates', findings, ...(searchTelemetry ? { searchTelemetry } : {}) }),
       });
     } catch (error) {
-      const reconciled = await reconcileSettledMission(fetchImpl, baseUrl, apiToken, mission.id);
+      const reconciled = await reconcileSettledMission(request, baseUrl, apiToken, mission.id);
       if (reconciled) return { status: missionWorkerStatus(reconciled), mission: reconciled };
       throw error;
+    }
+    if (!completed.mission || completed.mission.id !== mission.id
+      || !(completed.mission.status === 'completed' || completed.mission.executionPhase === 'verifying')) {
+      const reconciled = await reconcileSettledMission(request, baseUrl, apiToken, mission.id);
+      if (reconciled) return { status: missionWorkerStatus(reconciled), mission: reconciled };
+      throw new Error('Kernel did not confirm candidate submission');
     }
     return { status: missionWorkerStatus(completed.mission), mission: completed.mission };
   } catch (error) {
     const reason = sanitizeFailure(error);
-    await request(fetchImpl, `${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/failures`, apiToken, {
-      method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, reason }),
-    });
-    return { status: 'failed', missionId: mission.id, reason };
+    try {
+      await request(`${baseUrl}/api/agent-missions/${encodeURIComponent(mission.id)}/failures`, apiToken, {
+        method: 'POST', body: JSON.stringify({ leaseId: mission.leaseId, reason }),
+      });
+    } catch (reportError) {
+      // The Kernel did not record this failure (unreachable, lease superseded, ...). Keep the real
+      // cause instead of replacing it with the report error; the lease expiry stays the Kernel's
+      // recovery path, so nothing here claims the Mission failed in Kernel state.
+      return { status: 'failed', missionId: mission.id, reason, reported: false, reportError: sanitizeFailure(reportError) };
+    }
+    return { status: 'failed', missionId: mission.id, reason, reported: true };
   }
 }
 
@@ -85,17 +109,36 @@ function adapterFailure(code, stderr) {
   return `Hermes adapter exited with code ${code}${diagnostic ? `: ${diagnostic}` : ''}`;
 }
 
-async function request(fetchImpl, url, token, init, allowEmpty = false) {
-  const response = await fetchImpl(url, { ...init, headers: { 'x-hephaestus-token': token, ...(init.body ? { 'content-type': 'application/json' } : {}) } });
-  if (allowEmpty && response.status === 204) return undefined;
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error ?? `Kernel request failed with HTTP ${response.status}`);
-  return body;
+async function kernelRequest(fetchImpl, url, token, init, allowEmpty = false, timeoutMs = DEFAULT_KERNEL_REQUEST_TIMEOUT_MS) {
+  try {
+    const response = await fetchImpl(url, {
+      ...init,
+      headers: { 'x-hephaestus-token': token, ...(init.body ? { 'content-type': 'application/json' } : {}) },
+      // Authenticated local bookkeeping must never follow a redirect to another origin.
+      redirect: 'error',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (allowEmpty && response.status === 204) return undefined;
+    let body;
+    try {
+      body = await response.json();
+    } catch (error) {
+      if (error?.name === 'TimeoutError' || error?.name === 'AbortError') throw error;
+      throw new Error(`Kernel returned invalid JSON with HTTP ${response.status}`);
+    }
+    if (!response.ok) throw new Error(typeof body?.error === 'string' ? body.error : `Kernel request failed with HTTP ${response.status}`);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('Kernel returned an invalid response');
+    return body;
+  } catch (error) {
+    // The same request deadline covers the response body, not only the headers.
+    if (error?.name === 'TimeoutError' || error?.name === 'AbortError') throw new Error(`Kernel request timed out after ${timeoutMs} ms`);
+    throw error;
+  }
 }
 
-async function reconcileSettledMission(fetchImpl, baseUrl, token, missionId) {
+async function reconcileSettledMission(request, baseUrl, token, missionId) {
   try {
-    const body = await request(fetchImpl, `${baseUrl}/api/agent-missions`, token, { method: 'GET' });
+    const body = await request(`${baseUrl}/api/agent-missions`, token, { method: 'GET' });
     const mission = Array.isArray(body.missions) ? body.missions.find((item) => item?.id === missionId) : undefined;
     return mission && (mission.status === 'completed' || mission.executionPhase === 'verifying') ? mission : undefined;
   } catch {
@@ -110,6 +153,23 @@ function missionWorkerStatus(mission) {
 function validateAdapterResult(value) {
   if (!value || !Array.isArray(value.findings) || value.findings.length > 20) throw new Error('Hermes adapter must return { findings: [...] } with at most 20 items');
   return value.findings;
+}
+/**
+ * Display-only search telemetry from the adapter:
+ * { searches: [{ query, limit?, resultCount? }], plannedQueries?: string[], funnel?: { findingsReturned, dropped } }.
+ * Passed through for the Kernel to validate (bounds, funnel arithmetic) and store; a malformed shape
+ * is dropped here and never fails the mission. It is not Evidence and plays no part in SUPPORT.
+ */
+export function adapterSearchTelemetry(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  const searches = value.searches === undefined ? [] : value.searches;
+  if (!Array.isArray(searches) || searches.length > 8) return undefined;
+  if (!searches.every((item) => item && typeof item === 'object' && !Array.isArray(item) && typeof item.query === 'string')) return undefined;
+  const plannedQueries = Array.isArray(value.plannedQueries) && value.plannedQueries.length > 0 && value.plannedQueries.length <= 3
+    && value.plannedQueries.every((item) => typeof item === 'string') ? value.plannedQueries : undefined;
+  const funnel = value.funnel && typeof value.funnel === 'object' && !Array.isArray(value.funnel) ? value.funnel : undefined;
+  if (searches.length === 0 && !plannedQueries && !funnel) return undefined;
+  return { searches, ...(plannedQueries ? { plannedQueries } : {}), ...(funnel ? { funnel } : {}) };
 }
 function parseArgs(value) {
   if (!value) return [];

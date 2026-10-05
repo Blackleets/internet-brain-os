@@ -48,8 +48,14 @@ $script:freshBootstrapDiagnostic = '<not-yet-observed>'
 $tokenPath = Join-Path $dataDir 'kernel-api-token'
 $registryPath = Join-Path $dataDir 'authorized-extensions.json'
 
+$fixtureBuilder = Join-Path $extractRoot 'scripts\build-hermes-safe-runtime-fixture.ps1'
+$hermesFixture = Join-Path $env:RUNNER_TEMP 'efesto-hermes-safe-runtime.exe'
+if (-not (Test-Path $fixtureBuilder)) { throw 'Packaged candidate is missing the CI-only safe Hermes fixture builder.' }
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File $fixtureBuilder -OutputPath $hermesFixture
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path $hermesFixture)) { throw 'Unable to build the CI-only safe Hermes runtime fixture.' }
+
 $env:HEPHAESTUS_DATA_DIR = $dataDir
-$env:HEPHAESTUS_HERMES_EXECUTABLE = (Get-Command node).Source
+$env:HEPHAESTUS_HERMES_EXECUTABLE = $hermesFixture
 $env:HEPHAESTUS_HERMES_SECRET = $testBoundaryKey
 Remove-Item Env:HEPHAESTUS_PAIRING -ErrorAction SilentlyContinue
 Remove-Item Env:HEPHAESTUS_OBSIDIAN_DIR -ErrorAction SilentlyContinue

@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { executeAdapter, runHermesMissionWorker } from './hermes-mission-worker.mjs';
+import { adapterSearchTelemetry, executeAdapter, runHermesMissionWorker } from './hermes-mission-worker.mjs';
 
 const token = 'worker-token-that-is-longer-than-thirty-two-characters';
 const mission = { id: 'mission:1', leaseId: 'lease:1', scope: { categories: ['job'] } };
@@ -20,6 +20,48 @@ describe('Hermes mission worker', () => {
     });
   });
 
+  it('passes the searches Hermes reported through to the Kernel as display-only search telemetry', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true, mission: { ...mission, status: 'running', executionPhase: 'verifying' } }) });
+    const searches = [{ query: 'empleo rider España', limit: 10, resultCount: 10 }, { query: 'trabajo delivery Barcelona', limit: 10 }];
+    const execute = vi.fn(async () => ({ findings: [{ url: 'https://example.com/job', title: 'Job', text: 'Search snippet' }], searches }));
+    await runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute });
+    const body = JSON.parse(fetchImpl.mock.calls[1][1].body);
+    expect(body.searchTelemetry).toEqual({ searches });
+    expect(body.findings).toHaveLength(1);
+  });
+
+  it('passes the planned queries and the findings funnel through untouched for the Kernel to validate', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true, mission: { ...mission, status: 'running', executionPhase: 'verifying' } }) });
+    const searches = [{ query: 'empleo rider España 2025', limit: 10, resultCount: 10 }];
+    const plannedQueries = ['empleo rider españa', 'empleo rider'];
+    const funnel = { findingsReturned: 3, dropped: { malformed_url: 1, duplicate: 1 } };
+    const execute = vi.fn(async () => ({ findings: [{ url: 'https://example.com/job' }], searches, plannedQueries, funnel }));
+    await runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute });
+    expect(JSON.parse(fetchImpl.mock.calls[1][1].body).searchTelemetry).toEqual({ searches, plannedQueries, funnel });
+    // a plan without any sent search is still worth recording; a malformed plan or funnel is left out
+    expect(adapterSearchTelemetry({ plannedQueries: ['a'] })).toEqual({ searches: [], plannedQueries: ['a'] });
+    expect(adapterSearchTelemetry({ searches, plannedQueries: [1], funnel: [] })).toEqual({ searches });
+    expect(adapterSearchTelemetry({ searches, plannedQueries: ['a', 'b', 'c', 'd'] })).toEqual({ searches });
+  });
+
+  it('omits search telemetry the adapter did not report or reported malformed, without failing the mission', async () => {
+    expect(adapterSearchTelemetry({ findings: [] })).toBeUndefined();
+    expect(adapterSearchTelemetry({ searches: [] })).toBeUndefined();
+    expect(adapterSearchTelemetry({ searches: 'empleo' })).toBeUndefined();
+    expect(adapterSearchTelemetry({ searches: [{ limit: 10 }] })).toBeUndefined();
+    expect(adapterSearchTelemetry({ searches: Array.from({ length: 9 }, () => ({ query: 'q' })) })).toBeUndefined();
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true, mission: { ...mission, status: 'running', executionPhase: 'verifying' } }) });
+    const execute = vi.fn(async () => ({ findings: [{ url: 'https://example.com/job', title: 'Job', text: 'Search snippet' }], searches: [{ nope: true }] }));
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({ status: 'verifying' });
+    expect(JSON.parse(fetchImpl.mock.calls[1][1].body)).not.toHaveProperty('searchTelemetry');
+  });
+
   it('stays idle when no authorized mission is claimable', async () => {
     const fetchImpl = vi.fn(async () => ({ ok: true, status: 204 }));
     await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl })).resolves.toEqual({ status: 'idle' });
@@ -30,8 +72,98 @@ describe('Hermes mission worker', () => {
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
       .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true }) });
     const execute = vi.fn(async () => { throw new Error('provider\nfailed'); });
-    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({ status: 'failed', reason: 'provider failed' });
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({ status: 'failed', reason: 'provider failed', reported: true });
   });
+
+  it('keeps the real adapter cause when the Kernel refuses the failure report', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockResolvedValueOnce({ ok: false, status: 409, json: async () => ({ ok: false, error: 'Mission lease is no longer active' }) });
+    const execute = vi.fn(async () => { throw new Error('Hermes adapter timed out'); });
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toEqual({
+      status: 'failed', missionId: mission.id, reason: 'Hermes adapter timed out', reported: false, reportError: 'Mission lease is no longer active',
+    });
+  });
+
+  it('does not reject when the Kernel is unreachable for the failure report', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockRejectedValueOnce(new Error('connect ECONNREFUSED 127.0.0.1:4311'));
+    const execute = vi.fn(async () => ({ findings: 'not-an-array' }));
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute })).resolves.toMatchObject({
+      status: 'failed', reported: false, reason: expect.stringContaining('must return { findings'), reportError: expect.stringContaining('ECONNREFUSED'),
+    });
+  });
+
+  it('bounds a stalled Kernel request instead of awaiting forever, then reports the timeout', async () => {
+    // A Kernel that accepts the connection but never answers used to leave the worker (and the
+    // one-click activeRuns entry for this Mission) pending forever, so it was never retried.
+    const stalled = (_url, init) => new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true });
+    });
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, mission }) })
+      .mockImplementationOnce(stalled)
+      .mockImplementationOnce(stalled)
+      .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true }) });
+    const execute = vi.fn(async () => ({ findings: [{ url: 'https://example.com/job', title: 'Job', text: 'Search snippet' }] }));
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute, requestTimeoutMs: 50 }))
+      .resolves.toMatchObject({ status: 'failed', reported: true, reason: 'Kernel request timed out after 50 ms' });
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    expect(fetchImpl.mock.calls.every(([, init]) => init.signal instanceof AbortSignal)).toBe(true);
+  }, 5_000);
+
+  it('a stalled claim rejects with a bounded timeout rather than hanging', async () => {
+    const fetchImpl = vi.fn((_url, init) => new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true });
+    }));
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, requestTimeoutMs: 50 }))
+      .rejects.toThrow('Kernel request timed out after 50 ms');
+  }, 5_000);
+
+  it('bounds a stalled response body and preserves its timeout during failure reporting', async () => {
+    const stalledBody = (_url, init) => Promise.resolve({ ok: true, status: 200, json: () => new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true });
+    }) });
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ mission }) })
+      .mockImplementationOnce(stalledBody)
+      .mockImplementationOnce(stalledBody)
+      .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true }) });
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl,
+      execute: async () => ({ findings: [] }), requestTimeoutMs: 50 }))
+      .resolves.toMatchObject({ status: 'failed', reported: true, reason: 'Kernel request timed out after 50 ms' });
+    expect(fetchImpl.mock.calls.every(([, init]) => init.redirect === 'error')).toBe(true);
+  });
+
+  it('does not execute an adapter after a malformed claim response', async () => {
+    const execute = vi.fn();
+    const fetchImpl = vi.fn(async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('Unexpected HTML'); } }));
+    await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute }))
+      .rejects.toThrow('Kernel returned invalid JSON with HTTP 200');
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it.each([{}, { mission: null }, { mission: { id: 'mission:1' } }])
+    ('never starts an adapter without a Kernel-issued lease: %j', async (body) => {
+      const execute = vi.fn();
+      const fetchImpl = vi.fn(async () => ({ ok: true, status: 200, json: async () => body }));
+      await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl, execute }))
+        .rejects.toThrow('Kernel did not return a leased mission');
+      expect(execute).not.toHaveBeenCalled();
+    });
+
+  it.each([{}, { mission: { ...mission, status: 'queued' } }, { mission: { id: 'mission:other', status: 'completed' } }])
+    ('does not invent completion from an unconfirmed submission: %j', async (body) => {
+      const fetchImpl = vi.fn()
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ mission }) })
+        .mockResolvedValueOnce({ ok: true, status: 202, json: async () => body })
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ missions: [] }) })
+        .mockResolvedValueOnce({ ok: true, status: 202, json: async () => ({ ok: true }) });
+      await expect(runHermesMissionWorker({ apiToken: token, command: '/opt/hermes-adapter', fetchImpl,
+        execute: async () => ({ findings: [] }) }))
+        .resolves.toMatchObject({ status: 'failed', reported: true, reason: 'Kernel did not confirm candidate submission' });
+    });
 
   it('does not report a timeout until the adapter process has actually stopped', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'efesto-worker-timeout-test-'));

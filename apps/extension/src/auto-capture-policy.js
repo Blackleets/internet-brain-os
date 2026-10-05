@@ -43,3 +43,28 @@ export function evaluateAutoCapture(context, options = {}) {
   url.hash = '';
   return { allowed: true, safeUrl: url.href };
 }
+
+/** Cooldown key: the page without its #fragment (in-page anchors are the same page). */
+export function autoCaptureKey(value) {
+  try {
+    const url = new URL(value);
+    url.hash = '';
+    return url.href;
+  } catch {
+    return String(value ?? '');
+  }
+}
+
+/**
+ * Remember a capture for the cooldown only. Entries past the cooldown can never block a
+ * capture again, so keeping them just grew storage.local with every URL ever captured.
+ */
+export function rememberAutoCapture(previous, key, now = Date.now(), cooldownMs = AUTO_CAPTURE_COOLDOWN_MS) {
+  const kept = {};
+  for (const [url, at] of Object.entries(previous ?? {})) {
+    const when = Number(at);
+    if (Number.isFinite(when) && now - when < cooldownMs) kept[url] = when;
+  }
+  kept[key] = now;
+  return kept;
+}

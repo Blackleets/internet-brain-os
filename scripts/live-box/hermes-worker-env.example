@@ -1,0 +1,11 @@
+# Hermes queue-worker environment (copy to /tmp/.hermes-worker-env). Values below are the box defaults;
+# no secrets live here (the Kernel token is read from a private file, see HANDOFF-EFESTO.md).
+OLLAMA_HOST=127.0.0.1:11434
+OLLAMA_CONTEXT_LENGTH=8192
+HERMES_INFERENCE_PROVIDER=custom
+HERMES_INFERENCE_MODEL=qwen3.5:2b
+CUSTOM_BASE_URL=http://127.0.0.1:11434/v1
+HEPHAESTUS_HERMES_EXECUTABLE=/tmp/efesto-live/hermes-agent/.venv/bin/hermes
+HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS=480000
+HEPHAESTUS_HERMES_WORKER_TIMEOUT_MS=540000
+HEPHAESTUS_HERMES_MAX_TURNS=4

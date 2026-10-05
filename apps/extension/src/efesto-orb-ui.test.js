@@ -36,9 +36,11 @@ describe('Efesto orb UI static contract', () => {
   it('keeps protected Chrome pages guarded before the orb controller loads', () => {
     const html = readFileSync(resolve('apps/extension/src/popup.html'), 'utf8');
     const guard = readFileSync(resolve('apps/extension/src/unsupported-page-guard.js'), 'utf8');
+    const support = readFileSync(resolve('apps/extension/src/page-support.js'), 'utf8');
     expect(html.indexOf('central-forge-power.js')).toBeGreaterThan(html.indexOf('popup.js'));
-    expect(guard).toContain('Receiving end does not exist');
-    expect(guard).toContain("parsed.protocol === 'http:' || parsed.protocol === 'https:'");
+    expect(guard).toContain("from './page-support.js'");
+    expect(support).toContain('Receiving end does not exist');
+    expect(support).toContain("parsed.protocol === 'http:' || parsed.protocol === 'https:'");
   });
 
   it('renders the mission returned by the Kernel immediately after starting research', () => {
@@ -55,11 +57,26 @@ describe('Efesto orb UI static contract', () => {
     expect(source).toContain('mission: restartedMission');
   });
 
-  it('never displays empty summaries or Obsidian receipts outside completed state', () => {
+  it('end-of-cycle auto-disable derives terminal honesty before pausing (not START EFESTO)', () => {
+    const source = readFileSync(resolve('apps/extension/src/central-forge-power-controller.js'), 'utf8');
+    expect(source).toContain('const terminalView = deriveEfestoOrbState({ enabled: true, kernel, services, mission: latest })');
+    expect(source).toContain('{ ...terminalView, enabled: false }');
+    expect(source).not.toContain('deriveEfestoOrbState({ enabled: false, kernel, services, mission: latest })');
+  });
+
+  it('never displays empty summaries or Obsidian receipts outside completed/research_completed ledger', () => {
     const source = readFileSync(resolve('apps/extension/src/central-forge-power-controller.js'), 'utf8');
     const css = readFileSync(resolve('apps/extension/src/central-forge-power.css'), 'utf8');
-    expect(source).toContain("renderObsidianReceipt(obsidianReceipt, view.state === 'completed' ? view.obsidianReceipt : undefined)");
+    expect(source).toContain("const terminalLedger = view.state === 'completed' || view.state === 'research_completed' || view.state === 'completed_without_forge'");
+    expect(source).not.toContain("view.state === 'completed_without_forge' ? 'success'");
+    expect(css).not.toContain('data-state="completed_without_forge"');
+    expect(source).toContain('renderObsidianReceipt(obsidianReceipt, terminalLedger ? view.obsidianReceipt : undefined)');
+    expect(source).toContain("view.state === 'completed' ? 'success'");
+    expect(source).not.toContain("view.state === 'research_completed' ? 'success'");
     expect(css).toContain('.forge-power-shell [hidden]{display:none!important}');
+    // Green Completado chrome stays on completed only — no research_completed green rule.
+    expect(css).toContain('.forge-power-panel[data-state="completed"] .forge-power{');
+    expect(css).not.toContain('data-state="research_completed"');
   });
 
   it('makes the visible orb and Retry safely copy part of the same accessible control', () => {

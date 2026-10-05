@@ -1,18 +1,30 @@
 'use client';
 
-import Image from 'next/image';
+import type { GoalEditRequest } from './forge/goal-edit-sheet';
 import {
-  Activity, Bot, BrainCircuit, ChevronRight, Database, Home, Menu, RefreshCw, Settings,
+  Activity, Bot, BrainCircuit, ChevronRight, Database, Home, Menu, MoreHorizontal, Plus, RefreshCw, Settings,
   ShieldCheck, Sparkles, SquarePen, Target, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { KernelClient, KernelClientError } from '../lib/kernel/client';
-import type { CaseSummary } from '../lib/kernel/contracts';
+import type { CaseSummary, MissionSummary } from '../lib/kernel/contracts';
 import { loadGoalSurfaces, type GoalSurface, type GoalSurfaceWorkState } from '../lib/kernel/goal-surfaces';
 import { loadOverview, type OverviewSnapshot } from '../lib/kernel/overview';
-import { kernelSupportedFinds } from '../lib/kernel/supported-find';
+import { countMissionKernelSupportedFinds, kernelSupportedFinds, missionVerifiedWithoutSupport } from '../lib/kernel/supported-find';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
+import { loadMissionEvidence } from '../lib/kernel/mission-evidence';
+import { buildForgeModel, type ForgeEvidenceLoad } from '../lib/forge/forge-model';
+import { keywordsFromGoal } from '../lib/kernel/goal-keywords';
+import { focusGoalSurface } from '../lib/forge/forge-focus';
 import { connectionStore } from '../lib/session/connection-store';
+import { startVisiblePoller } from '../lib/ui/visible-poller';
+import { subscribeToKernelEvents } from '../lib/kernel/events';
+import { refreshOnKernelEvents } from '../lib/kernel/live-refresh';
+import { KERNEL_UNREACHABLE_AFTER_FAILURES, markKernelUnreachable } from '../lib/kernel/poll-health';
+import { EfestoLockup } from './brand/efesto-mark';
+import { ConnectionsSheet } from './agents/agent-connector';
+import { parseAgents, type AgentsSnapshot } from '../lib/kernel/agents';
+import { agentConnectionCopy } from '../lib/kernel/agent-connection-copy';
 import { ProductValueScorecardPanel } from './overview/product-value-scorecard';
 import {
   ActivityView, AgentsView, EvidenceView, FindsView, GoalsView, HomeView, MemoryView, ModelsView, SettingsView,
@@ -25,6 +37,8 @@ type StreamEvent = { type?: 'conversation' | 'delta' | 'done' | 'error'; delta?:
 
 const SESSION_CONNECTION_KEY = 'hephaestus.owner.connection.session.v1';
 const DEFAULT_BASE_URL = 'http://127.0.0.1:4000';
+// Must match the drawer breakpoint in efesto-forge-redesign.css.
+const MOBILE_NAV_QUERY = '(max-width: 720px)';
 type NavItem = { id: View; label: string; icon: typeof Home };
 const workspaceNav: NavItem[] = [
   { id: 'home', label: 'Inicio', icon: Home },
@@ -39,11 +53,10 @@ const systemNav: NavItem[] = [
   { id: 'agents', label: 'Agentes', icon: Bot },
 ];
 const settingsNav: NavItem = { id: 'settings', label: 'Ajustes', icon: Settings };
-const navGroups = [
-  { label: 'Producto', items: workspaceNav },
-  { label: 'Interno', items: systemNav },
-];
 const nav = [...workspaceNav, ...systemNav, settingsNav];
+// Phone bottom tabs (v3): the four main areas + "Más", which opens the full navigation drawer.
+const tabNav = workspaceNav.filter((item) => item.id === 'home' || item.id === 'goals' || item.id === 'finds' || item.id === 'evidence');
+const ACTIVE_GOALS_MAX = 5;
 
 export default function EfestoProductShell() {
   const [view, setView] = useState<View>('home');
@@ -58,6 +71,7 @@ export default function EfestoProductShell() {
   const [input, setInput] = useState('');
   const [preparedGoal, setPreparedGoal] = useState('');
   const [goalPending, setGoalPending] = useState(false);
+  const [relaunchPending, setRelaunchPending] = useState(false);
   const [chatMode, setChatMode] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatPending, setChatPending] = useState(false);
@@ -65,12 +79,25 @@ export default function EfestoProductShell() {
   const [selectedCaseId, setSelectedCaseId] = useState('');
   const [loadingCaseId, setLoadingCaseId] = useState('');
   const [toast, setToast] = useState('');
+  const [connectionsOpen, setConnectionsOpen] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [rememberSession, setRememberSession] = useState(false);
   const chatAbortRef = useRef<AbortController | undefined>(undefined);
+  const [mobileViewport, setMobileViewport] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const navOpenerRef = useRef<HTMLElement | null>(null);
+  const drawerCloseRef = useRef<HTMLButtonElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const [missionEvidence, setMissionEvidence] = useState<{ key: string; missionId: string; load: ForgeEvidenceLoad }>();
+  // "Objetivos activos" in the sidebar can pin the Goal the forge shows; otherwise the forge follows
+  // the mission the agent is working on (focusGoalSurface).
+  const [pinnedGoalId, setPinnedGoalId] = useState('');
 
   const selectedProvider = providers.find((item) => item.id === selectedProviderId);
-  const focusedGoalSurface = goalSurfaces[0];
+  const focusedGoalSurface = useMemo(
+    () => (pinnedGoalId ? goalSurfaces.find((surface) => surface.goal.id === pinnedGoalId) : undefined) ?? focusGoalSurface(goalSurfaces),
+    [goalSurfaces, pinnedGoalId],
+  );
   const brainPhase = useMemo<BrainPhase>(() => {
     if (!connection || snapshot?.readiness.kernel !== 'online') return 'offline';
     if (chatPending) return 'thinking';
@@ -80,8 +107,53 @@ export default function EfestoProductShell() {
     const hermesUnavailable = hermes === 'missing' || hermes === 'invalid' || hermes === 'failed';
     const waiting = mission?.workState === 'waiting_for_agent' || mission?.workState === 'queued';
     if (hermesUnavailable && waiting) return 'unavailable';
+    if (mission?.workState === 'verifying' || mission?.workState === 'failed') {
+      // GoalSurface strips verificationResults; prefer the full Mission row when loaded so
+      // an all-fetch-failed batch (retry still possible) keeps Verificando.
+      const fullMission = snapshot?.missions.find((item) => item.id === mission.id);
+      const proof = fullMission && Array.isArray(fullMission.verificationResults)
+        ? { workState: mission.workState, verificationResults: fullMission.verificationResults }
+        : mission;
+      if (missionVerifiedWithoutSupport(proof)) return 'verified_unsupported';
+    }
     return brainPhaseFromWorkState(mission?.workState);
-  }, [chatPending, connection, focusedGoalSurface?.mission, snapshot?.readiness.bootstrap?.hermes, snapshot?.readiness.kernel]);
+  }, [chatPending, connection, focusedGoalSurface?.mission, snapshot?.missions, snapshot?.readiness.bootstrap?.hermes, snapshot?.readiness.kernel]);
+
+  // Forge live view: the focused mission's full row (searchCandidates + verificationResults) and
+  // the Kernel Evidence excerpts for its verified rows. Excerpts are re-read only when the set of
+  // verified Evidence ids changes; any failure is shown as "extracto no disponible", never faked.
+  const focusedMissionRow = focusedGoalSurface?.mission ? snapshot?.missions.find((item) => item.id === focusedGoalSurface.mission?.id) : undefined;
+  const verifiedIds = (results: unknown): string[] => (Array.isArray(results) ? results : [])
+    .map((row) => (row && typeof row === 'object' && (row as { status?: unknown }).status === 'verified' ? (row as { evidenceId?: unknown }).evidenceId : undefined))
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+  // "Buscar más" keeps earlier attempts (priorAttempts): their Evidence stays readable, marked as prior.
+  const priorAttemptRows = Array.isArray(focusedMissionRow?.priorAttempts) ? focusedMissionRow.priorAttempts : [];
+  const verifiedEvidenceIds = [
+    ...verifiedIds(focusedMissionRow?.verificationResults),
+    ...priorAttemptRows.flatMap((attempt) => verifiedIds(attempt && typeof attempt === 'object' ? (attempt as { verificationResults?: unknown }).verificationResults : undefined).map((id) => `prior:${id}`)),
+  ].sort();
+  const evidenceKey = focusedMissionRow && verifiedEvidenceIds.length ? `${focusedMissionRow.id}|${verifiedEvidenceIds.join(',')}` : '';
+  const evidenceMissionId = focusedMissionRow?.id ?? '';
+  useEffect(() => {
+    if (!connection || !evidenceKey) { setMissionEvidence(undefined); return; }
+    const controller = new AbortController();
+    setMissionEvidence((current) => (current?.missionId === evidenceMissionId && current.load.status === 'available'
+      ? { ...current, key: evidenceKey }
+      : { key: evidenceKey, missionId: evidenceMissionId, load: { status: 'loading' } }));
+    loadMissionEvidence(new KernelClient(connection), evidenceMissionId, controller.signal)
+      .then((result) => { if (!controller.signal.aborted) setMissionEvidence({ key: evidenceKey, missionId: evidenceMissionId, load: { status: 'available', records: result.evidence } }); })
+      .catch(() => { if (!controller.signal.aborted) setMissionEvidence({ key: evidenceKey, missionId: evidenceMissionId, load: { status: 'unavailable' } }); });
+    return () => controller.abort();
+  }, [connection, evidenceKey, evidenceMissionId]);
+  const forgeModel = useMemo(() => buildForgeModel({
+    connected: Boolean(connection),
+    connecting: Boolean(connection) && !snapshot,
+    kernelOnline: snapshot?.readiness.kernel === 'online',
+    surface: focusedGoalSurface,
+    mission: focusedMissionRow,
+    evidence: missionEvidence && missionEvidence.missionId === evidenceMissionId ? missionEvidence.load : { status: 'idle' },
+    opportunities: snapshot?.opportunities,
+  }), [connection, evidenceMissionId, focusedGoalSurface, focusedMissionRow, missionEvidence, snapshot, snapshot?.opportunities, snapshot?.readiness.kernel]);
 
   useEffect(() => {
     try {
@@ -112,6 +184,7 @@ export default function EfestoProductShell() {
   useEffect(() => {
     if (!connection) return;
     let cancelled = false;
+    let failures = 0;
     const poll = async () => {
       try {
         const client = new KernelClient(connection);
@@ -120,22 +193,71 @@ export default function EfestoProductShell() {
           loadGoalSurfaces(client),
         ]);
         if (cancelled) return;
+        failures = 0;
         setSnapshot(nextSnapshot);
         setGoalSurfaces(nextGoalSurfaces);
       } catch {
-        // The visible readiness state remains the last verified state until the next successful poll.
+        // Keep the last verified records, but after repeated failures (Kernel stopped,
+        // restarting or token rotated) stop claiming the Kernel is online.
+        failures += 1;
+        if (!cancelled && failures >= KERNEL_UNREACHABLE_AFTER_FAILURES) setSnapshot(markKernelUnreachable);
       }
     };
-    const timer = window.setInterval(() => { void poll(); }, 3_000);
+    const poller = startVisiblePoller(poll, 3_000, document);
+    // Mission events from the Kernel trigger an immediate re-read; the 3 s poll stays the fallback.
+    const stopEvents = refreshOnKernelEvents(
+      (onEvent) => subscribeToKernelEvents(connection, onEvent),
+      poller.now,
+    );
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      stopEvents();
+      poller();
     };
   }, [connection]);
 
-  function navigate(next: View) { setView(next); setNavOpen(false); }
-  function toggleNavigation() {
-    if (window.matchMedia('(max-width: 720px)').matches) {
+  // Mobile drawer keyboard contract: the off-canvas sidebar is inert while closed (no Tab stops
+  // into invisible links), focus moves into it on open, Escape closes it and returns focus to the
+  // menu button, and choosing a destination moves focus to the new view.
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia(MOBILE_NAV_QUERY);
+    const sync = () => {
+      setMobileViewport(query.matches);
+      if (!query.matches) setNavOpen(false);
+    };
+    sync();
+    query.addEventListener?.('change', sync);
+    return () => query.removeEventListener?.('change', sync);
+  }, []);
+
+  useEffect(() => {
+    if (!navOpen) return;
+    drawerCloseRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      closeNavigation();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [navOpen]);
+
+  function navigate(next: View) {
+    const drawerWasOpen = navOpen;
+    setView(next);
+    setNavOpen(false);
+    if (drawerWasOpen) mainRef.current?.focus();
+  }
+  function closeNavigation() {
+    setNavOpen(false);
+    // Home hides the topbar and opens the drawer from its own menu button: return focus there.
+    const opener = navOpenerRef.current;
+    (opener?.isConnected ? opener : menuButtonRef.current)?.focus();
+  }
+  function toggleNavigation(opener?: HTMLElement) {
+    if (typeof window.matchMedia === 'function' && window.matchMedia(MOBILE_NAV_QUERY).matches) {
+      navOpenerRef.current = opener ?? null;
       setNavOpen(true);
       return;
     }
@@ -150,12 +272,26 @@ export default function EfestoProductShell() {
     setInput('');
     navigate('home');
   }
+  function openSettings() { navigate('settings'); }
   function newGoal() {
     chatAbortRef.current?.abort();
     setChatPending(false);
     setChatMode(false);
     setPreparedGoal('');
     setInput('');
+    navigate('home');
+    // With a live forge the composer sits below it: bring it into view and focus it.
+    window.requestAnimationFrame?.(() => {
+      const field = document.querySelector<HTMLTextAreaElement>('.forge-composer textarea');
+      if (!field) return;
+      field.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+      field.focus({ preventScroll: true });
+    });
+  }
+  function openGoal(goalId: string) {
+    setPinnedGoalId(goalId);
+    setChatMode(false);
+    setPreparedGoal('');
     navigate('home');
   }
 
@@ -250,6 +386,21 @@ export default function EfestoProductShell() {
     setToast('Dispositivo desconectado. El token ya no está en esta sesión.');
   }
 
+  /** "Probar conexión": a fresh GET /api/agents. undefined = this Kernel does not publish agent status. */
+  async function testAgents(): Promise<AgentsSnapshot | undefined> {
+    if (!connection) return undefined;
+    let next: AgentsSnapshot;
+    try {
+      next = await new KernelClient(connection).get('/api/agents', parseAgents);
+    } catch (error) {
+      if (error instanceof KernelClientError && error.code === 'HTTP_ERROR' && error.status === 404) return undefined;
+      if (error instanceof KernelClientError) throw error;
+      return undefined;
+    }
+    setSnapshot((current) => (current ? { ...current, agents: next } : current));
+    return next;
+  }
+
   async function refresh() {
     if (!connection) return navigate('settings');
     try {
@@ -284,10 +435,61 @@ export default function EfestoProductShell() {
       await client.request(`/api/goals/${encodeURIComponent(goal.id)}/missions`, {
         method: 'POST', body: JSON.stringify({ confirmed: true, agent: 'hermes', cadence: 'manual' }),
       }, parseOk);
-      setInput(''); setPreparedGoal(''); await refresh(); navigate('home');
+      setInput(''); setPreparedGoal(''); setPinnedGoalId(''); await refresh(); navigate('home');
       setToast('Goal persistido y misión confirmada para Hermes.');
     } catch { setToast('El Kernel rechazó la misión. No se creó actividad falsa ni trabajo parcial.'); }
     finally { setGoalPending(false); }
+  }
+
+  /**
+   * "Editar Goal": a Kernel Goal revision (POST /api/goals/:id/revisions). The Kernel only accepts it
+   * with the dashboard's interactive confirmation (its Origin) and keeps the Goal id, its Mission,
+   * earlier attempts, Evidence and Finds. Nothing runs: searching with the new text is "Buscar más".
+   */
+  async function reviseGoal(request: GoalEditRequest): Promise<boolean> {
+    if (!connection) { navigate('settings'); return false; }
+    try {
+      const client = new KernelClient({ ...connection, timeoutMs: 30_000 });
+      const response = await client.request(`/api/goals/${encodeURIComponent(request.goalId)}/revisions`, {
+        method: 'POST',
+        body: JSON.stringify({ confirmed: true, title: request.title, keywords: keywordsFromGoal(request.title), expectedRevision: request.expectedRevision }),
+      }, parseObject);
+      const revision = typeof response.revision === 'number' ? response.revision : undefined;
+      await refresh();
+      setToast(response.changed === false
+        ? 'El Goal ya decía eso: el Kernel no creó una revisión nueva.'
+        : `Goal revisado${revision ? ` (revisión ${revision})` : ''}. Se conservan su misión, la Evidence y los Finds. Pulsa «Buscar más» para buscar con el texto nuevo.`);
+      return true;
+    } catch {
+      setToast('El Kernel no aceptó la edición del Goal. El Goal y su misión siguen como estaban.');
+      return false;
+    }
+  }
+
+  /**
+   * Same confirm endpoint and body as confirmGoal: the Kernel restarts a mission that is no longer
+   * active. mode 'search_more' ("Buscar más") keeps the finished attempt, its Evidence and Finds.
+   * The Kernel only accepts it with the dashboard's interactive confirmation (its Origin).
+   */
+  async function relaunchMission(goalId: string, mode: 'restart' | 'search_more' = 'restart') {
+    if (!connection) { navigate('settings'); return; }
+    if (relaunchPending) return;
+    setRelaunchPending(true);
+    try {
+      const client = new KernelClient({ ...connection, timeoutMs: 30_000 });
+      await client.request(`/api/goals/${encodeURIComponent(goalId)}/missions`, {
+        method: 'POST', body: JSON.stringify({ confirmed: true, agent: 'hermes', cadence: 'manual', ...(mode === 'search_more' ? { mode } : {}) }),
+      }, parseOk);
+      await refresh();
+      setToast(mode === 'search_more'
+        ? 'Buscar más: el Kernel puso un nuevo intento en cola para Hermes. Los Finds y la Evidence anteriores se conservan.'
+        : 'Misión relanzada: el Kernel la puso en cola para Hermes.');
+    } catch {
+      setToast(mode === 'search_more'
+        ? 'El Kernel no aceptó «Buscar más». La misión y sus Finds siguen como estaban.'
+        : 'El Kernel no relanzó la misión. Su estado anterior se conserva.');
+    }
+    finally { setRelaunchPending(false); }
   }
 
   async function recordFeedback(opportunityId: string, signal: 'useful' | 'saved' | 'dismissed' | 'not_interested') {
@@ -304,14 +506,22 @@ export default function EfestoProductShell() {
   async function openCase(record: CaseSummary) {
     if (!connection) return navigate('settings');
     setSelectedCaseId(record.id);
-    if (caseDetails[record.id]) return;
-    setLoadingCaseId(record.id);
+    // Missions keep adding Evidence to a Case: always re-read on open. Cached receipts stay
+    // visible meanwhile; the loading state is shown only when nothing was read yet.
+    const cached = Boolean(caseDetails[record.id]);
+    if (!cached) setLoadingCaseId(record.id);
     try {
       const client = new KernelClient(connection);
       const detail = await client.get(`/api/browser/case/${encodeURIComponent(record.id)}`, parseCaseDetail);
       setCaseDetails((current) => ({ ...current, [record.id]: detail }));
-    } catch { setToast('No se pudo abrir el Case o su Evidence. No se muestran datos de relleno.'); }
-    finally { setLoadingCaseId(''); }
+    } catch {
+      setToast(cached
+        ? 'No se pudo actualizar el Case; se muestra la última Evidence leída del Kernel.'
+        : 'No se pudo abrir el Case o su Evidence. No se muestran datos de relleno.');
+    } finally {
+      // Only clear the spinner this request owns (a later open may be loading another Case).
+      setLoadingCaseId((current) => (current === record.id ? '' : current));
+    }
   }
 
   function openEvidence(record?: CaseSummary) {
@@ -374,65 +584,104 @@ export default function EfestoProductShell() {
   }
 
   const supportedFinds = kernelSupportedFinds(snapshot?.opportunities, snapshot?.missions);
+  const navExpanded = mobileViewport ? navOpen : !sidebarCollapsed;
+  // Focused GoalSurface mission: findCount is Kernel SUPPORT (verificationResults stripped).
+  // Must not use global inbox length; countMissionKernelSupportedFinds reads findCount.
+  // The GoalSurface projection may omit findCount; the full Mission row of the SAME mission id
+  // carries the Kernel verificationResults, so either proof of SUPPORT counts (never inbox length).
+  const forgeSupportedFindCount = Math.max(
+    countMissionKernelSupportedFinds(focusedGoalSurface?.mission),
+    countMissionKernelSupportedFinds(focusedMissionRow),
+  );
 
-  return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''}`}>
-    <aside className="efesto-sidebar" aria-label="Navegación principal">
+  const activeGoals = goalSurfaces.slice(0, ACTIVE_GOALS_MAX);
+  const hermesStatus = snapshot?.agents?.agents.find((agent) => agent.id === 'hermes');
+  const agentCopy = agentConnectionCopy(hermesStatus, Boolean(snapshot?.agents), Date.now());
+  const agentTone = agentCopy.tone;
+  const agentShort = agentCopy.short;
+
+  return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''} ${mobileViewport ? 'has-tabbar' : ''}`}>
+    <aside id="efesto-sidebar" className="efesto-sidebar" aria-label="Navegación principal" inert={mobileViewport && !navOpen ? true : undefined}>
       <div className="efesto-brand">
         <button type="button" onClick={() => navigate('home')} aria-label="Efesto, inicio">
-          <span className="brand-mark"><Image src="/efesto-smith.svg" alt="" width={36} height={36} /></span>
-          <span><strong>EFESTO</strong><small>The Intelligence Forge</small></span>
+          <EfestoLockup size={38} />
         </button>
-        <button type="button" className="mobile-close" onClick={() => setNavOpen(false)} aria-label="Cerrar menú"><X /></button>
+        <button type="button" ref={drawerCloseRef} className="mobile-close" onClick={closeNavigation} aria-label="Cerrar menú"><X /></button>
       </div>
 
       <div className="sidebar-actions" aria-label="Crear">
+        <button type="button" className="new-goal" onClick={newGoal} title="Nuevo Goal">
+          <Plus /><span>Nuevo Goal</span>
+        </button>
         <button type="button" className="new-chat" onClick={newChat} title="Nueva conversación">
           <SquarePen /><span>Nuevo chat</span>
-        </button>
-        <button type="button" className="new-goal" onClick={newGoal} title="Nuevo Goal">
-          <Target /><span>Nuevo Goal</span>
         </button>
       </div>
 
       <nav aria-label="Áreas de Efesto">
-        {navGroups.map((group) => <div className="nav-group" key={group.label}>
-          <span className="nav-label">{group.label}</span>
-          {group.items.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} title={label}>
+        <div className="nav-group">
+          <span className="nav-label">Producto</span>
+          {workspaceNav.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} title={label}>
             <Icon /><span>{label}</span>
             {id === 'goals' && snapshot ? <b>{snapshot.goals.length}</b> : null}
             {id === 'finds' ? <b>{supportedFinds.length}</b> : null}
           </button>)}
-        </div>)}
+        </div>
       </nav>
 
+      {activeGoals.length ? <section className="sidebar-goals" aria-label="Objetivos activos">
+        <span className="nav-label">Objetivos activos</span>
+        <ul>
+          {activeGoals.map((surface) => {
+            const focused = surface.goal.id === focusedGoalSurface?.goal.id;
+            const status = goalStatusLabel(surface, snapshot?.missions);
+            return <li key={surface.goal.id}>
+              <button type="button" className={focused ? 'active' : ''} aria-current={focused ? 'true' : undefined} onClick={() => openGoal(surface.goal.id)} title={surface.goal.title}>
+                <i data-tone={status.tone} aria-hidden="true" />
+                <span><strong>{surface.goal.title}</strong><small>{status.label}</small></span>
+              </button>
+            </li>;
+          })}
+        </ul>
+      </section> : null}
+
       <div className="sidebar-spacer" />
-      <button type="button" className={'sidebar-settings ' + (view === 'settings' ? 'active' : '')} onClick={() => navigate('settings')} aria-current={view === 'settings' ? 'page' : undefined} title="Ajustes">
-        <Settings /><span>Ajustes</span>
-      </button>
-      <button type="button" className="kernel-summary" onClick={() => navigate('settings')}><span className={`kernel-dot ${snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} /><span><strong>{snapshot?.readiness.kernel === 'online' ? 'Kernel online' : 'Kernel local'}</strong><small>{snapshot?.readiness.bootstrap?.pairing === 'paired' ? 'Emparejado' : snapshot?.readiness.bootstrap?.pairing === 'required' ? 'Pairing requerido' : 'Sin conexión'}</small></span><ChevronRight /></button>
+      <nav className="sidebar-system" aria-label="Sistema">
+        {[...systemNav, settingsNav].map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} title={label}>
+          <Icon /><span>{label}</span>
+        </button>)}
+      </nav>
+      <button type="button" className="kernel-summary" onClick={() => navigate('settings')}><span className={`kernel-dot ${snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} /><span><strong>Kernel local</strong><small>{kernelChipDetail(connection?.baseUrl, snapshot)}</small></span><ChevronRight /></button>
     </aside>
-    {navOpen ? <button type="button" className="nav-scrim" onClick={() => setNavOpen(false)} aria-label="Cerrar menú" /> : null}
+    {navOpen ? <button type="button" className="nav-scrim" onClick={closeNavigation} aria-label="Cerrar menú" tabIndex={-1} /> : null}
 
     <section className="efesto-stage">
       <header className="efesto-topbar">
-        <div><button type="button" className="menu-button" onClick={toggleNavigation} aria-label="Alternar navegación"><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view)}</button></div>
+        <div><button type="button" ref={menuButtonRef} className="menu-button" onClick={(event) => toggleNavigation(event.currentTarget)} aria-label="Alternar navegación" aria-controls="efesto-sidebar" aria-expanded={navExpanded}><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view)}</button></div>
         <div className="top-context"><span className="local-first-status"><ShieldCheck /> Primero local</span><span className="private-status">Privado por diseño</span></div>
-        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection ? 'online' : 'offline')} onClick={() => navigate('settings')}><span />{connection ? 'Kernel listo' : 'Conectar'}</button></div>
+        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection && snapshot?.readiness.kernel === 'online' ? 'online' : 'offline')} onClick={() => (connection ? setConnectionsOpen(true) : navigate('settings'))} aria-haspopup={connection ? 'dialog' : undefined}><span />{!connection ? 'Conectar' : snapshot?.readiness.kernel === 'online' ? 'Kernel listo' : 'Kernel sin respuesta'}{connection ? <i className="connection-agent" data-tone={agentTone} aria-hidden="true" /> : null}{connection ? <span className="forge-sr-only"> · {agentShort}</span> : null}</button></div>
       </header>
-      <main className="efesto-main">
-        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenNav={toggleNavigation} supportedFinds={supportedFinds} missions={snapshot?.missions} onFindFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
-        {view === 'goals' ? <div className="missions-route"><GoalsView snapshot={snapshot} onNew={newGoal} /><ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot?.productScorecard} /></div> : null}
-        {view === 'finds' ? <FindsView opportunities={supportedFinds} missions={snapshot?.missions} connected={Boolean(connection)} onFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
-        {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} onOpen={(record) => void openCase(record)} /> : null}
+      <main id="efesto-main" ref={mainRef} tabIndex={-1} className="efesto-main">
+        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenConnections={() => setConnectionsOpen(true)} onOpenNav={toggleNavigation} navExpanded={navExpanded} supportedFinds={supportedFinds} forgeSupportedFindCount={forgeSupportedFindCount} missions={snapshot?.missions} forgeModel={forgeModel} onOpenFinds={() => navigate('finds')} onRelaunchMission={(goalId) => void relaunchMission(goalId)} relaunchPending={relaunchPending} onSearchMore={(goalId) => void relaunchMission(goalId, 'search_more')} onReviseGoal={reviseGoal} onFindFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
+        {view === 'goals' ? <div className="missions-route"><GoalsView snapshot={snapshot} onNew={newGoal} onConnect={openSettings} forgeModel={forgeModel} onOpenFinds={() => navigate('finds')}  onRelaunchMission={(goalId) => void relaunchMission(goalId)} relaunchPending={relaunchPending} onSearchMore={(goalId) => void relaunchMission(goalId, 'search_more')} onReviseGoal={reviseGoal} /><ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot?.productScorecard} /></div> : null}
+        {view === 'finds' ? <FindsView opportunities={supportedFinds} missions={snapshot?.missions} connected={Boolean(connection)} onNewGoal={newGoal} onConnect={openSettings} onFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
+        {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} onOpen={(record) => void openCase(record)} onNewGoal={newGoal} onConnect={openSettings} /> : null}
         {view === 'memory' ? <MemoryView connected={Boolean(connection)} /> : null}
         {view === 'activity' ? <ActivityView snapshot={snapshot} connected={Boolean(connection)} /> : null}
         {view === 'models' ? <ModelsView providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} modelForge={snapshot?.readiness.modelForge} connected={Boolean(connection)} onSelect={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); setChatMode(true); navigate('home'); }} onAdd={addProvider} /> : null}
-        {view === 'agents' ? <AgentsView snapshot={snapshot} onSettings={() => navigate('settings')} onNewGoal={newGoal} /> : null}
-        {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} onConnect={connect} onDisconnect={disconnect} onRefresh={() => void refresh()} /> : null}
+        {view === 'agents' ? <AgentsView snapshot={snapshot} connected={Boolean(connection)} kernelUrl={connection?.baseUrl} onTestAgents={testAgents} onSettings={() => navigate('settings')} onNewGoal={newGoal} /> : null}
+        {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} kernelBaseUrl={connection?.baseUrl} onConnect={connect} onDisconnect={disconnect} onRefresh={() => void refresh()} /> : null}
       </main>
 
+      {connectionsOpen && connection ? <ConnectionsSheet kernelOnline={snapshot?.readiness.kernel === 'online'} connected kernelUrl={connection.baseUrl} agents={snapshot?.agents} onTest={testAgents} onConnectKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onManageKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onClose={() => setConnectionsOpen(false)} /> : null}
       {toast ? <div className="efesto-toast" role="status"><ShieldCheck /><span>{toast}</span><button type="button" onClick={() => setToast('')} aria-label="Cerrar aviso"><X /></button></div> : null}
     </section>
+    {mobileViewport ? <nav className="efesto-tabbar" aria-label="Navegación rápida" aria-hidden={navOpen ? true : undefined} inert={navOpen ? true : undefined}>
+      {tabNav.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} aria-current={view === id ? 'page' : undefined} onClick={() => navigate(id)}>
+        <Icon aria-hidden="true" /><span>{label}</span>
+      </button>)}
+      <button type="button" onClick={(event) => toggleNavigation(event.currentTarget)} aria-controls="efesto-sidebar" aria-expanded={navOpen}><MoreHorizontal aria-hidden="true" /><span>Más</span></button>
+    </nav> : null}
   </div>;
 }
 
@@ -441,10 +690,38 @@ function brainPhaseFromWorkState(workState: GoalSurfaceWorkState | undefined): B
   if (workState === 'investigating' || workState === 'running') return 'investigating';
   if (workState === 'waiting_for_agent' || workState === 'queued') return 'queued';
   if (workState === 'forged') return 'forged';
+  // completed-without-Evidence: never collapse to ready → green Forja lista.
+  if (workState === 'completed') return 'completed';
   if (workState === 'failed') return 'failed';
   return 'ready';
 }
-function keywordsFromGoal(value: string) { return Array.from(new Set(value.toLocaleLowerCase('es').replace(/[^\p{L}\p{N}]+/gu, ' ').split(/\s+/).filter((word) => word.length > 2))).slice(0, 8); }
+/** Sidebar "Objetivos activos" sub-label: the Kernel work state of the Goal's mission, in words. */
+function goalStatusLabel(surface: GoalSurface, missions?: readonly MissionSummary[]): { label: string; tone: 'gold' | 'hot' | 'idle' | 'alert' } {
+  const mission = surface.mission;
+  if (!mission) return { label: 'sin misión', tone: 'idle' };
+  // GoalSurface may omit findCount; the raw Mission rows carry Kernel SUPPORT verdicts.
+  const raw = missions?.find((item) => item.id === mission.id);
+  const finds = mission.findCount ?? (raw ? countMissionKernelSupportedFinds(raw) : 0);
+  switch (mission.workState) {
+    case 'forged': return finds > 0 ? { label: `${finds} ${finds === 1 ? 'Find' : 'Finds'} · forjado`, tone: 'gold' } : { label: 'investigación terminada', tone: 'idle' };
+    case 'verifying': return { label: 'Kernel leyendo', tone: 'hot' };
+    case 'investigating':
+    case 'running': return { label: 'Hermes buscando', tone: 'hot' };
+    case 'queued': return { label: 'en cola', tone: 'idle' };
+    case 'waiting_for_agent': return { label: 'esperando a Hermes', tone: 'idle' };
+    case 'completed': return { label: 'terminada sin Evidence', tone: 'idle' };
+    case 'failed': return { label: 'falló', tone: 'alert' };
+    default: return { label: 'en espera', tone: 'idle' };
+  }
+}
+/** Kernel chip: the local Kernel address it talks to and whether it answers. */
+function kernelChipDetail(baseUrl: string | undefined, snapshot: OverviewSnapshot | undefined): string {
+  if (!baseUrl) return 'Sin conexión';
+  let host = baseUrl;
+  try { host = new URL(baseUrl).host; } catch { /* keep the raw value */ }
+  if (!snapshot) return `${host} · conectando`;
+  return `${host} · ${snapshot.readiness.kernel === 'online' ? 'online' : 'sin respuesta'}`;
+}
 function slug(value: string) { return value.toLocaleLowerCase('en').replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || `provider-${Date.now()}`; }
 function viewLabel(view: View) { return nav.find((item) => item.id === view)?.label ?? 'Inicio'; }
 function connectionMessage(error: unknown) { if (error instanceof KernelClientError && error.code === 'UNAUTHORIZED') return 'El Kernel rechazó el token. No se guardó la credencial.'; if (error instanceof KernelClientError && error.code === 'TIMEOUT') return 'El Kernel tardó demasiado en responder.'; if (error instanceof KernelClientError && error.code === 'OFFLINE') return 'No se alcanzó el Kernel local. Comprueba que el Launcher esté activo.'; return 'No se pudo conectar. Revisa la URL local y el token.'; }

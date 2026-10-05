@@ -104,8 +104,8 @@
             <span class="auto-radar-label">Auto Radar:</span>
             <span id="auto-radar-status-indicator" class="status-indicator paused">⏸ Pausado</span>
           </div>
-          <button id="auto-radar-toggle" class="primary" type="button">
-            <span id="auto-radar-toggle-icon">⏸</span>
+          <button id="auto-radar-toggle" class="primary" type="button" aria-pressed="false">
+            <span id="auto-radar-toggle-icon" aria-hidden="true">▶️</span>
             <span id="auto-radar-toggle-text">Activar Auto Radar</span>
           </button>
           <div class="auto-radar-details">
@@ -129,11 +129,11 @@
       <section id="setup" class="setup">
         <p class="section-title">CONECTA TU KERNEL PRIVADO</p>
         <div class="pair-row">
-          <input id="pairing-code" type="text" inputmode="text" maxlength="12" autocomplete="one-time-code" placeholder="código de 8 caracteres">
+          <input id="pairing-code" type="text" aria-label="Código de emparejamiento del Kernel" inputmode="text" maxlength="12" autocomplete="one-time-code" placeholder="código de 8 caracteres">
           <button id="pair-kernel" type="button">Conectar</button>
         </div>
         <details><summary>Recuperación manual</summary>
-          <input id="kernel-token" type="password" autocomplete="off" placeholder="Token del Kernel local">
+          <input id="kernel-token" type="password" aria-label="Token del Kernel local" autocomplete="off" placeholder="Token del Kernel local">
           <button id="save-token" class="secondary" type="button">Guardar token local</button>
         </details>
       </section>
@@ -154,12 +154,12 @@
         </div>
         <div id="goal-list"><p class="empty">Añade un Goal para personalizar tu radar.</p></div>
         <details><summary>+ Añadir un Goal</summary>
-          <input id="goal-title" type="text" maxlength="120" placeholder="p. ej. Encontrar trabajo remoto en IA">
+          <input id="goal-title" type="text" aria-label="Título del Goal" maxlength="120" placeholder="p. ej. Encontrar trabajo remoto en IA">
           <div class="goal-form-row">
-            <select id="goal-category"><option value="job">Trabajo</option><option value="money">Ingresos extra</option><option value="food">Comida</option><option value="aid">Ayudas públicas</option><option value="grant">Financiación</option><option value="offer">Ahorros</option><option value="learning">Aprendizaje</option><option value="event">Eventos</option><option value="housing">Vivienda</option><option value="travel">Viajes</option><option value="client">Clientes</option></select>
-            <input id="goal-location" type="text" maxlength="80" placeholder="Ubicación (opcional)">
+            <select id="goal-category" aria-label="Categoría del Goal"><option value="job">Trabajo</option><option value="money">Ingresos extra</option><option value="food">Comida</option><option value="aid">Ayudas públicas</option><option value="grant">Financiación</option><option value="offer">Ahorros</option><option value="learning">Aprendizaje</option><option value="event">Eventos</option><option value="housing">Vivienda</option><option value="travel">Viajes</option><option value="client">Clientes</option></select>
+            <input id="goal-location" type="text" aria-label="Ubicación del Goal (opcional)" maxlength="80" placeholder="Ubicación (opcional)">
           </div>
-          <input id="goal-keywords" type="text" maxlength="160" placeholder="Palabras clave, separadas por comas">
+          <input id="goal-keywords" type="text" aria-label="Palabras clave del Goal" maxlength="160" placeholder="Palabras clave, separadas por comas">
           <button id="add-goal" class="secondary" type="button">Forjar Goal</button>
         </details>
       </section>

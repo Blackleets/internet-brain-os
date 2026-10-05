@@ -84,7 +84,8 @@ describe('mission verification: Kernel SUPPORT produces the Find', () => {
       { url: 'https://jwt.io/introduction', title: 'JSON Web Tokens - jwt.io', text: 'Decode, verify and generate JSON Web Tokens.' },
     );
     const result = await verifier.verify(mission.id);
-    expect(result.mission.executionPhase).toBe('verifying');
+    // Settled without a Find (never Completado): read, no Kernel SUPPORT.
+    expect(result.mission).toMatchObject({ status: 'failed', executionPhase: 'failed', lastFailure: { code: 'verified_without_support' } });
     expect(result.mission.resultSummary.opportunitiesPromoted).toBe(0);
     expect((await store.read()).opportunities ?? []).toHaveLength(0);
   });

@@ -3,6 +3,7 @@ import { kernelSupportedFinds, kernelSupportedFindsForMission, presentFind } fro
 import { buildOpportunityCommandCenter } from './opportunity-command-center.js';
 import { buildOpportunityActionPlan, normalizeOpportunityReviewState, updateOpportunityReviewState } from './opportunity-action-workspace.js';
 import { normalizePublicOrigin } from './auto-capture-policy.js';
+import { captureFailureMessage } from './page-support.js';
 import { applyLivingForgeActivity, forgeActivityForMission, temporaryForgeActivity } from './forge-activity.js';
 import { normalizeWorkspaceView, workspaceVisibility } from './workspace-navigation.js';
 import { missionJourney, newestMission, onboardingJourney } from './product-journey.js';
@@ -11,7 +12,8 @@ import { createAgentHubRefresher, missionRevision } from './agent-hub-refresh.js
 import { markWatchtowerEventsRead, presentWatchtowerBanner, unreadWatchtowerCount } from './mission-watchtower.js';
 import { listGoalSurfaces } from './goal-surface-transport.js';
 import { renderGoalSurfaceList } from './goal-surface-goal-list.js';
-import { autoRadarLastResultLabel, autoRadarStatusCopy } from './auto-radar.js';
+import { autoRadarLastResultLabel, autoRadarStatusCopy, autoRadarToggleCopy } from './auto-radar.js';
+import { createAutoRadarUiSync } from './auto-radar-ui-sync.js';
 
 const $ = (selector) => document.querySelector(selector);
 const select = $('#case-target');
@@ -28,6 +30,9 @@ const autoRadarLastDomain = $('#auto-radar-last-domain');
 const autoRadarLastResult = $('#auto-radar-last-result');
 let currentOrigin;
 let agentHubRefresher;
+// Keeps the Auto Radar status in sync with background updates while the popup is open.
+let nextAutoRadarUpdate;
+let autoRadarUIUpdateTimeout;
 const productState = { connected: false, goalCount: 0, radarEnabled: false, findCount: 0, autoRadarEnabled: false, autoRadarState: 'paused' };
 
 void initialize();
@@ -42,6 +47,7 @@ $('#advanced').addEventListener('click', () => chrome.tabs.create({ url: `${DEFA
 $('#guide-action').addEventListener('click', () => setWorkspaceView(onboardingJourney(productState).next?.view ?? 'finds'));
 document.addEventListener('visibilitychange', () => agentHubRefresher?.visibilityChanged());
 window.addEventListener('pagehide', () => agentHubRefresher?.stop(), { once: true });
+chrome.storage.onChanged.addListener(onStorageChanged);
 
 function setWorkspaceView(requestedView) {
   const activeView = normalizeWorkspaceView(requestedView);
@@ -83,52 +89,26 @@ async function initialize() {
   const initialMissions = results[4].status === 'fulfilled' && Array.isArray(results[4].value) ? results[4].value : [];
   if (stored.kernelApiToken) startAgentHubRefresh(stored, initialMissions);
   
-  // Add storage change listener to keep UI in sync
-  let lastAutoRadarState = productState.autoRadarState;
-  let lastRadarEvent = null;
-  
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local') {
-      const stateChanged = changes.autoRadarState;
-      const eventChanged = changes.lastRadarEvent;
-      
-      if (stateChanged || eventChanged) {
-        const autoRadarState = stateChanged ? stateChanged.newValue ?? productState.autoRadarState : productState.autoRadarState;
-        const lastRadarEvent = eventChanged ? eventChanged.newValue ?? null : null;
-        
-        // Skip if state and event haven't actually changed
-        if (autoRadarState === lastAutoRadarState && 
-            ((lastRadarEvent === null && lastRadarEvent === null) || 
-             (lastRadarEvent !== null && lastRadarEvent !== null && 
-              lastRadarEvent.status === lastRadarEvent.status && 
-              lastRadarEvent.title === lastRadarEvent.title))) {
-          return;
-        }
-        
-        lastAutoRadarState = autoRadarState;
-        lastRadarEvent = lastRadarEvent;
-        
-        // Debounce UI updates to prevent flickering
-        clearTimeout(autoRadarUIUpdateTimeout);
-        autoRadarUIUpdateTimeout = setTimeout(() => {
-          updateAutoRadarUI(autoRadarState, lastRadarEvent);
-        }, 150); // Increased debounce time
-      }
-      
-      if (changes.autoRadarEnabled) {
-        productState.autoRadarEnabled = changes.autoRadarEnabled?.newValue ?? false;
-        // Update toggle button text/icon based on enabled state
-        const state = productState.autoRadarState ?? 'paused';
-        if (state === 'paused') {
-          autoRadarToggleIcon.textContent = '▶️';
-          autoRadarToggleText.textContent = 'Activar Auto Radar';
-        } else {
-          autoRadarToggleIcon.textContent = '⏸';
-          autoRadarToggleText.textContent = 'Pausar Auto Radar';
-        }
-      }
-    }
-  });
+  // Re-run by pair()/saveToken(): reset the sync baseline; the listener itself is registered once.
+  nextAutoRadarUpdate = createAutoRadarUiSync(productState.autoRadarState, stored.lastRadarEvent ?? null);
+}
+
+function onStorageChanged(changes, area) {
+  if (area !== 'local') return;
+  const update = nextAutoRadarUpdate?.(changes, productState.autoRadarState);
+  if (update) {
+    productState.autoRadarState = update.autoRadarState;
+    // Debounce UI updates to prevent flickering
+    clearTimeout(autoRadarUIUpdateTimeout);
+    autoRadarUIUpdateTimeout = setTimeout(() => {
+      updateAutoRadarUI(update.autoRadarState, update.lastRadarEvent);
+    }, 150);
+  }
+  if (changes.autoRadarEnabled) {
+    productState.autoRadarEnabled = changes.autoRadarEnabled?.newValue ?? false;
+    // Update toggle button text/icon based on enabled state
+    applyAutoRadarToggle(productState.autoRadarState ?? 'paused');
+  }
 }
 
 function renderWatchtower(watchtower) {
@@ -150,6 +130,7 @@ function startAgentHubRefresh(stored, initialMissions) {
   let observedRevision = missionRevision(initialMissions);
   agentHubRefresher = createAgentHubRefresher({
     isVisible: () => document.visibilityState === 'visible',
+    onKernelReachability: (online) => setKernelState(online),
     refresh: async () => {
       const missions = await loadAgentHub(stored);
       const nextRevision = missionRevision(missions);
@@ -195,7 +176,12 @@ async function loadAgentHub(stored) {
   try { opportunities = await listOpportunities(auth); } catch { opportunities = []; }
   const latest = newestMission(missions);
   const forged = latest?.status === 'completed' && (latest.executionPhase === 'forged' || latest.workState === 'forged');
-  const findCount = kernelSupportedFindsForMission(opportunities, latest).length;
+  // Living Forge / mission-presentation parity: max(inbox, verificationResults SUPPORT).
+  // listOpportunities catch→[] must not demote #mission-state below Kernel SUPPORT proof.
+  const findCount = Math.max(
+    kernelSupportedFindsForMission(opportunities, latest).length,
+    latest ? presentMission(latest).opportunitiesPromoted : 0,
+  );
   // Fail-close mission-state: SUPPORT-gated findCount must name Kernel SUPPORT Finds, not bare opportunities.
   const completedCopy = findCount > 0
     ? `${findCount} ${findCount === 1 ? 'Find' : 'Finds'} passed Kernel SUPPORT`
@@ -206,8 +192,28 @@ async function loadAgentHub(stored) {
     waiting_for_agent: 'Waiting for Hermes', queued: 'Ready for Hermes', running: 'Hermes is researching',
     completed: completedCopy, failed: 'Research needs attention',
   }[latest?.status] ?? 'No research mission yet';
-  $('#mission-state').textContent = latest?.executionPhase === 'verifying' ? 'Efesto is verifying Evidence' : copy;
-  $('#mission-state').dataset.status = latest?.status ?? 'idle';
+  // Fail-close Agent Hub #mission-state chrome: zero-SUPPORT forged must not keep
+  // data-status=completed (green Completado) while Living Forge / orb already use
+  // idle / research_completed. SUPPORT Finds keep completed → green.
+  // completed-without-forge (status completed, not forged) must also stay off green
+  // Completado — mission-card already maps opportunitiesPromoted===0 → research_completed;
+  // Shared Goal Truth MutationObserver would otherwise re-apply honest copy beside green.
+  const chromeStatus = forged
+    ? (findCount > 0 ? 'completed' : 'research_completed')
+    : latest?.status === 'completed'
+      ? 'research_completed'
+      : (latest?.status ?? 'idle');
+  // Fail-close Living Forge honesty: shipped popup.html may omit #mission-state /
+  // #mission-progress / #mission-history-list. Unguarded writes throw before
+  // setForgeActivity, leaving HTML default "La forja está lista" (Forja lista
+  // Completado lookalike) while forgeActivityForMission already says Research
+  // completed / Research ended without Evidence. Optional Agent Hub DOM; Living
+  // Forge update must still run.
+  const missionState = $('#mission-state');
+  if (missionState) {
+    missionState.textContent = latest?.executionPhase === 'verifying' ? 'Efesto is verifying Evidence' : copy;
+    missionState.dataset.status = chromeStatus;
+  }
   renderMissionProgress(latest);
   renderMissionHistory(missions);
   setForgeActivity(forgeActivityForMission(latest, opportunities));
@@ -216,14 +222,21 @@ async function loadAgentHub(stored) {
 
 function renderMissionHistory(missions) {
   const list = $('#mission-history-list');
-  $('#mission-history-count').textContent = String(missions.length);
+  const count = $('#mission-history-count');
+  if (!list || !count) return;
+  count.textContent = String(missions.length);
   list.replaceChildren();
   if (!missions.length) { const empty = document.createElement('p'); empty.className = 'empty'; empty.textContent = 'No authorized research activity yet.'; list.append(empty); return; }
   for (const mission of missions.slice(0, 5)) list.append(renderMissionCard(presentMission(mission)));
 }
 
 function renderMissionCard(view) {
-  const card = document.createElement('article'); card.className = 'mission-card'; card.dataset.status = view.status;
+  const card = document.createElement('article'); card.className = 'mission-card';
+  // Fail-close mission history chrome: completed without Kernel SUPPORT Finds must not
+  // keep green Completado border (Living Forge idle / orb research_completed).
+  card.dataset.status = view.status === 'completed' && view.opportunitiesPromoted === 0
+    ? 'research_completed'
+    : view.status;
   const heading = document.createElement('div'); heading.className = 'mission-card-heading';
   const copy = document.createElement('span'); const title = document.createElement('b'); title.textContent = view.title;
   const statusLabel = document.createElement('small'); statusLabel.textContent = view.statusLabel; copy.append(title, statusLabel);
@@ -255,6 +268,7 @@ function formatMissionTime(value) { return new Intl.DateTimeFormat(undefined, { 
 
 function renderMissionProgress(mission) {
   const list = $('#mission-progress');
+  if (!list) return;
   list.replaceChildren();
   for (const stage of missionJourney(mission).stages) {
     const item = document.createElement('li'); item.dataset.state = stage.state;
@@ -454,14 +468,22 @@ function findSection(title, lines) {
 async function loadReadiness(stored) {
   try {
     const readiness = await getKernelStatus({ baseUrl: stored.kernelBaseUrl ?? DEFAULT_KERNEL_BASE_URL });
-    $('#kernel-state').textContent = 'Kernel ready';
-    $('#kernel-state').classList.add('ready');
+    setKernelState(true);
     setService('model', false, readiness.ollama === 'configured' ? 'Model configured · checking runtime' : 'Choose a free local model');
     setService('memory', readiness.obsidian === 'configured', readiness.obsidian === 'configured' ? 'Private vault connected' : 'Vault not configured');
     setService('agent', readiness.hermes === 'ready', readiness.hermes === 'ready' ? 'Hermes bridge ready' : 'Connect an agent next');
   } catch {
     setStatus('Start your private Efesto Kernel, then pair the extension.', true);
   }
+}
+
+function setKernelState(online) {
+  const state = $('#kernel-state');
+  state.textContent = online ? 'Kernel ready' : 'Kernel offline';
+  state.classList.toggle('ready', online);
+  if (!online) setStatus('Private Kernel unreachable. Shown data may be stale until it is back.', true);
+  else if (status.dataset.kernelOffline === 'true') setStatus('Private Kernel reconnected.');
+  status.dataset.kernelOffline = String(!online);
 }
 
 async function loadCases(stored) {
@@ -520,19 +542,19 @@ function updateRadarCopy() {
     : 'Authorize this public site to let Efesto work quietly while you browse.';
 }
 
+function applyAutoRadarToggle(state) {
+  const copy = autoRadarToggleCopy(state);
+  autoRadarToggleIcon.textContent = copy.icon;
+  autoRadarToggleText.textContent = copy.text;
+  autoRadarToggle.setAttribute('aria-pressed', String(copy.pressed));
+}
+
 function updateAutoRadarUI(state, lastEvent) {
   const copy = autoRadarStatusCopy(state);
   autoRadarStatusIndicator.textContent = `${copy.icon} ${copy.text}`;
   autoRadarStatusIndicator.className = `status-indicator ${copy.className}`;
   
-  // Update toggle button
-  if (state === 'paused') {
-    autoRadarToggleIcon.textContent = '▶️';
-    autoRadarToggleText.textContent = 'Activar Auto Radar';
-  } else {
-    autoRadarToggleIcon.textContent = '⏸';
-    autoRadarToggleText.textContent = 'Pausar Auto Radar';
-  }
+  applyAutoRadarToggle(state);
   
   // Update last domain and result from last event
     if (lastEvent && lastEvent.title) {
@@ -627,8 +649,9 @@ async function capture() {
   captureButton.disabled = true;
   setForgeActivity(temporaryForgeActivity('capture'));
   setStatus('Efesto is analyzing this page…');
+  let tab;
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id) throw new Error('No active public page');
     const captured = await chrome.tabs.sendMessage(tab.id, { type: 'HEPHAESTUS_CAPTURE_PAGE_CONTEXT' });
     if (!captured?.ok) throw new Error('Unable to read this page');
@@ -641,7 +664,7 @@ async function capture() {
     setForgeActivity(temporaryForgeActivity('capture-success'));
     const stored = await chrome.storage.local.get(['kernelBaseUrl', 'kernelApiToken']);
     await loadOpportunities(stored);
-  } catch (error) { setForgeActivity(temporaryForgeActivity('capture-error')); setStatus(error instanceof Error ? error.message : 'Unable to analyze page', true); }
+  } catch (error) { setForgeActivity(temporaryForgeActivity('capture-error')); setStatus(captureFailureMessage(error, tab?.url), true); }
   finally { captureButton.disabled = false; }
 }
 

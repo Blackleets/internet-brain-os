@@ -9,14 +9,19 @@ export function rankOpportunity(opportunity, { goalMatches = [], learnedAdjustme
   const provenanceAdjustment = evidenceStrength >= 90 ? 8 : evidenceStrength >= 70 ? 0 : -10;
   const freshnessAdjustment = freshness >= 85 ? 5 : freshness >= 70 ? 0 : freshness >= 50 ? -5 : -10;
   const goalAdjustment = Math.round(goalFit * 0.20);
-  const score = clamp(Math.round(
+  // The displayed score is bounded to 0..99, but strong supported Finds routinely sum past 99
+  // (relevance 80 + Goal fit + provenance + freshness), which collapsed them all onto 99 and left
+  // the Inbox ordered only by detectedAt. orderingScore keeps the unclamped sum so a better Goal
+  // fit or fresher Evidence still ranks first; clamp is monotonic, so it never contradicts score.
+  const orderingScore = Math.round(
     relevance
     + goalAdjustment
     + provenanceAdjustment
     + freshnessAdjustment
     + explicitPreferenceAdjustment
     - riskPenalty,
-  ));
+  );
+  const score = clamp(orderingScore);
 
   const reasons = [];
   if (goalFit >= 60) reasons.push('Strong Goal fit');
@@ -28,6 +33,7 @@ export function rankOpportunity(opportunity, { goalMatches = [], learnedAdjustme
 
   return {
     score,
+    orderingScore,
     components: {
       relevance,
       goalFit,
