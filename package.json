@@ -22,6 +22,7 @@
     "hermes:validate-agent": "node scripts/hermes-validate-agent-output.mjs",
     "kernel:serve": "node apps/local-kernel/one-click-kernel.mjs",
     "kernel:serve:legacy": "node apps/local-kernel/server.mjs",
+    "efesto:identity": "node scripts/efesto-install-identity.mjs",
     "efesto:bootstrap": "node scripts/efesto-bootstrap.mjs",
     "efesto:launcher": "node scripts/efesto-launcher.mjs",
     "dashboard:dev": "pnpm --filter @internet-brain-os/dashboard dev",

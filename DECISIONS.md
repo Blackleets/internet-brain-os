@@ -117,3 +117,31 @@ Implications: Example chips only fill the composer. Goal create still does not a
 ## 2026-10-05 — qualify the existing Forge candidate before extending scope
 
 Start from the latest #252 reliability head, preserving the complete #251 search/telemetry/SUPPORT stack. Treat incomplete Kernel replies and redirects as transport failures, retain persisted reconciliation and avoid UI completion inferred from HTTP success. Improve recovery/accessibility through existing Goal revision contracts. No new authority, dependency, user data migration or public-release claim is justified. Rollback is a revert of this additive candidate commit.
+
+## 2026-10-05 — Reviewed full live model identity
+
+The mutable qwen3.5:2b alias changed and correctly failed provisioning in run 37297333680. Select the explicit Q8_0 variant, review its public registry manifest and verify its full SHA-256 locally and in the disposable workflow. Never automatically accept a new digest. Inference compatibility requires a fresh live run; no SUPPORT threshold, worker budget or founder data changes. Rollback reverts only this provisioning correction.
+
+## 2026-10-05 — Curated local brand assets
+
+Prefer downloaded original marks with source/hash provenance over runtime favicon services, which would disclose researched domains. Unknown hosts use initials rather than invented logos. Limit this slice to existing Forge source cards and the actual Hermes connector; no new providers or claims of integration. Rollback reverts this presentation slice without deleting Evidence or changing #256.
+
+## 2026-10-05 — Exclusive vault diagnostic files
+
+The prior write check could overwrite and remove an existing .efesto-write-test entry. Use a unique name and exclusive open; cleanup occurs only after acquiring ownership and closing the handle. Existing validation behavior and configured-vault semantics remain compatible. Tests retain original contents and run eight concurrent checks. Rollback is a scoped code revert; no migration.
+
+## 2026-10-05 — Read-only installation identity
+
+Add `node scripts/efesto-install-identity.mjs` / `pnpm efesto:identity` to report internal version, exact checkout/archive commit and clean/modified checkout state without exposing paths, filenames, credentials or performing runtime/vault/network probes. `BUILD_COMMIT.txt` is expanded by Git archive through export-subst. Reject parent-repository identity for nested packages and keep legacy/malformed identity unknown. Identity is not authenticity or readiness; verify the package SHA256 separately. Candidate `.83` replaces frozen `.82` for this new behavior; public launch remains blocked. #259 merged as f635676 after all five workflows passed. Founder-PC UAT remains outstanding. Rollback this slice only.
+
+## 2026-10-05 — Launcher readiness rejects redirects
+
+Launcher health and runtime bootstrap requests use redirect:error so readiness is accepted only from a direct response at the requested endpoint. Existing timeouts, port-conflict detection and direct runtime certification remain intact. No crawler, Kernel domain, SUPPORT, credential or store changes. Real HTTP regressions cover 301/302/307/308 for both probes (8 failures before the fix) plus direct health and blocked Hermes compatibility. Candidate `.84` advances frozen `.83`. Rollback only this transport slice. #260 merged to main 7e077439 after all five workflows passed; founder Windows UAT remains unverified and public launch blocked.
+
+## 2026-10-05 — Observable launcher stop failures
+
+Default stopOwnedProcess now returns its stop result and removes the launcher PID record only for an accepted stop request. Failure/timeout retains the original record, returns stop_failed from shutdown/pairing repair and gives CLI exit 1. Pairing restart returns stop_not_confirmed instead of spawning a replacement when the bounded wait still reports Kernel ready. Successful stop-request and legacy injected operations remain compatible; no completed POSIX termination claim is added. No crawler, Kernel authority, SUPPORT, credential or user-store changes. Candidate `.85` advances frozen `.84`; public launch remains blocked. #261 merged as e6d407a after all five workflows passed; Windows founder-PC UAT remains outstanding. Rollback only this stop-result slice.
+
+## 2026-10-05 — Agent connector waiting count and SUPPORT truth
+
+Candidate `.86` integrates #257 with main `34c1eea`. The read-only agent-presence projection counts queued/waiting_for_agent missions, excluding terminal missions. It emits forged only for a completed forged mission with a persisted supported verification result and nonempty Evidence identifier; other completions are completed_without_forge. Dashboard copy maps both this phase and legacy completed to terminada sin Evidence. No executor, crawler, SUPPORT admission, authentication or persistence changes. Rollback only this projection/copy slice. Public launch remains blocked; exact-candidate automated qualification and founder-PC UAT are distinct gates.

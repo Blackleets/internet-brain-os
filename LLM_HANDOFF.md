@@ -686,3 +686,72 @@ This completes the web-first design slice. Responsive mobile use is included thr
 
 ### Do not forget
 - The crawler/spider/anvil/canvas, packages/kernel/src/evidence/support.ts, memory authority, query selection and existing records are unchanged. No new dependency, paid service or authority. publicLaunchApproved remains false. Rollback is a revert of this improvement commit; do not revert the #252 baseline.
+
+## Handoff 2026-10-05 — Codex live model identity
+
+- Base main 79ebdb1 (#254 merged), branch fix/efesto-live-model-identity. Founder requested autonomous continuation.
+- Confirmed failed run 37297333680 job 111721560210 stopped at model provisioning; build and live acceptance skipped. Registry manifest for explicit qwen3.5:2b-q8_0 hashes to 0689d44085e06d165161a8a9a1731344278cfb5aade63a3c3dbdb48ab54b130a. Its model/projector layer IDs match the failed download.
+- Replaced mutable alias/short pin with explicit variant/full digest, added tested fail-closed metadata verifier and updated current state. No crawler, SUPPORT, user store or authority edits.
+- Validate focused tests, full suite, architecture, types and build; publish correction as PR and inspect exact-SHA workflows. New artifact tools/inference and real L1-L7 remain unproven until that run. Windows installation/UAT and source/agent logos remain outstanding; publicLaunchApproved=false.
+- Rollback: revert this correction, preserve #254. No claim of founder-PC control or installation.
+
+### Fresh local validation for the identity correction
+
+- Focused tests 15/15; full Vitest 268 files / 1799 tests passed.
+- Typecheck, production build, architecture, constitution and release-readiness checks passed. Generated next-env.d.ts change was restored.
+- Full live inference, exact-SHA CI/browser/Windows/package checks and installed-PC manual UAT are separate and still pending.
+
+### Publication authorization
+
+- Founder explicitly authorized publishing fix/efesto-live-model-identity to Blackleets/internet-brain-os and opening its PR on 2026-10-05. The prior automatic push rejection is resolved by that authorization. Exact-SHA CI and live acceptance must still be reviewed; publication does not certify the Windows installation or public launch.
+
+## Handoff 2026-10-05 — Source logos after authentic Hermes qualification
+
+- #256 exact head 4026455: CI 37318713328, package 37318713368 and authentic Hermes 37318713439 succeeded. Read job 111791968962: full reviewed digest/tools passed; L1-L7 14/14, attempt=1, 7 candidates/Evidence, 5 SUPPORT Finds with fetched provenance. Not Windows UAT.
+- Follow-on improve/efesto-source-logos starts from origin/fix/efesto-live-model-identity (same tree as locally validated correction). Uses repository Efesto Product UI contract.
+- Added locally served original GitHub/VS Code/Hermes identity assets with URL/hash provenance, exact parsed host lookup, local failure fallback, and source/agent integration. No crawler, SUPPORT, store, provider or authority changes. Unit and desktop/mobile browser regressions cover brand spoofing, fallback and no remote icon requests.
+- Next: qualify this UI slice, integrate qualified PRs through the existing review flow, then exact-installed Windows UAT. Other source/agent brands require real assets/adapters; do not claim every brand or Muse is integrated. publicLaunchApproved=false.
+
+### Source identity validation
+
+- Focused source/Forge/connector tests 34/34 passed; full suite 269 files / 1811 tests passed. Typecheck, architecture, release-readiness and production build passed.
+- Local browser run could not launch: Chromium headless shell is not installed. No browser pass is claimed; added desktop/mobile local-network-only assertions await exact-SHA CI. Generated next-env and next dev agent files were excluded from the change.
+
+## Handoff 2026-10-05 — Integrated baseline and vault preservation
+
+- Integrated #256 as 685f1d5, then #258 as 60aded6, using expected exact-head guards and normal merges; no branches removed. Main tree matches the validated logo candidate.
+- #258 CI 37321018834 and package 37321019367 passed (32 browser tests, exact-package Windows 2022/2025 install-repair). Live 37321019144 job 111799808879 passed 14/14 with 4 candidates/verified Evidence, 2 SUPPORT Finds, attempt=1 and fetched provenance. No installed-PC UAT or public launch claimed.
+- New branch fix/efesto-vault-probe-preservation starts from main 60aded6. During installation diagnostic review, found probeObsidian overwrites/removes fixed .efesto-write-test. Corrected with UUID name, exclusive owner-private open and owned-handle cleanup; no crawler, SUPPORT, domain authority, secrets or store changes.
+- Scoped target: scripts/efesto-bootstrap.mjs, vault regression tests/Gherkin and continuity docs. Risk: temporary cleanup can truthfully fail if vault IO fails; rollback is this slice only. Diagnostic performs a temporary write, so do not call existing launcher status read-only.
+- Founder Windows installation still inaccessible from this execution environment; diagnose actual PC identity before updating. publicLaunchApproved=false.
+
+### Fresh preservation validation
+
+- Focused bootstrap/launcher checks 31/31 before adding the explicit collision case; final vault regression 4/4. Full suite 270 files / 1815 tests passed, including that collision test.
+- Typecheck, production build, architecture, constitution, release-readiness and diff checks passed. No dependencies changed. Windows CI/package qualification remains required for the published preservation head.
+
+- Internal candidate identity advanced to `0.1.0-internal.82` for integrated Hermes model identity, source logos and vault diagnostic preservation. Previous `.81` artifacts are frozen; `.82` requires qualification on its exact commit and founder Windows UAT. `publicLaunchApproved=false`.
+
+## 2026-10-05 — Read-only installation identity
+
+Add `node scripts/efesto-install-identity.mjs` / `pnpm efesto:identity` to report internal version, exact checkout/archive commit and clean/modified checkout state without exposing paths, filenames, credentials or performing runtime/vault/network probes. `BUILD_COMMIT.txt` is expanded by Git archive through export-subst. Reject parent-repository identity for nested packages and keep legacy/malformed identity unknown. Identity is not authenticity or readiness; verify the package SHA256 separately. Candidate `.83` replaces frozen `.82` for this new behavior; public launch remains blocked. #259 merged as f635676 after all five workflows passed. Founder-PC UAT remains outstanding. Rollback this slice only.
+
+Validation for identity slice: focused 9/9, full 271 files / 1820 tests; typecheck, production build, architecture, constitution, release checks and diff check passed. Exact published ZIP identity and Windows install/repair await new-head CI. Local test proves export-subst archive identity; no Windows or founder-PC pass is claimed. No dependencies added.
+
+## 2026-10-05 — Launcher readiness rejects redirects
+
+Launcher health and runtime bootstrap requests use redirect:error so readiness is accepted only from a direct response at the requested endpoint. Existing timeouts, port-conflict detection and direct runtime certification remain intact. No crawler, Kernel domain, SUPPORT, credential or store changes. Real HTTP regressions cover 301/302/307/308 for both probes (8 failures before the fix) plus direct health and blocked Hermes compatibility. Candidate `.84` advances frozen `.83`. Rollback only this transport slice. #260 merged to main 7e077439 after all five workflows passed; founder Windows UAT remains unverified and public launch blocked.
+
+Local `.84` validation: 35 related tests passed; full 272 files / 1830 tests passed; typecheck, production build, architecture, constitution, release-readiness and diff checks passed. Generated next-env change restored. The new candidate requires fresh remote CI, packaged Windows matrix and live Hermes; founder-PC UAT remains outstanding.
+
+## 2026-10-05 — Observable launcher stop failures
+
+Default stopOwnedProcess now returns its stop result and removes the launcher PID record only for an accepted stop request. Failure/timeout retains the original record, returns stop_failed from shutdown/pairing repair and gives CLI exit 1. Pairing restart returns stop_not_confirmed instead of spawning a replacement when the bounded wait still reports Kernel ready. Successful stop-request and legacy injected operations remain compatible; no completed POSIX termination claim is added. No crawler, Kernel authority, SUPPORT, credential or user-store changes. Candidate `.85` advances frozen `.84`; public launch remains blocked. #261 merged as e6d407a after all five workflows passed; Windows founder-PC UAT remains outstanding. Rollback only this stop-result slice.
+
+Local `.85` validation: 32 related tests passed (10 stop-failure/CLI regressions); full 273 files / 1840 tests passed. Typecheck, production build, architecture, constitution, release-readiness and diff checks passed. Generated next-env change restored. No dependencies added. New-head CI/package/live qualification and founder-PC UAT remain unverified at publication.
+
+## 2026-10-05 — Agent connector waiting count and SUPPORT truth
+
+Candidate `.86` integrates #257 with main `34c1eea`. The read-only agent-presence projection counts queued/waiting_for_agent missions, excluding terminal missions. It emits forged only for a completed forged mission with a persisted supported verification result and nonempty Evidence identifier; other completions are completed_without_forge. Dashboard copy maps both this phase and legacy completed to terminada sin Evidence. No executor, crawler, SUPPORT admission, authentication or persistence changes. Rollback only this projection/copy slice. Public launch remains blocked; exact-candidate automated qualification and founder-PC UAT are distinct gates.
+
+Local qualification: 23 focused tests, 273 files / 1842 tests, types, architecture, constitution, release contract and clean-cache production build passed. Initial Turbopack persistence-cache panic was resolved by replacing only local generated .next cache; no product code fix. Remote checks on the final unchanged SHA remain required.

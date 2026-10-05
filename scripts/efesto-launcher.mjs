@@ -22,7 +22,8 @@ function printStatus(status) {
   console.log(JSON.stringify(status.diagnostics, null, 2));
 }
 
-export function launcherRuntimeNeedsAttention(status) {
+export function launcherRuntimeNeedsAttention(status, result = {}) {
+  if (['stop_failed', 'stop_not_confirmed'].includes(result.reason)) return true;
   if (!status || typeof status !== 'object') return true;
   if (status.overall === 'failed') return true;
   return ['missing', 'invalid', 'failed'].includes(status.hermes);
@@ -39,6 +40,8 @@ async function main(argv = process.argv.slice(2)) {
   if (command === 'repair' || command === 'start') {
     const result = await repairEfestoLauncher();
     printStatus(result.status);
+    if (result.reason === 'stop_failed') console.error('Repair blocked: the owned Kernel could not be stopped. Its launcher record was retained.');
+    if (result.reason === 'stop_not_confirmed') console.error('Repair blocked: the Kernel is still responding after the shutdown wait. No replacement process was started.');
     if (result.status.overall === 'ready') {
       console.log('Ready for daily use: open the extension and press the central Efesto orb.');
     } else if (result.status.hermes === 'invalid') {
@@ -49,7 +52,7 @@ async function main(argv = process.argv.slice(2)) {
     // Pairing and optional Obsidian setup may legitimately keep overall=needs_setup,
     // but an absent/incompatible Hermes runtime cannot be advertised as a successful
     // one-click installation because confirmed Goal missions would fail closed.
-    if (launcherRuntimeNeedsAttention(result.status)) process.exitCode = 1;
+    if (launcherRuntimeNeedsAttention(result.status, result)) process.exitCode = 1;
     return;
   }
   if (command === 'open') {
@@ -62,6 +65,10 @@ async function main(argv = process.argv.slice(2)) {
     const result = await shutdownEfestoLauncher();
     printStatus(result.status);
     console.log(result.stopped ? 'Shutdown requested for the owned Efesto Kernel process.' : 'No owned Efesto Kernel process was stopped.');
+    if (result.reason === 'stop_failed') {
+      console.error('Shutdown failed; the launcher process record was retained.');
+      process.exitCode = 1;
+    }
     return;
   }
   if (command === 'help' || command === '--help') return printHelp();

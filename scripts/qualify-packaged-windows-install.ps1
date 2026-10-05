@@ -41,6 +41,14 @@ if ($release.version -ne $ReleaseVersion) { throw 'Extracted release metadata ve
 if ($release.publicLaunchApproved -ne $false) { throw 'Internal candidate must remain blocked from public promotion.' }
 if ($release.entrypoint -ne 'Install Efesto.cmd') { throw 'Unexpected Windows entrypoint.' }
 
+$identityScript = Join-Path $extractRoot 'scripts\efesto-install-identity.mjs'
+$identityJson = & node $identityScript
+if ($LASTEXITCODE -ne 0) { throw 'Packaged identity command failed.' }
+$identity = ($identityJson -join "`n") | ConvertFrom-Json
+if ($identity.version -ne $ReleaseVersion -or $identity.commit -ne $ExpectedCommit) { throw 'Packaged identity does not match the qualified candidate.' }
+if ($identity.source -ne 'git_archive' -or $identity.workingTree -ne 'unavailable') { throw 'Extracted package must report archive identity.' }
+if ($identity.runtimeVerified -ne $false -or $identity.authenticityVerified -ne $false) { throw 'Identity must not claim runtime or authenticity verification.' }
+
 $testBoundaryKey = 'internal-package-qualification-key'
 $script:testToken = ''
 $script:phase = 'setup'

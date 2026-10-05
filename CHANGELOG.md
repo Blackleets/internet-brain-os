@@ -104,3 +104,35 @@ All meaningful project changes should be recorded here.
 - Reject redirects for authenticated worker/dashboard transport and distinguish dashboard body timeouts from invalid JSON.
 - Recover Goal editing after save rejection, retain text, prevent duplicate submissions and contain modal keyboard focus.
 - Preserve Forge v3 crawler visuals, SUPPORT and all existing private records; document qualification and rollback plan.
+
+## 2026-10-05 — Hermes live model identity correction
+
+- Select explicit Qwen3.5 2B Q8_0 with reviewed full SHA-256 instead of a stale 12-character alias pin.
+- Reject ambiguous model metadata and missing tools before authentic Hermes acceptance. Preserve all Kernel gates and public-launch block.
+
+## 2026-10-05 — Private source identity
+
+- Show bundled original GitHub and VS Code marks beside Forge source domains and original Hermes favicon beside Kernel agent status.
+- Add local initials fallback and exact-hostname brand matching without remote favicon services. Preserve SUPPORT, source actions, mission history and crawler behavior.
+
+## 2026-10-05 — Preserve vault files during diagnostics
+
+- Replace the fixed-name overwrite/delete probe with a unique exclusive owner-private temporary file. Preserve historical probe-named user files and concurrent diagnostic isolation.
+- #256 and #258 integrated in main after exact-head CI, packaged Windows checks and authentic Hermes 14/14. Founder-PC UAT remains outstanding.
+
+- Internal candidate identity advanced to `0.1.0-internal.82` for integrated Hermes model identity, source logos and vault diagnostic preservation. Previous `.81` artifacts are frozen; `.82` requires qualification on its exact commit and founder Windows UAT. `publicLaunchApproved=false`.
+
+## 2026-10-05 — Read-only installation identity
+
+Add `node scripts/efesto-install-identity.mjs` / `pnpm efesto:identity` to report internal version, exact checkout/archive commit and clean/modified checkout state without exposing paths, filenames, credentials or performing runtime/vault/network probes. `BUILD_COMMIT.txt` is expanded by Git archive through export-subst. Reject parent-repository identity for nested packages and keep legacy/malformed identity unknown. Identity is not authenticity or readiness; verify the package SHA256 separately. Candidate `.83` replaces frozen `.82` for this new behavior; public launch remains blocked. #259 merged as f635676 after all five workflows passed. Founder-PC UAT remains outstanding. Rollback this slice only.
+
+## 2026-10-05 — Launcher readiness rejects redirects
+
+Launcher health and runtime bootstrap requests use redirect:error so readiness is accepted only from a direct response at the requested endpoint. Existing timeouts, port-conflict detection and direct runtime certification remain intact. No crawler, Kernel domain, SUPPORT, credential or store changes. Real HTTP regressions cover 301/302/307/308 for both probes (8 failures before the fix) plus direct health and blocked Hermes compatibility. Candidate `.84` advances frozen `.83`. Rollback only this transport slice. #260 merged to main 7e077439 after all five workflows passed; founder Windows UAT remains unverified and public launch blocked.
+
+## 2026-10-05 — Observable launcher stop failures
+
+Default stopOwnedProcess now returns its stop result and removes the launcher PID record only for an accepted stop request. Failure/timeout retains the original record, returns stop_failed from shutdown/pairing repair and gives CLI exit 1. Pairing restart returns stop_not_confirmed instead of spawning a replacement when the bounded wait still reports Kernel ready. Successful stop-request and legacy injected operations remain compatible; no completed POSIX termination claim is added. No crawler, Kernel authority, SUPPORT, credential or user-store changes. Candidate `.85` advances frozen `.84`; public launch remains blocked. #261 merged as e6d407a after all five workflows passed; Windows founder-PC UAT remains outstanding. Rollback only this stop-result slice.
+
+### 2026-10-05 — Agent connector truth
+- Count waiting_for_agent missions and display completed-without-SUPPORT work as terminada sin Evidence. Candidate internal.86; public launch remains blocked.

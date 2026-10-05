@@ -4,3 +4,4 @@
 *.ico binary
 *.zip binary
 *.cmd text eol=crlf
+BUILD_COMMIT.txt export-subst

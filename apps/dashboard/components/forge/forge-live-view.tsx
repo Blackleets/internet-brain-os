@@ -7,6 +7,7 @@ import type { ForgeMissionModel, ForgeModel, ForgeSearchRun, ForgeSource, ForgeS
 import { buildForgeStory, MAX_GRAPH_NODES, readFailureCode } from '../../lib/forge/forge-story';
 import { goalTermSegments } from '../../lib/forge/goal-terms';
 import { ForgeCrawlerRenderer, type CrawlerStage } from './forge-crawler-renderer';
+import { SourceMark } from '../brand/source-mark';
 
 const NARROW_MAX = 760;
 const VISIBLE_WIDE = 12;
@@ -424,7 +425,7 @@ function SourceCard({ source, goalTerms, onOpenFinds }: { source: ForgeSource; g
         {read ? <span className="forge-badge-interim" data-at="reading" aria-hidden="true">LEYENDO</span> : null}
         {source.state === 'supported' || source.state === 'unsupported' ? <span className="forge-badge-interim" data-at="evidence" aria-hidden="true">EVIDENCE</span> : null}
       </span>
-      <a href={source.url} target="_blank" rel="noreferrer noopener" className="forge-source-link" title={source.url} aria-label={`Abrir fuente ${source.host} (se abre en otra pestaña)`}>{source.host}</a>
+      <a href={source.url} target="_blank" rel="noreferrer noopener" className="forge-source-link" title={source.url} aria-label={`Abrir fuente ${source.host} (se abre en otra pestaña)`}><SourceMark url={source.url} /><span className="forge-source-host">{source.host}</span></a>
       {code ? <span className="forge-source-code" data-tone={source.state === 'read_failed' ? 'bad' : 'ok'} aria-hidden="true">{code}</span> : null}
     </div>
     {source.path ? <p className="forge-source-path">{source.host}{source.path}</p> : null}

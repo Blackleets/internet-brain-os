@@ -56,6 +56,8 @@ jobs:
           grep -q 'scripts/qualify-packaged-windows-install.ps1' package-contents.txt
           grep -q 'pnpm-lock.yaml' package-contents.txt
           grep -q 'INTERNAL_RELEASE.json' package-contents.txt
+          grep -q 'BUILD_COMMIT.txt' package-contents.txt
+          test "$(unzip -p "$package" BUILD_COMMIT.txt)" = "$GITHUB_SHA"
           if grep -Eq '(^|/)(node_modules|\.git|\.hephaestus|\.hermes)/' package-contents.txt; then
             echo 'Forbidden runtime/development state found in internal package.' >&2
             exit 1

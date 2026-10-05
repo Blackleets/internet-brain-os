@@ -21,13 +21,14 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 - Search snippet/agent text ≠ Evidence.
 - Responsive mobile-width support does not imply phone → PC Kernel authority.
 
-## Active improvement candidate — 2026-10-05
+## Current internal baseline — 2026-10-05
 
-- Founder authorized additive improvements without deleting existing behavior or data. Active branch `improve/efesto-reliability-review` starts from PR #252 head `a258ca3b5bb7a9aece4f7679711f0addec6e5809`, including the #251 Forge v3 candidate. These changes are not installed on the founder PC or merged to main.
-- Worker body-reading timeouts remain visible; malformed/unleased claims and unconfirmed submission responses cannot fabricate execution/completion. Authenticated worker/dashboard requests reject redirects. Dashboard body timeouts retain TIMEOUT classification.
-- Goal editing retains typed text and recovers after rejected saves, prevents duplicate submissions, and wraps keyboard focus within the modal. Desktop/mobile browser regression assertions are included.
-- Crawler/spider/anvil/canvas and `packages/kernel/src/evidence/support.ts` remain unchanged; no store migration/deletion or new dependency/authority. `publicLaunchApproved` remains false.
-- Detailed plan and rollback: `docs/efesto-improvement-plan-2026-10-05.md`. See the latest `LLM_HANDOFF.md` entry for exact validation and remaining environment/UAT limits.
+- Main is `34c1eea0249feb54561f01d6aef24ef3c2903c92`: #254, #256, #258–#262 are integrated. #262 keeps launcher records on failed stop requests and refuses an unconfirmed replacement. Its exact head `ef9d941cf321e58cf1a3bdc21e43d696ee6b30e4` passed all five workflows; local suite 273 files / 1840 tests passed. This is automated proof, not founder-PC UAT.
+- Active #257 (`fix/agent-connector-unforged-phase`) is integrated with that main baseline for candidate `.86`: count actual `waiting_for_agent` missions and project completed missions as forged only with persisted Kernel SUPPORT plus an Evidence identifier. Otherwise show `terminada sin Evidence`. No change to the mission executor, crawler, SUPPORT rules, credentials or user stores.
+- Original #257 head `6e9344be5e51a1d81c3ee888b9d65a5888118980` passed all five workflows. Those checks do not qualify the updated `.86` SHA; qualify the final unchanged head before merge. `.85` stays frozen.
+- Production-browser read-only checks confirmed Goal draft preparation and offline execution gating, plus truthful offline Findings/Evidence views. No authentic founder-PC connection or mission was tested.
+- Founder Windows identity/installation and packaged manual UAT remain unverified; `publicLaunchApproved=false`. The agent cannot operate the founder's Windows machine through the remote cloud browser.
+- Rollback only the agent-presence projection/copy slice; preserve prior integrations and user data.
 
 ## Current checkpoint - 2026-10-03
 
@@ -453,7 +454,7 @@ Candidate versions are immutable after use. `.41`, `.43`, `.53`, `.54`, `.58`, `
 
 ## What remains
 
-1. PR #241 OPEN: never merge without Lewis's explicit go-ahead. Live UAT-D / UAT A-F on an isolated Kernel store remain unrun (#238 is already merged) and are Lewis's call.
+1. Qualify the model-identity correction on one unchanged SHA. #254 has integrated the improvement chain; installed-PC UAT-D / UAT A-F remain outstanding.
 2. Packaged UAT-1 to UAT-6 on an immutable artifact after the seal is honest.
 3. Local scorecard (Useful Find Rate) after that.
 4. `publicLaunchApproved` stays false until UAT on the exact candidate.
@@ -468,3 +469,5 @@ Continue HEPHAESTUS using Blackleets/internet-brain-os only. Read PROJECT_STATE.
 ## Update rule
 
 Replace stale facts here when the verified baseline, blocker, next priority or recovery procedure changes. Do not turn this file into an append-only diary.
+
+- Internal candidate identity advanced to `0.1.0-internal.82` for integrated Hermes model identity, source logos and vault diagnostic preservation. Previous `.81` artifacts are frozen; `.82` requires qualification on its exact commit and founder Windows UAT. `publicLaunchApproved=false`.

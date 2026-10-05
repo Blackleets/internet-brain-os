@@ -21,6 +21,11 @@ describe('workerSetupCommands', () => {
 });
 
 describe('AgentConnector', () => {
+  it('shows the bundled Hermes identity while retaining the Kernel disconnected state', () => {
+    const { container } = render(<AgentConnector connected={true} agents={snapshot('never')} onConnectKernel={() => {}} onTest={async () => undefined} now={() => NOW} />);
+    expect(container.querySelector('.agent-status-mark img')?.getAttribute('src')).toBe('/brand/sources/hermes.ico');
+    expect(container.querySelector('.agent-status')?.getAttribute('data-tone')).not.toBe('ok');
+  });
   it('without a Kernel: asks to connect it first and cannot test', () => {
     const onConnectKernel = vi.fn();
     render(<AgentConnector connected={false} onConnectKernel={onConnectKernel} onTest={async () => undefined} now={() => NOW} />);

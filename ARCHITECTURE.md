@@ -284,3 +284,31 @@ Replay Lab also provides a local real-capture import boundary. The operator sele
 ## 2026-10-05 candidate transport and Goal editor reliability
 
 Authenticated dashboard JSON/NDJSON calls and worker bookkeeping reject redirects. The worker retains response-body aborts as timeouts, rejects missing leased mission identities before invoking an adapter, and confirms the same mission is persisted as verifying/completed before reporting submission success. Lost responses still reconcile against persisted Kernel records; no client gains SUPPORT or memory authority. The dashboard distinguishes body timeouts from malformed JSON. Goal revision editing retains text on unconfirmed save, restores controls, prevents overlapping submissions and contains keyboard focus; it still uses the same revision-bound Kernel endpoint and requires separate research confirmation.
+
+## 2026-10-05 live inference provisioning identity
+
+The disposable live workflow selects an explicit Q8_0 tag and checks the entire reviewed SHA-256 through scripts/hermes-live-model-identity.mjs before Hermes runs. Missing, duplicate, malformed or mismatched identities and absent tools fail closed. This is provisioning verification only, not proof of inference or Kernel SUPPORT; Kernel authority and stored records are unchanged.
+
+## Local source identity assets
+
+Forge source cards and the Hermes agent connector may render curated original assets served from dashboard/public/brand/sources. Exact parsed hostname matching protects branding; unknown or failed assets fall back to inert initials. The UI performs no source favicon requests or third-party domain disclosure. Logos convey identity only, with SUPPORT/state unchanged. provenance.json retains retrieval URLs and SHA-256; no Kernel or crawler changes.
+
+## Vault diagnostic ownership
+
+The local Obsidian write diagnostic creates a UUID-named probe with exclusive open and owner-private permissions, writes through its owned handle and removes only that probe after closing. Collision/open failure cannot trigger deletion. Existing vault entries and concurrent diagnostics remain independent. This is a temporary write diagnostic, not a read-only operation; no Kernel authority or source store changes.
+
+## 2026-10-05 — Read-only installation identity
+
+Add `node scripts/efesto-install-identity.mjs` / `pnpm efesto:identity` to report internal version, exact checkout/archive commit and clean/modified checkout state without exposing paths, filenames, credentials or performing runtime/vault/network probes. `BUILD_COMMIT.txt` is expanded by Git archive through export-subst. Reject parent-repository identity for nested packages and keep legacy/malformed identity unknown. Identity is not authenticity or readiness; verify the package SHA256 separately. Candidate `.83` replaces frozen `.82` for this new behavior; public launch remains blocked. #259 merged as f635676 after all five workflows passed. Founder-PC UAT remains outstanding. Rollback this slice only.
+
+## 2026-10-05 — Launcher readiness rejects redirects
+
+Launcher health and runtime bootstrap requests use redirect:error so readiness is accepted only from a direct response at the requested endpoint. Existing timeouts, port-conflict detection and direct runtime certification remain intact. No crawler, Kernel domain, SUPPORT, credential or store changes. Real HTTP regressions cover 301/302/307/308 for both probes (8 failures before the fix) plus direct health and blocked Hermes compatibility. Candidate `.84` advances frozen `.83`. Rollback only this transport slice. #260 merged to main 7e077439 after all five workflows passed; founder Windows UAT remains unverified and public launch blocked.
+
+## 2026-10-05 — Observable launcher stop failures
+
+Default stopOwnedProcess now returns its stop result and removes the launcher PID record only for an accepted stop request. Failure/timeout retains the original record, returns stop_failed from shutdown/pairing repair and gives CLI exit 1. Pairing restart returns stop_not_confirmed instead of spawning a replacement when the bounded wait still reports Kernel ready. Successful stop-request and legacy injected operations remain compatible; no completed POSIX termination claim is added. No crawler, Kernel authority, SUPPORT, credential or user-store changes. Candidate `.85` advances frozen `.84`; public launch remains blocked. #261 merged as e6d407a after all five workflows passed; Windows founder-PC UAT remains outstanding. Rollback only this stop-result slice.
+
+## 2026-10-05 — Agent connector waiting count and SUPPORT truth
+
+Candidate `.86` integrates #257 with main `34c1eea`. The read-only agent-presence projection counts queued/waiting_for_agent missions, excluding terminal missions. It emits forged only for a completed forged mission with a persisted supported verification result and nonempty Evidence identifier; other completions are completed_without_forge. Dashboard copy maps both this phase and legacy completed to terminada sin Evidence. No executor, crawler, SUPPORT admission, authentication or persistence changes. Rollback only this projection/copy slice. Public launch remains blocked; exact-candidate automated qualification and founder-PC UAT are distinct gates.
