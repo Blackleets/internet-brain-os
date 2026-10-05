@@ -125,3 +125,7 @@ All meaningful project changes should be recorded here.
 ## 2026-10-05 — Read-only installation identity
 
 Add `node scripts/efesto-install-identity.mjs` / `pnpm efesto:identity` to report internal version, exact checkout/archive commit and clean/modified checkout state without exposing paths, filenames, credentials or performing runtime/vault/network probes. `BUILD_COMMIT.txt` is expanded by Git archive through export-subst. Reject parent-repository identity for nested packages and keep legacy/malformed identity unknown. Identity is not authenticity or readiness; verify the package SHA256 separately. Candidate `.83` replaces frozen `.82` for this new behavior; public launch remains blocked. #259 merged as f635676 after all five workflows passed. Founder-PC UAT remains outstanding. Rollback this slice only.
+
+## 2026-10-05 — Launcher readiness rejects redirects
+
+Launcher health and runtime bootstrap requests use redirect:error so readiness is accepted only from a direct response at the requested endpoint. Existing timeouts, port-conflict detection and direct runtime certification remain intact. No crawler, Kernel domain, SUPPORT, credential or store changes. Real HTTP regressions cover 301/302/307/308 for both probes (8 failures before the fix) plus direct health and blocked Hermes compatibility. Candidate `.84` advances frozen `.83`. Rollback only this transport slice. #260 merged to main 7e077439 after all five workflows passed; founder Windows UAT remains unverified and public launch blocked.
