@@ -40,8 +40,8 @@ describe('supply-chain audit policy', () => {
     expect(lockfile).toMatch(/^ {2}next@16\.(?:3\.(?:[3-9]|\d{2,})|[4-9]\.\d+|\d{2,}\.\d+):/m);
     expect(lockfile).not.toMatch(/^ {2}next@16\.3\.[012]:/m);
     expect(lockfile).not.toMatch(/^ {2}next@16\.2\./m);
-    // GHSA-rgj7-g3m4-5g8c: sharp <0.35.4 via next>sharp
-    expect(policy).toContain("sharp: '>=0.35.4'");
+    // GHSA-wq5f-xc86-pv6w: sharp <0.35.5 via next>sharp
+    expect(policy).toContain("sharp: '0.35.5'");
     expect(policy).not.toContain("sharp: '>=0.35.0'");
   });
 });
