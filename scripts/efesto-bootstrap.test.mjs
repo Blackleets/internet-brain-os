@@ -21,6 +21,21 @@ const validRecord = {
 };
 
 describe('Efesto launcher process identity probe', () => {
+  it('reads a Windows UTF-8 BOM without rewriting the process record or trusting a foreign process', async () => {
+    const paths = await pathsWithRecord(validRecord);
+    await writeFile(paths.pidFile, `\uFEFF${JSON.stringify(validRecord)}\n`, 'utf8');
+    await expect(probeLauncherProcess(paths, {
+      isProcessAlive: async () => true,
+      readProcessIdentity: async () => ({ commandLine: 'node C:/other/server.mjs' }),
+    })).resolves.toMatchObject({ alive: true, owned: true, verified: false, reason: 'fingerprint_mismatch' });
+  });
+
+  it('still rejects malformed process JSON rather than deleting or silently repairing it', async () => {
+    const paths = await pathsWithRecord(validRecord);
+    await writeFile(paths.pidFile, '\uFEFF{broken', 'utf8');
+    await expect(probeLauncherProcess(paths)).rejects.toThrow(SyntaxError);
+  });
+
   it('verifies the original Efesto process by pid, marker, command fingerprint, and nonce', async () => {
     const paths = await pathsWithRecord(validRecord);
     await expect(probeLauncherProcess(paths, {

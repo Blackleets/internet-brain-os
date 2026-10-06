@@ -171,7 +171,7 @@ async function executableExists(path) {
 }
 
 async function readJsonOptional(path) {
-  try { return JSON.parse(await readFile(path, 'utf8')); }
+  try { return JSON.parse((await readFile(path, 'utf8')).replace(/^\uFEFF/, '')); }
   catch (error) { if (error?.code === 'ENOENT') return undefined; throw error; }
 }
 
