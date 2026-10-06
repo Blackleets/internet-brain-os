@@ -53,6 +53,33 @@ jobs:
           cache: pnpm
       - name: Frozen install
         run: pnpm install --frozen-lockfile
+      - name: Launcher JSON and CMD shim regression
+        shell: pwsh
+        run: |
+          pnpm exec vitest run scripts/efesto-bootstrap.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Launcher JSON regression failed' }
+          $fixture = Join-Path $env:RUNNER_TEMP ('efesto-cmd-' + [guid]::NewGuid().ToString('N'))
+          New-Item -ItemType Directory -Path $fixture | Out-Null
+          $oldPath = $env:PATH
+          try {
+            Copy-Item 'Efesto Launcher.cmd' (Join-Path $fixture 'Efesto Launcher.cmd')
+            foreach ($relative in @('node_modules', 'packages/shared/dist', 'packages/kernel/dist', 'packages/connectors/dist')) {
+              New-Item -ItemType Directory -Force -Path (Join-Path $fixture $relative) | Out-Null
+            }
+            foreach ($relative in @('packages/shared/dist/index.js', 'packages/kernel/dist/index.js', 'packages/connectors/dist/index.js')) {
+              Set-Content (Join-Path $fixture $relative) '// fixture only'
+            }
+            Set-Content (Join-Path $fixture 'pnpm.cmd') "@echo off`r`nexit /b 7" -Encoding ascii
+            $env:PATH = "$fixture;$oldPath"
+            $output = cmd.exe /d /c ('call "' + (Join-Path $fixture 'Efesto Launcher.cmd') + '" < NUL') 2>&1 | Out-String
+            $code = $LASTEXITCODE
+            if ($code -ne 7 -or $output -notmatch 'Efesto needs attention') {
+              throw 'CMD launcher failed to return from the pnpm shim and retain its failure diagnostic'
+            }
+          } finally {
+            $env:PATH = $oldPath
+            Remove-Item -LiteralPath $fixture -Recurse -Force
+          }
       - name: Automatic startup shortcut lifecycle
         shell: pwsh
         run: |

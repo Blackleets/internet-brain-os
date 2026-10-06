@@ -320,3 +320,7 @@ Candidate `.87` introduces an opt-in extension transport for the canonical produ
 A per-user Windows Startup shortcut invokes `efesto-launcher.mjs autostart` through a noninteractive PowerShell wrapper. It starts an offline owned installation, preserves a healthy process, refuses conflicts and never installs dependencies at login. Enable/disable verify shortcut ownership. Installation only opts in through the explicit daily setup entrypoint/switch. User stores, authentication checks, mission policy and SUPPORT remain Kernel-owned. See `docs/changes/efesto-daily-start.md` for limits, trust assumptions, qualification and rollback.
 
 2026-10-06 qualification follow-up: actual Chromium extension messaging acceptance added to browser CI; Windows shortcut negative tests capture subprocess exit status. Pin transitive source-map-js 1.2.2 for GHSA-68fv-2mgg-jv7q, preserving strict audit gates and existing domain boundaries.
+
+## Windows launcher JSON compatibility
+
+Launcher metadata accepts one leading UTF-8 BOM without rewriting its source. Malformed JSON still fails closed; process ownership and identity checks remain unchanged. The Windows CMD entrypoint uses CALL for the pnpm shim so diagnostics and the final pause execute.

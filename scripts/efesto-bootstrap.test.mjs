@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
@@ -23,11 +23,17 @@ const validRecord = {
 describe('Efesto launcher process identity probe', () => {
   it('reads a Windows UTF-8 BOM without rewriting the process record or trusting a foreign process', async () => {
     const paths = await pathsWithRecord(validRecord);
-    await writeFile(paths.pidFile, `\uFEFF${JSON.stringify(validRecord)}\n`, 'utf8');
+    const original = `\uFEFF${JSON.stringify(validRecord)}\n`;
+    await writeFile(paths.pidFile, original, 'utf8');
     await expect(probeLauncherProcess(paths, {
       isProcessAlive: async () => true,
       readProcessIdentity: async () => ({ commandLine: 'node C:/other/server.mjs' }),
     })).resolves.toMatchObject({ alive: true, owned: true, verified: false, reason: 'fingerprint_mismatch' });
+    await expect(probeLauncherProcess(paths, {
+      isProcessAlive: async () => true,
+      readProcessIdentity: async () => ({ commandLine: `node ${validRecord.command} --efesto-launcher-nonce ${validRecord.nonce}` }),
+    })).resolves.toMatchObject({ owned: true, verified: true });
+    expect(await readFile(paths.pidFile, 'utf8')).toBe(original);
   });
 
   it('still rejects malformed process JSON rather than deleting or silently repairing it', async () => {

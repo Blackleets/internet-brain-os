@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## 2026-10-06 — Windows recovery qualification (.88)
+
+PR #264 corrects leading UTF-8 BOM launcher metadata and CMD return handling. Initial Windows First Run and Launcher Smoke workflows passed; the strict package audit detected newly published GHSA-wq5f-xc86-pv6w in sharp 0.35.4. Pin sharp 0.35.5 and regenerate the lockfile without suppressing audits. Candidate .88 replaces frozen .87; qualify the final unchanged head before merging. Add a real Windows CMD shim regression and verify BOM metadata is read without modifying it. Founder-PC update and automatic reconnection are still pending. Public launch remains blocked.
+
+
+## 2026-10-06 — Founder Windows launcher recovery
+
+Founder-PC installation built the Kernel and extension, then failed in readJsonOptional while reading the launcher process record. A leading UTF-8 BOM is a reproduced cause; the PC file has not been inspected, so its encoding remains unconfirmed. The reader now removes only a leading BOM and still rejects malformed JSON. The CMD launcher calls pnpm with CALL so it returns to its diagnostic and pause. No state records, credentials, Evidence or user stores are deleted. Local targeted tests pass; Windows execution, remote qualification and founder-PC recovery remain pending. Rollback these two compatibility changes only. Public launch stays blocked.
+
+
 ### Added
 - Real Chromium extension bridge acceptance covering discovery, consent, authenticated streaming reads, reopen and revocation. Pin source-map-js 1.2.2 for GHSA-68fv-2mgg-jv7q while keeping strict audit gates.
 - Candidate .87: explicit Windows daily setup with reversible per-user automatic Kernel startup; approved extension-backed web reconnection without delivering a private token to the dashboard, bounded streaming transport, revocation, setup guide and startup/security regression coverage.
