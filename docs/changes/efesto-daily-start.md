@@ -18,8 +18,10 @@ Trusting the production web origin authorizes its existing interactive API scope
 
 ## Verification and rollback
 
-Automated coverage includes sender/path rejection, consent and revocation, bounded transport, generic errors without credential disclosure, real HTTP between the extension worker and KernelClient with mocked Chrome messaging, NDJSON/SSE cancellation, mounted dashboard restore/disconnect and no automatic mutation, and launcher lifecycle decisions. Windows CI registers/removes actual temporary WScript shortcuts and verifies preservation of unrelated entries. CI's Hermes fixture is not authentic agent or founder-PC acceptance.
+Automated coverage includes sender/path rejection, consent and revocation, bounded transport, generic errors without credential disclosure, real HTTP between the extension worker and KernelClient with mocked Chrome messaging, NDJSON/SSE cancellation, mounted dashboard restore/disconnect and no automatic mutation, and launcher lifecycle decisions. Real Chromium acceptance now exercises the actual extension and production-origin discovery/consent/read/reopen/revocation protocol against a local HTTP fixture. Windows CI registers/removes actual temporary WScript shortcuts and verifies preservation of unrelated entries. CI's Hermes fixture is not authentic agent or founder-PC acceptance.
 
 Before merging, inspect checks on the final unchanged commit, including Windows launcher and dashboard browser jobs. #257's earlier `.86` combined workflows ended unsuccessfully with several jobs cancelled before steps; an older green SHA does not qualify this change. Do not label a cancelled runner as an application failure without evidence.
 
 Rollback: disable the startup shortcut from its owning installation, revoke the checkbox, and revert this transport/startup slice. Keep user stores and existing pairing intact. Manual launcher and manual web connection remain available. No public release or founder-PC installation is claimed by this PR.
+
+Qualification follow-up 2026-10-06: fix the Windows negative-test subprocess handling after its expected rejection raised NativeCommandError; pin source-map-js 1.2.2 for GHSA-68fv-2mgg-jv7q rather than ignoring strict production audits. Browser download in the local environment returned an invalid/truncated archive; remote browser CI must qualify the added test.

@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- Real Chromium extension bridge acceptance covering discovery, consent, authenticated streaming reads, reopen and revocation. Pin source-map-js 1.2.2 for GHSA-68fv-2mgg-jv7q while keeping strict audit gates.
 - Candidate .87: explicit Windows daily setup with reversible per-user automatic Kernel startup; approved extension-backed web reconnection without delivering a private token to the dashboard, bounded streaming transport, revocation, setup guide and startup/security regression coverage.
 - Forge live mission view on Home and Objetivos: the focused Kernel mission rendered as an anvil with real candidates, Kernel web.read Evidence, SUPPORT verdicts and Finds (mobile-first at 390×844, wide anvil composition on desktop, reduced-motion still frame, honest offline/connecting/empty states). New read-only `GET /api/agent-missions/:id/evidence` projection returns bounded verbatim Evidence excerpts (never Hermes snippets, never undecoded binary).
 - Canonical `CONSTITUTION.md` for Efesto's product identity, Kernel authority, safety boundaries, truthful autonomy, engineering discipline, agent preflight, and amendment process; `pnpm resume` now validates its required agent entry points before exposing the live checkpoint.

@@ -21,6 +21,11 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 - Search snippet/agent text ≠ Evidence.
 - Responsive mobile-width support does not imply phone → PC Kernel authority.
 
+
+## 2026-10-06 — PR #263 qualification follow-up
+
+Active daily-start integration: #263, `feat/efesto-daily-start`, includes #257. First published tree passed 276 files / 1858 tests, typecheck, dashboard build and extension packaging locally. Remote first-run Windows acceptance and the existing pairing/port-conflict jobs passed. Windows startup registration/removal passed, but its expected foreign-owner rejection caused NativeCommandError in the test harness; use a captured subprocess exit code for that negative test. Strict audits also found GHSA-68fv-2mgg-jv7q in source-map-js 1.2.1: pin the patched 1.2.2 without suppressing audits. Add real Chromium extension discovery/consent/proxy/revocation coverage to dashboard browser CI. Local Chromium download was blocked by an invalid/truncated archive, so the browser test requires remote CI qualification. Final unchanged-head checks and founder-PC UAT remain pending; do not infer green from an older commit.
+
 ## 2026-10-05 — Daily startup and web reconnection (candidate .87)
 
 The founder requested automatic Windows startup and opening Efesto without repeated token entry. `Setup Efesto Daily.cmd` enables a reversible per-user Startup shortcut after installation. A noninteractive launcher starts only an offline Kernel and preserves healthy instances and foreign processes. The paired extension can explicitly authorize the canonical production root page, then proxy bounded dashboard requests without handing its credential to the web. Revocation cancels active requests; Kernel authority and mission confirmations stay unchanged.

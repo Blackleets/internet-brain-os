@@ -24,8 +24,8 @@ try {
   $Foreign.Save()
   $Before = (Get-FileHash -LiteralPath $Path).Hash
   foreach ($Action in @('Enable', 'Disable')) {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Script -Action $Action -StartupDirectory $TestFolder 2>$null
-    if ($LASTEXITCODE -eq 0) { throw 'Foreign shortcut accepted' }
+    $Rejected = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $Script + '"'), '-Action', $Action, '-StartupDirectory', ('"' + $TestFolder + '"')) -Wait -PassThru -WindowStyle Hidden -RedirectStandardError (Join-Path $TestFolder 'expected-rejection.txt')
+    if ($Rejected.ExitCode -eq 0) { throw 'Foreign shortcut accepted' }
     if ((Get-FileHash -LiteralPath $Path).Hash -ne $Before) { throw 'Foreign shortcut changed' }
   }
   Write-Output 'PASS: real Windows shortcut registration, idempotency, removal and foreign-owner preservation'
