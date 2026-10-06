@@ -13,7 +13,7 @@ if not exist "%~dp0packages\shared\dist\index.js" goto INSTALL_OR_REPAIR
 if not exist "%~dp0packages\kernel\dist\index.js" goto INSTALL_OR_REPAIR
 if not exist "%~dp0packages\connectors\dist\index.js" goto INSTALL_OR_REPAIR
 
-pnpm efesto:launcher repair
+call pnpm efesto:launcher repair
 set EXIT_CODE=%ERRORLEVEL%
 goto FINISH
 
