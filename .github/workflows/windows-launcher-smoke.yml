@@ -76,6 +76,9 @@ jobs:
             if ($code -ne 7 -or $output -notmatch 'Efesto needs attention') {
               throw 'CMD launcher failed to return from the pnpm shim and retain its failure diagnostic'
             }
+            Write-Host 'CMD shim regression passed: expected exit 7 and failure diagnostic retained.'
+            # The negative fixture is successful only after both assertions pass.
+            $global:LASTEXITCODE = 0
           } finally {
             $env:PATH = $oldPath
             Remove-Item -LiteralPath $fixture -Recurse -Force
