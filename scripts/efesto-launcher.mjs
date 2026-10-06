@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'node:url';
 import { inspectEfestoBootstrap, writeLauncherConfig } from './efesto-bootstrap.mjs';
-import { openEfestoLauncher, repairEfestoLauncher, shutdownEfestoLauncher } from './efesto-launcher-core.mjs';
+import { openEfestoLauncher, repairEfestoLauncher, shutdownEfestoLauncher, startEfestoAutomatically } from './efesto-launcher-core.mjs';
 
 function arg(name) {
   const index = process.argv.indexOf(name);
@@ -34,6 +34,12 @@ async function main(argv = process.argv.slice(2)) {
   const obsidianDir = arg('--obsidian-dir');
   if (obsidianDir) await writeLauncherConfig({ obsidianDir });
 
+  if (command === 'autostart') {
+    const result = await startEfestoAutomatically();
+    console.log(`Efesto automatic start: ${result.status.kernel}`);
+    if (result.status.kernel !== 'ready') process.exitCode = 1;
+    return;
+  }
   if (command === 'status') {
     return printStatus(await inspectEfestoBootstrap());
   }

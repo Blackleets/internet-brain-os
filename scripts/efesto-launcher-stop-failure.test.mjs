@@ -72,7 +72,7 @@ describe('launcher stop failure remains observable and recoverable', () => {
     await copyFile(new URL('./efesto-launcher.mjs', import.meta.url), join(dir, 'efesto-launcher.mjs'));
     await writeFile(join(dir, 'efesto-bootstrap.mjs'), 'export async function inspectEfestoBootstrap() {}\nexport async function writeLauncherConfig() {}\n');
     const result = { started: false, stopped: false, reason: 'stop_failed', status: { ...ready, actions: [], message: 'Kernel remains running' } };
-    await writeFile(join(dir, 'efesto-launcher-core.mjs'), `const result = ${JSON.stringify(result)};\nexport async function repairEfestoLauncher(){return result;}\nexport async function shutdownEfestoLauncher(){return result;}\nexport async function openEfestoLauncher(){return result;}\n`);
+    await writeFile(join(dir, 'efesto-launcher-core.mjs'), `const result = ${JSON.stringify(result)};\nexport async function repairEfestoLauncher(){return result;}\nexport async function shutdownEfestoLauncher(){return result;}\nexport async function openEfestoLauncher(){return result;}\nexport async function startEfestoAutomatically(){return result;}\n`);
     const output = await exec(process.execPath, [join(dir, 'efesto-launcher.mjs'), command], { timeout: 5000 }).catch(error => error);
     expect(output.code).toBe(1);
     expect(output.stderr).toMatch(/record.*retained/);

@@ -16,6 +16,7 @@ import { loadMissionEvidence } from '../lib/kernel/mission-evidence';
 import { buildForgeModel, type ForgeEvidenceLoad } from '../lib/forge/forge-model';
 import { keywordsFromGoal } from '../lib/kernel/goal-keywords';
 import { focusGoalSurface } from '../lib/forge/forge-focus';
+import { discoverExtensionConnection, revokeExtensionConnection, EXTENSION_TRANSPORT } from '../lib/session/extension-bridge';
 import { connectionStore } from '../lib/session/connection-store';
 import { startVisiblePoller } from '../lib/ui/visible-poller';
 import { subscribeToKernelEvents } from '../lib/kernel/events';
@@ -82,6 +83,8 @@ export default function EfestoProductShell() {
   const [connectionsOpen, setConnectionsOpen] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [rememberSession, setRememberSession] = useState(false);
+  const connectionAttempt = useRef(0);
+  const automaticPaused = useRef(false);
   const chatAbortRef = useRef<AbortController | undefined>(undefined);
   const [mobileViewport, setMobileViewport] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -156,17 +159,29 @@ export default function EfestoProductShell() {
   }), [connection, evidenceMissionId, focusedGoalSurface, focusedMissionRow, missionEvidence, snapshot, snapshot?.opportunities, snapshot?.readiness.kernel]);
 
   useEffect(() => {
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let attempt = 0;
+    const restore = async () => {
+      if (controller.signal.aborted || automaticPaused.current || connectionStore.get()) return;
+      try {
+        const candidate = await discoverExtensionConnection(controller.signal);
+        if (!controller.signal.aborted && !automaticPaused.current && !connectionStore.get()) {
+          if (await connectWith(candidate, false)) return;
+        }
+      } catch { /* Manual pairing remains available; no invented connection. */ }
+      if (!controller.signal.aborted && !automaticPaused.current && ++attempt < 5) timer = setTimeout(() => void restore(), 5000);
+    };
     try {
       const saved = window.sessionStorage.getItem(SESSION_CONNECTION_KEY);
-      if (!saved) return;
-      const parsed = JSON.parse(saved) as Partial<Connection>;
-      if (typeof parsed.baseUrl !== 'string' || typeof parsed.token !== 'string') return;
-      setRememberSession(true);
-      void connectWith({ baseUrl: parsed.baseUrl, token: parsed.token }, true);
-    } catch {
-      window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
-    }
-  // connectWith is intentionally a one-time session restoration boundary.
+      const parsed = saved ? JSON.parse(saved) as Partial<Connection> : undefined;
+      if (parsed && typeof parsed.baseUrl === 'string' && typeof parsed.token === 'string' && parsed.token !== EXTENSION_TRANSPORT) {
+        setRememberSession(true);
+        void connectWith({ baseUrl: parsed.baseUrl, token: parsed.token }, true);
+      } else void restore();
+    } catch { window.sessionStorage.removeItem(SESSION_CONNECTION_KEY); void restore(); }
+    return () => { controller.abort(); clearTimeout(timer); connectionAttempt.current += 1; };
+  // Restoration is bounded and cannot override a manual disconnect or newer connection.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -297,6 +312,8 @@ export default function EfestoProductShell() {
 
   async function connect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    automaticPaused.current = true;
+    connectionAttempt.current += 1;
     const form = event.currentTarget;
     const data = new FormData(form);
     const pairingCode = String(data.get('pairingCode') ?? '').trim();
@@ -351,6 +368,7 @@ export default function EfestoProductShell() {
   }
 
   async function connectWith(input: Connection, remember: boolean) {
+    const attempt = ++connectionAttempt.current;
     setConnecting(true);
     setToast('');
     try {
@@ -361,25 +379,43 @@ export default function EfestoProductShell() {
         client.get('/api/chat/providers', parseProviders),
         loadGoalSurfaces(client),
       ]);
+      if (attempt !== connectionAttempt.current) return false;
       if (nextSnapshot.readiness.kernel !== 'online') throw new KernelClientError('OFFLINE');
       setConnection(verified);
       setSnapshot(nextSnapshot);
       setProviders(nextProviders);
       setGoalSurfaces(nextGoalSurfaces);
       connectionStore.set(verified);
-      if (remember) window.sessionStorage.setItem(SESSION_CONNECTION_KEY, JSON.stringify(verified));
+      if (remember && verified.token !== EXTENSION_TRANSPORT) window.sessionStorage.setItem(SESSION_CONNECTION_KEY, JSON.stringify(verified));
       else window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
       setToast('Kernel conectado. La interfaz muestra estado persistido real.');
       return true;
     } catch (error) {
+      if (attempt !== connectionAttempt.current) return false;
       setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); connectionStore.clear();
       window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
       setToast(connectionMessage(error));
       return false;
-    } finally { setConnecting(false); }
+    } finally { if (attempt === connectionAttempt.current) setConnecting(false); }
+  }
+
+  async function connectExtension() {
+    automaticPaused.current = true;
+    const attempt = ++connectionAttempt.current;
+    setConnecting(true);
+    try {
+      const candidate = await discoverExtensionConnection();
+      if (attempt === connectionAttempt.current) await connectWith(candidate, false);
+    }
+    catch { setToast('Abre la extensión Efesto, empareja una vez y activa «Reconectar automáticamente la web de Efesto».'); }
+    finally { setConnecting(false); }
   }
 
   function disconnect() {
+    automaticPaused.current = true;
+    connectionAttempt.current += 1;
+    setConnecting(false);
+    if (connection?.token === EXTENSION_TRANSPORT) void revokeExtensionConnection().catch(() => setToast('Sesión cerrada. Para revocar la reconexión, desmarca la autorización en la extensión.'));
     chatAbortRef.current?.abort();
     setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); setCaseDetails({}); setSelectedCaseId(''); setChatMessages([]);
     connectionStore.clear(); window.sessionStorage.removeItem(SESSION_CONNECTION_KEY); setRememberSession(false);
@@ -670,7 +706,7 @@ export default function EfestoProductShell() {
         {view === 'activity' ? <ActivityView snapshot={snapshot} connected={Boolean(connection)} /> : null}
         {view === 'models' ? <ModelsView providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} modelForge={snapshot?.readiness.modelForge} connected={Boolean(connection)} onSelect={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); setChatMode(true); navigate('home'); }} onAdd={addProvider} /> : null}
         {view === 'agents' ? <AgentsView snapshot={snapshot} connected={Boolean(connection)} kernelUrl={connection?.baseUrl} onTestAgents={testAgents} onSettings={() => navigate('settings')} onNewGoal={newGoal} /> : null}
-        {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} kernelBaseUrl={connection?.baseUrl} onConnect={connect} onDisconnect={disconnect} onRefresh={() => void refresh()} /> : null}
+        {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} kernelBaseUrl={connection?.baseUrl} onConnect={connect} onExtensionConnect={() => void connectExtension()} onDisconnect={disconnect} onRefresh={() => void refresh()} /> : null}
       </main>
 
       {connectionsOpen && connection ? <ConnectionsSheet kernelOnline={snapshot?.readiness.kernel === 'online'} connected kernelUrl={connection.baseUrl} agents={snapshot?.agents} onTest={testAgents} onConnectKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onManageKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onClose={() => setConnectionsOpen(false)} /> : null}

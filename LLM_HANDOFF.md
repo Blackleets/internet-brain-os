@@ -6,6 +6,17 @@ This file lets Hermes, OpenCode, Codex, GPT, and future models continue work wit
 
 Every AI must update this file before ending a work session.
 
+
+## 2026-10-06 — PR #263 qualification follow-up
+
+Active daily-start integration: #263, `feat/efesto-daily-start`, includes #257. First published tree passed 276 files / 1858 tests, typecheck, dashboard build and extension packaging locally. Remote first-run Windows acceptance and the existing pairing/port-conflict jobs passed. Windows startup registration/removal passed, but its expected foreign-owner rejection caused NativeCommandError in the test harness; use a captured subprocess exit code for that negative test. Strict audits also found GHSA-68fv-2mgg-jv7q in source-map-js 1.2.1: pin the patched 1.2.2 without suppressing audits. Add real Chromium extension discovery/consent/proxy/revocation coverage to dashboard browser CI. Local Chromium download was blocked by an invalid/truncated archive, so the browser test requires remote CI qualification. Final unchanged-head checks and founder-PC UAT remain pending; do not infer green from an older commit.
+
+## 2026-10-05 — Daily startup and web reconnection (candidate .87)
+
+The founder requested automatic Windows startup and opening Efesto without repeated token entry. `Setup Efesto Daily.cmd` enables a reversible per-user Startup shortcut after installation. A noninteractive launcher starts only an offline Kernel and preserves healthy instances and foreign processes. The paired extension can explicitly authorize the canonical production root page, then proxy bounded dashboard requests without handing its credential to the web. Revocation cancels active requests; Kernel authority and mission confirmations stay unchanged.
+
+See [daily setup](docs/efesto-daily-start.md), [security change request](docs/changes/efesto-daily-start.md) and `tests/acceptance/efesto-daily-start.feature`. This candidate includes unmerged #257 at `445b5f0`; main remains `34c1eea` at implementation time. #257's updated-head workflows ended unsuccessfully with multiple jobs cancelled before execution; the successful browser job and older green head do not qualify .87. Final-head Windows/browser CI and founder-PC login/reconnection acceptance are separate checks. No installation on the founder PC or production deployment is claimed. `publicLaunchApproved=false`. Local validation on 2026-10-06: 276 test files / 1858 tests, root/dashboard typecheck, production build and extension packaging passed.
+
 ## Current project state
 
 > Superseded snapshot: the status block below is historical (2026-07-28). `PROJECT_STATE.md` is the live checkpoint; as of 2026-09-28 the active PR is #241 (OPEN, not merged) and `publicLaunchApproved` remains false.
@@ -749,3 +760,9 @@ Local `.84` validation: 35 related tests passed; full 272 files / 1830 tests pas
 Default stopOwnedProcess now returns its stop result and removes the launcher PID record only for an accepted stop request. Failure/timeout retains the original record, returns stop_failed from shutdown/pairing repair and gives CLI exit 1. Pairing restart returns stop_not_confirmed instead of spawning a replacement when the bounded wait still reports Kernel ready. Successful stop-request and legacy injected operations remain compatible; no completed POSIX termination claim is added. No crawler, Kernel authority, SUPPORT, credential or user-store changes. Candidate `.85` advances frozen `.84`; public launch remains blocked. #261 merged as e6d407a after all five workflows passed; Windows founder-PC UAT remains outstanding. Rollback only this stop-result slice.
 
 Local `.85` validation: 32 related tests passed (10 stop-failure/CLI regressions); full 273 files / 1840 tests passed. Typecheck, production build, architecture, constitution, release-readiness and diff checks passed. Generated next-env change restored. No dependencies added. New-head CI/package/live qualification and founder-PC UAT remain unverified at publication.
+
+## 2026-10-05 — Agent connector waiting count and SUPPORT truth
+
+Candidate `.86` integrates #257 with main `34c1eea`. The read-only agent-presence projection counts queued/waiting_for_agent missions, excluding terminal missions. It emits forged only for a completed forged mission with a persisted supported verification result and nonempty Evidence identifier; other completions are completed_without_forge. Dashboard copy maps both this phase and legacy completed to terminada sin Evidence. No executor, crawler, SUPPORT admission, authentication or persistence changes. Rollback only this projection/copy slice. Public launch remains blocked; exact-candidate automated qualification and founder-PC UAT are distinct gates.
+
+Local qualification: 23 focused tests, 273 files / 1842 tests, types, architecture, constitution, release contract and clean-cache production build passed. Initial Turbopack persistence-cache panic was resolved by replacing only local generated .next cache; no product code fix. Remote checks on the final unchanged SHA remain required.

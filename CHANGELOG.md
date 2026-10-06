@@ -1,6 +1,8 @@
 ## [Unreleased]
 
 ### Added
+- Real Chromium extension bridge acceptance covering discovery, consent, authenticated streaming reads, reopen and revocation. Pin source-map-js 1.2.2 for GHSA-68fv-2mgg-jv7q while keeping strict audit gates.
+- Candidate .87: explicit Windows daily setup with reversible per-user automatic Kernel startup; approved extension-backed web reconnection without delivering a private token to the dashboard, bounded streaming transport, revocation, setup guide and startup/security regression coverage.
 - Forge live mission view on Home and Objetivos: the focused Kernel mission rendered as an anvil with real candidates, Kernel web.read Evidence, SUPPORT verdicts and Finds (mobile-first at 390×844, wide anvil composition on desktop, reduced-motion still frame, honest offline/connecting/empty states). New read-only `GET /api/agent-missions/:id/evidence` projection returns bounded verbatim Evidence excerpts (never Hermes snippets, never undecoded binary).
 - Canonical `CONSTITUTION.md` for Efesto's product identity, Kernel authority, safety boundaries, truthful autonomy, engineering discipline, agent preflight, and amendment process; `pnpm resume` now validates its required agent entry points before exposing the live checkpoint.
 - Credential-free remote Hermes L1→L7 acceptance using a checksum-verified, runner-local Ollama runtime and reviewed tool-capable Qwen3 model identity; no founder API key or PC installation is required.
@@ -133,3 +135,6 @@ Launcher health and runtime bootstrap requests use redirect:error so readiness i
 ## 2026-10-05 — Observable launcher stop failures
 
 Default stopOwnedProcess now returns its stop result and removes the launcher PID record only for an accepted stop request. Failure/timeout retains the original record, returns stop_failed from shutdown/pairing repair and gives CLI exit 1. Pairing restart returns stop_not_confirmed instead of spawning a replacement when the bounded wait still reports Kernel ready. Successful stop-request and legacy injected operations remain compatible; no completed POSIX termination claim is added. No crawler, Kernel authority, SUPPORT, credential or user-store changes. Candidate `.85` advances frozen `.84`; public launch remains blocked. #261 merged as e6d407a after all five workflows passed; Windows founder-PC UAT remains outstanding. Rollback only this stop-result slice.
+
+### 2026-10-05 — Agent connector truth
+- Count waiting_for_agent missions and display completed-without-SUPPORT work as terminada sin Evidence. Candidate internal.86; public launch remains blocked.

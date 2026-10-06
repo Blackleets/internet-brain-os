@@ -21,14 +21,25 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 - Search snippet/agent text ≠ Evidence.
 - Responsive mobile-width support does not imply phone → PC Kernel authority.
 
+
+## 2026-10-06 — PR #263 qualification follow-up
+
+Active daily-start integration: #263, `feat/efesto-daily-start`, includes #257. First published tree passed 276 files / 1858 tests, typecheck, dashboard build and extension packaging locally. Remote first-run Windows acceptance and the existing pairing/port-conflict jobs passed. Windows startup registration/removal passed, but its expected foreign-owner rejection caused NativeCommandError in the test harness; use a captured subprocess exit code for that negative test. Strict audits also found GHSA-68fv-2mgg-jv7q in source-map-js 1.2.1: pin the patched 1.2.2 without suppressing audits. Add real Chromium extension discovery/consent/proxy/revocation coverage to dashboard browser CI. Local Chromium download was blocked by an invalid/truncated archive, so the browser test requires remote CI qualification. Final unchanged-head checks and founder-PC UAT remain pending; do not infer green from an older commit.
+
+## 2026-10-05 — Daily startup and web reconnection (candidate .87)
+
+The founder requested automatic Windows startup and opening Efesto without repeated token entry. `Setup Efesto Daily.cmd` enables a reversible per-user Startup shortcut after installation. A noninteractive launcher starts only an offline Kernel and preserves healthy instances and foreign processes. The paired extension can explicitly authorize the canonical production root page, then proxy bounded dashboard requests without handing its credential to the web. Revocation cancels active requests; Kernel authority and mission confirmations stay unchanged.
+
+See [daily setup](docs/efesto-daily-start.md), [security change request](docs/changes/efesto-daily-start.md) and `tests/acceptance/efesto-daily-start.feature`. This candidate includes unmerged #257 at `445b5f0`; main remains `34c1eea` at implementation time. #257's updated-head workflows ended unsuccessfully with multiple jobs cancelled before execution; the successful browser job and older green head do not qualify .87. Final-head Windows/browser CI and founder-PC login/reconnection acceptance are separate checks. No installation on the founder PC or production deployment is claimed. `publicLaunchApproved=false`. Local validation on 2026-10-06: 276 test files / 1858 tests, root/dashboard typecheck, production build and extension packaging passed.
+
 ## Current internal baseline — 2026-10-05
 
-- Main is `e6d407a3b6666d8918b468e20a193c1469b0bc77`: #254, #256 (full reviewed Hermes identity), #258 (bundled original logos), #259 (exclusive vault probes), #260 (read-only installed code identity) and #261 (launcher readiness rejects redirects) are integrated. Historical OPEN/candidate statements below are frozen checkpoints.
-- #261 head `6a3aa7abc4f3de23d4e8f4aca2af28dc4a883219`: CI `37330508672`, package `37330509408`, launcher `37330508949`, first-run `37330508906` and authentic Hermes `37330508938` succeeded. Live job `111832067542` proved 14/14, attempt=1, 5 verified Evidence and 4 SUPPORT Finds with fetched provenance. Local suite 272 files / 1830 tests passed. No founder-PC or post-merge result is inferred.
-- Qualified `.84` PR ZIP identifies test-merge `8cb3426b771c0a4793edf679241818db4bae9f61`. Artifact `11353304473`: outer SHA256 `398f9c30b4a7773b8bba524d2b55237acbc0fc94da2fc241df043558a603025f`, inner ZIP SHA256 `30a7cf06074921b4ffe2bf54bc873780499311683238fe5945a02a9745283ee2`. Checked checksums, BUILD_INFO, archive marker and extracted identity CLI; exact-artifact Windows 2022/2025 install/repair passed. Main merge identity differs.
-- Follow-on `fix/efesto-launcher-stop-failure`, candidate `.85`: retain process record when taskkill rejects/times out, propagate failed stops to shutdown/pairing repair and CLI, and do not start a replacement if the bounded shutdown wait still reports Kernel ready. Successful stop-request behavior and legacy injected operations remain compatible. A successful request does not independently prove completed POSIX termination.
-- Founder Windows identity/installation and packaged manual UAT remain unverified; `publicLaunchApproved=false`. Crawler, Kernel authority, SUPPORT and user stores unchanged. Finish `.85` remote qualification, then obtain installed PC identity before update decisions.
-- Rollback only this stop-result slice; preserve prior integrations and user data. `.84` is frozen.
+- Main is `34c1eea0249feb54561f01d6aef24ef3c2903c92`: #254, #256, #258–#262 are integrated. #262 keeps launcher records on failed stop requests and refuses an unconfirmed replacement. Its exact head `ef9d941cf321e58cf1a3bdc21e43d696ee6b30e4` passed all five workflows; local suite 273 files / 1840 tests passed. This is automated proof, not founder-PC UAT.
+- Active #257 (`fix/agent-connector-unforged-phase`) is integrated with that main baseline for candidate `.86`: count actual `waiting_for_agent` missions and project completed missions as forged only with persisted Kernel SUPPORT plus an Evidence identifier. Otherwise show `terminada sin Evidence`. No change to the mission executor, crawler, SUPPORT rules, credentials or user stores.
+- Original #257 head `6e9344be5e51a1d81c3ee888b9d65a5888118980` passed all five workflows. Those checks do not qualify the updated `.86` SHA; qualify the final unchanged head before merge. `.85` stays frozen.
+- Production-browser read-only checks confirmed Goal draft preparation and offline execution gating, plus truthful offline Findings/Evidence views. No authentic founder-PC connection or mission was tested.
+- Founder Windows identity/installation and packaged manual UAT remain unverified; `publicLaunchApproved=false`. The agent cannot operate the founder's Windows machine through the remote cloud browser.
+- Rollback only the agent-presence projection/copy slice; preserve prior integrations and user data.
 
 ## Current checkpoint - 2026-10-03
 

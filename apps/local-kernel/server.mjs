@@ -794,7 +794,7 @@ function dashboardOriginsFrom(value) {
     .filter(Boolean);
   return configured.length
     ? configured
-    : ['https://internet-brain-os.leerenmos.chatgpt.site'];
+    : ['https://internet-brain-os.leerenmos.chatgpt.site', 'https://efesto-five.vercel.app'];
 }
 
 

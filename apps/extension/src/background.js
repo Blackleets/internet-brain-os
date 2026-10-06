@@ -1,3 +1,4 @@
+import { installDashboardBridge } from './dashboard-bridge.js';
 import { DEFAULT_KERNEL_BASE_URL, listAgentMissions, listNotifications, listOpportunities, markNotificationRead, sendPageContext } from './local-transport.js';
 import { autoCaptureKey, evaluateAutoCapture, rememberAutoCapture } from './auto-capture-policy.js';
 import { chromeNotificationIdForWatchtowerAviso, pendingWorkspaceViewForWatchtowerNotification, presentWatchtowerAviso, reconcileMissionWatchtower } from './mission-watchtower.js';
@@ -19,6 +20,7 @@ const WATCHTOWER_ALARM = 'efesto-mission-watchtower';
 // Instancia global del Auto Radar
 // Kernel token lives in storage.local: keep it off content scripts (every page renderer).
 void restrictLocalStorageToTrustedContexts(chrome.storage);
+installDashboardBridge(chrome);
 const autoRadar = new AutoRadar();
 
 chrome.runtime.onInstalled.addListener(() => void ensureWatchtower());

@@ -1,3 +1,4 @@
+import { kernelFetch } from '../session/extension-bridge';
 import { normalizeKernelBaseUrl } from './url';
 
 export type KernelClientErrorCode = 'UNAUTHORIZED' | 'OFFLINE' | 'TIMEOUT' | 'HTTP_ERROR' | 'INVALID_RESPONSE';
@@ -26,7 +27,7 @@ export class KernelClient {
 
   constructor(private readonly options: KernelClientOptions) {
     this.baseUrl = normalizeKernelBaseUrl(options.baseUrl);
-    this.fetcher = options.fetcher ?? ((input, init) => globalThis.fetch(input, init));
+    this.fetcher = options.fetcher ?? kernelFetch(options.token);
     this.timeoutMs = boundedTimeout(options.timeoutMs);
   }
 

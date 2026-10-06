@@ -4,6 +4,10 @@ This file records major product and technical decisions.
 
 Do not delete old decisions. If a decision changes, add a new entry explaining why.
 
+## 2026-10-05 — Remember web authorization in the paired extension
+
+Decision: satisfy the founder's daily startup request with an explicit per-user Windows startup shortcut and an opt-in extension proxy for the canonical Efesto web origin. Do not persist the private Kernel token in the hosted dashboard. Keep the existing manual connection path and require Kernel confirmations for mutations. Web disconnect revokes its extension consent. Avoid privileged machine-wide services and installation work during login; preserve healthy processes and unrelated shortcuts. See `docs/changes/efesto-daily-start.md` for the reviewed boundary and `docs/efesto-daily-start.md` for owner setup and rollback. This is candidate .87; real founder-PC UAT and final-head CI remain distinct from local tests.
+
 ## 2026-08-12 - Canonical Efesto constitution
 
 Decision: `CONSTITUTION.md` is the single canonical project constitution and agent preflight contract for Efesto.
@@ -141,3 +145,7 @@ Launcher health and runtime bootstrap requests use redirect:error so readiness i
 ## 2026-10-05 — Observable launcher stop failures
 
 Default stopOwnedProcess now returns its stop result and removes the launcher PID record only for an accepted stop request. Failure/timeout retains the original record, returns stop_failed from shutdown/pairing repair and gives CLI exit 1. Pairing restart returns stop_not_confirmed instead of spawning a replacement when the bounded wait still reports Kernel ready. Successful stop-request and legacy injected operations remain compatible; no completed POSIX termination claim is added. No crawler, Kernel authority, SUPPORT, credential or user-store changes. Candidate `.85` advances frozen `.84`; public launch remains blocked. #261 merged as e6d407a after all five workflows passed; Windows founder-PC UAT remains outstanding. Rollback only this stop-result slice.
+
+## 2026-10-05 — Agent connector waiting count and SUPPORT truth
+
+Candidate `.86` integrates #257 with main `34c1eea`. The read-only agent-presence projection counts queued/waiting_for_agent missions, excluding terminal missions. It emits forged only for a completed forged mission with a persisted supported verification result and nonempty Evidence identifier; other completions are completed_without_forge. Dashboard copy maps both this phase and legacy completed to terminada sin Evidence. No executor, crawler, SUPPORT admission, authentication or persistence changes. Rollback only this projection/copy slice. Public launch remains blocked; exact-candidate automated qualification and founder-PC UAT are distinct gates.

@@ -29,7 +29,8 @@ export function formatClock(iso: string | undefined): string {
   return at.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 }
 
-const PHASES: Record<string, string> = { forged: 'forjada', verifying: 'verificando', investigating: 'investigando', failed: 'fallida', queued: 'en cola', completed: 'completada', running: 'en curso' };
+// "completed" without a Kernel forge is not finished work: same wording as the sidebar Goal status.
+const PHASES: Record<string, string> = { forged: 'forjada', verifying: 'verificando', investigating: 'investigando', failed: 'fallida', queued: 'en cola', completed: 'terminada sin Evidence', completed_without_forge: 'terminada sin Evidence', running: 'en curso' };
 
 /**
  * Human copy for one agent, derived only from the Kernel's own state. `available === false` means

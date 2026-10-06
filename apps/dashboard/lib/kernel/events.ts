@@ -1,3 +1,4 @@
+import { kernelFetch } from '../session/extension-bridge';
 import type { KernelClientOptions } from './client';
 
 /**
@@ -29,7 +30,7 @@ export function subscribeToKernelEvents(
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   const baseUrl = options.baseUrl.replace(/\/$/, '');
-  const fetcher = options.fetcher ?? fetch;
+  const fetcher = options.fetcher ?? kernelFetch(options.token);
 
   async function loop(): Promise<void> {
     while (!stopped) {

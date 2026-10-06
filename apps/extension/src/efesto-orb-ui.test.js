@@ -6,7 +6,10 @@ describe('Efesto orb UI static contract', () => {
   it('does not make remote assets or tracking mandatory', () => {
     const html = readFileSync(resolve('apps/extension/src/popup.html'), 'utf8');
     const css = readFileSync(resolve('apps/extension/src/central-forge-power.css'), 'utf8');
-    expect(`${html}\n${css}`).not.toMatch(/https?:\/\//i);
+    // User-activated navigation is allowed; remote resource loading remains forbidden.
+    const resources = html.replace(/<a\b[^>]*href=["'][^"']*["'][^>]*>/gi, '<a>');
+    expect(`${resources}\n${css}`).not.toMatch(/https?:\/\//i);
+    expect(html).toContain('href="https://efesto-five.vercel.app/"');
     expect(`${html}\n${css}`).not.toMatch(/<script[^>]+src=["']https?:/i);
   });
 
