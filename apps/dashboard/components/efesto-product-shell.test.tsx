@@ -2,6 +2,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EfestoProductShell from './efesto-product-shell';
+import * as extensionBridge from '../lib/session/extension-bridge';
+import { connectionStore } from '../lib/session/connection-store';
 
 const token = 'test-token-that-is-long-enough-for-kernel-validation';
 const requests: Request[] = [];
@@ -42,6 +44,7 @@ async function connect(): Promise<void> {
 
 beforeEach(() => {
   requests.length = 0;
+  connectionStore.clear();
   window.sessionStorage.clear();
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, { ...init, signal: undefined });
@@ -53,6 +56,20 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); window.sessionStorage.clear(); });
 
 describe('Efesto goal-first product shell', () => {
+  it('restores an approved extension connection without storing a web credential or launching missions', async () => {
+    vi.spyOn(extensionBridge, 'discoverExtensionConnection').mockResolvedValue({ baseUrl: 'http://127.0.0.1:4000', token: extensionBridge.EXTENSION_TRANSPORT });
+    vi.spyOn(extensionBridge, 'kernelFetch').mockImplementation(() => globalThis.fetch);
+    const revoke = vi.spyOn(extensionBridge, 'revokeExtensionConnection').mockResolvedValue();
+    render(<EfestoProductShell />);
+    await waitFor(() => expect(screen.getByRole('button', { name: /Kernel listo/ })).toBeTruthy());
+    expect(window.sessionStorage.getItem('hephaestus.owner.connection.session.v1')).toBeNull();
+    expect(requests.every((request) => request.method === 'GET')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Ajustes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Desconectar' }));
+    expect(revoke).toHaveBeenCalledOnce();
+    expect(connectionStore.get()).toBeUndefined();
+  });
+
   it('starts honest and goal-first without simulating Kernel activity', () => {
     render(<EfestoProductShell />);
     expect(screen.getByRole('heading', { name: '¿Qué estás buscando?' })).toBeTruthy();

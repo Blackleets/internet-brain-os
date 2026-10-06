@@ -39,6 +39,13 @@ void initialize();
 captureButton.addEventListener('click', capture);
 $('#save-token').addEventListener('click', saveToken);
 $('#pair-kernel').addEventListener('click', pair);
+$('#dashboard-auto-connect').addEventListener('change', async (event) => {
+  const enabled = event.target.checked;
+  try {
+    await chrome.storage.local.set({ dashboardAutoConnect: enabled });
+    setStatus(enabled ? 'Reconexión autorizada para la web oficial de Efesto.' : 'Reconexión de la web revocada.');
+  } catch { event.target.checked = !enabled; setStatus('No se pudo guardar la autorización.', true); }
+});
 $('#add-goal').addEventListener('click', addGoal);
 siteRadar.addEventListener('change', toggleRadar);
 autoRadarToggle.addEventListener('click', toggleAutoRadar);
@@ -68,8 +75,10 @@ async function initialize() {
   currentOrigin = normalizePublicOrigin(tab?.url);
   $('#site-name').textContent = currentOrigin ? new URL(currentOrigin).hostname : 'Unsupported page';
   siteRadar.disabled = !currentOrigin;
-  const stored = await chrome.storage.local.get(['kernelBaseUrl', 'kernelApiToken', 'allowedOrigins', 'radarEnabled', 'autoRadarEnabled', 'autoRadarState', 'lastRadarEvent', 'missionWatchtower', 'pendingWorkspaceView']);
+  const stored = await chrome.storage.local.get(['kernelBaseUrl', 'kernelApiToken', 'allowedOrigins', 'radarEnabled', 'autoRadarEnabled', 'autoRadarState', 'lastRadarEvent', 'missionWatchtower', 'pendingWorkspaceView', 'dashboardAutoConnect']);
   tokenInput.value = stored.kernelApiToken ?? '';
+  $('#dashboard-auto-connect').checked = stored.dashboardAutoConnect === true;
+  $('#dashboard-auto-connect').disabled = !stored.kernelApiToken;
   const allowed = stored.allowedOrigins ?? [];
   siteRadar.checked = Boolean(stored.radarEnabled && currentOrigin && allowed.includes(currentOrigin));
   productState.connected = Boolean(stored.kernelApiToken);

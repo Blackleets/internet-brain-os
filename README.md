@@ -27,7 +27,9 @@ Agent run → signed ingestion → evidence-backed Case → Kernel gates → con
 
 ## Install Efesto on Windows
 
-The normal user path does not require knowing Node, pnpm or terminal commands.
+For **automatic startup and web reconnection**, use **`Setup Efesto Daily.cmd`** and follow the [one-time daily setup guide](docs/efesto-daily-start.md). It explicitly enables startup for your Windows account; the extension asks you to authorize reconnection once.
+
+The normal manual-start path does not require knowing Node, pnpm or terminal commands.
 
 1. Download/clone this repository.
 2. Double-click **`Install Efesto.cmd`**.

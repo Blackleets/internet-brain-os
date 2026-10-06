@@ -3,8 +3,18 @@
   "name": "Efesto Opportunity Radar",
   "version": "0.1.0",
   "description": "Private, local-first opportunity intelligence while you browse.",
-  "permissions": ["activeTab", "storage", "alarms", "notifications"],
-  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*", "http://*/*", "https://*/*"],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "alarms",
+    "notifications"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "http://*/*",
+    "https://*/*"
+  ],
   "background": {
     "service_worker": "src/background.js",
     "type": "module"
@@ -15,9 +25,30 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["src/page-context.js", "src/content-script.js"],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "src/page-context.js",
+        "src/content-script.js"
+      ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://efesto-five.vercel.app/*"
+      ],
+      "js": [
+        "src/dashboard-discovery.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false
     }
-  ]
+  ],
+  "externally_connectable": {
+    "matches": [
+      "https://efesto-five.vercel.app/*"
+    ]
+  }
 }

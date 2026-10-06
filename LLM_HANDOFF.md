@@ -6,6 +6,12 @@ This file lets Hermes, OpenCode, Codex, GPT, and future models continue work wit
 
 Every AI must update this file before ending a work session.
 
+## 2026-10-05 — Daily startup and web reconnection (candidate .87)
+
+The founder requested automatic Windows startup and opening Efesto without repeated token entry. `Setup Efesto Daily.cmd` enables a reversible per-user Startup shortcut after installation. A noninteractive launcher starts only an offline Kernel and preserves healthy instances and foreign processes. The paired extension can explicitly authorize the canonical production root page, then proxy bounded dashboard requests without handing its credential to the web. Revocation cancels active requests; Kernel authority and mission confirmations stay unchanged.
+
+See [daily setup](docs/efesto-daily-start.md), [security change request](docs/changes/efesto-daily-start.md) and `tests/acceptance/efesto-daily-start.feature`. This candidate includes unmerged #257 at `445b5f0`; main remains `34c1eea` at implementation time. #257's updated-head workflows ended unsuccessfully with multiple jobs cancelled before execution; the successful browser job and older green head do not qualify .87. Final-head Windows/browser CI and founder-PC login/reconnection acceptance are separate checks. No installation on the founder PC or production deployment is claimed. `publicLaunchApproved=false`. Local validation on 2026-10-06: 276 test files / 1858 tests, root/dashboard typecheck, production build and extension packaging passed.
+
 ## Current project state
 
 > Superseded snapshot: the status block below is historical (2026-07-28). `PROJECT_STATE.md` is the live checkpoint; as of 2026-09-28 the active PR is #241 (OPEN, not merged) and `publicLaunchApproved` remains false.

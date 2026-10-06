@@ -1,6 +1,7 @@
 param(
   [switch]$SkipNodeInstall,
-  [switch]$SkipShortcut
+  [switch]$SkipShortcut,
+  [switch]$EnableAutoStart
 )
 
 $ErrorActionPreference = 'Stop'
@@ -163,6 +164,10 @@ try {
   Invoke-Pnpm @('efesto:launcher', 'repair') 'Efesto launcher repair failed'
 
   Install-DesktopShortcut
+  if ($EnableAutoStart) {
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'efesto-autostart.ps1') -Action Enable
+    if ($LASTEXITCODE -ne 0) { throw 'Automatic startup could not be enabled.' }
+  }
 
   Write-Host ''
   Write-Host 'Efesto is installed and ready.' -ForegroundColor Green

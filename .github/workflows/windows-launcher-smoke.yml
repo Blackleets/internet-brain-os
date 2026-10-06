@@ -8,9 +8,14 @@ on:
       - 'apps/local-kernel/**'
       - 'scripts/efesto-*.mjs'
       - 'scripts/install-efesto.ps1'
+      - 'scripts/efesto-autostart.ps1'
+      - 'scripts/test-efesto-autostart.ps1'
       - 'scripts/build-hermes-safe-runtime-fixture.ps1'
       - 'Efesto Launcher.cmd'
       - 'Install Efesto.cmd'
+      - 'Setup Efesto Daily.cmd'
+      - 'Enable Efesto Auto Start.cmd'
+      - 'Disable Efesto Auto Start.cmd'
       - 'INTERNAL_RELEASE.json'
       - '.github/workflows/windows-launcher-smoke.yml'
   pull_request:
@@ -18,9 +23,14 @@ on:
       - 'apps/local-kernel/**'
       - 'scripts/efesto-*.mjs'
       - 'scripts/install-efesto.ps1'
+      - 'scripts/efesto-autostart.ps1'
+      - 'scripts/test-efesto-autostart.ps1'
       - 'scripts/build-hermes-safe-runtime-fixture.ps1'
       - 'Efesto Launcher.cmd'
       - 'Install Efesto.cmd'
+      - 'Setup Efesto Daily.cmd'
+      - 'Enable Efesto Auto Start.cmd'
+      - 'Disable Efesto Auto Start.cmd'
       - 'INTERNAL_RELEASE.json'
       - '.github/workflows/windows-launcher-smoke.yml'
   workflow_dispatch:
@@ -43,6 +53,13 @@ jobs:
           cache: pnpm
       - name: Frozen install
         run: pnpm install --frozen-lockfile
+      - name: Automatic startup shortcut lifecycle
+        shell: pwsh
+        run: |
+          pnpm exec tsc -b packages/kernel/tsconfig.json packages/connectors/tsconfig.json
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime build failed' }
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-efesto-autostart.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Startup lifecycle failed' }
       - name: Real Windows launcher bootstrap
         shell: pwsh
         run: |
@@ -74,6 +91,10 @@ jobs:
 
             $bootstrap = node scripts/efesto-bootstrap.mjs | ConvertFrom-Json
             if ($bootstrap.kernel -ne 'ready') { throw 'Bootstrap did not report Kernel ready' }
+            powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/efesto-autostart.ps1 -Action Run
+            if ($LASTEXITCODE -ne 0) { throw 'Noninteractive startup failed' }
+            $afterAutoStart = node scripts/efesto-bootstrap.mjs | ConvertFrom-Json
+            if ($afterAutoStart.diagnostics.kernel.pid -ne $bootstrap.diagnostics.kernel.pid) { throw 'Automatic startup replaced an existing Kernel' }
             if (-not $bootstrap.diagnostics.kernel.pidFilePresent -or -not $bootstrap.diagnostics.kernel.alive -or -not $bootstrap.diagnostics.kernel.owned -or -not $bootstrap.diagnostics.kernel.verified) {
               throw "Launcher process was not fully verified: $($bootstrap.diagnostics.kernel | ConvertTo-Json -Compress)"
             }

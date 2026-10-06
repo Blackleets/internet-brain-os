@@ -4,6 +4,10 @@ This file records major product and technical decisions.
 
 Do not delete old decisions. If a decision changes, add a new entry explaining why.
 
+## 2026-10-05 — Remember web authorization in the paired extension
+
+Decision: satisfy the founder's daily startup request with an explicit per-user Windows startup shortcut and an opt-in extension proxy for the canonical Efesto web origin. Do not persist the private Kernel token in the hosted dashboard. Keep the existing manual connection path and require Kernel confirmations for mutations. Web disconnect revokes its extension consent. Avoid privileged machine-wide services and installation work during login; preserve healthy processes and unrelated shortcuts. See `docs/changes/efesto-daily-start.md` for the reviewed boundary and `docs/efesto-daily-start.md` for owner setup and rollback. This is candidate .87; real founder-PC UAT and final-head CI remain distinct from local tests.
+
 ## 2026-08-12 - Canonical Efesto constitution
 
 Decision: `CONSTITUTION.md` is the single canonical project constitution and agent preflight contract for Efesto.

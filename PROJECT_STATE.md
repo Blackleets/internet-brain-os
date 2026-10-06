@@ -21,6 +21,12 @@ Read `CONSTITUTION.md` completely, then read `PROJECT_STATE.md`, `AGENTS.md`, `A
 - Search snippet/agent text ≠ Evidence.
 - Responsive mobile-width support does not imply phone → PC Kernel authority.
 
+## 2026-10-05 — Daily startup and web reconnection (candidate .87)
+
+The founder requested automatic Windows startup and opening Efesto without repeated token entry. `Setup Efesto Daily.cmd` enables a reversible per-user Startup shortcut after installation. A noninteractive launcher starts only an offline Kernel and preserves healthy instances and foreign processes. The paired extension can explicitly authorize the canonical production root page, then proxy bounded dashboard requests without handing its credential to the web. Revocation cancels active requests; Kernel authority and mission confirmations stay unchanged.
+
+See [daily setup](docs/efesto-daily-start.md), [security change request](docs/changes/efesto-daily-start.md) and `tests/acceptance/efesto-daily-start.feature`. This candidate includes unmerged #257 at `445b5f0`; main remains `34c1eea` at implementation time. #257's updated-head workflows ended unsuccessfully with multiple jobs cancelled before execution; the successful browser job and older green head do not qualify .87. Final-head Windows/browser CI and founder-PC login/reconnection acceptance are separate checks. No installation on the founder PC or production deployment is claimed. `publicLaunchApproved=false`. Local validation on 2026-10-06: 276 test files / 1858 tests, root/dashboard typecheck, production build and extension packaging passed.
+
 ## Current internal baseline — 2026-10-05
 
 - Main is `34c1eea0249feb54561f01d6aef24ef3c2903c92`: #254, #256, #258–#262 are integrated. #262 keeps launcher records on failed stop requests and refuses an unconfirmed replacement. Its exact head `ef9d941cf321e58cf1a3bdc21e43d696ee6b30e4` passed all five workflows; local suite 273 files / 1840 tests passed. This is automated proof, not founder-PC UAT.

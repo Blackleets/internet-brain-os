@@ -52,6 +52,22 @@ export async function repairEfestoLauncher(options = {}) {
   return { started: true, pid: started?.pid, status };
 }
 
+// Login startup is deliberately non-interactive: never restart a healthy unpaired
+// Kernel, rotate credentials, print pairing codes, install dependencies or take a port.
+export async function startEfestoAutomatically(options = {}) {
+  const ops = launcherOps(options);
+  const before = await ops.inspect();
+  if (before.kernel === 'ready' || before.kernel === 'port_conflict' || before.kernel === 'failed') {
+    return { started: false, status: before };
+  }
+  await ops.ensureDirectories();
+  if (before.kernel === 'stale') await ops.removeStalePidFile(before.diagnostics?.kernel?.pid);
+  const started = await ops.startKernel({ showPairing: false });
+  const status = await ops.waitForReady(started);
+  await ops.writeLog(`Automatic start: Kernel ${status.kernel}; open Efesto Launcher if setup is needed.`);
+  return { started: true, status };
+}
+
 export async function shutdownEfestoLauncher(options = {}) {
   const ops = launcherOps(options);
   const status = await ops.inspect();
