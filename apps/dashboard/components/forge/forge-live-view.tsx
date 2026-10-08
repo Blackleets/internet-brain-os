@@ -232,7 +232,9 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onSearchMore, se
         <button type="button" className="forge-live-relaunch-btn forge-live-searchmore-btn" disabled={searchMorePending} aria-describedby={searchMoreNoteId} onClick={() => { if (model.searchMore) onSearchMore(model.searchMore.goalId); }}>
           <Search aria-hidden="true" />{searchMorePending ? 'Enviando…' : 'Buscar más'}
         </button>
-        <p id={searchMoreNoteId}>Otro intento de Hermes con el mismo Goal. Los Finds y la Evidence guardados se conservan; lo nuevo se suma.</p>
+        <p id={searchMoreNoteId}>{model.phase === 'blocked'
+          ? 'Confirma otro intento con el Goal actual. Se conservan los intentos anteriores, la Evidence y los Finds; el bloqueo anterior queda en el historial.'
+          : 'Otro intento de Hermes con el mismo Goal. Los Finds y la Evidence guardados se conservan; lo nuevo se suma.'}</p>
       </div> : null}
       {model.prior ? <PriorAttempts prior={model.prior} goalTerms={model.goalTerms} onOpenFinds={onOpenFinds} /> : null}
       <details className="forge-live-legend" open={legendOpen} onToggle={(event) => setLegendOpen(event.currentTarget.open)}>

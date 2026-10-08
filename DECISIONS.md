@@ -4,6 +4,10 @@ This file records major product and technical decisions.
 
 Do not delete old decisions. If a decision changes, add a new entry explaining why.
 
+## 2026-10-08 — Recover historical revision blocks through existing confirmation
+
+Expose search_more only for the known revision-mismatch block after an attempt finished and no live lease exists. The existing Kernel endpoint decides whether to create a fresh current-revision attempt or preserve active work. Archive the literal known denial, retain prior data and never replay the stale batch. No automatic repair, migration or authority extension. Founder explicitly requested improvements first, merging later; keep this candidate draft and unmerged.
+
 ## 2026-10-08 — Keep Goal revision stable through verification
 
 Pending source verification is active work even after the Hermes lease is released. Reject changed revisions in the existing atomic Goal transaction and explain the wait in the existing editor. Reuse the settlement contract rather than adding another lifecycle or extending execution authority. Do not renew stale receipts or repair old policy blocks automatically. Preserve the visual design and user stores. Scope, acceptance and rollback are in docs/changes/goal-edit-verification-reliability.md.

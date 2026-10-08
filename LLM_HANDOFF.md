@@ -1,5 +1,14 @@
 # LLM HANDOFF
 
+## 2026-10-08 — Historical Goal block recovery (candidate .90, unmerged)
+
+Founder instruction: improve first, merge later. Do not merge this branch until the founder explicitly instructs it. Main baseline 4e846763114b076fb835287571fc9647c214353c already includes PR #265: five successful workflows, 35 Chromium tests and authentic Hermes 14/14. That proof belongs to .89, not this candidate.
+
+Branch improve/efesto-blocked-goal-recovery exposes the existing interactive Buscar más action for a finished running/verifying mission blocked by authorization_revision_mismatch, without a live lease or automatic policy block. A fresh current-Goal authorization comes from the existing Kernel endpoint; denied candidates are not replayed. Archive the known denial with the previous attempt and preserve Evidence/Finds. The success message acknowledges the request without claiming a new queued attempt when an active mission or offline agent was returned. Preserve design and authority boundaries. See docs/changes/blocked-goal-recovery.md.
+
+Local qualification: 276 Vitest files / 1868 tests, architecture guard, root/dashboard types production build, strict production audit, 7 SQLite tests, extension packaging and Hermes/replay smoke checks passed. Exact-head remote browser/Windows qualification remains pending. Keep the PR draft/unmerged, production and the founder updater unchanged. Founder-PC reconnection and authentic installed UAT remain unverified; publicLaunchApproved=false. Roll back only this slice; no data rollback.
+
+
 ## Handoff 2026-10-08 — Goal edit verification reliability
 
 Founder requested continuing Efesto improvements and avoiding lost session context. Canonical checkout main 8d56cf89f9292bf67b1ee9b696e0560f69049082; new branch fix/efesto-goal-verification-edit. Incorporates PR #255's two-file fix with authorship retained and adds pending-verification copy to the existing editor, partial/settleable regression coverage, mobile/desktop Playwright acceptance and candidate .89. No redesign, migration, provider, SUPPORT or authority change. Historical policy-blocked missions are not repaired automatically.

@@ -38,6 +38,47 @@ async function fixture() {
 const searchMore = { agent: 'hermes', confirmed: true, mode: 'search_more' };
 
 describe('"Buscar más": a finished Mission searches again without erasing earlier Finds', () => {
+  it('recovers a historical revision denial only through a fresh interactive attempt and keeps its denial and Finds', async () => {
+    const { store, goal, missions, mission, executor, attempt } = await fixture();
+    await attempt('https://shop.example/drill', '24.99');
+    await missions.create(goal.id, searchMore, interactive);
+    const claim = await executor.claim('hermes', mission.id);
+    await executor.complete(mission.id, { leaseId: claim.leaseId, resultKind: 'search_candidates', findings: [{ url: 'https://stale.example/drill', title: 'Old result', text: 'UNTRUSTED SEARCH SNIPPET' }] });
+    // Historical TEST FIXTURE: emulate persisted data from before the Goal edit guard.
+    const data = await store.read();
+    await store.write({ ...data, goals: data.goals.map((item) => item.id === goal.id ? { ...item, revision: 2 } : item) });
+    let reads = 0;
+    const verifier = new MissionSearchCandidateVerifier(store, new OpportunityProjector(store), { kernel, reader: { fetch: async () => { reads += 1; throw new Error('stale batch must not be read'); } } });
+    const denied = await verifier.verify(mission.id);
+    expect(denied.mission.verificationBlock).toEqual({ reason: 'authorization_revision_mismatch' });
+    expect(reads).toBe(0);
+    const before = await store.read();
+    await expect(missions.create(goal.id, searchMore, {})).rejects.toMatchObject({ status: 403 });
+    expect(await store.read()).toEqual(before);
+
+    const recovered = await missions.create(goal.id, searchMore, interactive);
+    expect(recovered).toMatchObject({ id: mission.id, status: 'queued', attempt: 0, authorization: { goalRevision: 2, actorType: 'interactive_user' } });
+    expect(recovered).not.toHaveProperty('verificationBlock');
+    expect(recovered).not.toHaveProperty('searchCandidates');
+    expect(recovered.priorAttempts).toHaveLength(2);
+    expect(recovered.priorAttempts[1]).toMatchObject({ verificationBlock: { reason: 'authorization_revision_mismatch' }, searchCandidates: [{ url: 'https://stale.example/drill' }] });
+    expect(JSON.stringify(recovered.priorAttempts)).not.toContain('UNTRUSTED SEARCH SNIPPET');
+    const queued = await store.read();
+    expect(queued.evidence).toEqual(before.evidence);
+    expect(queued.opportunities).toEqual(before.opportunities);
+    expect((await attempt('https://fresh.example/drill', '19.99')).verified.mission).toMatchObject({ status: 'completed', executionPhase: 'forged' });
+    expect((await store.read()).evidence).toHaveLength(2);
+    expect((await store.read()).opportunities).toHaveLength(2);
+  });
+
+  it('does not replace an attempt that acquired a live lease before the recovery request', async () => {
+    const { store, goal, missions, mission, executor } = await fixture();
+    await executor.claim('hermes', mission.id);
+    const before = await store.read();
+    expect(await missions.create(goal.id, searchMore, interactive)).toEqual(before.agentMissions[0]);
+    expect(await store.read()).toEqual(before);
+  });
+
   it('keeps the earlier attempt, its Evidence and its Find; the new attempt adds to them', async () => {
     const { store, goal, missions, mission, attempt } = await fixture();
     const first = await attempt('https://shop.example/drill', '24.99');

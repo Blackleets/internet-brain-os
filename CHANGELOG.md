@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+### 2026-10-08 — Historical Goal block recovery (.90, unmerged)
+
+- Offer explicit Buscar más recovery for finished revision-mismatch blocks, with current-Goal confirmation and preserved history/Evidence/Finds. Keep other policy blocks and active leases protected.
+- Retain the known denial in bounded previous-attempt metadata and avoid claiming a queued attempt from a stale client request. Keep the existing visual design. Founder requested improvements before a later merge.
+
 ### 2026-10-08 — Goal verification reliability
 
 - Protect the Goal revision while the Kernel verifies submitted candidates, including the interval without an agent lease; incorporate PR #255's guard.

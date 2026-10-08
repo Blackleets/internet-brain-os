@@ -1,5 +1,7 @@
 # Internet Brain OS — Architecture Continuation Guide
 
+Historical revision-block recovery: Forge offers the existing authenticated interactive `search_more` request only for finished running/verifying missions with the exact `authorization_revision_mismatch` block, no automatic policy block and no live lease. The Kernel retains active work or creates a fresh current-revision authorization through its existing endpoint. Bounded prior attempts retain the known denial reason; Evidence and Finds remain untouched. No implicit execution or authority change.
+
 ## Purpose
 
 This document is the implementation continuation guide for any future agent continuing the repository. Read `CONSTITUTION.md` first for durable product, authority, safety, and engineering invariants, then read this guide before modifying code.

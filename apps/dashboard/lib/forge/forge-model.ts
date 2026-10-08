@@ -287,11 +287,19 @@ const SEARCH_MORE_PHASES = new Set<ForgePhase>(['forged', 'research_completed', 
  * queued/waiting, has no live lease, and already ran an attempt.
  */
 function canSearchMore(phase: ForgePhase, status: string, row: MissionSummary | undefined, now: number): boolean {
-  if (!SEARCH_MORE_PHASES.has(phase) || !row) return false;
+  if (!row) return false;
+  const recoverRevision = phase === 'blocked' && status === 'running' && isGoalRevisionBlock(row);
+  if (!SEARCH_MORE_PHASES.has(phase) && !recoverRevision) return false;
   if (status === 'queued' || status === 'waiting_for_agent') return false;
   const lease = Date.parse(str(row.leaseExpiresAt));
   if (status === 'running' && Number.isFinite(lease) && lease > now) return false;
   return Boolean(str(row.completedAt) || str(row.verifyingAt) || str(row.failedAt) || arrayOfRows(row.verificationResults).length);
+}
+
+/** A recorded denial, not pending work or permission to bypass any Kernel policy. */
+function isGoalRevisionBlock(row: MissionSummary | undefined): boolean {
+  return Boolean(row && row.status === 'running' && row.executionPhase === 'verifying'
+    && !row.automaticBlock && asRow(row.verificationBlock)?.reason === 'authorization_revision_mismatch');
 }
 
 const MAX_PRIOR_SOURCES = 20;
@@ -621,7 +629,9 @@ function phaseCopy(phase: ForgePhase, counts: ForgeCounts, row?: MissionSummary)
       const reason = str(asRow(row?.lastFailure)?.reason);
       return { label: 'Atención requerida', detail: reason ? `La misión falló: ${reason}` : 'La misión falló.' };
     }
-    case 'blocked': return { label: 'Bloqueada', detail: 'La política del Kernel denegó la ejecución automática.' };
+    case 'blocked': return isGoalRevisionBlock(row)
+      ? { label: 'Bloqueada · Goal actualizado', detail: 'El Goal cambió después de esta búsqueda. El Kernel detuvo la verificación del intento anterior. Para buscar con el Goal actual necesitas confirmar un nuevo intento.' }
+      : { label: 'Bloqueada', detail: 'La política del Kernel denegó la ejecución automática.' };
   }
 }
 

@@ -22,6 +22,24 @@ const row = (extra: Record<string, unknown> = {}) => ({ id: MISSION_ID, goalId: 
 afterEach(() => cleanup());
 
 describe('ForgeLiveView', () => {
+  it('explains a historical Goal revision block and only requests recovery on a click', () => {
+    const onSearchMore = vi.fn();
+    const record = row({ verifyingAt: '2026-10-03T09:03:00.000Z', verificationBlock: { reason: 'authorization_revision_mismatch' } });
+    const build = (mission: MissionSummary) => buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission });
+    const { rerender } = render(<ForgeLiveView model={build(record)} onSearchMore={onSearchMore} />);
+    expect(onSearchMore).not.toHaveBeenCalled();
+    expect(screen.getByText('Bloqueada · Goal actualizado')).toBeTruthy();
+    expect(screen.getByText(/el bloqueo anterior queda en el historial/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar más' }));
+    expect(onSearchMore).toHaveBeenCalledExactlyOnceWith('goal:1');
+    rerender(<ForgeLiveView model={build(record)} onSearchMore={onSearchMore} relaunchPending />);
+    expect((screen.getByRole('button', { name: 'Enviando…' }) as HTMLButtonElement).disabled).toBe(true);
+    for (const extra of [{ verificationBlock: { reason: 'authorization_missing' } }, { leaseExpiresAt: new Date(Date.now() + 60_000).toISOString() }]) {
+      rerender(<ForgeLiveView model={build({ ...record, ...extra } as MissionSummary)} onSearchMore={onSearchMore} />);
+      expect(screen.queryByRole('button', { name: 'Buscar más' })).toBeNull();
+    }
+  });
+
   it('adds only a local source identity and preserves candidate state and link', () => {
     const url = 'https://github.com/git-guides';
     const { container } = render(<ForgeLiveView model={buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ searchCandidates: [{ ...candidates[0], url }] }) })} />);
