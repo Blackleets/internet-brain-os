@@ -1,5 +1,11 @@
 # HEPHAESTUS — Current Project State
 
+## 2026-10-08 — Goal verification edit reliability (candidate .89)
+
+Main baseline is 8d56cf89f9292bf67b1ee9b696e0560f69049082; the Windows recovery and daily-start work are integrated. Founder-PC recovery/reconnection remains unverified. Branch fix/efesto-goal-verification-edit incorporates PR #255's revision guard and completes its existing-editor explanation: pending Kernel verification, even without a Hermes lease, blocks changed Goal content with 409; typed editor text survives the waiting period. Partial batches block, while already blocked/settleable batches keep existing compatibility. SUPPORT, authentication, history, memory and visual design are unchanged. Existing blocked missions are not silently repaired.
+
+Local checks: 276 files / 1864 tests, architecture guard, root/dashboard types, production build, strict production audit and 7 SQLite tests pass. Two regression tests fail on main without the revision guard. Local Chromium download returned a truncated archive, so exact-head browser/Windows/package CI remains required. Candidate .89 replaces frozen .88; publicLaunchApproved=false. See docs/changes/goal-edit-verification-reliability.md. Next: finish exact-head qualification, then founder-PC recovery and authentic installed-Goal UAT; do not claim installed recovery from these tests. Roll back only this reliability slice; no user-data rollback.
+
 ## 2026-10-06 — Windows recovery qualification (.88)
 
 PR #264 corrects leading UTF-8 BOM launcher metadata and CMD return handling. Initial Windows First Run and Launcher Smoke workflows passed; the strict package audit detected newly published GHSA-wq5f-xc86-pv6w in sharp 0.35.4. Pin sharp 0.35.5 and regenerate the lockfile without suppressing audits. Candidate .88 replaces frozen .87; qualify the final unchanged head before merging. Add a real Windows CMD shim regression and verify BOM metadata is read without modifying it. Founder-PC update and automatic reconnection are still pending. Public launch remains blocked.

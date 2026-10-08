@@ -399,6 +399,38 @@ test('forge is honestly off without a Kernel and draws a still frame under reduc
 });
 
 for (const view of [{ shot: '390', width: 390, height: 844 }, { shot: 'desktop', width: 1440, height: 900 }]) {
+  test(`"Editar Goal" waits for pending Kernel verification at ${view.width}px without losing typed text`, async ({ page }) => {
+    await page.setViewportSize({ width: view.width, height: view.height });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    let verifying = true;
+    const posted: unknown[] = [];
+    await useForgeFixture(page);
+    const pendingMission = { ...missions.missions[0], status: 'running', executionPhase: 'verifying', verificationResults: [] };
+    const pendingSurface = { ...surfaces.surfaces[0], mission: { ...surfaces.surfaces[0].mission, status: 'running', executionPhase: 'verifying', workState: 'verifying' } };
+    await page.route('http://127.0.0.1:4100/api/agent-missions', (route) => fulfill(verifying ? { ok: true, missions: [pendingMission] } : missions)(route));
+    await page.route('http://127.0.0.1:4100/api/goal-surfaces', (route) => fulfill(verifying ? { ok: true, surfaces: [pendingSurface] } : surfaces)(route));
+    await page.route('http://127.0.0.1:4100/api/goals/goal-forge/revisions', async (route) => {
+      if (route.request().method() === 'POST') posted.push(route.request().postDataJSON());
+      await route.fallback();
+    });
+    await page.goto('/');
+    await connect(page);
+    await openHome(page, view.width < 700);
+    await page.locator('.forge-live header').getByRole('button', { name: 'Editar Goal' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Ajusta lo que buscas' });
+    const field = dialog.getByLabel('Texto del Goal');
+    await field.fill('Fixture ownership and borrowing guide');
+    await expect(dialog.getByRole('status')).toContainText('El Kernel está verificando');
+    const save = dialog.getByRole('button', { name: 'Guardar revisión' });
+    await expect(save).toBeDisabled();
+    await expectNoHorizontalOverflow(page, view.width);
+    verifying = false;
+    // Existing dashboard polling observes the terminal state; there is no second action or API.
+    await expect(save).toBeEnabled({ timeout: 15_000 });
+    await expect(field).toHaveValue('Fixture ownership and borrowing guide');
+    expect(posted).toEqual([]);
+  });
+
   test(`"Editar Goal" at ${view.width}px revises the confirmed Goal through the Kernel revision endpoint, keeping its Mission and Find`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: view.width, height: view.height });
     let revised = false;

@@ -211,11 +211,12 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
   const relaunch = canRelaunch(phase, surfaceMission.status, row, input.now ?? Date.now()) && input.surface.goal.id ? { goalId: input.surface.goal.id } : undefined;
   const searchMore = canSearchMore(phase, surfaceMission.status, row, input.now ?? Date.now()) && input.surface.goal.id ? { goalId: input.surface.goal.id } : undefined;
   const prior = buildPriorAttempts(row, evidence, input.opportunities, sources, goalTerms);
+  const editBlocked = goalEditBlock(row, surfaceMission, input.now ?? Date.now());
   const editGoal = input.surface.goal.id ? {
     goalId: input.surface.goal.id,
     title: input.surface.goal.title,
     revision: Number.isInteger(input.surface.goal.revision) && input.surface.goal.revision > 0 ? input.surface.goal.revision : 1,
-    ...(hasLiveLease(row, input.now ?? Date.now()) ? { blocked: 'Hermes está trabajando en este Goal. Podrás editarlo cuando termine el intento.' } : {}),
+    ...(editBlocked ? { blocked: editBlocked } : {}),
   } : undefined;
   return {
     kind: 'mission',
@@ -246,7 +247,26 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
 
 const ACTIVE_PHASES = new Set<ForgePhase>(['waiting_agent', 'queued', 'searching', 'verifying']);
 
-/** Stalled by design in the Kernel: read without SUPPORT (or no page readable), status running, no live lease. */
+/** Presentation only: the Kernel repeats these checks atomically when saving a revision. */
+function goalEditBlock(row: MissionSummary | undefined, surface: NonNullable<GoalSurface['mission']>, now: number): string | undefined {
+  if (hasLiveLease(row, now)) return 'Hermes está trabajando en este Goal. Podrás editarlo cuando termine el intento.';
+  if (!row) {
+    return surface.status === 'running' && surface.workState === 'verifying' && !surface.blockedReason
+      ? 'El Kernel está verificando las fuentes de este Goal. Podrás guardarlo cuando termine la verificación.'
+      : undefined;
+  }
+  if (row.status !== 'running' || row.executionPhase !== 'verifying' || row.verificationBlock) return undefined;
+  // Mirror settleStrandedVerification: all candidates read without SUPPORT can settle on list.
+  // A partial batch or a supported result still awaiting persistence must retain its revision.
+  const candidates = arrayOfRows(row.searchCandidates);
+  const results = arrayOfRows(row.verificationResults);
+  const settledIds = new Set(results.map((result) => result.candidateId));
+  const settleable = candidates.length > 0 && results.length > 0
+    && !results.some((result) => result.supported === true)
+    && candidates.every((candidate) => settledIds.has(candidate.id));
+  return settleable ? undefined : 'El Kernel está verificando las fuentes de este Goal. Podrás guardarlo cuando termine la verificación.';
+}
+
 function hasLiveLease(row: MissionSummary | undefined, now: number): boolean {
   if (!row || row.status !== 'running') return false;
   const lease = Date.parse(str(row.leaseExpiresAt));

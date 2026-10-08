@@ -1,5 +1,11 @@
 # LLM HANDOFF
 
+## Handoff 2026-10-08 — Goal edit verification reliability
+
+Founder requested continuing Efesto improvements and avoiding lost session context. Canonical checkout main 8d56cf89f9292bf67b1ee9b696e0560f69049082; new branch fix/efesto-goal-verification-edit. Incorporates PR #255's two-file fix with authorship retained and adds pending-verification copy to the existing editor, partial/settleable regression coverage, mobile/desktop Playwright acceptance and candidate .89. No redesign, migration, provider, SUPPORT or authority change. Historical policy-blocked missions are not repaired automatically.
+
+Checks: architecture, types, release contract, strict production audit, 276 Vitest files / 1864 tests, production build and 7 SQLite tests passed. Main without the guard fails two new Kernel regressions. Local Chromium install failed with a truncated archive; remote exact-head CI is the browser/Windows gate. Preserve the same candidate SHA while qualifying. Founder-PC startup, reconnection and authentic Goal UAT are pending; publicLaunchApproved=false. Details and rollback: docs/changes/goal-edit-verification-reliability.md. Do not restart cosmetic work or claim the user's PC is repaired. Finish qualification and review before integrating; then continue the installed UAT gate.
+
 ## 2026-10-06 — Windows recovery qualification (.88)
 
 PR #264 corrects leading UTF-8 BOM launcher metadata and CMD return handling. Initial Windows First Run and Launcher Smoke workflows passed; the strict package audit detected newly published GHSA-wq5f-xc86-pv6w in sharp 0.35.4. Pin sharp 0.35.5 and regenerate the lockfile without suppressing audits. Candidate .88 replaces frozen .87; qualify the final unchanged head before merging. Add a real Windows CMD shim regression and verify BOM metadata is read without modifying it. Founder-PC update and automatic reconnection are still pending. Public launch remains blocked.

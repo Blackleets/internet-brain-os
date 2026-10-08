@@ -88,19 +88,57 @@ describe('Goal revision ("Editar Goal")', () => {
     expect(evidence.evidence.filter((record) => record.priorAttempt)).toHaveLength(1);
   });
 
-  it('a candidate submitted under revision 1 is not verified against revision 2 without a fresh confirmation', async () => {
-    const { store, goals, goal, submit, verify } = await fixture();
+  it('candidates awaiting Kernel verification (no lease) block the edit (409) so the attempt is not stranded as blocked; the verifier still refuses a revision mismatch', async () => {
+    const { store, goals, goal, missions, submit, verify } = await fixture();
     await submit('https://shop.example/drill');
     const pending = (await store.read()).agentMissions[0];
     expect(pending).toMatchObject({ status: 'running', executionPhase: 'verifying' });
     expect(pending.leaseExpiresAt).toBeUndefined();
-    await goals.revise(goal.id, edit({ title: 'Find a cordless drill offer' }), interactive);
+
+    // Before: the lease-only gate let this edit through; the verifier then denied
+    // authorization_revision_mismatch and left the Mission running/verifying with a
+    // verificationBlock forever (no lease to expire, not stranded-settleable, no Buscar más).
+    const beforeEdit = await store.read();
+    await expect(goals.revise(goal.id, edit({ title: 'Find a cordless drill offer' }), interactive)).rejects.toMatchObject({ code: 'GOAL_MISSION_RUNNING', status: 409 });
+    expect(await store.read()).toEqual(beforeEdit);
+
+    // The pending verification settles against the revision it was authorized for; then the edit is accepted.
+    const settled = await verify('https://shop.example/drill', '24.99');
+    expect(settled.mission).toMatchObject({ status: 'completed', executionPhase: 'forged' });
+    expect(await goals.revise(goal.id, edit({ title: 'Find a cordless drill offer' }), interactive)).toMatchObject({ changed: true, revision: 2 });
+    expect((await missions.list())[0]).not.toHaveProperty('verificationBlock');
+  });
+
+  it('a verification already blocked by Kernel policy does not freeze Goal edits; a raw revision mismatch is still never verified', async () => {
+    const { store, goals, goal, submit, verify } = await fixture();
+    await submit('https://shop.example/drill');
+    // TEST FIXTURE: the Goal revision moves underneath the pending batch (pre-fix persisted state).
+    await store.project(async (data) => ({ changed: true, data: { ...data, goals: data.goals.map((item) => ({ ...item, revision: 2 })) }, result: null }));
     const outcome = await verify('https://shop.example/drill', '24.99');
     const data = await store.read();
     expect(data.evidence ?? []).toHaveLength(0);
     expect(data.opportunities ?? []).toHaveLength(0);
     expect(outcome.mission.limitation).toBe('Kernel web.read verification blocked: authorization_revision_mismatch');
     expect(outcome.mission.resultSummary).toMatchObject({ received: 1, evidenceCreated: 0, opportunitiesPromoted: 0 });
+    // The block is already recorded (verification will not run again), so the edit is not refused.
+    expect(await goals.revise(goal.id, edit({ title: 'Find a cordless drill offer', expectedRevision: 2 }), interactive)).toMatchObject({ changed: true, revision: 3 });
+  });
+
+  it('all unsupported candidates can settle without freezing editing, but a partial batch still protects its revision', async () => {
+    const { store, goals, goal, submit, missions, mission } = await fixture();
+    await submit('https://shop.example/drill');
+    await store.project(async (data) => ({ changed: true, data: { ...data, agentMissions: data.agentMissions.map((item) => ({
+      ...item, searchCandidates: [...item.searchCandidates, { ...item.searchCandidates[0], id: 'candidate:second', url: 'https://shop.example/other' }],
+      verificationResults: [{ candidateId: item.searchCandidates[0].id, status: 'verified', supported: false }],
+    })) }, result: null }));
+    const pending = await store.read();
+    await expect(goals.revise(goal.id, edit({ title: 'Find a cordless drill offer' }), interactive)).rejects.toMatchObject({ code: 'GOAL_MISSION_RUNNING', status: 409 });
+    expect(await store.read()).toEqual(pending);
+    await store.project(async (data) => ({ changed: true, data: { ...data, agentMissions: data.agentMissions.map((item) => ({
+      ...item, verificationResults: [...item.verificationResults, { candidateId: 'candidate:second', status: 'verification_failed' }],
+    })) }, result: null }));
+    expect(await goals.revise(goal.id, edit({ title: 'Find a cordless drill offer' }), interactive)).toMatchObject({ revision: 2 });
+    expect((await missions.list()).find((item) => item.id === mission.id)).toMatchObject({ status: 'failed', executionPhase: 'failed' });
   });
 
   it('refuses without the interactive confirmation (403) and without confirmed:true (400), changing nothing', async () => {

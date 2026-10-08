@@ -4,6 +4,10 @@ This file records major product and technical decisions.
 
 Do not delete old decisions. If a decision changes, add a new entry explaining why.
 
+## 2026-10-08 — Keep Goal revision stable through verification
+
+Pending source verification is active work even after the Hermes lease is released. Reject changed revisions in the existing atomic Goal transaction and explain the wait in the existing editor. Reuse the settlement contract rather than adding another lifecycle or extending execution authority. Do not renew stale receipts or repair old policy blocks automatically. Preserve the visual design and user stores. Scope, acceptance and rollback are in docs/changes/goal-edit-verification-reliability.md.
+
 ## 2026-10-05 — Remember web authorization in the paired extension
 
 Decision: satisfy the founder's daily startup request with an explicit per-user Windows startup shortcut and an opt-in extension proxy for the canonical Efesto web origin. Do not persist the private Kernel token in the hosted dashboard. Keep the existing manual connection path and require Kernel confirmations for mutations. Web disconnect revokes its extension consent. Avoid privileged machine-wide services and installation work during login; preserve healthy processes and unrelated shortcuts. See `docs/changes/efesto-daily-start.md` for the reviewed boundary and `docs/efesto-daily-start.md` for owner setup and rollback. This is candidate .87; real founder-PC UAT and final-head CI remain distinct from local tests.
