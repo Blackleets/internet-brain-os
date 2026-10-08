@@ -14,20 +14,56 @@ const surface = (revision = 1): GoalSurface => ({
   goal: { id: 'goal:rider', title: TITLE, status: 'active', revision, createdAt: '2026-10-04T09:00:00.000Z', updatedAt: '2026-10-04T09:00:00.000Z', compatibility: 'legacy_radar', policySummary: { autonomyLevel: 'assisted', approvalPolicy: 'none', source: 'legacy_compatibility' } },
   mission: { id: MISSION_ID, status: 'running', workState: 'verifying', createdAt: '2026-10-04T09:00:00.000Z', updatedAt: '2026-10-04T09:01:00.000Z' },
 });
-const row = (extra: Record<string, unknown> = {}) => ({ id: MISSION_ID, goalId: 'goal:rider', goalTitle: TITLE, status: 'running', executionPhase: 'verifying', createdAt: '2026-10-04T09:00:00.000Z', searchCandidates: [], ...extra }) as MissionSummary;
+const row = (extra: Record<string, unknown> = {}) => ({ id: MISSION_ID, goalId: 'goal:rider', goalTitle: TITLE, status: 'failed', executionPhase: 'failed', createdAt: '2026-10-04T09:00:00.000Z', searchCandidates: [], ...extra }) as MissionSummary;
 const NOW = Date.parse('2026-10-04T10:00:00.000Z');
 const model = (extra: Record<string, unknown> = {}, revision = 1) => buildForgeModel({ connected: true, kernelOnline: true, surface: surface(revision), mission: row(extra), now: NOW });
+const running = { status: 'running', executionPhase: 'verifying' };
 
 afterEach(() => cleanup());
 
 describe('"Editar Goal" (Kernel Goal revision)', () => {
-  it('the forge model carries the confirmed Goal, its Kernel revision, and blocks the edit only under a live Hermes lease', () => {
+  it('carries the confirmed Goal revision and blocks live leases and pending verification even without a lease', () => {
     const idle = model({}, 3);
     expect(idle.kind === 'mission' && idle.editGoal).toEqual({ goalId: 'goal:rider', title: TITLE, revision: 3 });
-    const leased = model({ leaseExpiresAt: '2026-10-04T10:05:00.000Z' });
+    const leased = model({ ...running, leaseExpiresAt: '2026-10-04T10:05:00.000Z' });
     expect(leased.kind === 'mission' && leased.editGoal?.blocked).toMatch(/Hermes está trabajando/);
-    const expired = model({ leaseExpiresAt: '2026-10-04T09:05:00.000Z' });
-    expect(expired.kind === 'mission' && expired.editGoal?.blocked).toBeUndefined();
+    for (const extra of [{}, { leaseExpiresAt: '2026-10-04T09:05:00.000Z' }]) {
+      const pending = model({ ...running, ...extra });
+      expect(pending.kind === 'mission' && pending.editGoal?.blocked).toMatch(/Kernel está verificando/);
+    }
+    const expiredDiscovery = model({ status: 'running', executionPhase: 'investigating', leaseExpiresAt: '2026-10-04T09:05:00.000Z' });
+    expect(expiredDiscovery.kind === 'mission' && expiredDiscovery.editGoal?.blocked).toBeUndefined();
+  });
+
+  it('does not freeze an already blocked or settleable batch; partial and supported batches still block', () => {
+    const searchCandidates = [{ id: 'candidate-a' }, { id: 'candidate-b' }];
+    const partial = [{ candidateId: 'candidate-a', status: 'verified', supported: false }];
+    const all = [...partial, { candidateId: 'candidate-b', status: 'verification_failed' }];
+    for (const verificationResults of [partial, [...all, { candidateId: 'candidate-a', supported: true }]]) {
+      const pending = model({ ...running, searchCandidates, verificationResults });
+      expect(pending.kind === 'mission' && pending.editGoal?.blocked).toMatch(/Kernel está verificando/);
+    }
+    for (const extra of [{ searchCandidates, verificationResults: all }, { verificationBlock: { reason: 'authorization_revision_mismatch' } }]) {
+      const editable = model({ ...running, ...extra });
+      expect(editable.kind === 'mission' && editable.editGoal?.blocked).toBeUndefined();
+    }
+  });
+
+  it('retains typed text while verification begins and enables saving after the Kernel finishes', () => {
+    const onEditGoal = vi.fn(async () => true);
+    const { rerender } = render(<ForgeLiveView model={model()} onEditGoal={onEditGoal} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Goal' }));
+    const field = screen.getByLabelText('Texto del Goal') as HTMLTextAreaElement;
+    fireEvent.change(field, { target: { value: 'empleo de rider en Madrid' } });
+    rerender(<ForgeLiveView model={model(running)} onEditGoal={onEditGoal} />);
+    expect(field.value).toBe('empleo de rider en Madrid');
+    expect(screen.getByRole('status').textContent).toMatch(/Kernel está verificando/);
+    expect((screen.getByRole('button', { name: 'Guardar revisión' }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.submit(field.closest('form')!);
+    expect(onEditGoal).not.toHaveBeenCalled();
+    rerender(<ForgeLiveView model={model({ status: 'completed', executionPhase: 'forged' })} onEditGoal={onEditGoal} />);
+    expect(field.value).toBe('empleo de rider en Madrid');
+    expect((screen.getByRole('button', { name: 'Guardar revisión' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('opens a labelled dialog from the Goal title, previews the next search keywords and saves a revision with the expected revision', async () => {
@@ -110,7 +146,7 @@ describe('"Editar Goal" (Kernel Goal revision)', () => {
 
   it('while Hermes holds a lease the dialog explains why and cannot save; too-short text cannot save', () => {
     const onEditGoal = vi.fn(async () => true);
-    const { unmount } = render(<ForgeLiveView model={model({ leaseExpiresAt: '2026-10-04T10:05:00.000Z' })} onEditGoal={onEditGoal} />);
+    const { unmount } = render(<ForgeLiveView model={model({ ...running, leaseExpiresAt: '2026-10-04T10:05:00.000Z' })} onEditGoal={onEditGoal} />);
     fireEvent.click(screen.getByRole('button', { name: 'Editar Goal' }));
     fireEvent.change(screen.getByLabelText('Texto del Goal'), { target: { value: 'empleo de rider' } });
     expect(screen.getByRole('status').textContent).toMatch(/Hermes está trabajando/);

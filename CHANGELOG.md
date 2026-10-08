@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+### 2026-10-08 — Goal verification reliability
+
+- Protect the Goal revision while the Kernel verifies submitted candidates, including the interval without an agent lease; incorporate PR #255's guard.
+- Explain the waiting state in the existing editor, preserve typed text and re-enable saving when verification settles. Cover partial, blocked and settleable batches; add desktop/mobile browser acceptance. Candidate .89, public launch still blocked pending installed UAT.
+
 ## 2026-10-06 — Windows recovery qualification (.88)
 
 PR #264 corrects leading UTF-8 BOM launcher metadata and CMD return handling. Initial Windows First Run and Launcher Smoke workflows passed; the strict package audit detected newly published GHSA-wq5f-xc86-pv6w in sharp 0.35.4. Pin sharp 0.35.5 and regenerate the lockfile without suppressing audits. Candidate .88 replaces frozen .87; qualify the final unchanged head before merging. Add a real Windows CMD shim regression and verify BOM metadata is read without modifying it. Founder-PC update and automatic reconnection are still pending. Public launch remains blocked.
