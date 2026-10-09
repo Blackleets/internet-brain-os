@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "efesto.eval.ranking-case.v1",
+  "title": "Efesto labelled Goal/page relevance case (one JSON object per JSONL line)",
+  "description": "Enforced at load time by validateCase() in scripts/eval/jev-ranking-bench-lib.mjs. Labels must come from real repo test assertions or a named human labeller; never invent labels.",
+  "type": "object",
+  "required": ["schemaVersion", "id", "goal", "goalMode", "page", "label", "labelSource", "circular", "provenance"],
+  "properties": {
+    "schemaVersion": { "const": "efesto.eval.ranking-case.v1" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,120}$" },
+    "goal": {
+      "type": "object",
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "keywords": { "type": "array", "items": { "type": "string" } },
+        "categories": { "type": "array", "items": { "type": "string" } },
+        "location": { "type": "string" },
+        "priority": { "type": "integer", "minimum": 1, "maximum": 3 }
+      }
+    },
+    "goalMode": {
+      "enum": ["raw", "goal-manager", "stored"],
+      "description": "raw: goal passed to evidenceSupportsGoal exactly as written (direct unit test). goal-manager: goal created through GoalManager.create, so keywords/categories are enriched by enrichGoalIntent. stored: goal object written to the Kernel store as-is."
+    },
+    "page": {
+      "type": "object",
+      "description": "The fetched page judged against the Goal. May be {} for 'no evidence' cases.",
+      "properties": {
+        "title": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "url": { "type": "string" },
+        "text": { "type": "string" },
+        "fetchedAt": { "type": "string", "description": "Canonical UTC ISO-8601; defaults to 2026-08-09T22:19:00.000Z" },
+        "paddingSuffix": {
+          "type": "object",
+          "required": ["char", "count"],
+          "description": "Reconstructs fixtures that append char.repeat(count) to text.",
+          "properties": {
+            "char": { "type": "string", "minLength": 1, "maxLength": 1 },
+            "count": { "type": "integer", "minimum": 1, "maximum": 100000 },
+            "separator": { "type": "string" }
+          }
+        }
+      }
+    },
+    "label": {
+      "type": "object",
+      "required": ["relevant"],
+      "properties": {
+        "relevant": { "type": "boolean", "description": "Does this page provide evidence relevant to the Goal?" },
+        "graded": { "type": ["integer", "null"], "minimum": 1, "maximum": 5, "description": "Optional human 1-5 grade; null when the source only gives a binary label." }
+      }
+    },
+    "labelSource": { "enum": ["repo-test-assertion", "human"] },
+    "labeledBy": { "type": "string", "description": "Required when labelSource is human." },
+    "circular": { "type": "boolean", "description": "true when the label is an assertion on the current ranker's own output (consistency check, not independent ground truth)." },
+    "provenance": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["file", "test", "assertion"],
+        "properties": {
+          "file": { "type": "string", "description": "Repo-relative path of the source fixture/test, or 'human' notes location." },
+          "test": { "type": "string" },
+          "assertion": { "type": "string" },
+          "snippets": { "type": "array", "items": { "type": "string" }, "description": "Verbatim strings that must appear in file (checked by tests)." }
+        }
+      }
+    },
+    "notes": { "type": "string" }
+  }
+}
