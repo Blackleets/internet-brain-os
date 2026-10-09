@@ -4,6 +4,10 @@ This file records major product and technical decisions.
 
 Do not delete old decisions. If a decision changes, add a new entry explaining why.
 
+## 2026-10-10 — Keywords refine discovery, not replace the Goal
+
+Keep persisted intent/authorization unchanged. The discovery adapter searches the complete sanitized title first and combines title terms with keywords for bounded alternatives/selection context. Retain numeric restrictions without losing the subject. No synonym invention, SUPPORT changes or migration. See docs/changes/goal-query-context.md.
+
 ## 2026-10-08 — Recover historical revision blocks through existing confirmation
 
 Expose search_more only for the known revision-mismatch block after an attempt finished and no live lease exists. The existing Kernel endpoint decides whether to create a fresh current-revision attempt or preserve active work. Archive the literal known denial, retain prior data and never replay the stale batch. No automatic repair, migration or authority extension. Founder explicitly requested improvements first, merging later; keep this candidate draft and unmerged.

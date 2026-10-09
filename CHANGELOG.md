@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### 2026-10-10 — Economic Goal searches
+
+- Preserve the full Goal subject when intent enrichment supplies price or identifier keywords; retain bounded discovery and existing verification. Five composed regressions reproduce the old failure. Candidate .91, unmerged.
+
 ### 2026-10-08 — Historical Goal block recovery (.90, unmerged)
 
 - Offer explicit Buscar más recovery for finished revision-mismatch blocks, with current-Goal confirmation and preserved history/Evidence/Finds. Keep other policy blocks and active leases protected.

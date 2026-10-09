@@ -330,3 +330,7 @@ Launcher metadata accepts one leading UTF-8 BOM without rewriting its source. Ma
 ## Goal revision during pending verification
 
 GoalManager rejects changed content while its running mission's candidate batch is awaiting Kernel verification, including the no-lease interval after agent submission. It reuses settleStrandedVerification to preserve existing blocked/settleable compatibility. The Forge client projects the same waiting explanation into the existing editor and retains typed text as the observable state changes; the atomic Kernel guard handles races. No authority is delegated to the client, no stale authorization is renewed, and no historical blocked record is silently repaired. See docs/changes/goal-edit-verification-reliability.md.
+
+## Economic Goal discovery context
+
+The Hermes discovery adapter combines title and keyword terms; inferred numeric keywords never replace the title subject. Its primary query retains the bounded sanitized Goal title, with at most three 160-character queries. Selection terms reserve subject space separately from up to two numeric terms. Persisted intent, Kernel authorization and SUPPORT remain unchanged. See docs/changes/goal-query-context.md.

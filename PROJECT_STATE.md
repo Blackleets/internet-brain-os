@@ -1,5 +1,10 @@
 # HEPHAESTUS — Current Project State
 
+## 2026-10-10 — Economic Goal query context (candidate .91)
+
+PR #266 remains draft and unmerged on improve/efesto-blocked-goal-recovery. Its prior recovery remains intact. Discovery now combines title and keywords instead of replacing the subject with inferred prices/identifiers; the primary query retains the full authorized title. Five composed regressions fail before the fix and pass after; adapter suite 52/52. Candidate .91 supersedes .90; publicLaunchApproved=false. Scope/rollback: docs/changes/goal-query-context.md. Full exact-head qualification and founder-PC UAT remain pending. Next bounded slice: pure MCP reads for expired/historical missions; then qualify the final candidate. Main stays 4e846763114b076fb835287571fc9647c214353c.
+
+
 ## 2026-10-08 — Historical Goal block recovery (candidate .90, unmerged)
 
 Founder instruction: improve first, merge later. Do not merge this branch until the founder explicitly instructs it. Main baseline 4e846763114b076fb835287571fc9647c214353c already includes PR #265: five successful workflows, 35 Chromium tests and authentic Hermes 14/14. That proof belongs to .89, not this candidate.
