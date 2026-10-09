@@ -334,3 +334,7 @@ GoalManager rejects changed content while its running mission's candidate batch 
 ## Economic Goal discovery context
 
 The Hermes discovery adapter combines title and keyword terms; inferred numeric keywords never replace the title subject. Its primary query retains the bounded sanitized Goal title, with at most three 160-character queries. Selection terms reserve subject space separately from up to two numeric terms. Persisted intent, Kernel authorization and SUPPORT remain unchanged. See docs/changes/goal-query-context.md.
+
+## MCP snapshot boundary
+
+The five stdio MCP tools consume LocalKnowledgeStore.read only, without mission reconciliation, leases, repairs or writes. Mission rows are persisted snapshots. The launching local process and file permissions define access; legacy tokenConfigured is a format diagnostic, not authentication or live readiness. Clients may forward returned knowledge to their providers. Normal Kernel HTTP authentication/reconciliation are unchanged. See docs/changes/mcp-snapshot-reads.md.

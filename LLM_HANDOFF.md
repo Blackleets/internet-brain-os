@@ -1,5 +1,14 @@
 # LLM HANDOFF
 
+## 2026-10-10 — Audit improvements 1–2 (candidate .92, current)
+
+Active review: PR #266, improve/efesto-blocked-goal-recovery, draft/unmerged. Main remains 4e846763114b076fb835287571fc9647c214353c. Its historical-block recovery is preserved; economic Goal discovery now keeps the complete subject, and MCP reads stored snapshots without reconciliation or the expired-lease clock error. Pure-read regression fails before the MCP change; nine MCP tests pass after. Candidate .92 supersedes .91/.90; publicLaunchApproved=false. Exact-head full/remote qualification remains pending at implementation time. Scope/rollback: docs/changes/goal-query-context.md and docs/changes/mcp-snapshot-reads.md.
+
+Local qualification: architecture, root/dashboard types, release contract, all 276 files / 1,877 tests, production build, seven SQLite tests, strict production audit, extension packaging and Hermes exact/altered replay plus Replay Lab smoke passed. This was Node 24.19.0/pnpm 11.25.0; pinned Node 22/pnpm 11.11.0 Windows/browser/live workflows must qualify the final published SHA. Founder-PC and real usefulness UAT remain unverified.
+
+Current ordered queue: (1) finish final-candidate qualification without merging; (2) evaluate real Goals and founder Windows UAT on that exact candidate; (3) separately specify claim/price/freshness verification without weakening SUPPORT; (4) consistent backup/restore and continuity; (5) Evidence-grounded chat and read-only memory; (6) measured recurrence/delivery/cost and opt-in beta. Earlier status blocks below are historical, not active work instructions. No production/founder-PC update or live search usefulness is claimed.
+
+
 ## 2026-10-10 — Economic Goal query context (candidate .91)
 
 PR #266 remains draft and unmerged on improve/efesto-blocked-goal-recovery. Its prior recovery remains intact. Discovery now combines title and keywords instead of replacing the subject with inferred prices/identifiers; the primary query retains the full authorized title. Five composed regressions fail before the fix and pass after; adapter suite 52/52. Candidate .91 supersedes .90; publicLaunchApproved=false. Scope/rollback: docs/changes/goal-query-context.md. Full exact-head qualification and founder-PC UAT remain pending. Next bounded slice: pure MCP reads for expired/historical missions; then qualify the final candidate. Main stays 4e846763114b076fb835287571fc9647c214353c.

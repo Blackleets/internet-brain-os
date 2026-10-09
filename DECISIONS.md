@@ -4,6 +4,10 @@ This file records major product and technical decisions.
 
 Do not delete old decisions. If a decision changes, add a new entry explaining why.
 
+## 2026-10-10 — MCP has no reconciliation authority
+
+Read stored snapshots directly rather than calling lifecycle managers. Kernel APIs retain all repair/write authority. Stdio trusts authorized local process/file access; a legacy token-format field is diagnostic only. Document client-provider disclosure and preserve tool compatibility. See docs/changes/mcp-snapshot-reads.md.
+
 ## 2026-10-10 — Keywords refine discovery, not replace the Goal
 
 Keep persisted intent/authorization unchanged. The discovery adapter searches the complete sanitized title first and combines title terms with keywords for bounded alternatives/selection context. Retain numeric restrictions without losing the subject. No synonym invention, SUPPORT changes or migration. See docs/changes/goal-query-context.md.

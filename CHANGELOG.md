@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### 2026-10-10 — Pure MCP snapshots
+
+- Read expired and historical missions without manager reconciliation or writes. Preserve all five tools, add store-integrity/error regressions, and document process/file-permission trust plus legacy token diagnostics. Candidate .92, unmerged.
+
 ### 2026-10-10 — Economic Goal searches
 
 - Preserve the full Goal subject when intent enrichment supplies price or identifier keywords; retain bounded discovery and existing verification. Five composed regressions reproduce the old failure. Candidate .91, unmerged.

@@ -1,6 +1,6 @@
 # Efesto MCP Server
 
-Expose your local Efesto Kernel knowledge — Goals, Missions, Cases and their Evidence receipts — as **read-only tools over the Model Context Protocol**. Any MCP client (Claude Desktop, Cursor, Windsurf, Hermes…) can then answer questions grounded in *your verified, provenance-backed* knowledge. Nothing leaves your machine.
+Expose your local Efesto Kernel knowledge — Goals, Missions, Cases and their Evidence receipts — as **read-only tools over the Model Context Protocol**. Authorized MCP clients (Claude Desktop, Cursor, Windsurf, Hermes…) receive stored snapshots and provenance. The server has no network transport, but a client may forward returned data to its model provider. Configure the client's privacy settings before sharing private knowledge.
 
 ## Why this matters
 
@@ -8,9 +8,9 @@ Most agent memory is a blob of embeddings with no provenance. Efesto's memory is
 
 ## Quick start (2 minutes)
 
-1. Find your Kernel data dir and token:
+1. Find your Kernel data dir:
    - Data dir: `.hephaestus/` in your Efesto install (or `HEPHAESTUS_DATA_DIR`)
-   - Token: the contents of `.hephaestus/kernel-api-token` (or `HEPHAESTUS_API_TOKEN`)
+   - No Kernel token is required for stdio. File access is inherited from the process that launches this server.
 
 2. Register the server in your MCP client, e.g. Claude Desktop (`claude_desktop_config.json`):
 
@@ -21,8 +21,7 @@ Most agent memory is a blob of embeddings with no provenance. Efesto's memory is
       "command": "node",
       "args": ["C:\\path\\to\\internet-brain-os\\apps\\local-kernel\\mcp-server.mjs"],
       "env": {
-        "HEPHAESTUS_DATA_DIR": "C:\\path\\to\\.hephaestus",
-        "HEPHAESTUS_API_TOKEN": "<your kernel token>"
+        "HEPHAESTUS_DATA_DIR": "C:\\path\\to\\.hephaestus"
       }
     }
   }
@@ -35,9 +34,9 @@ Most agent memory is a blob of embeddings with no provenance. Efesto's memory is
 
 | Tool | What it returns |
 |---|---|
-| `kernel_status` | Whether a valid token is configured and which data dir is in use. No secrets. |
+| `kernel_status` | Local configuration and process/file-permission trust boundary, not live Kernel health. Legacy token-format diagnostic only. No secrets. |
 | `list_goals` | Active Goals sorted by priority then recency. |
-| `list_missions` | Hermes research missions with lifecycle state (queued → investigating → verifying → forged). |
+| `list_missions` | Hermes missions exactly as persisted, newest first. Expired leases are not repaired. |
 | `list_cases` | Cases with Evidence-backed titles and statuses. |
 | `get_case` | One Case plus its stored Evidence receipts (source URL, capture time, summary). |
 
@@ -47,14 +46,16 @@ Every tool declares `readOnlyHint: true`. The server cannot mutate Kernel state 
 
 - **Stdio transport only**: the server speaks JSON-RPC 2.0 on stdin/stdout with the process that launched it. It opens no port and accepts no network connections.
 - **Token never echoed**: `kernel_status` reports whether a token is configured, never its value.
+- **Local process trust**: launch only from a client you authorize to read the selected directory. A legacy `HEPHAESTUS_API_TOKEN` is checked only for valid format; it is not compared with the Kernel credential and does not authenticate this stdio session. Prefer omitting it.
 - **Read-only by construction**: no tool handler touches a store mutation path.
+- **Snapshots, not reconciliation**: the server reads `store.json` directly and never invokes mission managers, repairs leases, settles verification or creates a missing store. Only the Kernel performs those transitions.
 
 ## Verify it works
 
 ```bash
 cd apps/local-kernel
-HEPHAESTUS_API_TOKEN=<your token> node --test mcp-server.test.mjs
-# expect: # pass 5 / # fail 0
+pnpm exec vitest run mcp-server.test.mjs
+# expect: 9 passed / 0 failed
 ```
 
-The contract suite spawns the real server binary and speaks newline-delimited JSON-RPC like any MCP client would: handshake, tools/list schema checks, tools/call round-trips, structured error handling without crashes, and JSON-RPC `-32601` for unknown methods.
+The contract suite spawns the real server and speaks newline-delimited JSON-RPC: handshake, tool schemas, round-trips, expired/historical missions, exact unchanged store bytes after every tool, absent/corrupt storage, malformed arguments, and structured errors without crashes. Synthetic records establish these contracts, not compatibility with every external MCP client.
