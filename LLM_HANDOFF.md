@@ -1,5 +1,13 @@
 # LLM HANDOFF
 
+## 2026-10-10 — Verification scope visibility (candidate .94, current)
+
+PR #266 remains draft/unmerged. Prior .93 head 4d912d42d58e5f4a48dfc9bd3f33fc7918c92545 passed all five remote workflows: CI 38048728364 (1,880 tests and 37 Chromium), live Hermes 38048728378 (14/14, 5 Evidence, 4 SUPPORT Finds), Windows First Run 38048728336, Internal Package 38048728454 and Launcher 38048728383. This qualifies .93 only; main remains 4e846763114b076fb835287571fc9647c214353c.
+
+Candidate .94 exposes implementation limits on the read-only Mission Evidence response: term coverage only, with price/availability/freshness not_assessed. Dashboard supports older Kernels conservatively and rejects malformed or unsupported explicit certification. Supported Forge cards expose the distinction through a collapsed keyboard/touch-accessible disclosure. No SUPPORT, authority, source-store, memory, execution or Find-admission change. Contract/rollback and planned actual assessment cases: docs/changes/verification-scope.md. Actual price/stock/freshness assessments are not implemented.
+
+Local .94 qualification passed: architecture, constitution, root/dashboard types, all 276 files / 1,890 tests and production build. Six new scope regressions were demonstrated failing before implementation and passing after; additional malformed-scope tests pass. Two new Chromium acceptance cases at 390/1280px require remote verification because no local Chromium runtime is installed. Remote final-head qualification is pending at implementation time. The 30-Goal protocol remains prepared/unexecuted and founder Windows UAT remains unverified. publicLaunchApproved=false. Next: qualify this exact candidate without merging; implement a separately versioned Evidence-bound condition assessment under the written contract, then evaluate real Goals and address consistent backup/restore and grounded chat. Do not claim UAT from fixtures or prior-head results.
+
 ## 2026-10-10 — Honest usefulness timing (candidate .93, current)
 
 Active work builds on PR #266 head 0c52530740e14be0946bcd6061396a1996b85774. That exact .92 head passed all five GitHub workflows: CI 37998752338 (1,877 tests, 37 Chromium tests), live Hermes 37998752334 (14/14, 3 Evidence and 3 SUPPORT Finds), internal package 37998752316, Windows launcher 37998752353 and first-run 37998752326. Those results qualify .92 only. PR remains draft/unmerged; main is unchanged at 4e846763114b076fb835287571fc9647c214353c.

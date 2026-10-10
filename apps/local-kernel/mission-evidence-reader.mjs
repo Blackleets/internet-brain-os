@@ -59,6 +59,13 @@ export class MissionEvidenceReader {
       schemaVersion: MISSION_EVIDENCE_SCHEMA_VERSION,
       sourceOfTruth: 'kernel',
       missionId: mission.id,
+      // Kernel-owned implementation limits, never copied from an agent or source page.
+      verificationScope: {
+        topic: 'term_coverage_only',
+        price: 'not_assessed',
+        availability: 'not_assessed',
+        freshness: 'not_assessed',
+      },
       evidence: records,
       limits: { maxRecords: MAX_MISSION_EVIDENCE_RECORDS, maxExcerptChars: MAX_EVIDENCE_EXCERPT_CHARS },
     };

@@ -342,3 +342,7 @@ The five stdio MCP tools consume LocalKnowledgeStore.read only, without mission 
 ## Useful-feedback duration across retries
 
 The local scorecard uses the earliest retained trusted authorization for a Goal ID/revision as its elapsed-time origin. Feedback still must follow its producing mission authorization. Retries cannot reset the clock; edited revisions remain independent. This read model preserves source bytes and API schema and does not certify claim/price/freshness constraints. See docs/changes/scorecard-retry-wait.md and docs/product/real-goal-evaluation-v1.md.
+
+## Mission Evidence verification limits
+
+The read-only Mission Evidence response publishes Kernel-derived term-coverage scope and not_assessed price/availability/freshness limits. The client defaults legacy omission conservatively, rejects unsupported certification and exposes a collapsed scope disclosure on supported Forge cards. No condition evaluator or new admission authority exists. See docs/changes/verification-scope.md for the separate planned Evidence-bound assessment contract.

@@ -286,6 +286,10 @@
 .forge-term { background: none; color: var(--v3-gold2); text-decoration: underline; text-decoration-color: rgba(245, 196, 81, .55); text-underline-offset: 3px; }
 .forge-source-meta { display: grid; margin: 8px 0 0; font-size: 13px; line-height: 19px; color: var(--v3-muted); overflow-wrap: anywhere; }
 .forge-source-meta > span { grid-area: 1 / 1; }
+.forge-source-checks { margin-top: 8px; color: var(--v3-muted); font-size: 13px; line-height: 19px; overflow-wrap: anywhere; }
+.forge-source-checks summary { min-height: 44px; display: list-item; align-content: center; cursor: pointer; }
+.forge-source-checks summary:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
+.forge-source-checks p { margin: 0 0 8px; }
 .forge-meta-interim { visibility: hidden; }
 .forge-source[data-stage='hidden'] .forge-meta-final, .forge-source[data-stage='candidate'] .forge-meta-final, .forge-source[data-stage='reading'] .forge-meta-final { visibility: hidden; }
 .forge-source[data-stage='hidden'] [data-at='pending'], .forge-source[data-stage='candidate'] [data-at='pending'], .forge-source[data-stage='reading'] [data-at='pending'] { visibility: visible; }

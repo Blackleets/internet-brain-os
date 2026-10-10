@@ -121,6 +121,33 @@ async function expectHonestSources(page: Page): Promise<void> {
   await expect(forge.getByLabel('Contadores de la misión')).toContainText('SUPPORT');
 }
 
+for (const width of [390, 1280]) {
+  test(`verification scope disclosure is honest and keyboard accessible at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await useForgeFixture(page);
+    await page.goto('/');
+    await connect(page);
+    await openHome(page, width < 768);
+    await expectHonestSources(page);
+    const supported = page.locator('.forge-source[data-state="supported"]');
+    const disclosure = supported.locator('.forge-source-checks');
+    const summary = disclosure.locator('summary');
+    await expect(disclosure).not.toHaveAttribute('open');
+    expect((await summary.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await summary.focus();
+    await summary.press('Enter');
+    await expect(disclosure).toHaveAttribute('open', '');
+    await expect(disclosure.getByText(/Precio, disponibilidad y vigencia no evaluados por separado/)).toBeVisible();
+    await expect(supported.locator('.forge-badge-final')).toHaveText('KERNEL SUPPORT');
+    await expect(page.locator('.forge-source[data-state="unsupported"] .forge-source-checks')).toHaveCount(0);
+    await expectNoHorizontalOverflow(page, width);
+    await page.screenshot({ path: testInfo.outputPath(`verification-scope-${width}.png`) });
+    await summary.press('Enter');
+    await expect(disclosure).not.toHaveAttribute('open');
+  });
+}
+
 test('forge live view on a 390×844 phone: real Kernel states, readable cards, no overflow', async ({ page }, testInfo) => {
   // Two full play-throughs of the real records (first view + replay) run in this test.
   test.setTimeout(60_000);

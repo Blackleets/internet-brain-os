@@ -446,6 +446,10 @@ function SourceCard({ source, goalTerms, onOpenFinds }: { source: ForgeSource; g
           {read && !hasBody ? <span className="forge-meta-interim" data-at="pending" aria-hidden="true">Pendiente de lectura del Kernel</span> : null}
           {source.state === 'unsupported' ? <span className="forge-meta-interim" data-at="evidence" aria-hidden="true">Leída: Evidence guardada · esperando veredicto</span> : null}
         </p>}
+        {source.state === 'supported' ? <details className="forge-source-checks">
+          <summary>Qué respalda esta fuente</summary>
+          <p>Coincide con los términos del Goal. Precio, disponibilidad y vigencia no evaluados por separado. La fecha de captura indica cuándo se leyó la página.</p>
+        </details> : null}
       </div>
     </div>
   </article>;

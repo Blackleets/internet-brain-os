@@ -75,6 +75,21 @@ async function startServer(reader) {
 }
 
 describe('MissionEvidenceReader', () => {
+  it('reports term-coverage scope without certifying price, stock or freshness from agent or stored text', async () => {
+    const data = fixture();
+    const fakeScope = { topic: 'all_conditions_verified', price: 'met', availability: 'met', freshness: 'met' };
+    data.agentMissions[0].verificationScope = fakeScope;
+    data.agentMissions[0].verificationResults[0].verificationScope = fakeScope;
+    data.evidence[0].verificationScope = fakeScope;
+    const before = JSON.stringify(data);
+    const result = await new MissionEvidenceReader(memoryStore(data)).list(MISSION_ID);
+    expect(result.verificationScope).toEqual({
+      topic: 'term_coverage_only', price: 'not_assessed', availability: 'not_assessed', freshness: 'not_assessed',
+    });
+    expect(result.evidence[0].supported).toBe(true);
+    expect(JSON.stringify(data)).toBe(before);
+  });
+
   it('projects only Kernel-verified Evidence of the Mission with the Kernel SUPPORT decision and a bounded verbatim excerpt', async () => {
     const result = await new MissionEvidenceReader(memoryStore(fixture())).list(MISSION_ID);
     expect(result.schemaVersion).toBe(MISSION_EVIDENCE_SCHEMA_VERSION);
@@ -205,6 +220,7 @@ describe('GET /api/agent-missions/:id/evidence', () => {
     const body = await response.json();
     expect(body.ok).toBe(true);
     expect(body.schemaVersion).toBe(MISSION_EVIDENCE_SCHEMA_VERSION);
+    expect(body.verificationScope).toMatchObject({ topic: 'term_coverage_only', price: 'not_assessed', availability: 'not_assessed', freshness: 'not_assessed' });
     expect(body.evidence).toHaveLength(2);
   });
 

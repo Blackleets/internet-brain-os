@@ -98,10 +98,13 @@ describe('ForgeLiveView', () => {
     // The Goal term in the Kernel excerpt is marked.
     expect([...supported.querySelectorAll('mark.forge-term')].map((mark) => mark.textContent)).toEqual(['Ownership']);
     expect(within(supported).getByText('KERNEL SUPPORT')).toBeTruthy();
+    expect(within(supported).getByText('Qué respalda esta fuente').closest('details')?.hasAttribute('open')).toBe(false);
+    expect(within(supported).getByText(/Precio, disponibilidad y vigencia no evaluados por separado/)).toBeTruthy();
     // The Find title opens the Find.
     fireEvent.click(within(supported).getByRole('button', { name: /^Ownership\s*· ver Find$/ }));
     expect(onOpenFinds).toHaveBeenCalledTimes(1);
     const unsupported = container.querySelector('.forge-source[data-state="unsupported"]') as HTMLElement;
+    expect(within(unsupported).queryByText('Qué respalda esta fuente')).toBeNull();
     expect(within(unsupported).queryByRole('button', { name: /ver Find/ })).toBeNull();
     expect(within(unsupported).getByText('EVIDENCE', { selector: '.forge-badge-final' })).toBeTruthy();
     expect(within(unsupported).getByText(/no cubre suficientes términos del Goal/i)).toBeTruthy();

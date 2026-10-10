@@ -172,3 +172,9 @@ Default stopOwnedProcess now returns its stop result and removes the launcher PI
 - Correct usefulness elapsed time across retained retries of one Goal revision (65 minutes was incorrectly reported as 5). Preserve revision isolation, producing-mission timestamp checks and source immutability.
 - Add three regressions and a proposed 30-Goal evaluation/review protocol; no live usefulness result is claimed.
 - Record exact .92 automated qualification independently; .93 requires fresh qualification.
+
+## 2026-10-10 — internal.94 (unmerged)
+
+- Expose honest Mission Evidence verification scope: term coverage only, commercial conditions not assessed. Reject unsupported certification and preserve legacy compatibility.
+- Add a collapsed mobile/keyboard-accessible disclosure on supported Forge cards and browser acceptance at 390/1280px.
+- Specify future actual condition assessment; no price, stock or freshness certification is claimed.

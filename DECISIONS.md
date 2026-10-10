@@ -169,3 +169,7 @@ Candidate `.86` integrates #257 with main `34c1eea`. The read-only agent-presenc
 ## 2026-10-10 — Count the full retained wait to useful feedback
 
 Use earliest trusted authorization per Goal revision for time-to-first-useful, rather than the producing retry alone. Preserve validation against the producing mission to reject impossible feedback. No migration or SUPPORT change. Human review time remains part of the metric. Proposed 30-Goal evaluation is unexecuted; commercial constraint proof and founder-PC UAT are independent gates.
+
+## 2026-10-10 — Separate topic SUPPORT from condition certification
+
+Publish current implementation limits before adding actual assessments. SUPPORT and verified fetches are not exact price/stock/freshness proof. Agent or stored claimed scope cannot override read-model limits. Current UI disclosure preserves existing Find actions and design. Actual assessments require a separate Evidence/hash/Goal-revision bound versioned contract; public launch and founder UAT stay blocked.
