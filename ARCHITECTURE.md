@@ -338,3 +338,7 @@ The Hermes discovery adapter combines title and keyword terms; inferred numeric 
 ## MCP snapshot boundary
 
 The five stdio MCP tools consume LocalKnowledgeStore.read only, without mission reconciliation, leases, repairs or writes. Mission rows are persisted snapshots. The launching local process and file permissions define access; legacy tokenConfigured is a format diagnostic, not authentication or live readiness. Clients may forward returned knowledge to their providers. Normal Kernel HTTP authentication/reconciliation are unchanged. See docs/changes/mcp-snapshot-reads.md.
+
+## Useful-feedback duration across retries
+
+The local scorecard uses the earliest retained trusted authorization for a Goal ID/revision as its elapsed-time origin. Feedback still must follow its producing mission authorization. Retries cannot reset the clock; edited revisions remain independent. This read model preserves source bytes and API schema and does not certify claim/price/freshness constraints. See docs/changes/scorecard-retry-wait.md and docs/product/real-goal-evaluation-v1.md.

@@ -165,3 +165,7 @@ Default stopOwnedProcess now returns its stop result and removes the launcher PI
 ## 2026-10-05 — Agent connector waiting count and SUPPORT truth
 
 Candidate `.86` integrates #257 with main `34c1eea`. The read-only agent-presence projection counts queued/waiting_for_agent missions, excluding terminal missions. It emits forged only for a completed forged mission with a persisted supported verification result and nonempty Evidence identifier; other completions are completed_without_forge. Dashboard copy maps both this phase and legacy completed to terminada sin Evidence. No executor, crawler, SUPPORT admission, authentication or persistence changes. Rollback only this projection/copy slice. Public launch remains blocked; exact-candidate automated qualification and founder-PC UAT are distinct gates.
+
+## 2026-10-10 — Count the full retained wait to useful feedback
+
+Use earliest trusted authorization per Goal revision for time-to-first-useful, rather than the producing retry alone. Preserve validation against the producing mission to reject impossible feedback. No migration or SUPPORT change. Human review time remains part of the metric. Proposed 30-Goal evaluation is unexecuted; commercial constraint proof and founder-PC UAT are independent gates.

@@ -1,5 +1,15 @@
 # HEPHAESTUS — Current Project State
 
+## 2026-10-10 — Honest usefulness timing (candidate .93, current)
+
+Active work builds on PR #266 head 0c52530740e14be0946bcd6061396a1996b85774. That exact .92 head passed all five GitHub workflows: CI 37998752338 (1,877 tests, 37 Chromium tests), live Hermes 37998752334 (14/14, 3 Evidence and 3 SUPPORT Finds), internal package 37998752316, Windows launcher 37998752353 and first-run 37998752326. Those results qualify .92 only. PR remains draft/unmerged; main is unchanged at 4e846763114b076fb835287571fc9647c214353c.
+
+Candidate .93 corrects time-to-first-useful measurement to include the earliest retained authorization across retries of the same Goal revision, while retaining producing-mission feedback validation and revision isolation. Three regressions fail before the fix and pass after. No store mutation, SUPPORT, authority, UI or API schema change. Scope/rollback: docs/changes/scorecard-retry-wait.md. Local .93 qualification: architecture, root/dashboard types, all 276 files / 1,880 tests and production build passed; 29 related tests passed. Three new regressions failed before and passed after. Remote final-head qualification remains pending at implementation time; .92 proof never qualifies .93.
+
+Prepared 30 proposed evaluation Goals and an evidence/constraint review protocol in docs/product/real-goal-evaluation-v1.md. None of these 30 runs has been executed or marked useful. Founder-PC UAT and genuine usefulness remain unverified; publicLaunchApproved=false.
+
+Next: qualify this exact candidate without merging, run the real-Goal protocol and founder Windows UAT; then separately specify price/claim/freshness verification, consistent backup/restore, Evidence-grounded chat and measured recurrence/delivery/cost. Earlier blocks below are historical.
+
 ## 2026-10-10 — Audit improvements 1–2 (candidate .92, current)
 
 Active review: PR #266, improve/efesto-blocked-goal-recovery, draft/unmerged. Main remains 4e846763114b076fb835287571fc9647c214353c. Its historical-block recovery is preserved; economic Goal discovery now keeps the complete subject, and MCP reads stored snapshots without reconciliation or the expired-lease clock error. Pure-read regression fails before the MCP change; nine MCP tests pass after. Candidate .92 supersedes .91/.90; publicLaunchApproved=false. Exact-head full/remote qualification remains pending at implementation time. Scope/rollback: docs/changes/goal-query-context.md and docs/changes/mcp-snapshot-reads.md.

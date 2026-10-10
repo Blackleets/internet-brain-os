@@ -16,6 +16,44 @@ const productCohort = {
 };
 
 describe('local-first product value scorecard', () => {
+  it.each([false, true])('includes the wait before Buscar más regardless of mission order (reversed=%s)', (reversed) => {
+    const missions = [
+      { id: 'mission:first', goalId: 'goal:1', status: 'failed', authorization: authorization('goal:1', '2026-08-10T10:00:00.000Z') },
+      { id: 'mission:retry', goalId: 'goal:1', status: 'completed', executionPhase: 'forged', authorization: authorization('goal:1', '2026-08-10T11:00:00.000Z') },
+    ];
+    const data = {
+      productCohort,
+      agentMissions: reversed ? missions.toReversed() : missions,
+      evidence: [{ id: 'evidence:retry', missionId: 'mission:retry' }],
+      opportunities: [{ id: 'find:retry', evidenceId: 'evidence:retry', supported: true }],
+      preferenceFeedback: [{ opportunityId: 'find:retry', signal: 'useful', recordedAt: '2026-08-10T11:05:00.000Z' }],
+    };
+    const before = JSON.stringify(data);
+    const scorecard = buildProductValueScorecard(data, { now: '2026-08-10T12:00:00.000Z' });
+    expect(scorecard.primary.timeToFirstUsefulFind).toMatchObject({ value: 3900000, sampleCount: 1 });
+    expect(scorecard.primary.goalUsefulFindRate).toMatchObject({ numerator: 1, denominator: 1, value: 1 });
+    expect(JSON.stringify(data)).toBe(before);
+  });
+
+  it('keeps edited Goal revisions separate and rejects feedback predating its producing authorization', () => {
+    const scorecard = buildProductValueScorecard({
+      agentMissions: [
+        { id: 'mission:old', goalId: 'goal:1', status: 'failed', authorization: authorization('goal:1', '2026-08-10T09:00:00.000Z', 1) },
+        { id: 'mission:new', goalId: 'goal:1', status: 'failed', authorization: authorization('goal:1', '2026-08-10T10:00:00.000Z', 2) },
+        { id: 'mission:retry', goalId: 'goal:1', status: 'completed', executionPhase: 'forged', authorization: authorization('goal:1', '2026-08-10T11:00:00.000Z', 2) },
+      ],
+      evidence: [{ id: 'evidence:retry', missionId: 'mission:retry' }],
+      opportunities: [{ id: 'find:retry', evidenceId: 'evidence:retry', supported: true }],
+      preferenceFeedback: [
+        { opportunityId: 'find:retry', signal: 'saved', recordedAt: '2026-08-10T10:30:00.000Z' },
+        { opportunityId: 'find:retry', signal: 'useful', recordedAt: '2026-08-10T11:05:00.000Z' },
+      ],
+    }, { now: '2026-08-10T12:00:00.000Z' });
+    expect(scorecard.primary.timeToFirstUsefulFind).toMatchObject({ value: 3900000, sampleCount: 1 });
+    expect(scorecard.primary.goalUsefulFindRate).toMatchObject({ numerator: 1, denominator: 2, value: 0.5 });
+    expect(scorecard.coverage.invalidTimestampEvents).toBe(1);
+  });
+
   it('measures Goal value from Kernel-linked Finds and explicit private feedback', () => {
     const scorecard = buildProductValueScorecard({
       productCohort,

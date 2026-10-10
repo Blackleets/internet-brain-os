@@ -166,3 +166,9 @@ Default stopOwnedProcess now returns its stop result and removes the launcher PI
 
 ### 2026-10-05 — Agent connector truth
 - Count waiting_for_agent missions and display completed-without-SUPPORT work as terminada sin Evidence. Candidate internal.86; public launch remains blocked.
+
+## 2026-10-10 — internal.93 (unmerged)
+
+- Correct usefulness elapsed time across retained retries of one Goal revision (65 minutes was incorrectly reported as 5). Preserve revision isolation, producing-mission timestamp checks and source immutability.
+- Add three regressions and a proposed 30-Goal evaluation/review protocol; no live usefulness result is claimed.
+- Record exact .92 automated qualification independently; .93 requires fresh qualification.
