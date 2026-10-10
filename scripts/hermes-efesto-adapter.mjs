@@ -410,7 +410,13 @@ export function parseHermesFindingsWithFunnel(text) {
     }
   }
   if (!parsed || !Array.isArray(parsed.findings) || parsed.findings.length > 20) {
-    throw new Error('Hermes must return { findings: [...] } with at most 20 findings');
+    // Only fixed shape labels survive this boundary. Never retain keys, values, URLs or prose.
+    const shapeType = (value) => value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
+    const hasFindings = parsed !== null && typeof parsed === 'object'
+      && Object.hasOwn(parsed, 'findings');
+    const findingsType = hasFindings ? shapeType(parsed.findings) : 'missing';
+    const count = Array.isArray(parsed?.findings) ? 'over_20' : 'none';
+    throw new Error(`Hermes must return { findings: [...] } with at most 20 findings (root=${shapeType(parsed)} findings=${findingsType} count=${count})`);
   }
   // A finding whose http(s) URL is malformed and cannot be recovered unambiguously is dropped, not
   // guessed; the Kernel rejects any URL that is not well-formed, so it would otherwise fail the batch.

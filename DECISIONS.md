@@ -173,3 +173,7 @@ Use earliest trusted authorization per Goal revision for time-to-first-useful, r
 ## 2026-10-10 — Separate topic SUPPORT from condition certification
 
 Publish current implementation limits before adding actual assessments. SUPPORT and verified fetches are not exact price/stock/freshness proof. Agent or stored claimed scope cannot override read-model limits. Current UI disclosure preserves existing Find actions and design. Actual assessments require a separate Evidence/hash/Goal-revision bound versioned contract; public launch and founder UAT stay blocked.
+
+## 2026-10-10 — Hermes rejected-output diagnostics (.95)
+
+The adapter still rejects structured output without an array of at most twenty findings. Its failure now includes only fixed root/findings type labels and none/over_20 count categories. No payload, keys, values, URLs, private reasoning, candidates or authority are retained from a rejected result. Frozen .94 live run 38051253204 failed 8/14 before ingestion; .95 is a diagnostic improvement, not a proven malformed-output repair. Existing queued-with-lastFailure recovery is preserved. See docs/changes/hermes-output-shape-diagnostics.md; rollback this error-metadata slice only. PR #266 stays draft/unmerged and public launch remains blocked.

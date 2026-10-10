@@ -178,3 +178,7 @@ Default stopOwnedProcess now returns its stop result and removes the launcher PI
 - Expose honest Mission Evidence verification scope: term coverage only, commercial conditions not assessed. Reject unsupported certification and preserve legacy compatibility.
 - Add a collapsed mobile/keyboard-accessible disclosure on supported Forge cards and browser acceptance at 390/1280px.
 - Specify future actual condition assessment; no price, stock or freshness certification is claimed.
+
+## 2026-10-10 — Hermes rejected-output diagnostics (.95)
+
+The adapter still rejects structured output without an array of at most twenty findings. Its failure now includes only fixed root/findings type labels and none/over_20 count categories. No payload, keys, values, URLs, private reasoning, candidates or authority are retained from a rejected result. Frozen .94 live run 38051253204 failed 8/14 before ingestion; .95 is a diagnostic improvement, not a proven malformed-output repair. Existing queued-with-lastFailure recovery is preserved. See docs/changes/hermes-output-shape-diagnostics.md; rollback this error-metadata slice only. PR #266 stays draft/unmerged and public launch remains blocked.

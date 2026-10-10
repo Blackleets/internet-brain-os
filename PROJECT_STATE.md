@@ -1,6 +1,16 @@
 # HEPHAESTUS — Current Project State
 
-## 2026-10-10 — Verification scope visibility (candidate .94, current)
+## 2026-10-10 — Safe Hermes output-shape diagnosis (candidate .95, current)
+
+PR #266 remains draft/open/unmerged; improve first, merge later. Main remains 4e846763114b076fb835287571fc9647c214353c; publicLaunchApproved=false.
+
+Frozen .94 head 80c94658022700cfd47c0193fef1b207d5ba19a3 passed CI 38051253246 (1,890 tests / 39 Chromium), Launcher 38051253220, First Run 38051253212 and Package 38051253211. Authentic Hermes run 38051253204 failed at 8/14: the adapter rejected parsed output at its findings-array / maximum-20 gate, before any candidate, Evidence or SUPPORT Find. Its generic error cannot distinguish missing findings, wrong type or excessive size. No specific malformed payload is known; no live success or regression cause is inferred. Queued plus lastFailure is existing bounded recovery state. Do not reuse .94 or relabel it successful.
+
+Candidate .95 preserves parsing, admission and retry behavior and adds only fixed root/findings type labels and none/over_20 count categories to this existing rejection reason. It never retains source text, keys, values, URLs or model reasoning. Ten negative adapter cases failed before and pass after; a worker wiring regression verifies a failure request without candidate submission or content leakage. Contract/rollback: docs/changes/hermes-output-shape-diagnostics.md. Local qualification passed: architecture, constitution, root/dashboard types, 276 files / 1,901 tests and production build. Ten negative adapter regressions failed before the change and pass after. Release contract passed (public launch remains blocked). Remote exact-head qualification is pending; local tests are not authentic runtime proof.
+
+Next: qualify .95 on one immutable SHA and examine its real output-shape outcome before changing parsing or pursuing the separate Evidence-bound condition assessment. Do not weaken schema validation or blindly rerun until green. The 30 proposed real Goals remain unexecuted; founder-PC Windows UAT remains unverified. No merge, deployment or installed-PC update is authorized.
+
+## 2026-10-10 — Verification scope visibility (candidate .94, historical frozen failure)
 
 PR #266 remains draft/unmerged. Prior .93 head 4d912d42d58e5f4a48dfc9bd3f33fc7918c92545 passed all five remote workflows: CI 38048728364 (1,880 tests and 37 Chromium), live Hermes 38048728378 (14/14, 5 Evidence, 4 SUPPORT Finds), Windows First Run 38048728336, Internal Package 38048728454 and Launcher 38048728383. This qualifies .93 only; main remains 4e846763114b076fb835287571fc9647c214353c.
 

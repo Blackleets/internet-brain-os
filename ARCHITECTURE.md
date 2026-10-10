@@ -346,3 +346,7 @@ The local scorecard uses the earliest retained trusted authorization for a Goal 
 ## Mission Evidence verification limits
 
 The read-only Mission Evidence response publishes Kernel-derived term-coverage scope and not_assessed price/availability/freshness limits. The client defaults legacy omission conservatively, rejects unsupported certification and exposes a collapsed scope disclosure on supported Forge cards. No condition evaluator or new admission authority exists. See docs/changes/verification-scope.md for the separate planned Evidence-bound assessment contract.
+
+## 2026-10-10 — Hermes rejected-output diagnostics (.95)
+
+The adapter still rejects structured output without an array of at most twenty findings. Its failure now includes only fixed root/findings type labels and none/over_20 count categories. No payload, keys, values, URLs, private reasoning, candidates or authority are retained from a rejected result. Frozen .94 live run 38051253204 failed 8/14 before ingestion; .95 is a diagnostic improvement, not a proven malformed-output repair. Existing queued-with-lastFailure recovery is preserved. See docs/changes/hermes-output-shape-diagnostics.md; rollback this error-metadata slice only. PR #266 stays draft/unmerged and public launch remains blocked.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { runHermesMissionWorker } from './hermes-mission-worker.mjs';
+import { parseHermesFindings } from '../../scripts/hermes-efesto-adapter.mjs';
 
 const SECRET = 'sk-live-SUPERSECRET-0123456789abcdef';
 
@@ -14,6 +15,19 @@ function fetchStub(recorded) {
 }
 
 describe('hermes mission worker failure sanitization', () => {
+  it('reports only rejected output shape and never submits candidates after a parse failure', async () => {
+    const recorded = [];
+    const result = await runHermesMissionWorker({
+      baseUrl: 'http://127.0.0.1:4000', apiToken: 'a'.repeat(40), command: 'unused',
+      fetchImpl: fetchStub(recorded),
+      execute: async () => parseHermesFindings(JSON.stringify({ findings: SECRET, 'private-key': 'private-value' })),
+    });
+    expect(result).toMatchObject({ status: 'failed', reported: true });
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0].url).toMatch(/\/failures$/);
+    expect(recorded[0].body.reason).toBe('Hermes must return { findings: [...] } with at most 20 findings (root=object findings=string count=none)');
+    expect(JSON.stringify(recorded)).not.toMatch(/SUPERSECRET|private-key|private-value/);
+  });
   it('never forwards adapter stderr into the Kernel failure reason', async () => {
     const recorded = [];
     const result = await runHermesMissionWorker({

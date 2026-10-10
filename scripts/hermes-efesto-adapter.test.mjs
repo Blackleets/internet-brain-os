@@ -738,4 +738,23 @@ process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/a' 
     expect(() => parseHermesFindings(JSON.stringify({ findings: Array.from({ length: 21 }, () => ({})) }))).toThrow('at most 20');
     expect(() => parseHermesFindings(Array.from({ length: 21 }, (_, index) => `https://source${index}.example/path`).join('\n'))).toThrow('at most 20');
   });
+
+  it.each([
+    [null, 'null', 'missing', 'none'],
+    [[], 'array', 'missing', 'none'],
+    ['private-value', 'string', 'missing', 'none'],
+    [true, 'boolean', 'missing', 'none'],
+    [42, 'number', 'missing', 'none'],
+    [{ 'private-key': 'private-value' }, 'object', 'missing', 'none'],
+    [{ findings: null }, 'object', 'null', 'none'],
+    [{ findings: 'private-value' }, 'object', 'string', 'none'],
+    [{ findings: { 'private-key': 'private-value' } }, 'object', 'object', 'none'],
+    [{ findings: Array.from({ length: 100 }, () => ({ url: 'https://private.example/?token=private-value' })) }, 'object', 'array', 'over_20'],
+  ])('diagnoses rejected shape without retaining model content (%j)', (value, root, findings, count) => {
+    let failure;
+    try { parseHermesFindings(JSON.stringify(value)); } catch (error) { failure = error; }
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure.message).toBe(`Hermes must return { findings: [...] } with at most 20 findings (root=${root} findings=${findings} count=${count})`);
+    expect(failure.message).not.toMatch(/private-value|private-key|private\.example|token=/);
+  });
 });
