@@ -319,6 +319,22 @@ describe('displayText', () => {
     const now = Date.parse('2026-10-03T10:00:00.000Z');
     const forgedRow = row({ status: 'completed', executionPhase: 'forged', completedAt: '2026-10-03T09:03:00.000Z', verificationResults: forgedResults });
 
+    it('offers explicit recovery only for a finished revision mismatch without a live lease or policy block', () => {
+      const blocked = row({ verifyingAt: '2026-10-03T09:03:00.000Z', verificationBlock: { reason: 'authorization_revision_mismatch' } });
+      const build = (record?: MissionSummary) => mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: record, now }));
+      expect(build(blocked)).toMatchObject({ phase: 'blocked', phaseLabel: 'Bloqueada · Goal actualizado', searchMore: { goalId: 'goal:1' } });
+      expect(build(blocked).phaseDetail).toContain('confirmar un nuevo intento');
+      for (const extra of [
+        { verificationBlock: { reason: 'authorization_missing' } },
+        { automaticBlock: { reason: 'policy_denied' } },
+        { leaseExpiresAt: '2026-10-03T10:05:00.000Z' },
+        { status: 'queued' },
+        { executionPhase: 'investigating' },
+        { verifyingAt: undefined },
+      ]) expect(build({ ...blocked, ...extra } as MissionSummary).searchMore).toBeUndefined();
+      expect(build().searchMore).toBeUndefined();
+    });
+
     it('is offered once an attempt finished and nobody works the Mission, never while queued, searching or leased', () => {
       const forged = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('forged', { status: 'completed' }), mission: forgedRow, now }));
       expect(forged.searchMore).toEqual({ goalId: 'goal:1' });

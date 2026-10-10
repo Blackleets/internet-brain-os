@@ -1,5 +1,18 @@
 ## [Unreleased]
 
+### 2026-10-10 — Pure MCP snapshots
+
+- Read expired and historical missions without manager reconciliation or writes. Preserve all five tools, add store-integrity/error regressions, and document process/file-permission trust plus legacy token diagnostics. Candidate .92, unmerged.
+
+### 2026-10-10 — Economic Goal searches
+
+- Preserve the full Goal subject when intent enrichment supplies price or identifier keywords; retain bounded discovery and existing verification. Five composed regressions reproduce the old failure. Candidate .91, unmerged.
+
+### 2026-10-08 — Historical Goal block recovery (.90, unmerged)
+
+- Offer explicit Buscar más recovery for finished revision-mismatch blocks, with current-Goal confirmation and preserved history/Evidence/Finds. Keep other policy blocks and active leases protected.
+- Retain the known denial in bounded previous-attempt metadata and avoid claiming a queued attempt from a stale client request. Keep the existing visual design. Founder requested improvements before a later merge.
+
 ### 2026-10-08 — Goal verification reliability
 
 - Protect the Goal revision while the Kernel verifies submitted candidates, including the interval without an agent lease; incorporate PR #255's guard.
@@ -153,3 +166,19 @@ Default stopOwnedProcess now returns its stop result and removes the launcher PI
 
 ### 2026-10-05 — Agent connector truth
 - Count waiting_for_agent missions and display completed-without-SUPPORT work as terminada sin Evidence. Candidate internal.86; public launch remains blocked.
+
+## 2026-10-10 — internal.93 (unmerged)
+
+- Correct usefulness elapsed time across retained retries of one Goal revision (65 minutes was incorrectly reported as 5). Preserve revision isolation, producing-mission timestamp checks and source immutability.
+- Add three regressions and a proposed 30-Goal evaluation/review protocol; no live usefulness result is claimed.
+- Record exact .92 automated qualification independently; .93 requires fresh qualification.
+
+## 2026-10-10 — internal.94 (unmerged)
+
+- Expose honest Mission Evidence verification scope: term coverage only, commercial conditions not assessed. Reject unsupported certification and preserve legacy compatibility.
+- Add a collapsed mobile/keyboard-accessible disclosure on supported Forge cards and browser acceptance at 390/1280px.
+- Specify future actual condition assessment; no price, stock or freshness certification is claimed.
+
+## 2026-10-10 — Hermes rejected-output diagnostics (.95)
+
+The adapter still rejects structured output without an array of at most twenty findings. Its failure now includes only fixed root/findings type labels and none/over_20 count categories. No payload, keys, values, URLs, private reasoning, candidates or authority are retained from a rejected result. Frozen .94 live run 38051253204 failed 8/14 before ingestion; .95 is a diagnostic improvement, not a proven malformed-output repair. Existing queued-with-lastFailure recovery is preserved. See docs/changes/hermes-output-shape-diagnostics.md; rollback this error-metadata slice only. PR #266 stays draft/unmerged and public launch remains blocked.

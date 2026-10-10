@@ -1,5 +1,7 @@
 # Internet Brain OS — Architecture Continuation Guide
 
+Historical revision-block recovery: Forge offers the existing authenticated interactive `search_more` request only for finished running/verifying missions with the exact `authorization_revision_mismatch` block, no automatic policy block and no live lease. The Kernel retains active work or creates a fresh current-revision authorization through its existing endpoint. Bounded prior attempts retain the known denial reason; Evidence and Finds remain untouched. No implicit execution or authority change.
+
 ## Purpose
 
 This document is the implementation continuation guide for any future agent continuing the repository. Read `CONSTITUTION.md` first for durable product, authority, safety, and engineering invariants, then read this guide before modifying code.
@@ -328,3 +330,23 @@ Launcher metadata accepts one leading UTF-8 BOM without rewriting its source. Ma
 ## Goal revision during pending verification
 
 GoalManager rejects changed content while its running mission's candidate batch is awaiting Kernel verification, including the no-lease interval after agent submission. It reuses settleStrandedVerification to preserve existing blocked/settleable compatibility. The Forge client projects the same waiting explanation into the existing editor and retains typed text as the observable state changes; the atomic Kernel guard handles races. No authority is delegated to the client, no stale authorization is renewed, and no historical blocked record is silently repaired. See docs/changes/goal-edit-verification-reliability.md.
+
+## Economic Goal discovery context
+
+The Hermes discovery adapter combines title and keyword terms; inferred numeric keywords never replace the title subject. Its primary query retains the bounded sanitized Goal title, with at most three 160-character queries. Selection terms reserve subject space separately from up to two numeric terms. Persisted intent, Kernel authorization and SUPPORT remain unchanged. See docs/changes/goal-query-context.md.
+
+## MCP snapshot boundary
+
+The five stdio MCP tools consume LocalKnowledgeStore.read only, without mission reconciliation, leases, repairs or writes. Mission rows are persisted snapshots. The launching local process and file permissions define access; legacy tokenConfigured is a format diagnostic, not authentication or live readiness. Clients may forward returned knowledge to their providers. Normal Kernel HTTP authentication/reconciliation are unchanged. See docs/changes/mcp-snapshot-reads.md.
+
+## Useful-feedback duration across retries
+
+The local scorecard uses the earliest retained trusted authorization for a Goal ID/revision as its elapsed-time origin. Feedback still must follow its producing mission authorization. Retries cannot reset the clock; edited revisions remain independent. This read model preserves source bytes and API schema and does not certify claim/price/freshness constraints. See docs/changes/scorecard-retry-wait.md and docs/product/real-goal-evaluation-v1.md.
+
+## Mission Evidence verification limits
+
+The read-only Mission Evidence response publishes Kernel-derived term-coverage scope and not_assessed price/availability/freshness limits. The client defaults legacy omission conservatively, rejects unsupported certification and exposes a collapsed scope disclosure on supported Forge cards. No condition evaluator or new admission authority exists. See docs/changes/verification-scope.md for the separate planned Evidence-bound assessment contract.
+
+## 2026-10-10 — Hermes rejected-output diagnostics (.95)
+
+The adapter still rejects structured output without an array of at most twenty findings. Its failure now includes only fixed root/findings type labels and none/over_20 count categories. No payload, keys, values, URLs, private reasoning, candidates or authority are retained from a rejected result. Frozen .94 live run 38051253204 failed 8/14 before ingestion; .95 is a diagnostic improvement, not a proven malformed-output repair. Existing queued-with-lastFailure recovery is preserved. See docs/changes/hermes-output-shape-diagnostics.md; rollback this error-metadata slice only. PR #266 stays draft/unmerged and public launch remains blocked.

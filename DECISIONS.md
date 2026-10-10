@@ -4,6 +4,18 @@ This file records major product and technical decisions.
 
 Do not delete old decisions. If a decision changes, add a new entry explaining why.
 
+## 2026-10-10 — MCP has no reconciliation authority
+
+Read stored snapshots directly rather than calling lifecycle managers. Kernel APIs retain all repair/write authority. Stdio trusts authorized local process/file access; a legacy token-format field is diagnostic only. Document client-provider disclosure and preserve tool compatibility. See docs/changes/mcp-snapshot-reads.md.
+
+## 2026-10-10 — Keywords refine discovery, not replace the Goal
+
+Keep persisted intent/authorization unchanged. The discovery adapter searches the complete sanitized title first and combines title terms with keywords for bounded alternatives/selection context. Retain numeric restrictions without losing the subject. No synonym invention, SUPPORT changes or migration. See docs/changes/goal-query-context.md.
+
+## 2026-10-08 — Recover historical revision blocks through existing confirmation
+
+Expose search_more only for the known revision-mismatch block after an attempt finished and no live lease exists. The existing Kernel endpoint decides whether to create a fresh current-revision attempt or preserve active work. Archive the literal known denial, retain prior data and never replay the stale batch. No automatic repair, migration or authority extension. Founder explicitly requested improvements first, merging later; keep this candidate draft and unmerged.
+
 ## 2026-10-08 — Keep Goal revision stable through verification
 
 Pending source verification is active work even after the Hermes lease is released. Reject changed revisions in the existing atomic Goal transaction and explain the wait in the existing editor. Reuse the settlement contract rather than adding another lifecycle or extending execution authority. Do not renew stale receipts or repair old policy blocks automatically. Preserve the visual design and user stores. Scope, acceptance and rollback are in docs/changes/goal-edit-verification-reliability.md.
@@ -153,3 +165,15 @@ Default stopOwnedProcess now returns its stop result and removes the launcher PI
 ## 2026-10-05 — Agent connector waiting count and SUPPORT truth
 
 Candidate `.86` integrates #257 with main `34c1eea`. The read-only agent-presence projection counts queued/waiting_for_agent missions, excluding terminal missions. It emits forged only for a completed forged mission with a persisted supported verification result and nonempty Evidence identifier; other completions are completed_without_forge. Dashboard copy maps both this phase and legacy completed to terminada sin Evidence. No executor, crawler, SUPPORT admission, authentication or persistence changes. Rollback only this projection/copy slice. Public launch remains blocked; exact-candidate automated qualification and founder-PC UAT are distinct gates.
+
+## 2026-10-10 — Count the full retained wait to useful feedback
+
+Use earliest trusted authorization per Goal revision for time-to-first-useful, rather than the producing retry alone. Preserve validation against the producing mission to reject impossible feedback. No migration or SUPPORT change. Human review time remains part of the metric. Proposed 30-Goal evaluation is unexecuted; commercial constraint proof and founder-PC UAT are independent gates.
+
+## 2026-10-10 — Separate topic SUPPORT from condition certification
+
+Publish current implementation limits before adding actual assessments. SUPPORT and verified fetches are not exact price/stock/freshness proof. Agent or stored claimed scope cannot override read-model limits. Current UI disclosure preserves existing Find actions and design. Actual assessments require a separate Evidence/hash/Goal-revision bound versioned contract; public launch and founder UAT stay blocked.
+
+## 2026-10-10 — Hermes rejected-output diagnostics (.95)
+
+The adapter still rejects structured output without an array of at most twenty findings. Its failure now includes only fixed root/findings type labels and none/over_20 count categories. No payload, keys, values, URLs, private reasoning, candidates or authority are retained from a rejected result. Frozen .94 live run 38051253204 failed 8/14 before ingestion; .95 is a diagnostic improvement, not a proven malformed-output repair. Existing queued-with-lastFailure recovery is preserved. See docs/changes/hermes-output-shape-diagnostics.md; rollback this error-metadata slice only. PR #266 stays draft/unmerged and public launch remains blocked.

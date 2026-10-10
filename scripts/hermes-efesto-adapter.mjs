@@ -53,19 +53,28 @@ const GOAL_STOPWORDS = new Set([
 ]);
 const MAX_CORE_TERMS = 8;
 
-/** Topic terms of the Goal (scope keywords, else Goal title words) minus filler, for query anchoring. */
-export function goalCoreTerms(mission) {
+/** Keywords refine the title; inferred prices/identifiers must never replace its subject. */
+function goalSearchTerms(mission) {
   const scope = mission?.scope ?? {};
   const keywords = Array.isArray(scope.keywords) ? scope.keywords.filter((value) => typeof value === 'string') : [];
-  const source = keywords.length ? keywords : String(mission?.goalTitle ?? '').split(/[^\p{L}\p{N}]+/u);
+  const title = cleanQueryText(mission?.goalTitle, 120);
+  const titleTerms = title.split(/[^\p{L}\p{N}]+/u);
+  const source = [...keywords.slice(0, 40), ...titleTerms];
   const terms = [];
-  for (const raw of source.slice(0, 40)) {
-    const term = raw.trim().toLowerCase().slice(0, 60);
+  for (const raw of source) {
+    const term = cleanQueryText(raw, 60).toLowerCase();
     if (term.length < 2 || GOAL_STOPWORDS.has(term) || terms.includes(term)) continue;
     terms.push(term);
-    if (terms.length === MAX_CORE_TERMS) break;
   }
   return terms;
+}
+
+export function goalCoreTerms(mission) {
+  const terms = goalSearchTerms(mission);
+  // Reserve space for numeric restrictions without allowing them to consume the subject budget.
+  const numbers = terms.filter((term) => /^\d+(?:[.,]\d+)?$/.test(term)).slice(0, 2);
+  const subject = terms.filter((term) => !/^\d+(?:[.,]\d+)?$/.test(term));
+  return [...subject.slice(0, MAX_CORE_TERMS - numbers.length), ...numbers];
 }
 
 const MAX_QUERY_TERMS = 6;
@@ -73,21 +82,28 @@ const MAX_PLANNED_QUERY_CHARS = 160;
 
 /**
  * The 2–3 queries the adapter asks Hermes to send, built deterministically from the Goal's own
- * words: its core terms (filler removed, at most 6), then variants that drop the first or last term,
+ * words: title and keywords together (filler removed), then bounded topic-preserving variants,
  * or add the Location when one is set and not already a term. Nothing is invented — no years,
  * numbers, synonyms, translations or spelling fixes — and duplicates are removed. A Goal with only
  * one or two usable terms and no Location yields a single query.
  */
 export function planSearchQueries(mission) {
   const scope = mission?.scope ?? {};
+  const allTerms = goalSearchTerms(mission);
+  const title = cleanQueryText(mission?.goalTitle, 120);
+  // A real title is the complete authorized subject. Keep it intact in the primary search,
+  // including prices, skill names and locations that may fall beyond the short keyword budget.
+  const hasTitle = title.split(/[^\p{L}\p{N}]+/u).some((term) => term.length >= 2 && !GOAL_STOPWORDS.has(term.toLowerCase()));
   const terms = goalCoreTerms(mission).slice(0, MAX_QUERY_TERMS);
   const location = cleanQueryText(scope.location, 60);
-  const base = terms.length ? terms.join(' ') : cleanQueryText(mission?.goalTitle, 120);
+  const base = hasTitle ? title : terms.join(' ');
   if (!base) return [];
   const addLocation = location && !base.toLowerCase().split(' ').includes(location.toLowerCase()) && !base.toLowerCase().includes(location.toLowerCase());
-  const variants = addLocation
-    ? [base, `${base} ${location}`, terms.length >= 3 ? `${terms.slice(1).join(' ')} ${location}` : undefined]
-    : [base, terms.length >= 3 ? terms.slice(1).join(' ') : undefined, terms.length >= 3 ? terms.slice(0, -1).join(' ') : undefined];
+  const variants = hasTitle
+    ? [base, addLocation ? `${base} ${location}` : undefined, allTerms.join(' ')]
+    : addLocation
+      ? [base, `${base} ${location}`, terms.length >= 3 ? `${terms.slice(1).join(' ')} ${location}` : undefined]
+      : [base, terms.length >= 3 ? terms.slice(1).join(' ') : undefined, terms.length >= 3 ? terms.slice(0, -1).join(' ') : undefined];
   const planned = [];
   for (const variant of variants) {
     const query = cleanQueryText(variant, MAX_PLANNED_QUERY_CHARS);
@@ -394,7 +410,13 @@ export function parseHermesFindingsWithFunnel(text) {
     }
   }
   if (!parsed || !Array.isArray(parsed.findings) || parsed.findings.length > 20) {
-    throw new Error('Hermes must return { findings: [...] } with at most 20 findings');
+    // Only fixed shape labels survive this boundary. Never retain keys, values, URLs or prose.
+    const shapeType = (value) => value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
+    const hasFindings = parsed !== null && typeof parsed === 'object'
+      && Object.hasOwn(parsed, 'findings');
+    const findingsType = hasFindings ? shapeType(parsed.findings) : 'missing';
+    const count = Array.isArray(parsed?.findings) ? 'over_20' : 'none';
+    throw new Error(`Hermes must return { findings: [...] } with at most 20 findings (root=${shapeType(parsed)} findings=${findingsType} count=${count})`);
   }
   // A finding whose http(s) URL is malformed and cannot be recovered unambiguously is dropped, not
   // guessed; the Kernel rejects any URL that is not well-formed, so it would otherwise fail the batch.

@@ -185,6 +185,9 @@ function archivedAttempt(mission) {
     ...(mission.resultSummary ? { resultSummary: pick(mission.resultSummary, ['received', 'evidenceCreated', 'opportunitiesPromoted']) } : {}),
     searchCandidates: candidates.slice(0, MAX_PRIOR_ITEMS).map((item) => pick(item, ['id', 'url', 'title', 'status'])),
     verificationResults: results.slice(0, MAX_PRIOR_ITEMS).map((item) => pick(item, ['candidateId', 'status', 'sourceUrl', 'evidenceId', 'supported', 'supportReason', 'reason'])),
+    // A fresh interactive attempt does not erase the known denial that stopped the old batch.
+    ...(mission.verificationBlock?.reason === 'authorization_revision_mismatch'
+      ? { verificationBlock: { reason: 'authorization_revision_mismatch' } } : {}),
     ...(mission.searchTelemetry ? { searchTelemetry: mission.searchTelemetry } : {}),
   };
 }

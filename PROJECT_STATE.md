@@ -1,5 +1,56 @@
 # HEPHAESTUS — Current Project State
 
+## 2026-10-10 — Safe Hermes output-shape diagnosis (candidate .95, current)
+
+PR #266 remains draft/open/unmerged; improve first, merge later. Main remains 4e846763114b076fb835287571fc9647c214353c; publicLaunchApproved=false.
+
+Frozen .94 head 80c94658022700cfd47c0193fef1b207d5ba19a3 passed CI 38051253246 (1,890 tests / 39 Chromium), Launcher 38051253220, First Run 38051253212 and Package 38051253211. Authentic Hermes run 38051253204 failed at 8/14: the adapter rejected parsed output at its findings-array / maximum-20 gate, before any candidate, Evidence or SUPPORT Find. Its generic error cannot distinguish missing findings, wrong type or excessive size. No specific malformed payload is known; no live success or regression cause is inferred. Queued plus lastFailure is existing bounded recovery state. Do not reuse .94 or relabel it successful.
+
+Candidate .95 preserves parsing, admission and retry behavior and adds only fixed root/findings type labels and none/over_20 count categories to this existing rejection reason. It never retains source text, keys, values, URLs or model reasoning. Ten negative adapter cases failed before and pass after; a worker wiring regression verifies a failure request without candidate submission or content leakage. Contract/rollback: docs/changes/hermes-output-shape-diagnostics.md. Local qualification passed: architecture, constitution, root/dashboard types, 276 files / 1,901 tests and production build. Ten negative adapter regressions failed before the change and pass after. Release contract passed (public launch remains blocked). Remote exact-head qualification is pending; local tests are not authentic runtime proof.
+
+Next: qualify .95 on one immutable SHA and examine its real output-shape outcome before changing parsing or pursuing the separate Evidence-bound condition assessment. Do not weaken schema validation or blindly rerun until green. The 30 proposed real Goals remain unexecuted; founder-PC Windows UAT remains unverified. No merge, deployment or installed-PC update is authorized.
+
+## 2026-10-10 — Verification scope visibility (candidate .94, historical frozen failure)
+
+PR #266 remains draft/unmerged. Prior .93 head 4d912d42d58e5f4a48dfc9bd3f33fc7918c92545 passed all five remote workflows: CI 38048728364 (1,880 tests and 37 Chromium), live Hermes 38048728378 (14/14, 5 Evidence, 4 SUPPORT Finds), Windows First Run 38048728336, Internal Package 38048728454 and Launcher 38048728383. This qualifies .93 only; main remains 4e846763114b076fb835287571fc9647c214353c.
+
+Candidate .94 exposes implementation limits on the read-only Mission Evidence response: term coverage only, with price/availability/freshness not_assessed. Dashboard supports older Kernels conservatively and rejects malformed or unsupported explicit certification. Supported Forge cards expose the distinction through a collapsed keyboard/touch-accessible disclosure. No SUPPORT, authority, source-store, memory, execution or Find-admission change. Contract/rollback and planned actual assessment cases: docs/changes/verification-scope.md. Actual price/stock/freshness assessments are not implemented.
+
+Local .94 qualification passed: architecture, constitution, root/dashboard types, all 276 files / 1,890 tests and production build. Six new scope regressions were demonstrated failing before implementation and passing after; additional malformed-scope tests pass. Two new Chromium acceptance cases at 390/1280px require remote verification because no local Chromium runtime is installed. Remote final-head qualification is pending at implementation time. The 30-Goal protocol remains prepared/unexecuted and founder Windows UAT remains unverified. publicLaunchApproved=false. Next: qualify this exact candidate without merging; implement a separately versioned Evidence-bound condition assessment under the written contract, then evaluate real Goals and address consistent backup/restore and grounded chat. Do not claim UAT from fixtures or prior-head results.
+
+## 2026-10-10 — Honest usefulness timing (candidate .93, current)
+
+Active work builds on PR #266 head 0c52530740e14be0946bcd6061396a1996b85774. That exact .92 head passed all five GitHub workflows: CI 37998752338 (1,877 tests, 37 Chromium tests), live Hermes 37998752334 (14/14, 3 Evidence and 3 SUPPORT Finds), internal package 37998752316, Windows launcher 37998752353 and first-run 37998752326. Those results qualify .92 only. PR remains draft/unmerged; main is unchanged at 4e846763114b076fb835287571fc9647c214353c.
+
+Candidate .93 corrects time-to-first-useful measurement to include the earliest retained authorization across retries of the same Goal revision, while retaining producing-mission feedback validation and revision isolation. Three regressions fail before the fix and pass after. No store mutation, SUPPORT, authority, UI or API schema change. Scope/rollback: docs/changes/scorecard-retry-wait.md. Local .93 qualification: architecture, root/dashboard types, all 276 files / 1,880 tests and production build passed; 29 related tests passed. Three new regressions failed before and passed after. Remote final-head qualification remains pending at implementation time; .92 proof never qualifies .93.
+
+Prepared 30 proposed evaluation Goals and an evidence/constraint review protocol in docs/product/real-goal-evaluation-v1.md. None of these 30 runs has been executed or marked useful. Founder-PC UAT and genuine usefulness remain unverified; publicLaunchApproved=false.
+
+Next: qualify this exact candidate without merging, run the real-Goal protocol and founder Windows UAT; then separately specify price/claim/freshness verification, consistent backup/restore, Evidence-grounded chat and measured recurrence/delivery/cost. Earlier blocks below are historical.
+
+## 2026-10-10 — Audit improvements 1–2 (candidate .92, current)
+
+Active review: PR #266, improve/efesto-blocked-goal-recovery, draft/unmerged. Main remains 4e846763114b076fb835287571fc9647c214353c. Its historical-block recovery is preserved; economic Goal discovery now keeps the complete subject, and MCP reads stored snapshots without reconciliation or the expired-lease clock error. Pure-read regression fails before the MCP change; nine MCP tests pass after. Candidate .92 supersedes .91/.90; publicLaunchApproved=false. Exact-head full/remote qualification remains pending at implementation time. Scope/rollback: docs/changes/goal-query-context.md and docs/changes/mcp-snapshot-reads.md.
+
+Local qualification: architecture, root/dashboard types, release contract, all 276 files / 1,877 tests, production build, seven SQLite tests, strict production audit, extension packaging and Hermes exact/altered replay plus Replay Lab smoke passed. This was Node 24.19.0/pnpm 11.25.0; pinned Node 22/pnpm 11.11.0 Windows/browser/live workflows must qualify the final published SHA. Founder-PC and real usefulness UAT remain unverified.
+
+Current ordered queue: (1) finish final-candidate qualification without merging; (2) evaluate real Goals and founder Windows UAT on that exact candidate; (3) separately specify claim/price/freshness verification without weakening SUPPORT; (4) consistent backup/restore and continuity; (5) Evidence-grounded chat and read-only memory; (6) measured recurrence/delivery/cost and opt-in beta. Earlier status blocks below are historical, not active work instructions. No production/founder-PC update or live search usefulness is claimed.
+
+
+## 2026-10-10 — Economic Goal query context (candidate .91)
+
+PR #266 remains draft and unmerged on improve/efesto-blocked-goal-recovery. Its prior recovery remains intact. Discovery now combines title and keywords instead of replacing the subject with inferred prices/identifiers; the primary query retains the full authorized title. Five composed regressions fail before the fix and pass after; adapter suite 52/52. Candidate .91 supersedes .90; publicLaunchApproved=false. Scope/rollback: docs/changes/goal-query-context.md. Full exact-head qualification and founder-PC UAT remain pending. Next bounded slice: pure MCP reads for expired/historical missions; then qualify the final candidate. Main stays 4e846763114b076fb835287571fc9647c214353c.
+
+
+## 2026-10-08 — Historical Goal block recovery (candidate .90, unmerged)
+
+Founder instruction: improve first, merge later. Do not merge this branch until the founder explicitly instructs it. Main baseline 4e846763114b076fb835287571fc9647c214353c already includes PR #265: five successful workflows, 35 Chromium tests and authentic Hermes 14/14. That proof belongs to .89, not this candidate.
+
+Branch improve/efesto-blocked-goal-recovery exposes the existing interactive Buscar más action for a finished running/verifying mission blocked by authorization_revision_mismatch, without a live lease or automatic policy block. A fresh current-Goal authorization comes from the existing Kernel endpoint; denied candidates are not replayed. Archive the known denial with the previous attempt and preserve Evidence/Finds. The success message acknowledges the request without claiming a new queued attempt when an active mission or offline agent was returned. Preserve design and authority boundaries. See docs/changes/blocked-goal-recovery.md.
+
+Local qualification: 276 Vitest files / 1868 tests, architecture guard, root/dashboard types production build, strict production audit, 7 SQLite tests, extension packaging and Hermes/replay smoke checks passed. Exact-head remote browser/Windows qualification remains pending. Keep the PR draft/unmerged, production and the founder updater unchanged. Founder-PC reconnection and authentic installed UAT remain unverified; publicLaunchApproved=false. Roll back only this slice; no data rollback.
+
+
 ## 2026-10-08 — Goal verification edit reliability (candidate .89)
 
 Main baseline is 8d56cf89f9292bf67b1ee9b696e0560f69049082; the Windows recovery and daily-start work are integrated. Founder-PC recovery/reconnection remains unverified. Branch fix/efesto-goal-verification-edit incorporates PR #255's revision guard and completes its existing-editor explanation: pending Kernel verification, even without a Hermes lease, blocks changed Goal content with 409; typed editor text survives the waiting period. Partial batches block, while already blocked/settleable batches keep existing compatibility. SUPPORT, authentication, history, memory and visual design are unchanged. Existing blocked missions are not silently repaired.

@@ -12,14 +12,13 @@
  *
  * Configure in any MCP client (e.g. Claude Desktop):
  *   { "command": "node", "args": ["apps/local-kernel/mcp-server.mjs"],
- *     "env": { "HEPHAESTUS_DATA_DIR": "<your .hephaestus dir>",
- *              "HEPHAESTUS_API_TOKEN": "<kernel token>" } }
+ *     "env": { "HEPHAESTUS_DATA_DIR": "<your .hephaestus dir>" } }
+ * Stdio trusts the launching process's file permissions. A legacy token is only a
+ * format diagnostic; it is not authenticated against the running Kernel.
  */
 import { createInterface } from 'node:readline';
 import { resolve } from 'node:path';
-import { GoalManager } from './goals.mjs';
-import { AgentMissionManager } from './agent-missions.mjs';
-import { CaptureCaseEvidenceProjector, LocalKnowledgeStore } from './capture-projector.mjs';
+import { LocalKnowledgeStore } from './capture-projector.mjs';
 import { validateApiToken } from './api-token-store.mjs';
 
 const SERVER_INFO = { name: 'efesto-kernel', version: '0.1.0' };
@@ -32,21 +31,23 @@ const tokenConfigured = Boolean(
 );
 
 const knowledgeStore = new LocalKnowledgeStore(resolve(dataDir, 'store.json'));
-const goalManager = new GoalManager(knowledgeStore);
-const missionManager = new AgentMissionManager(knowledgeStore, { now: () => new Date().toISOString() });
-const projector = new CaptureCaseEvidenceProjector(knowledgeStore);
+// MCP only reads snapshots. In particular, AgentMissionManager.list() reconciles and
+// may persist transitions; it must never be used by a read-only MCP tool.
+const readKnowledge = () => knowledgeStore.read();
 
 /** Read-only tool implementations. Every handler returns JSON-serializable data. */
 const tools = {
   kernel_status: {
-    description: 'Efesto local Kernel status: whether an API token is configured and which data directory is in use. No secrets are returned.',
+    description: 'Efesto local data configuration, not live Kernel health. A legacy token-format diagnostic is not authentication. No secrets are returned.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     async handler() {
       return {
         ok: true,
         tokenConfigured,
         dataDir,
-        note: 'Read-only MCP surface. Mutations must go through the authenticated loopback Kernel API.',
+        accessBoundary: 'local_process_file_permissions',
+        tokenPurpose: 'format_diagnostic_only',
+        note: 'Read-only stored snapshots, not live readiness. Trust only authorized local clients; mutations must go through the authenticated loopback Kernel API.',
       };
     },
   },
@@ -54,22 +55,30 @@ const tools = {
     description: 'List active Goals tracked by the local Kernel, sorted by priority then recency.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     async handler() {
-      return { ok: true, goals: await goalManager.list() };
+      const data = await readKnowledge();
+      const goals = data.goals.filter((item) => item?.status === 'active')
+        .sort((left, right) => Number(right.priority ?? 0) - Number(left.priority ?? 0)
+          || String(left.createdAt ?? '').localeCompare(String(right.createdAt ?? '')));
+      return { ok: true, goals };
     },
   },
   list_missions: {
-    description: 'List Hermes research missions with their persisted lifecycle state (queued/running/completed/failed).',
+    description: 'List Hermes missions as stored (queued/running/completed/failed). Expired leases are not repaired; only the Kernel may reconcile them.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     async handler() {
-      const listed = await missionManager.list();
-      return { ok: true, missions: listed.result ?? listed };
+      const data = await readKnowledge();
+      const missions = [...data.agentMissions].sort((a, b) => String(b?.createdAt ?? '').localeCompare(String(a?.createdAt ?? '')));
+      return { ok: true, missions };
     },
   },
   list_cases: {
     description: 'List Cases with their Evidence-backed titles and statuses.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     async handler() {
-      return { ok: true, cases: await projector.listCases() };
+      const data = await readKnowledge();
+      const cases = data.cases.filter((item) => item?.status !== 'archived' && typeof item?.id === 'string')
+        .map((item) => ({ id: item.id, title: item.title ?? item.objective ?? item.id, status: item.status ?? 'draft' }));
+      return { ok: true, cases };
     },
   },
   get_case: {
@@ -77,12 +86,15 @@ const tools = {
     inputSchema: {
       type: 'object',
       required: ['caseId'],
-      properties: { caseId: { type: 'string', description: 'Case identifier, e.g. "case-1"' } },
+      properties: { caseId: { type: 'string', minLength: 1, maxLength: 200, description: 'Case identifier, e.g. "case-1"' } },
       additionalProperties: false,
     },
     async handler({ caseId }) {
-      if (typeof caseId !== 'string' || !caseId.trim()) throw new Error('caseId is required');
-      return { ok: true, ...(await projector.getCaseById(caseId)) };
+      if (typeof caseId !== 'string' || !caseId.trim() || caseId.length > 200) throw new Error('A bounded caseId is required');
+      const data = await readKnowledge();
+      const record = data.cases.find((item) => item?.id === caseId);
+      if (!record) throw new Error('Case not found');
+      return { ok: true, case: record, evidence: data.evidence.filter((item) => item?.caseId === caseId) };
     },
   },
 };
@@ -115,10 +127,14 @@ async function dispatch(method, params) {
       return { tools: TOOL_DEFINITIONS };
     case 'tools/call': {
       const name = params?.name;
-      const tool = tools[name];
+      const tool = Object.hasOwn(tools, name) ? tools[name] : undefined;
       if (!tool) throw Object.assign(new Error(`Unknown tool: ${name}`), { code: -32602 });
       try {
-        const payload = await tool.handler(params?.arguments ?? {});
+        const args = params?.arguments ?? {};
+        if (typeof args !== 'object' || Array.isArray(args) || Object.keys(args).some((key) => !Object.hasOwn(tool.inputSchema.properties, key))) {
+          throw new Error('Invalid tool arguments');
+        }
+        const payload = await tool.handler(args);
         return {
           content: [{ type: 'text', text: JSON.stringify(payload) }],
           isError: false,

@@ -33,6 +33,12 @@ export type MissionEvidenceRecord = {
 
 export type MissionEvidence = {
   missionId: string;
+  verificationScope: {
+    topic: 'term_coverage_only';
+    price: 'not_assessed';
+    availability: 'not_assessed';
+    freshness: 'not_assessed';
+  };
   evidence: MissionEvidenceRecord[];
 };
 
@@ -59,8 +65,23 @@ export function parseMissionEvidence(value: unknown, expectedMissionId?: string)
   if (!Array.isArray(body.evidence) || body.evidence.length > MAX_RECORDS) throw new MissionEvidenceContractError('missionEvidence.evidence');
   return {
     missionId,
+    verificationScope: parseVerificationScope(body.verificationScope),
     evidence: body.evidence.map((item, index) => parseRecord(item, `missionEvidence.evidence[${index}]`)),
   };
+}
+
+function parseVerificationScope(value: unknown): MissionEvidence['verificationScope'] {
+  const limits: MissionEvidence['verificationScope'] = {
+    topic: 'term_coverage_only', price: 'not_assessed', availability: 'not_assessed', freshness: 'not_assessed',
+  };
+  // Older kernels do not publish this field; absence cannot imply certified conditions.
+  if (value === undefined) return limits;
+  const scope = record(value, 'missionEvidence.verificationScope');
+  if (Object.keys(scope).length !== Object.keys(limits).length
+      || Object.entries(limits).some(([key, expected]) => scope[key] !== expected)) {
+    throw new MissionEvidenceContractError('missionEvidence.verificationScope');
+  }
+  return limits;
 }
 
 function parseRecord(value: unknown, path: string): MissionEvidenceRecord {

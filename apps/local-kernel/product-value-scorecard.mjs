@@ -65,7 +65,13 @@ export function buildProductValueScorecard(data = {}, options = {}) {
       positiveFindIds.add(event.opportunityId);
       const current = firstPositiveAtByGoal.get(linked.execution.key);
       if (!current || recordedAtMs < current.recordedAtMs) {
-        firstPositiveAtByGoal.set(linked.execution.key, { recordedAtMs, decidedAtMs });
+        // Count the user's full wait across retries of this same Goal revision.
+        // Keep the producing mission's receipt above as the feedback validity boundary.
+        const firstAuthorization = executedGoals.get(linked.execution.key);
+        firstPositiveAtByGoal.set(linked.execution.key, {
+          recordedAtMs,
+          decidedAtMs: Date.parse(firstAuthorization.decidedAt),
+        });
       }
     }
     if (NEGATIVE_SIGNALS.has(signal)) negativeFindIds.add(event.opportunityId);

@@ -18,7 +18,7 @@ No search snippet becomes Evidence. No feedback changes Evidence truth. No metri
 ## Measurable now
 
 - **Goal → Useful Find Rate**: unique authorized Goal revisions with at least one valid Goal-linked `useful`/`saved` Find divided by unique authorized Goal revisions.
-- **Time to First Useful Find**: median elapsed time from trusted Goal authorization to the first valid useful/saved feedback event for that Goal revision.
+- **Time to First Useful Find**: median elapsed time from the earliest retained trusted Goal authorization to the first valid useful/saved feedback event for that Goal revision. Buscar más retries do not reset the wait. Feedback must still follow the producing mission's authorization, and edited revisions remain separate. This includes human review time; it is not provider latency or a complete historical warehouse.
 - **Repeat Goal Usage**: after the local installation has activated, one repeated installation out of one is observed only when it authorizes a second distinct Goal. This is a private single-installation observation, not a claimed population rate.
 - **Mission completion rate**: completed Mission records divided by current Mission records.
 - **Finds per completed Goal**: Goal-linked Finds produced by completed Goal revisions divided by completed Goal revisions.

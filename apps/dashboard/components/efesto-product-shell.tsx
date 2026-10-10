@@ -518,7 +518,7 @@ export default function EfestoProductShell() {
       }, parseOk);
       await refresh();
       setToast(mode === 'search_more'
-        ? 'Buscar más: el Kernel puso un nuevo intento en cola para Hermes. Los Finds y la Evidence anteriores se conservan.'
+        ? 'Solicitud de «Buscar más» recibida por el Kernel. Consulta el estado actualizado de la misión; los Finds y la Evidence anteriores se conservan.'
         : 'Misión relanzada: el Kernel la puso en cola para Hermes.');
     } catch {
       setToast(mode === 'search_more'

@@ -8,6 +8,21 @@ const body = {
 };
 
 describe('parseMissionEvidence', () => {
+  it('keeps explicit verification limits and defaults older kernels to unassessed conditions', () => {
+    const scope = { topic: 'term_coverage_only', price: 'not_assessed', availability: 'not_assessed', freshness: 'not_assessed' };
+    expect(parseMissionEvidence({ ...body, verificationScope: scope }).verificationScope).toEqual(scope);
+    expect(parseMissionEvidence(body).verificationScope).toEqual(scope);
+  });
+
+  it.each(['topic', 'price', 'availability', 'freshness'])('rejects an unsupported verification claim for %s', (key) => {
+    const scope = { topic: 'term_coverage_only', price: 'not_assessed', availability: 'not_assessed', freshness: 'not_assessed', [key]: 'met' };
+    expect(() => parseMissionEvidence({ ...body, verificationScope: scope })).toThrow(MissionEvidenceContractError);
+  });
+
+  it.each([null, [], {}, { topic: 'term_coverage_only' }])('rejects malformed explicit scope instead of treating it as a legacy omission', (scope) => {
+    expect(() => parseMissionEvidence({ ...body, verificationScope: scope })).toThrow(MissionEvidenceContractError);
+  });
+
   it('accepts the Kernel contract', () => {
     expect(parseMissionEvidence(body, 'mission:1').evidence[0]).toMatchObject({ id: 'e1', supported: true, excerpt: { text: 'Taladro 18 V', truncatedEnd: true } });
   });

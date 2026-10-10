@@ -121,6 +121,33 @@ async function expectHonestSources(page: Page): Promise<void> {
   await expect(forge.getByLabel('Contadores de la misión')).toContainText('SUPPORT');
 }
 
+for (const width of [390, 1280]) {
+  test(`verification scope disclosure is honest and keyboard accessible at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await useForgeFixture(page);
+    await page.goto('/');
+    await connect(page);
+    await openHome(page, width < 768);
+    await expectHonestSources(page);
+    const supported = page.locator('.forge-source[data-state="supported"]');
+    const disclosure = supported.locator('.forge-source-checks');
+    const summary = disclosure.locator('summary');
+    await expect(disclosure).not.toHaveAttribute('open');
+    expect((await summary.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await summary.focus();
+    await summary.press('Enter');
+    await expect(disclosure).toHaveAttribute('open', '');
+    await expect(disclosure.getByText(/Precio, disponibilidad y vigencia no evaluados por separado/)).toBeVisible();
+    await expect(supported.locator('.forge-badge-final')).toHaveText('KERNEL SUPPORT');
+    await expect(page.locator('.forge-source[data-state="unsupported"] .forge-source-checks')).toHaveCount(0);
+    await expectNoHorizontalOverflow(page, width);
+    await page.screenshot({ path: testInfo.outputPath(`verification-scope-${width}.png`) });
+    await summary.press('Enter');
+    await expect(disclosure).not.toHaveAttribute('open');
+  });
+}
+
 test('forge live view on a 390×844 phone: real Kernel states, readable cards, no overflow', async ({ page }, testInfo) => {
   // Two full play-throughs of the real records (first view + replay) run in this test.
   test.setTimeout(60_000);
@@ -220,7 +247,7 @@ test('a mission the Kernel left read without SUPPORT and without a lease is offe
   await relaunch.click();
   await expect.poll(() => posted.length).toBe(1);
   expect(posted[0]).toEqual({ confirmed: true, agent: 'hermes', cadence: 'manual', mode: 'search_more' });
-  await expect(page.getByText(/Buscar más: el Kernel puso un nuevo intento en cola para Hermes/)).toBeVisible();
+  await expect(page.getByText(/Solicitud de «Buscar más» recibida por el Kernel/)).toBeVisible();
 });
 
 test('"Buscar más" on a forged mission posts search_more through the dashboard confirm path and keeps the earlier Find on screen', async ({ page }, testInfo) => {
@@ -258,7 +285,7 @@ test('"Buscar más" on a forged mission posts search_more through the dashboard 
   await searchMore.click();
   await expect.poll(() => posted.length).toBe(1);
   expect(posted[0]).toEqual({ confirmed: true, agent: 'hermes', cadence: 'manual', mode: 'search_more' });
-  await expect(page.getByText(/Buscar más: el Kernel puso un nuevo intento en cola para Hermes/)).toBeVisible();
+  await expect(page.getByText(/Solicitud de «Buscar más» recibida por el Kernel/)).toBeVisible();
   await expect(forge.getByRole('button', { name: 'Buscar más' })).toHaveCount(0);
   const prior = forge.locator('.forge-live-prior');
   await expect(prior).toContainText('Intento anterior · 1 SUPPORT · 2 Evidence');
@@ -512,5 +539,35 @@ for (const size of [{ width: 390, height: 844, mobile: true }, { width: 360, hei
     expect(intersects(boxes.stage, boxes.ticker)).toBe(false);
     // the anvil itself is inside the visible stage
     expect(boxes.anvil.left >= boxes.stage.left - 1 && boxes.anvil.right <= boxes.stage.right + 1 && boxes.anvil.bottom <= boxes.stage.bottom + 1).toBe(true);
+  });
+}
+
+for (const width of [390, 1440]) {
+  test(`historical Goal revision block needs an explicit recovery at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await useForgeFixture(page);
+    let confirmed = false;
+    const posted: unknown[] = [];
+    const blocked = { ...missions.missions[0], status: 'running', executionPhase: 'verifying', verifyingAt: '2026-07-26T10:03:00.000Z', verificationResults: [], verificationBlock: { reason: 'authorization_revision_mismatch' } };
+    const queued = { ...blocked, status: 'queued', executionPhase: 'queued', verifyingAt: undefined, searchCandidates: undefined, verificationBlock: undefined, priorAttempts: [blocked], authorization: { goalRevision: 2 } };
+    await page.route('http://127.0.0.1:4100/api/agent-missions', (route) => fulfill({ ok: true, missions: [confirmed ? queued : blocked] })(route));
+    await page.route('http://127.0.0.1:4100/api/goal-surfaces', (route) => fulfill({ ok: true, surfaces: [{ ...surfaces.surfaces[0], goal: { ...surfaces.surfaces[0].goal, revision: 2 }, mission: { ...surfaces.surfaces[0].mission, status: confirmed ? 'queued' : 'running', executionPhase: confirmed ? 'queued' : 'verifying', workState: confirmed ? 'queued' : 'verifying', ...(confirmed ? {} : { blockedReason: 'authorization_revision_mismatch' }) } }] })(route));
+    await page.route('http://127.0.0.1:4100/api/goals/goal-forge/missions', async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      posted.push(route.request().postDataJSON());
+      confirmed = true;
+      await route.fulfill({ status: 201, headers: cors, body: JSON.stringify({ ok: true, mission: queued }) });
+    });
+    await page.goto('/');
+    await connect(page);
+    await openHome(page, width < 760);
+    await expect(page.getByText('Bloqueada · Goal actualizado', { exact: true })).toBeVisible();
+    await expect(page.getByText(/el bloqueo anterior queda en el historial/)).toBeVisible();
+    expect(posted).toEqual([]);
+    await page.locator('.forge-live').getByRole('button', { name: 'Buscar más', exact: true }).click();
+    await expect(page.getByText(/Solicitud de «Buscar más» recibida por el Kernel/)).toBeVisible();
+    expect(posted).toEqual([{ confirmed: true, agent: 'hermes', cadence: 'manual', mode: 'search_more' }]);
+    await expect(page.locator('.forge-live').getByRole('button', { name: 'Buscar más', exact: true })).toHaveCount(0);
+    await expectNoHorizontalOverflow(page, width);
   });
 }
