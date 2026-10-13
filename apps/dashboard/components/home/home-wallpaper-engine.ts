@@ -15,14 +15,18 @@ const rgba = (c: RGB, a: number) => `rgba(${c[0]},${c[1]},${c[2]},${Math.max(0, 
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 const smooth = (k: number) => k * k * (3 - 2 * k);
 const MAX_DPR = 1.5;
-const MAX_STRANDS = 14;
+const MAX_STRANDS = 220;
+const STRAND_LIFE = 150; // seconds a strand lives before it fades
+const FADE = 8;
 
-type Strand = { a: P; b: P; born: number; sag: number };
+type Strand = { a: P; b: P; born: number; sag: number; dieAt?: number };
+type Waypoint = { p: P; lay: boolean };
+type Web = { c: P; r: number };
 type Fly = { p: P; home: P; phase: number; born: number };
 type Cocoon = { p: P; born: number };
 type Mode = 'wander' | 'weave' | 'hunt';
 
-export type WallpaperState = { mode: Mode; fly: boolean; catches: number; strands: number };
+export type WallpaperState = { mode: Mode; fly: boolean; catches: number; strands: number; webs: number };
 
 export class HomeWallpaperEngine {
   private ctx: CanvasRenderingContext2D | null;
@@ -34,7 +38,7 @@ export class HomeWallpaperEngine {
   private mode: Mode = 'wander'; private modeUntil = 0; private weaveFrom: P | null = null;
   private feet: { p: P; from: P; to: P; lift: number }[] = [];
   private strands: Strand[] = [];
-  private fly: Fly | null = null; private nextFlyAt = 7; private huntAt = 0; private cocoon: Cocoon | null = null;
+  private fly: Fly | null = null; private nextFlyAt = 32; private plan: Waypoint[] = []; private from: P | null = null; private webs: Web[] = []; private restSince = 0; private huntAt = 0; private cocoon: Cocoon | null = null;
   private catches = 0;
   private glowSprite: HTMLCanvasElement | null = null;
   private onVisibility = () => { if (document.hidden) this.stop(); else if (this.animate) this.start(); };
@@ -59,7 +63,7 @@ export class HomeWallpaperEngine {
   }
   unmount() { this.stop(); document.removeEventListener('visibilitychange', this.onVisibility); }
   setAnimate(animate: boolean) { if (animate === this.animate) return; this.unmount(); this.mount(animate); }
-  get state(): WallpaperState { return { mode: this.mode, fly: Boolean(this.fly), catches: this.catches, strands: this.strands.length }; }
+  get state(): WallpaperState { return { mode: this.mode, fly: Boolean(this.fly), catches: this.catches, strands: this.strands.length, webs: this.webs.length }; }
   get isRunning() { return this.running; }
 
   measure(reset = false) {
@@ -69,7 +73,7 @@ export class HomeWallpaperEngine {
     this.canvas.width = Math.round(W * this.dpr); this.canvas.height = Math.round(H * this.dpr);
     this.W = W; this.H = H; this.mob = W < 720;
     if (reset || !this.feet.length) {
-      this.p = { x: W * 0.72, y: H * 0.3 }; this.heading = Math.PI * 0.8; const first = this.pickPoint(); this.target = { x: lerp(this.p.x, first.x, 0.25), y: lerp(this.p.y, first.y, 0.25) }; this.mode = 'weave'; this.weaveFrom = { ...this.p };
+      this.p = { x: W * 0.72, y: H * 0.3 }; this.heading = Math.PI * 0.8; const first = this.pickPoint(); this.target = { x: lerp(this.p.x, first.x, 0.25), y: lerp(this.p.y, first.y, 0.25) }; this.mode = 'weave'; this.weaveFrom = null; this.plan = []; this.webs = []; this.strands = [];
       this.feet = [];
       for (let i = 0; i < 8; i += 1) { const f = this.footHome(i); this.feet.push({ p: { ...f }, from: { ...f }, to: { ...f }, lift: 1 }); }
     } else {
@@ -91,14 +95,13 @@ export class HomeWallpaperEngine {
   private stop() { this.running = false; if (this.raf) cancelAnimationFrame(this.raf); this.raf = 0; }
 
   private stillFrame() {
-    // a resting spider beside two strands; nothing moves
-    const { W, H } = this;
-    this.strands = [
-      { a: { x: W * 0.62, y: H * 0.12 }, b: { x: W * 0.78, y: H * 0.3 }, born: -100, sag: 10 },
-      { a: { x: W * 0.78, y: H * 0.3 }, b: { x: W * 0.9, y: H * 0.18 }, born: -100, sag: 8 },
-    ];
-    this.p = { x: W * 0.78, y: H * 0.3 };
-    this.t = 0; this.draw(true);
+    // a resting spider at the hub of one finished web; nothing moves
+    this.t = 0; this.strands = []; this.webs = [];
+    const web = this.findHub() ?? { c: { x: this.W * 0.8, y: this.H * 0.2 }, r: this.mob ? 60 : 100 };
+    this.webs.push(web);
+    let prev: P | null = null;
+    for (const wp of this.planWeb(web)) { if (wp.lay && prev) this.addStrand(prev, wp.p); prev = wp.p; }
+    this.p = { ...web.c }; this.draw(true);
   }
 
   // ---------------------------------------------------------------- behaviour
@@ -113,6 +116,61 @@ export class HomeWallpaperEngine {
       if (!this.avoid.some((r) => p.x > r.x - pad && p.x < r.x + r.w + pad && p.y > r.y - pad && p.y < r.y + r.h + pad)) break;
     }
     return p;
+  }
+  /** Finds an empty disc (clear of the composer/wordmark/pills and of other webs) for a new orb web. */
+  private findHub(): Web | null {
+    const pad = 18, rMax = this.mob ? 92 : 150, rMin = this.mob ? 46 : 70;
+    for (let r = rMax; r >= rMin; r -= this.mob ? 12 : 20) {
+      for (let i = 0; i < 40; i += 1) {
+        const c = { x: r + 10 + this.rnd() * (this.W - 2 * r - 20), y: r + 50 + this.rnd() * (this.H - 2 * r - 60) };
+        if (c.x < r || c.y < r) continue;
+        const hitsUi = this.avoid.some((q) => { const nx = Math.max(q.x - pad, Math.min(c.x, q.x + q.w + pad)), ny = Math.max(q.y - pad, Math.min(c.y, q.y + q.h + pad)); return Math.hypot(nx - c.x, ny - c.y) < r; });
+        if (hitsUi) continue;
+        if (this.webs.some((w) => Math.hypot(w.c.x - c.x, w.c.y - c.y) < w.r + r + 12)) continue;
+        return { c, r };
+      }
+    }
+    return null;
+  }
+  /** Orb-web plan: radial spokes (with frame segments), then an outward spiral across the spokes. */
+  private planWeb(web: Web): Waypoint[] {
+    const n = this.mob ? 7 : 9, { c, r } = web, rot = this.rnd() * Math.PI * 2;
+    const at = (a: number, rr: number) => ({ x: c.x + Math.cos(a) * rr, y: c.y + Math.sin(a) * rr * 0.92 });
+    const ang = (i: number) => rot + (i / n) * Math.PI * 2 + (this.rnd() - 0.5) * 0.12;
+    const rims = Array.from({ length: n }, (_, i) => ({ a: ang(i), rr: r * (0.86 + this.rnd() * 0.14) }));
+    const out: Waypoint[] = [{ p: c, lay: false }];
+    for (let i = 0; i < n; i += 2) {
+      const a = rims[i], b = rims[(i + 1) % n];
+      out.push({ p: at(a.a, a.rr), lay: true });
+      if (i + 1 < n) { out.push({ p: at(b.a, b.rr), lay: true }); out.push({ p: c, lay: true }); }
+      else out.push({ p: c, lay: false });
+    }
+    const turns = this.mob ? 4 : 5, steps = n * turns;
+    for (let j = 0; j <= steps; j += 1) {
+      const k = j / steps, rim = rims[j % n];
+      out.push({ p: at(rim.a, rim.rr * (0.2 + 0.72 * k)), lay: j > 0 });
+    }
+    return out;
+  }
+  private nextWaypoint() {
+    if (!this.plan.length) {
+      const web = this.findHub();
+      if (web) { this.webs.push(web); this.plan = this.planWeb(web); if (this.t < 1) { this.p = { ...web.c }; for (const f of this.feet) { const h = this.footHome(this.feet.indexOf(f)); f.p = { ...h }; f.from = { ...h }; f.to = { ...h }; } } }
+      else { // no room: rest on a web; after a while the oldest web fades to make room
+        if (!this.restSince) this.restSince = this.t;
+        if (this.t - this.restSince > 25) { this.fadeOldestWeb(); this.restSince = 0; }
+        const w = this.webs[this.webs.length - 1];
+        this.plan = [{ p: w ? { x: w.c.x + (this.rnd() - 0.5) * w.r, y: w.c.y + (this.rnd() - 0.5) * w.r } : this.pickPoint(), lay: false }];
+        this.pauseUntil = this.t + 2 + this.rnd() * 2;
+        return;
+      }
+      this.restSince = 0;
+      this.pauseUntil = this.t + 0.6;
+    }
+  }
+  private fadeOldestWeb() {
+    const w = this.webs.shift(); if (!w) return;
+    for (const s of this.strands) if (!s.dieAt && Math.hypot(s.a.x - w.c.x, s.a.y - w.c.y) <= w.r + 2) s.dieAt = this.t + FADE;
   }
   private step(dt: number) {
     this.t += dt;
@@ -133,7 +191,7 @@ export class HomeWallpaperEngine {
       f.p.y = f.home.y + Math.cos(k * 2.3 + f.phase * 1.3) * r * 0.6 + Math.cos(k * 13.1) * 3;
       if (this.mode !== 'hunt' && k > 3.5) { this.mode = 'hunt'; this.weaveFrom = null; this.huntAt = t; }
     }
-    if (this.cocoon && t - this.cocoon.born > 4.5) { this.cocoon = null; this.nextFlyAt = t + 7 + this.rnd() * 6; }
+    if (this.cocoon && t - this.cocoon.born > 4.5) { this.cocoon = null; this.nextFlyAt = t + 30 + this.rnd() * 20; }
 
     // movement
     let tgt = this.target, maxV = this.mob ? 38 : 56;
@@ -143,26 +201,28 @@ export class HomeWallpaperEngine {
       if (d < 70 && Math.sin(t * 2.2) > 0.4) maxV *= 0.15;           // freeze-and-creep
       if (d < (this.mob ? 9 : 12)) {
         this.cocoon = { p: { ...this.fly.p }, born: t }; this.fly = null; this.catches += 1;
-        this.mode = 'wander'; this.pauseUntil = t + 2.2; this.target = this.pickPoint();
+        this.mode = 'weave'; this.pauseUntil = t + 2.2;
       }
     } else {
-      if (Math.hypot(tgt.x - this.p.x, tgt.y - this.p.y) < 22) {
-        if (this.mode === 'weave' && this.weaveFrom) this.addStrand(this.weaveFrom, { ...this.p });
-        this.mode = this.rnd() < 0.55 ? 'weave' : 'wander';
-        this.weaveFrom = this.mode === 'weave' ? { ...this.p } : null;
-        this.pauseUntil = t + (this.mode === 'weave' ? 0.4 : 0.8 + this.rnd() * 2.2);
-        const near = this.mode === 'weave';
-        const nt = this.pickPoint();
-        const reach = near ? 0.22 : 0.45;
-        this.target = { x: lerp(this.p.x, nt.x, reach), y: lerp(this.p.y, nt.y, reach) };
+      this.mode = 'weave';
+      if (!this.plan.length) this.nextWaypoint();
+      const wp = this.plan[0];
+      tgt = wp.p; maxV = this.mob ? 78 : 112;
+      if (Math.hypot(tgt.x - this.p.x, tgt.y - this.p.y) < 4) {
+        if (wp.lay && this.from) this.addStrand(this.from, wp.p);
+        this.from = wp.p; this.plan.shift();
+        this.weaveFrom = this.plan[0]?.lay ? this.from : null;
+        if (!this.plan.length) this.nextWaypoint();
+      } else {
+        this.weaveFrom = wp.lay ? this.from : null;
       }
     }
     const paused = t < this.pauseUntil;
     const want = Math.atan2(tgt.y - this.p.y, tgt.x - this.p.x);
     let da = want - this.heading; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2;
     const dist = Math.hypot(tgt.x - this.p.x, tgt.y - this.p.y);
-    this.heading += da * Math.min(1, dt * (dist < 60 ? 6 : 3.2));
-    const v = paused ? 0 : maxV * Math.max(0.15, Math.cos(da)) * Math.min(1, 0.35 + dist / 60);
+    if (dist < 14) this.heading = want; else this.heading += da * Math.min(1, dt * (dist < 60 ? 6 : 3.2));
+    const v = paused ? 0 : maxV * Math.max(0.15, Math.cos(da)) * Math.min(1, 0.5 + dist / 40);
     this.speed = lerp(this.speed, v, Math.min(1, dt * 4));
     this.p.x += Math.cos(this.heading) * this.speed * dt; this.p.y += Math.sin(this.heading) * this.speed * dt;
     this.walk += this.speed * dt;
@@ -185,13 +245,14 @@ export class HomeWallpaperEngine {
       }
     }
     // keep the in-progress weave thread attached
-    const life = 22;
-    if (this.strands.length) this.strands = this.strands.filter((s) => t - s.born < life);
+    for (const s of this.strands) if (!s.dieAt && t - s.born > STRAND_LIFE) s.dieAt = t + FADE;
+    if (this.strands.some((s) => s.dieAt !== undefined && t > s.dieAt)) this.strands = this.strands.filter((s) => s.dieAt === undefined || t <= s.dieAt);
   }
   private addStrand(a: P, b: P) {
-    if (Math.hypot(a.x - b.x, a.y - b.y) < 16) return;
-    this.strands.push({ a, b, born: this.t, sag: 6 + this.rnd() * 10 });
-    if (this.strands.length > MAX_STRANDS) this.strands.shift();
+    const len = Math.hypot(a.x - b.x, a.y - b.y);
+    if (len < 3) return;
+    this.strands.push({ a, b, born: this.t, sag: Math.min(4, len * 0.04) });
+    if (this.strands.filter((s) => !s.dieAt).length > MAX_STRANDS) this.fadeOldestWeb();
   }
   private footHome(i: number): P {
     const L = this.mob ? 22 : 32, side = i < 4 ? 1 : -1, k = i % 4, la = this.heading + side * (0.55 + k * 0.55);
@@ -221,11 +282,11 @@ export class HomeWallpaperEngine {
     ctx.lineCap = 'round';
     // strands (silk, fading)
     for (const s of this.strands) {
-      const age = still ? 5 : t - s.born, a = Math.min(1, age / 0.6) * (1 - Math.max(0, (age - 16) / 6));
+      const age = still ? 5 : t - s.born, a = Math.min(1, age / 0.6) * (s.dieAt === undefined || still ? 1 : Math.max(0, Math.min(1, (s.dieAt - t) / FADE)));
       const mx = (s.a.x + s.b.x) / 2, my = (s.a.y + s.b.y) / 2 + s.sag;
-      ctx.strokeStyle = rgba(SILK, 0.42 * a); ctx.lineWidth = 0.8;
+      ctx.strokeStyle = rgba(SILK, 0.5 * a); ctx.lineWidth = 0.75;
       ctx.beginPath(); ctx.moveTo(s.a.x, s.a.y); ctx.quadraticCurveTo(mx, my, s.b.x, s.b.y); ctx.stroke();
-      ctx.fillStyle = rgba(SILK, 0.6 * a); ctx.fillRect(s.a.x - 1, s.a.y - 1, 2, 2); ctx.fillRect(s.b.x - 1, s.b.y - 1, 2, 2);
+      
     }
     // thread being woven
     if (this.mode === 'weave' && this.weaveFrom) {

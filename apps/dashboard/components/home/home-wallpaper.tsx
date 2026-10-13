@@ -20,7 +20,7 @@ export function HomeWallpaper() {
     const updateAvoid = () => {
       const base = canvas.getBoundingClientRect();
       const host = canvas.parentElement;
-      const els = host ? Array.from(host.querySelectorAll<HTMLElement>('.forge-composer, .forge-composer-tray, .forge-page-chips, .forge-wordmark')) : [];
+      const els = host ? Array.from(host.querySelectorAll<HTMLElement>('.forge-composer, .forge-composer-tray, .forge-page-chips, .forge-wordmark, .forge-explore-ideas, .forge-surface-bar')) : [];
       engine.setAvoid(els.map((el) => { const r = el.getBoundingClientRect(); return { x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height }; }));
     };
     updateAvoid();
