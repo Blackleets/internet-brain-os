@@ -50,12 +50,13 @@ describe('ollama-structured selection', () => {
   });
   it('calls Ollama /api/chat with think:false and format=schema, and returns the selected listed hits', async () => {
     let sent;
-    const fetchImpl = async (url, init) => { sent = { url, body: JSON.parse(init.body) }; return { ok: true, json: async () => ({ message: { content: JSON.stringify({ findings: [{ url: results[2].url }] }) } }) }; };
+    const fetchImpl = async (url, init) => { sent = { url, body: JSON.parse(init.body) }; return { ok: true, json: async () => ({ message: { content: JSON.stringify({ findings: [3, 99] }) } }) }; };
     const out = await runOllamaSelection({ prompt: 'p', results, env: { OLLAMA_HOST: '127.0.0.1:11434', HERMES_INFERENCE_MODEL: 'qwen3.5:2b' }, timeoutMs: 60_000, fetchImpl });
     expect(sent.url).toBe('http://127.0.0.1:11434/api/chat');
     expect(sent.body.think).toBe(false);
     expect(sent.body.options.num_ctx).toBe(8192);
-    expect(sent.body.format.properties.findings.items.properties.url.enum).toHaveLength(3);
+    expect(sent.body.format.properties.findings.items.enum).toEqual([1, 2, 3]);
+    expect(sent.body.keep_alive).toBe('30m');
     expect(out.findings.map((f) => f.url)).toEqual([results[2].url]);
   });
   it('fails readably when Ollama is unreachable', async () => {

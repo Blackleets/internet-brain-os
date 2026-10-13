@@ -27,9 +27,16 @@ async function missions() {
   return body.missions;
 }
 
+// Warm with the same num_ctx the selection uses: a different context size makes Ollama reload the
+// model on the next call, which cost 6–20 s per Mission. Skipped when the model is already resident.
+const NUM_CTX = 8192;
 async function warm() {
   const t0 = Date.now();
-  const res = await fetch(`${ollama}/api/generate`, { method: 'POST', body: JSON.stringify({ model, prompt: 'ok', stream: false, think: false, keep_alive: '30m', options: { num_predict: 1 } }), signal: AbortSignal.timeout(180_000) });
+  try {
+    const ps = await (await fetch(`${ollama}/api/ps`, { signal: AbortSignal.timeout(5_000) })).json();
+    if ((ps?.models ?? []).some((m) => m?.name === model || m?.model === model)) return 0;
+  } catch { /* fall through to a real warm-up */ }
+  const res = await fetch(`${ollama}/api/generate`, { method: 'POST', body: JSON.stringify({ model, prompt: 'ok', stream: false, think: false, keep_alive: '30m', options: { num_predict: 1, num_ctx: NUM_CTX } }), signal: AbortSignal.timeout(180_000) });
   await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`model warm-up HTTP ${res.status}`);
   return Date.now() - t0;
@@ -91,5 +98,6 @@ for (;;) {
       if (idle !== lastIdle) { log(idle); lastIdle = idle; }
     }
   } catch (e) { log(`poll error: ${e.message}`); }
-  await sleep(10_000);
+  // A confirmed Goal is picked up within ~3 s (one cheap local GET per cycle).
+  await sleep(3_000);
 }

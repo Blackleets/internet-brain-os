@@ -159,7 +159,7 @@ export function dropKnownFindings(findings, knownUrls) {
  * The prompt for the selection step: the adapter already ran the planned searches, so the model
  * gets only those results (as data) and picks findings from them. It has no tools.
  */
-export function buildSelectionPrompt(payload, results) {
+export function buildSelectionPrompt(payload, results, { byNumber = false } = {}) {
   if (!payload || payload.schemaVersion !== 'efesto.hermes-mission.v1' || !payload.mission) {
     throw new Error('Expected one efesto.hermes-mission.v1 mission object');
   }
@@ -170,7 +170,7 @@ export function buildSelectionPrompt(payload, results) {
     n: index + 1,
     url: item.url,
     title: item.title,
-    description: item.description,
+    description: byNumber ? String(item.description ?? '').slice(0, 120) : item.description,
     ...(known.has(comparableUrl(item.url)) ? { known: true } : {}),
   }));
   return [
@@ -180,7 +180,9 @@ export function buildSelectionPrompt(payload, results) {
     `From these results only, pick ${MIN_FINDINGS} to ${MAX_FINDINGS} findings about the Goal itself, from varied source domains (at most ${MAX_PER_HOST} per domain); no companies, brands or topics that are not in the Goal. If fewer results are about the Goal, pick fewer; if none is, return {"findings":[]}.`,
     'Prefer canonical, directly readable public pages with substantive content; avoid login walls, paywalls, redirectors, search-result pages, generic homepages and JavaScript-only shells.',
     'Skip results marked "known": true (earlier attempts of this mission already brought them).',
-    'Return ONLY one valid JSON object with this exact shape: {"findings":[{"url":"https://public.example/path"}]}. Copy each url exactly as listed. Each finding has exactly one field: url. No markdown fences or commentary.',
+    byNumber
+      ? 'Return ONLY one valid JSON object with this exact shape: {"findings":[3,7,12]}: the n numbers of the results you pick. No commentary.'
+      : 'Return ONLY one valid JSON object with this exact shape: {"findings":[{"url":"https://public.example/path"}]}. Copy each url exactly as listed. Each finding has exactly one field: url. No markdown fences or commentary.',
     '',
     `Mission id: ${String(mission.id ?? '').slice(0, 160)}`,
     `Goal: ${String(mission.goalTitle ?? '').slice(0, 500)}`,
@@ -249,15 +251,26 @@ export async function runPlannedSearches(planned, worker, options = {}) {
   const searches = [];
   const results = [];
   const seen = new Set();
-  for (const query of planned.slice(0, MAX_SEARCH_CALLS)) {
-    const outcome = await runSearchWorker(worker, query, options);
-    const search = { query, limit: SEARCH_LIMIT, ...(outcome.ok ? { resultCount: outcome.results.length } : {}) };
+  const queries = planned.slice(0, MAX_SEARCH_CALLS);
+  // The planned queries are independent: run them in parallel (order of the record is the plan's).
+  // A query DuckDuckGo fails or answers empty for falls back to the keyless source, if one is given.
+  const outcomes = await Promise.all(queries.map(async (query) => {
+    const primary = await runSearchWorker(worker, query, options);
+    if ((primary.ok && primary.results.length) || typeof options.fallbackSearch !== 'function') return { ...primary, source: 'ddgs' };
+    const fallback = await options.fallbackSearch(query).catch(() => ({ ok: false }));
+    return fallback?.ok && Array.isArray(fallback.results) && fallback.results.length
+      ? { ok: true, results: fallback.results, source: fallback.source ?? 'fallback' }
+      : { ...primary, source: 'ddgs' };
+  }));
+  queries.forEach((query, index) => {
+    const outcome = outcomes[index];
+    const search = { query, limit: SEARCH_LIMIT, source: outcome.source, ...(outcome.ok ? { resultCount: outcome.results.length } : {}) };
     if (outcome.ok) {
       const shown = displayableResults(outcome.results);
       if (shown.length) search.results = shown;
     }
     searches.push(search);
-    if (!outcome.ok) continue;
+    if (!outcome.ok) return;
     for (const hit of outcome.results) {
       const url = typeof hit?.url === 'string' ? hit.url.trim() : '';
       if (!url || url.length > 2048 || !isWellFormedWebUrl(url) || isAdRedirect(url)) continue;
@@ -266,8 +279,43 @@ export async function runPlannedSearches(planned, worker, options = {}) {
       seen.add(key);
       results.push({ url, title: cleanQueryText(hit.title, MAX_RESULT_TITLE_CHARS), description: cleanQueryText(hit.description, MAX_RESULT_DESCRIPTION_CHARS) });
     }
-  }
+  });
   return { searches, results };
+}
+
+const SPANISH_HINT = /[ñáéíóúü¿¡]|\b(?:de|para|los|las|del|mejores|empleo|busca|cómo|como|que|una?)\b/i;
+
+/** Wikipedia edition for the Goal: Spanish when the Goal reads Spanish, else English. */
+export function goalWikipediaLanguage(mission) {
+  return SPANISH_HINT.test(String(mission?.goalTitle ?? '')) ? 'es' : 'en';
+}
+
+const WIKIPEDIA_USER_AGENT = 'Efesto/1.0 (local-first research assistant; https://github.com/Blackleets/internet-brain-os)';
+const WIKIPEDIA_TIMEOUT_MS = 10_000;
+
+/**
+ * Keyless fallback search: the public MediaWiki search API of one Wikipedia edition (no API key;
+ * identifies itself with a User-Agent as Wikimedia asks). Only article URLs built from the titles
+ * the API returned; snippets are stripped of markup. { ok, results, source: 'wikipedia' }.
+ */
+export async function runWikipediaSearch(query, { lang = 'en', limit = SEARCH_LIMIT, fetchImpl = fetch, timeoutMs = WIKIPEDIA_TIMEOUT_MS } = {}) {
+  if (!/^[a-z]{2,3}$/.test(lang)) return { ok: false, source: 'wikipedia' };
+  const api = new URL(`https://${lang}.wikipedia.org/w/api.php`);
+  for (const [key, value] of Object.entries({ action: 'query', list: 'search', srsearch: query, srlimit: String(limit), format: 'json', utf8: '1' })) api.searchParams.set(key, value);
+  try {
+    const response = await fetchImpl(api.href, { headers: { 'user-agent': WIKIPEDIA_USER_AGENT, accept: 'application/json' }, signal: AbortSignal.timeout(timeoutMs) });
+    if (!response.ok) return { ok: false, source: 'wikipedia' };
+    const body = await response.json();
+    const hits = Array.isArray(body?.query?.search) ? body.query.search : [];
+    const results = [];
+    for (const hit of hits.slice(0, limit)) {
+      if (typeof hit?.title !== 'string' || !hit.title.trim()) continue;
+      const url = `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(hit.title.trim().replace(/ /g, '_'))}`;
+      const description = typeof hit.snippet === 'string' ? hit.snippet.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&') : '';
+      results.push({ title: hit.title.trim(), url, description });
+    }
+    return { ok: true, results, source: 'wikipedia' };
+  } catch { return { ok: false, source: 'wikipedia' }; }
 }
 
 /** Search-engine ad click redirects (e.g. bing.com/aclick) are never candidates: they are ads, not sources. */
@@ -349,6 +397,8 @@ const OLLAMA_SELECTION_MAX_MS = 300_000;
 const OLLAMA_SELECTION_MARGIN_MS = 30_000;
 // The prompt carries up to 30 results (~5k tokens); Ollama's default context would silently cut it.
 const OLLAMA_SELECTION_NUM_CTX = 8192;
+// Keep the local model resident between attempts and Missions (same num_ctx as the worker warm-up).
+const OLLAMA_KEEP_ALIVE = '30m';
 
 export function selectionBackend(env = process.env) {
   const value = typeof env.HEPHAESTUS_SELECTION_BACKEND === 'string' ? env.HEPHAESTUS_SELECTION_BACKEND.trim() : '';
@@ -361,7 +411,15 @@ export function selectionBackend(env = process.env) {
  * JSON schema for Ollama structured output: every url must be one of the listed search hits
  * (enum), so the local model cannot invent or alter a URL.
  */
-export function selectionSchema(results) {
+export function selectionSchema(results, { byNumber = false } = {}) {
+  if (byNumber) {
+    const count = Array.isArray(results) ? results.length : 0;
+    return {
+      type: 'object',
+      properties: { findings: { type: 'array', maxItems: MAX_FINDINGS, items: { type: 'integer', enum: Array.from({ length: count }, (_, i) => i + 1) } } },
+      required: ['findings'],
+    };
+  }
   const urls = [...new Set((Array.isArray(results) ? results : []).map((item) => item.url))];
   return {
     type: 'object',
@@ -382,7 +440,7 @@ export async function runOllamaSelection({ prompt, results, env = process.env, t
     response = await fetchImpl(`${host}/api/chat`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ model, stream: false, think: false, format: selectionSchema(results), options: { temperature: 0, num_predict: 1024, num_ctx: OLLAMA_SELECTION_NUM_CTX }, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model, stream: false, think: false, keep_alive: OLLAMA_KEEP_ALIVE, format: selectionSchema(results, { byNumber: true }), options: { temperature: 0, num_predict: 256, num_ctx: OLLAMA_SELECTION_NUM_CTX }, messages: [{ role: 'user', content: prompt }] }),
       signal: AbortSignal.timeout(budget),
     });
   } catch (error) {
@@ -390,7 +448,24 @@ export async function runOllamaSelection({ prompt, results, env = process.env, t
   }
   if (!response.ok) throw new Error(`Local model selection failed (HTTP ${response.status})`);
   const body = await response.json().catch(() => ({}));
-  return parseSelectionOutput(String(body?.message?.content ?? ''), results);
+  return parseNumberedSelection(String(body?.message?.content ?? ''), results);
+}
+
+/**
+ * {"findings":[3,7]} from the numbered schema, mapped to the listed hits (out-of-range numbers are
+ * dropped, never guessed). Falls back to the URL/n:K parser for any other shape.
+ */
+export function parseNumberedSelection(text, results) {
+  let parsed;
+  try { parsed = JSON.parse(text); } catch { return parseSelectionOutput(text, results); }
+  if (!parsed || !Array.isArray(parsed.findings) || !parsed.findings.every((value) => Number.isInteger(value))) return parseSelectionOutput(text, results);
+  const list = Array.isArray(results) ? results : [];
+  const urls = [];
+  for (const n of parsed.findings.slice(0, 20)) {
+    const hit = list[n - 1];
+    if (hit && !urls.includes(hit.url)) urls.push(hit.url);
+  }
+  return parseHermesFindingsWithFunnel(JSON.stringify({ findings: urls.map((url) => ({ url })) }));
 }
 
 export function buildHermesArgs(prompt, maxTurns = DEFAULT_AGENT_TURNS, provider, model) {
@@ -810,12 +885,16 @@ export async function runHermesOneShot(payload, options = {}) {
   // Fail closed: without the search worker the adapter cannot guarantee sent == planned.
   if (!worker) throw new Error('Hermes search worker (ddgs) not found next to the Hermes executable; set HEPHAESTUS_HERMES_PYTHON');
   const timeoutMs = options.timeoutMs ?? configuredTimeout(process.env.HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
-  const { searches, results } = await runPlannedSearches(plannedQueries, worker, { env: baseEnv, ...(options.searchTimeoutMs ? { timeoutMs: options.searchTimeoutMs } : {}) });
+  const lang = goalWikipediaLanguage(payload.mission);
+  const fallbackSearch = options.fallbackSearch === null ? undefined
+    : options.fallbackSearch ?? (baseEnv.HEPHAESTUS_SEARCH_FALLBACK === 'off' ? undefined : (query) => runWikipediaSearch(query, { lang }));
+  const { searches, results } = await runPlannedSearches(plannedQueries, worker, { env: baseEnv, fallbackSearch, ...(options.searchTimeoutMs ? { timeoutMs: options.searchTimeoutMs } : {}) });
   const telemetry = { searches, plannedQueries };
   // Nothing to choose from: no model call.
   if (!results.length) return { findings: [], ...telemetry, funnel: { findingsReturned: 0, dropped: {} } };
 
-  const prompt = buildSelectionPrompt(payload, results);
+  const useOllama = selectionBackend(baseEnv) === 'ollama-structured';
+  const prompt = buildSelectionPrompt(payload, results, { byNumber: useOllama });
   const finalize = (selected) => {
     const listed = keepListedFindings(selected.findings, results);
     const fresh = dropKnownFindings(listed.findings, missionKnownSourceUrls(payload.mission));
@@ -823,7 +902,7 @@ export async function runHermesOneShot(payload, options = {}) {
     const funnel = [listed.dropped, fresh.dropped, diverse.dropped].reduce((acc, dropped) => mergeFindingsFunnel(acc, dropped), selected.funnel);
     return { findings: diverse.findings, ...telemetry, funnel };
   };
-  if (selectionBackend(baseEnv) === 'ollama-structured') {
+  if (useOllama) {
     return finalize(await (options.runOllamaSelection ?? runOllamaSelection)({ prompt, results, env: baseEnv, timeoutMs }));
   }
   const ownsHermesHome = options.hermesHome === undefined;

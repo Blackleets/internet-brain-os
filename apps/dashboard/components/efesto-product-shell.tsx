@@ -640,7 +640,7 @@ export default function EfestoProductShell() {
 
   const activeGoals = goalSurfaces.slice(0, ACTIVE_GOALS_MAX);
   const hermesStatus = snapshot?.agents?.agents.find((agent) => agent.id === 'hermes');
-  const agentCopy = agentConnectionCopy(hermesStatus, Boolean(snapshot?.agents), Date.now());
+  const agentCopy = agentConnectionCopy(hermesStatus, Boolean(snapshot?.agents), Date.now(), snapshot?.missions);
   const agentTone = agentCopy.tone;
   const agentShort = agentCopy.short;
 
@@ -717,7 +717,7 @@ export default function EfestoProductShell() {
         {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} kernelBaseUrl={connection?.baseUrl} onConnect={connect} onExtensionConnect={() => void connectExtension()} onDisconnect={disconnect} onRefresh={() => void refresh()} /> : null}
       </main>
 
-      {connectionsOpen && connection ? <ConnectionsSheet kernelOnline={snapshot?.readiness.kernel === 'online'} connected kernelUrl={connection.baseUrl} agents={snapshot?.agents} onTest={testAgents} onConnectKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onManageKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onClose={() => setConnectionsOpen(false)} /> : null}
+      {connectionsOpen && connection ? <ConnectionsSheet missions={snapshot?.missions} kernelOnline={snapshot?.readiness.kernel === 'online'} connected kernelUrl={connection.baseUrl} agents={snapshot?.agents} onTest={testAgents} onConnectKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onManageKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onClose={() => setConnectionsOpen(false)} /> : null}
       {toast ? <div className="efesto-toast" role="status"><ShieldCheck /><span>{toast}</span><button type="button" onClick={() => setToast('')} aria-label="Cerrar aviso"><X /></button></div> : null}
     </section>
     {mobileViewport ? <nav className="efesto-tabbar" aria-label="Navegación rápida" aria-hidden={navOpen ? true : undefined} inert={navOpen ? true : undefined}>
