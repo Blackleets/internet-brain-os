@@ -27,6 +27,7 @@ export function reconcileMissionWatchtower(missions, previous = {}, now = Date.n
       status: mission.status,
       executionPhase: typeof mission.executionPhase === 'string' ? mission.executionPhase : undefined,
       workState: typeof mission.workState === 'string' ? mission.workState : undefined,
+      settlement: kernelSettlementCode(mission),
       occurredAt: terminalTimestamp(mission),
       observedAt: new Date(now).toISOString(),
       unread: true,
@@ -60,6 +61,26 @@ function isForgedComplete(record = {}) {
  */
 export function presentWatchtowerAviso(transition = {}, opportunities = [], mission) {
   if (transition.status === 'failed') {
+    // Fail-close Kernel self-settlement (mission-presentation / sidebar parity): the Kernel read
+    // pages and none passed SUPPORT. That is an honest research outcome, not "needs attention";
+    // it still must never brand a Find or Completado. Every read failing stays attention.
+    const settlement = transition.settlement ?? kernelSettlementCode(mission);
+    if (settlement === VERIFIED_WITHOUT_SUPPORT) {
+      return {
+        notify: true,
+        kind: 'forged',
+        title: 'Read without Kernel SUPPORT',
+        message: 'The Kernel read candidate pages; none passed Kernel SUPPORT, so no Find was forged. Open Efesto to review the Forge Ledger.',
+      };
+    }
+    if (settlement === WEB_READ_FAILED) {
+      return {
+        notify: true,
+        kind: 'attention',
+        title: 'Candidate pages could not be read',
+        message: 'The Kernel could not read any candidate page, so no Evidence or Find was forged. Open Efesto to review the Forge Ledger.',
+      };
+    }
     return {
       notify: true,
       kind: 'attention',
@@ -96,6 +117,16 @@ export function presentWatchtowerAviso(transition = {}, opportunities = [], miss
     title: 'Research completed',
     message: 'No Kernel SUPPORT Find. Open Efesto to review the Forge Ledger.',
   };
+}
+
+const VERIFIED_WITHOUT_SUPPORT = 'verified_without_support';
+const WEB_READ_FAILED = 'web_read_failed';
+
+/** Kernel settled its own verification (failed + lastFailure.code) with zero SUPPORT Finds. */
+function kernelSettlementCode(mission) {
+  if (mission?.status !== 'failed' || countMissionSupportedFinds(mission) > 0) return undefined;
+  const code = mission?.lastFailure?.code;
+  return code === VERIFIED_WITHOUT_SUPPORT || code === WEB_READ_FAILED ? code : undefined;
 }
 
 /** Living Forge gate: verificationResults with supported === true. */
@@ -157,7 +188,7 @@ export function presentWatchtowerBanner(unread, event = {}) {
   if (event.kind === 'find') {
     return `${count} new forge result${count === 1 ? '' : 's'} ready to inspect.`;
   }
-  if (event.kind === 'forged' || isForgedComplete(event)) {
+  if (event.kind === 'forged' || isForgedComplete(event) || event.settlement === VERIFIED_WITHOUT_SUPPORT) {
     return `${count} research update${count === 1 ? '' : 's'} ready to inspect.`;
   }
   return `${count} mission update${count === 1 ? '' : 's'} needs attention.`;

@@ -129,6 +129,34 @@ describe('Watchtower Find aviso', () => {
   });
 
 
+  it('names Kernel read-without-SUPPORT settlement, not attention or Find', () => {
+    const settled = {
+      ...queued,
+      status: 'failed',
+      executionPhase: 'failed',
+      lastFailure: { code: 'verified_without_support', recordedAt: '2026-07-22T10:05:00Z', attempt: 1 },
+      verificationResults: [{ url: 'https://jwt.io/', status: 'verified', evidenceId: 'ev-jwt', supported: false }],
+    };
+    const result = reconcileMissionWatchtower([settled], { initialized: true, known: { 'mission:1': 'queued||2026-07-22T10:00:00Z|' }, events: [] });
+    expect(result.transitions).toHaveLength(1);
+    expect(result.transitions[0].settlement).toBe('verified_without_support');
+    const aviso = presentWatchtowerAviso(result.transitions[0], [], settled);
+    expect(aviso).toMatchObject({ notify: true, kind: 'forged', title: 'Read without Kernel SUPPORT' });
+    expect(aviso.message).toContain('none passed Kernel SUPPORT');
+    expect(aviso.title).not.toMatch(/attention|finished forging/i);
+    expect(pendingWorkspaceViewForWatchtowerNotification(chromeNotificationIdForWatchtowerAviso(result.transitions[0], aviso.kind))).toBe('missions');
+    expect(presentWatchtowerBanner(1, result.transitions[0])).toBe('1 research update ready to inspect.');
+    // Legacy stored transition without settlement: full mission row still proves it.
+    expect(presentWatchtowerAviso({ status: 'failed' }, [], settled).title).toBe('Read without Kernel SUPPORT');
+  });
+
+  it('keeps all-reads-failed settlement as attention with honest copy', () => {
+    const readFailed = { ...queued, status: 'failed', lastFailure: { code: 'web_read_failed' }, verificationResults: [{ status: 'failed', supported: false }] };
+    const aviso = presentWatchtowerAviso({ status: 'failed' }, [], readFailed);
+    expect(aviso).toMatchObject({ notify: true, kind: 'attention', title: 'Candidate pages could not be read' });
+    expect(presentWatchtowerBanner(1, { status: 'failed', settlement: 'web_read_failed' })).toBe('1 mission update needs attention.');
+  });
+
   it('routes kind:find OS notify click to Finds workspace (Kernel gateway fallback parity)', () => {
     const transition = { id: 'mission:1:completed:2026-07-22T10:05:00Z', missionId: 'mission:1', status: 'completed' };
     const findId = chromeNotificationIdForWatchtowerAviso(transition, 'find');
