@@ -7,7 +7,7 @@ import { captureFailureMessage } from './page-support.js';
 import { applyLivingForgeActivity, forgeActivityForMission, temporaryForgeActivity } from './forge-activity.js';
 import { normalizeWorkspaceView, workspaceVisibility } from './workspace-navigation.js';
 import { missionJourney, newestMission, onboardingJourney } from './product-journey.js';
-import { presentMission } from './mission-presentation.js';
+import { presentMission, kernelSettlementCode, VERIFIED_WITHOUT_SUPPORT, WEB_READ_FAILED } from './mission-presentation.js';
 import { createAgentHubRefresher, missionRevision } from './agent-hub-refresh.js';
 import { markWatchtowerEventsRead, presentWatchtowerBanner, unreadWatchtowerCount } from './mission-watchtower.js';
 import { listGoalSurfaces } from './goal-surface-transport.js';
@@ -197,9 +197,17 @@ async function loadAgentHub(stored) {
     : forged
       ? 'Research completed'
       : 'Research ended without Evidence';
+  // Fail-close Agent Hub #mission-state: Kernel verified_without_support must not keep
+  // "Research needs attention" while Living Forge / orb / mission card say Read without SUPPORT.
+  const settlement = latest ? kernelSettlementCode(latest) : undefined;
+  const failedCopy = settlement === VERIFIED_WITHOUT_SUPPORT
+    ? 'Read without Kernel SUPPORT'
+    : settlement === WEB_READ_FAILED
+      ? 'Candidate pages could not be read'
+      : 'Research needs attention';
   const copy = {
     waiting_for_agent: 'Waiting for Hermes', queued: 'Ready for Hermes', running: 'Hermes is researching',
-    completed: completedCopy, failed: 'Research needs attention',
+    completed: completedCopy, failed: failedCopy,
   }[latest?.status] ?? 'No research mission yet';
   // Fail-close Agent Hub #mission-state chrome: zero-SUPPORT forged must not keep
   // data-status=completed (green Completado) while Living Forge / orb already use
@@ -207,9 +215,10 @@ async function loadAgentHub(stored) {
   // completed-without-forge (status completed, not forged) must also stay off green
   // Completado — mission-card already maps opportunitiesPromoted===0 → research_completed;
   // Shared Goal Truth MutationObserver would otherwise re-apply honest copy beside green.
+  // Kernel settlement without SUPPORT stays research_completed (neutral), never failed red.
   const chromeStatus = forged
     ? (findCount > 0 ? 'completed' : 'research_completed')
-    : latest?.status === 'completed'
+    : latest?.status === 'completed' || settlement
       ? 'research_completed'
       : (latest?.status ?? 'idle');
   // Fail-close Living Forge honesty: shipped popup.html may omit #mission-state /

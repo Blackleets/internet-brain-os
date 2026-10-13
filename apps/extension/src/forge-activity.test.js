@@ -25,6 +25,48 @@ describe('pixel forge activity contract', () => {
     expect(forgeActivityForMission({ status: 'failed' }).tone).toBe('error');
   });
 
+  it('Kernel verified_without_support is Read without Kernel SUPPORT — never broken-piece ATENTA', () => {
+    // Same settlement as mission card / orb / watchtower (mission-verification-settlement.mjs).
+    const settled = forgeActivityForMission({
+      status: 'failed',
+      executionPhase: 'failed',
+      lastFailure: { code: 'verified_without_support', reason: 'Kernel web.read read 2 pages; none supports the Goal' },
+      verificationResults: [
+        { candidateId: 'a', status: 'verified', evidenceId: 'evidence:a', supported: false },
+        { candidateId: 'b', status: 'verified', evidenceId: 'evidence:b', supported: false },
+      ],
+    });
+    expect(settled).toMatchObject({
+      tone: 'idle',
+      label: 'Read without Kernel SUPPORT',
+    });
+    expect(settled.detail).toMatch(/2 pages.*Evidence.*none passed Kernel SUPPORT/i);
+    expect(settled.label).not.toMatch(/broken piece|needs attention|stopped safely/i);
+    expect(settled.tone).not.toBe('error');
+
+    const contradicted = forgeActivityForMission({
+      status: 'failed',
+      lastFailure: { code: 'verified_without_support' },
+      verificationResults: [{ candidateId: 'a', status: 'verified', supported: true }],
+    });
+    expect(contradicted.tone).toBe('error');
+    expect(contradicted.label).toBe('Inspecting a broken piece');
+  });
+
+  it('Kernel web_read_failed Living Forge stays off broken-piece Completado-lookalike attention', () => {
+    const unread = forgeActivityForMission({
+      status: 'failed',
+      lastFailure: { code: 'web_read_failed', reason: 'Kernel web.read could not read any candidate page' },
+      verificationResults: [{ candidateId: 'a', status: 'failed', errorCode: 'dns' }],
+    });
+    expect(unread).toMatchObject({
+      tone: 'idle',
+      label: 'Candidate pages could not be read',
+    });
+    expect(unread.label).not.toMatch(/broken piece|needs attention/i);
+  });
+
+
     it('keeps zero-SUPPORT forged Living Forge off success celebrate chrome', () => {
     // Central Forge orb research_completed → idle; popup #living-forge must not paint
     // data-activity=success (green badge + celebrate) for Research completed.

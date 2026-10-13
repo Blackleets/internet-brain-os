@@ -10,8 +10,8 @@ const STATUS_COPY = Object.freeze({
 // Kernel settlement codes (apps/local-kernel/mission-verification-settlement.mjs): the Kernel itself
 // settled a single attempt's web.read verification as failed without a Find. Not exhausted retries,
 // not a provider error: a page read (HTTP 200 → Evidence) is RETRIEVED only, never Kernel SUPPORT.
-const VERIFIED_WITHOUT_SUPPORT = 'verified_without_support';
-const WEB_READ_FAILED = 'web_read_failed';
+export const VERIFIED_WITHOUT_SUPPORT = 'verified_without_support';
+export const WEB_READ_FAILED = 'web_read_failed';
 
 export function presentMission(mission) {
   const status = missionStatusCopy(mission);
@@ -111,14 +111,14 @@ export function missionTimeline(mission = {}) {
   return events.sort((left, right) => left.at.localeCompare(right.at));
 }
 
-function kernelSettlementCode(mission) {
+export function kernelSettlementCode(mission) {
   if (mission?.status !== 'failed' || countSupportedFinds(mission?.verificationResults) > 0) return undefined;
   const code = mission?.lastFailure?.code;
   return code === VERIFIED_WITHOUT_SUPPORT || code === WEB_READ_FAILED ? code : undefined;
 }
 
 /** Pages the Kernel web.read actually fetched (status verified). A read is RETRIEVED, not SUPPORT. */
-function countVerifiedReads(results) {
+export function countVerifiedReads(results) {
   if (!Array.isArray(results)) return 0;
   let n = 0;
   for (const entry of results) {

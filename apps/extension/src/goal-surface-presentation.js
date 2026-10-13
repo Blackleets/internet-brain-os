@@ -24,6 +24,19 @@ const WORK_COPY = Object.freeze({
   failed: 'Research needs attention',
 });
 
+
+// Goal Surface ships `limitation` from settleVerificationWithoutFind, not lastFailure.code.
+// Match those Kernel strings so Shared Goal Truth sync keeps Living Forge / #mission-state honest.
+const READ_WITHOUT_SUPPORT_LIMITATION = 'none supports the Goal, so no Find was forged';
+const WEB_READ_FAILED_LIMITATION = 'without reading any page';
+
+export function goalSurfaceSettlement(mission) {
+  const limitation = typeof mission?.limitation === 'string' ? mission.limitation : '';
+  if (limitation.includes(READ_WITHOUT_SUPPORT_LIMITATION)) return 'verified_without_support';
+  if (limitation.includes(WEB_READ_FAILED_LIMITATION)) return 'web_read_failed';
+  return undefined;
+}
+
 export function presentGoalSurfaces(surfaces = []) {
   const safe = Array.isArray(surfaces) ? surfaces : [];
   const focused = safe[0];
@@ -53,6 +66,9 @@ export function presentGoalSurface(surface) {
     missionId: mission?.id,
     findCount: mission?.findCount,
     blockedReason: mission?.blockedReason,
+    // Kernel settleVerificationWithoutFind projects limitation onto Goal Surface — needed so
+    // Shared Goal Truth chrome can fail-close read-without-SUPPORT (not lastFailure.code).
+    ...(typeof mission?.limitation === 'string' && mission.limitation ? { limitation: mission.limitation } : {}),
     canResearch: surface.goal.status === 'active'
       && (!mission?.blockedReason || isReauthorizableBlock(mission.blockedReason))
       && !isActiveWork(mission?.workState),
@@ -93,7 +109,24 @@ export function forgeActivityForGoalSurface(surface) {
       detail: `${found} ${found === 1 ? 'Find' : 'Finds'} passed Kernel SUPPORT and were forged.`,
     };
   }
-  if (workState === 'failed') return FORGE_ACTIVITY.failed;
+  if (workState === 'failed') {
+    const settlement = goalSurfaceSettlement(surface?.mission);
+    if (settlement === 'verified_without_support') {
+      return {
+        label: 'Read without Kernel SUPPORT',
+        detail: 'The Kernel read candidate pages as Evidence; none passed Kernel SUPPORT, so no Find was forged.',
+        tone: 'idle',
+      };
+    }
+    if (settlement === 'web_read_failed') {
+      return {
+        label: 'Candidate pages could not be read',
+        detail: 'The Kernel could not read any candidate page, so no page became Evidence and no Find was forged.',
+        tone: 'idle',
+      };
+    }
+    return FORGE_ACTIVITY.failed;
+  }
   return FORGE_ACTIVITY.idle;
 }
 
@@ -118,6 +151,14 @@ function workLabelForMission(mission) {
         : `${found} Finds passed Kernel SUPPORT`;
     }
     return 'Research completed';
+  }
+  // Fail-close Goal Surface #mission-state: Kernel read-without-SUPPORT settlement (limitation
+  // from settleVerificationWithoutFind) must not keep "Research needs attention" while Living
+  // Forge / orb / mission card say Read without Kernel SUPPORT.
+  if (workState === 'failed') {
+    const settlement = goalSurfaceSettlement(mission);
+    if (settlement === 'verified_without_support') return 'Read without Kernel SUPPORT';
+    if (settlement === 'web_read_failed') return 'Candidate pages could not be read';
   }
   return WORK_COPY[workState] ?? 'Kernel state unavailable';
 }

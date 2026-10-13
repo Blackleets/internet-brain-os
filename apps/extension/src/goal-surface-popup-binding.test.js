@@ -99,6 +99,29 @@ describe('Shared Goal Truth popup binding', () => {
     expect(document.querySelector('#living-forge')?.dataset.activity).toBe('success');
   });
 
+
+  it('Kernel read-without-SUPPORT settlement keeps #mission-state off failed red chrome', () => {
+    mount();
+    const result = applyGoalTruthPresentation(document, {
+      focused: {
+        workState: 'failed',
+        workLabel: 'Read without Kernel SUPPORT',
+        limitation: 'Kernel web.read verification finished: pages read became Evidence, none supports the Goal, so no Find was forged',
+      },
+      forgeActivity: {
+        label: 'Read without Kernel SUPPORT',
+        detail: 'The Kernel read candidate pages as Evidence; none passed Kernel SUPPORT, so no Find was forged.',
+        tone: 'idle',
+      },
+    });
+    expect(result).toEqual({ status: 'research_completed', text: 'Read without Kernel SUPPORT' });
+    expect(document.querySelector('#mission-state')?.dataset.status).toBe('research_completed');
+    expect(document.querySelector('#mission-state')?.dataset.status).not.toBe('failed');
+    expect(document.querySelector('#living-forge')?.dataset.activity).toBe('idle');
+    expect(document.querySelector('#forge-activity-label')?.textContent).toBe('Read without Kernel SUPPORT');
+    expect(document.querySelector('#forge-activity-label')?.textContent).not.toMatch(/broken piece|needs attention/i);
+  });
+
   it('fails visually closed when Goal truth cannot be read instead of retaining legacy activity', async () => {
     mount();
     document.querySelector('#mission-state').textContent = 'stale mission-state';

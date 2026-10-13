@@ -117,6 +117,31 @@ describe('extension Shared Goal Truth presentation', () => {
     });
   });
 
+
+  it('Goal Surface limitation from Kernel settlement is Read without SUPPORT — never broken piece', () => {
+    const ash = surface('failed', {
+      mission: {
+        limitation: 'Kernel web.read verification finished: pages read became Evidence, none supports the Goal, so no Find was forged',
+      },
+    });
+    expect(presentGoalSurface(ash).workLabel).toBe('Read without Kernel SUPPORT');
+    expect(presentGoalSurface(ash).limitation).toMatch(/none supports the Goal/);
+    expect(forgeActivityForGoalSurface(ash)).toMatchObject({
+      label: 'Read without Kernel SUPPORT', tone: 'idle',
+    });
+    expect(forgeActivityForGoalSurface(ash).label).not.toMatch(/broken piece|needs attention/i);
+
+    const unread = surface('failed', {
+      mission: {
+        limitation: 'Kernel web.read verification finished without reading any page; Buscar más can try again',
+      },
+    });
+    expect(presentGoalSurface(unread).workLabel).toBe('Candidate pages could not be read');
+    expect(forgeActivityForGoalSurface(unread)).toMatchObject({
+      label: 'Candidate pages could not be read', tone: 'idle',
+    });
+  });
+
   it.each([
     ['waiting_for_agent', 'Hermes not available', 'error'],
     ['queued', 'Preparing the tools', 'queued'],
