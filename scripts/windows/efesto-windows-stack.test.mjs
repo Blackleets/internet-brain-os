@@ -112,3 +112,30 @@ describe('Windows PowerShell 5.1 compatibility', () => {
     expect(installer).toMatch(/if \(\$foundPython\)[^\n]*else \{ Install-WithWinget 'Python\.Python\.3\.13'/);
   });
 });
+
+describe('installer native calls under Windows PowerShell 5.1', () => {
+  const installer = readFileSync(join(process.cwd(), 'scripts/windows/install-efesto-windows.ps1'), 'utf8').replace(/^\uFEFF/, '');
+  const code = installer.split('\n').filter((line) => !line.trim().startsWith('#'));
+  it('runs every native command through Invoke-Native (stderr never becomes a terminating error)', () => {
+    const helperStart = code.findIndex((line) => line.startsWith('function Invoke-Native'));
+    const helperEnd = code.findIndex((line, i) => i > helperStart && line === '}');
+    const outside = code.filter((_, i) => i < helperStart || i > helperEnd);
+    expect(outside.filter((line) => /(^|[\s(;])&\s/.test(line))).toEqual([]);
+    expect(installer).not.toContain('2>$null');
+    const helper = code.slice(helperStart, helperEnd + 1).join('\n');
+    expect(helper).toContain("$ErrorActionPreference = 'Continue'");
+    expect(helper).toContain('2>&1');
+    expect(helper).toMatch(/finally \{\s*\$ErrorActionPreference = \$previous/);
+  });
+  it('judges Invoke-Checked only by the exit code', () => {
+    expect(installer).toMatch(/function Invoke-Checked[\s\S]*?\$r = Invoke-Native \$Exe \$Arguments\s*\n\s*if \(\$r\.Code -ne 0\)/);
+    expect(installer).not.toContain('$LASTEXITCODE -ne 0) { throw');
+  });
+  it('keeps an existing Hermes at its own revision and only adds ddgs', () => {
+    const block = installer.slice(installer.indexOf('if (Test-Path $HermesExe) {'), installer.indexOf('if (Test-Path $HermesRoot) {'));
+    expect(block).toContain("'rev-parse'");
+    expect(block).not.toContain("'checkout'");
+    expect(block).toContain("'ddgs==9.16.0'");
+    expect(block).toContain("Invoke-Native $venvPython @('-c', 'import ddgs') -Quiet");
+  });
+});

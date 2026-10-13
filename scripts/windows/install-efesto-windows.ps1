@@ -42,35 +42,63 @@ function Refresh-ProcessPath {
 }
 function Test-Command([string]$Name) { return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue) }
 
+# Native commands (python, py, git, pip, winget, ollama, node...) write warnings and tracebacks to stderr.
+# Under $ErrorActionPreference='Stop' (and with *>&1 | Tee-Object) Windows PowerShell 5.1 turns that stderr into a
+# terminating error. Every native call goes through Invoke-Native: stderr is captured as text and success is
+# judged only by the exit code.
+function Invoke-Native([string]$Exe, [string[]]$Arguments = @(), [switch]$Quiet) {
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  $lines = @()
+  $code = 1
+  try {
+    # streamed line by line (long steps like ollama pull or the dashboard build show progress), and captured
+    $lines = @(& $Exe @Arguments 2>&1 | ForEach-Object {
+      $text = if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.Exception.Message } else { "$_" }
+      if (-not $Quiet) { Write-Host "          $text" }
+      $text
+    })
+    $code = $LASTEXITCODE
+    if ($null -eq $code) { $code = 0 }
+  } catch {
+    $lines += $_.Exception.Message
+    $code = 1
+  } finally {
+    $ErrorActionPreference = $previous
+  }
+  return [pscustomobject]@{ Code = [int]$code; Output = (($lines -join "`n").Trim()) }
+}
+
 function Install-WithWinget([string]$Id, [string]$Name) {
   if ($DryRun) { Write-Info "(simulación) winget install --id $Id"; return }
   if (-not (Test-Command 'winget')) {
     throw "Falta $Name y este equipo no tiene winget (Instalador de aplicaciones de Microsoft). Instala 'App Installer' desde Microsoft Store y vuelve a ejecutar."
   }
   Write-Info "Instalando $Name con winget (puede tardar unos minutos)..."
-  & winget install --id $Id --exact --accept-package-agreements --accept-source-agreements --silent
-  if ($LASTEXITCODE -ne 0) { throw "winget no pudo instalar $Name (código $LASTEXITCODE)." }
+  $r = Invoke-Native 'winget' @('install', '--id', $Id, '--exact', '--accept-package-agreements', '--accept-source-agreements', '--silent')
+  if ($r.Code -ne 0) { throw "winget no pudo instalar $Name (código $($r.Code))." }
   Refresh-ProcessPath
 }
 
 function Get-NodeMajor {
   if (-not (Test-Command 'node')) { return 0 }
-  try { return [int](& node -p "process.versions.node.split('.')[0]") } catch { return 0 }
+  $r = Invoke-Native 'node' @('-p', "process.versions.node.split('.')[0]") -Quiet
+  if ($r.Code -ne 0) { return 0 }
+  try { return [int]$r.Output } catch { return 0 }
 }
 
 # Hermes Agent ae3f9f9c declares requires-python = ">=3.11,<3.15" (pyproject.toml): any installed 3.11–3.14 works.
 $PythonMinor = @(14, 13, 12, 11)
 function Test-HermesPython([string]$Exe) {
-  try {
-    $v = (& $Exe -c "import sys; print('%d.%d' % sys.version_info[:2])" 2>$null)
-    if ($LASTEXITCODE -ne 0 -or -not $v) { return $false }
-    $parts = $v.Trim().Split('.'); return ([int]$parts[0] -eq 3 -and [int]$parts[1] -ge 11 -and [int]$parts[1] -le 14)
-  } catch { return $false }
+  $r = Invoke-Native $Exe @('-c', "import sys; print('%d.%d' % sys.version_info[:2])") -Quiet
+  if ($r.Code -ne 0 -or -not $r.Output) { return $false }
+  try { $parts = $r.Output.Split('.'); return ([int]$parts[0] -eq 3 -and [int]$parts[1] -ge 11 -and [int]$parts[1] -le 14) } catch { return $false }
 }
 function Get-HermesPython {
   if (Test-Command 'py') {
     foreach ($m in $PythonMinor) {
-      try { $p = (& py "-3.$m" -c "import sys; print(sys.executable)" 2>$null); if ($LASTEXITCODE -eq 0 -and $p) { return $p.Trim() } } catch {}
+      $r = Invoke-Native 'py' @("-3.$m", '-c', 'import sys; print(sys.executable)') -Quiet
+      if ($r.Code -eq 0 -and $r.Output) { return $r.Output }
     }
   }
   foreach ($name in @('python', 'python3')) {
@@ -86,8 +114,8 @@ function Get-HermesPython {
 
 function Invoke-Checked([string]$Exe, [string[]]$Arguments, [string]$Failure) {
   if ($DryRun) { Write-Info "(simulación) $Exe $($Arguments -join ' ')"; return }
-  & $Exe @Arguments
-  if ($LASTEXITCODE -ne 0) { throw "$Failure (código $LASTEXITCODE)." }
+  $r = Invoke-Native $Exe $Arguments
+  if ($r.Code -ne 0) { throw "$Failure (código $($r.Code))." }
 }
 
 function Ensure-Prerequisites {
@@ -113,10 +141,22 @@ function Ensure-HermesAgent {
   }
   if (Test-Path $HermesExe) {
     $venvPython = Join-Path $HermesRoot 'venv\Scripts\python.exe'
-    if (-not $DryRun) { & $venvPython -c "import ddgs" 2>$null }
-    if ($DryRun -or $LASTEXITCODE -eq 0) { Write-Ok 'Hermes Agent ya instalado con búsqueda DuckDuckGo.'; return }
-    Write-Info 'Hermes está instalado pero le falta la búsqueda DuckDuckGo; se añade.'
-    Invoke-Checked $venvPython @('-m', 'pip', 'install', '--quiet', '-e', "$HermesRoot[ddgs]") 'No se pudo añadir la búsqueda a Hermes'
+    # An existing install is kept as it is (no checkout of the user's Hermes); only the search extra is added.
+    if (Test-Path (Join-Path $HermesRoot '.git')) {
+      $rev = Invoke-Native 'git' @('-C', $HermesRoot, 'rev-parse', '--short=11', 'HEAD') -Quiet
+      if ($rev.Code -eq 0 -and $rev.Output) {
+        if ($rev.Output.StartsWith($HermesRevision)) { Write-Info "Hermes Agent existente en la revisión validada $($rev.Output)." }
+        else { Write-Info "Hermes Agent existente en la revisión $($rev.Output) (Efesto se valida con $HermesRevision); se conserva sin cambiarla." }
+      }
+    }
+    if ($DryRun) { Write-Ok 'Hermes Agent ya instalado (simulación: no se comprueba ddgs).'; return }
+    $probe = Invoke-Native $venvPython @('-c', 'import ddgs') -Quiet
+    if ($probe.Code -eq 0) { Write-Ok 'Hermes Agent ya instalado con búsqueda DuckDuckGo.'; return }
+    Write-Info 'Hermes está instalado pero le falta la búsqueda DuckDuckGo; se añade (ddgs==9.16.0).'
+    Invoke-Checked $venvPython @('-m', 'pip', 'install', '--quiet', 'ddgs==9.16.0') 'No se pudo añadir la búsqueda a Hermes'
+    $probe = Invoke-Native $venvPython @('-c', 'import ddgs') -Quiet
+    if ($probe.Code -ne 0) { throw 'Se instaló ddgs pero Hermes sigue sin poder importarlo.' }
+    Write-Ok 'Búsqueda DuckDuckGo añadida a Hermes Agent.'
     return
   }
   if (Test-Path $HermesRoot) {
