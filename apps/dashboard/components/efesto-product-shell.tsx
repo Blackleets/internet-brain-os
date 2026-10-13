@@ -32,6 +32,7 @@ import {
   type BrainPhase, type CaseDetail, type ChatMessage, type EvidenceRecord, type Provider,
 } from './efesto-product-views';
 
+const TOAST_TTL_MS = 6_000;
 type View = 'home' | 'goals' | 'finds' | 'evidence' | 'memory' | 'activity' | 'models' | 'agents' | 'settings';
 type Connection = { baseUrl: string; token: string };
 type StreamEvent = { type?: 'conversation' | 'delta' | 'done' | 'error'; delta?: string; error?: string; response?: { model?: string } };
@@ -184,6 +185,13 @@ export default function EfestoProductShell() {
   // Restoration is bounded and cannot override a manual disconnect or newer connection.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Toasts are transient: they never linger over live counters (mobile) once read.
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(''), TOAST_TTL_MS);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   useEffect(() => {
     const current = providers.find((item) => item.id === selectedProviderId);

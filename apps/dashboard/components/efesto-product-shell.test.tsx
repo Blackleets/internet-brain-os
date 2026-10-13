@@ -125,6 +125,17 @@ describe('Efesto goal-first product shell', () => {
     expect(screen.getByRole('button', { name: 'Goal' }).getAttribute('aria-pressed')).toBe('true');
   });
 
+  it('dismisses the confirmation toast on its own so it never lingers over live counters', async () => {
+    render(<EfestoProductShell />);
+    await connect();
+    fireEvent.click(screen.getByRole('button', { name: 'Inicio' }));
+    fireEvent.change(screen.getByLabelText('Goal'), { target: { value: 'mejores herramientas gratis de IA para pequeñas empresas' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Preparar Goal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar y ejecutar' }));
+    expect(await screen.findByText('Goal persistido y misión confirmada para Hermes.')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText('Goal persistido y misión confirmada para Hermes.')).toBeNull(), { timeout: 9000 });
+  }, 15000);
+
   it('wires Finds feedback and Evidence source inspection to real Kernel routes', async () => {
     render(<EfestoProductShell />);
     await connect();

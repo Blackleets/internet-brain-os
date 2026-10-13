@@ -619,7 +619,7 @@ function phaseCopy(phase: ForgePhase, counts: ForgeCounts, row?: MissionSummary)
     case 'completed_without_evidence': return { label: 'Terminada sin Evidence', detail: 'El intento terminó sin Evidence forjada.' };
     case 'failed': {
       const reason = str(asRow(row?.lastFailure)?.reason);
-      return { label: 'Atención requerida', detail: reason ? `La misión falló: ${reason}` : 'La misión falló.' };
+      return { label: 'Atención requerida', detail: missionFailureCopy(reason) };
     }
     case 'blocked': return { label: 'Bloqueada', detail: 'La política del Kernel denegó la ejecución automática.' };
   }
@@ -675,8 +675,17 @@ const MAX_MISSION_ATTEMPTS = 3;
 export function attemptFailureCopy(reason: string): string {
   if (/timed out|timeout/i.test(reason)) return 'Hermes tardó demasiado';
   if (/lease expired/i.test(reason)) return 'Hermes no terminó a tiempo';
-  if (/findings/i.test(reason)) return 'Hermes devolvió una respuesta inválida';
+  if (/findings|valid JSON/i.test(reason)) return 'Hermes devolvió una respuesta inválida';
+  if (/reach Ollama|HTTP \d{3}/i.test(reason)) return 'no se pudo usar el modelo local';
+  // Raw process diagnostics (exit codes, session ids, stack traces) are not user copy.
+  if (/exited with code|session_id|Traceback/i.test(reason)) return 'Hermes no devolvió candidatos utilizables';
   return reason.length > 90 ? `${reason.slice(0, 89)}…` : reason;
+}
+
+/** Readable Spanish for a Mission that ended failed; never echoes raw process diagnostics. */
+export function missionFailureCopy(reason?: string): string {
+  if (!reason) return 'La misión falló.';
+  return `La misión falló: ${attemptFailureCopy(reason)}. Ningún Find se inventa: solo cuentan páginas con Kernel SUPPORT. Puedes relanzarla.`;
 }
 
 const HTTP_READ_COPY: Record<string, string> = {
