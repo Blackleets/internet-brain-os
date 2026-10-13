@@ -2,10 +2,9 @@
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { Bot, Check, ChevronRight, Copy, PlugZap, RefreshCw, X } from 'lucide-react';
+import { Check, ChevronRight, Copy, PlugZap, RefreshCw, X } from 'lucide-react';
 import type { AgentStatus, AgentsSnapshot } from '../../lib/kernel/agents';
 import { agentConnectionCopy, connectionTestResult } from '../../lib/kernel/agent-connection-copy';
-import { SourceMark } from '../brand/source-mark';
 
 export type ShellKind = 'bash' | 'powershell';
 
@@ -60,6 +59,41 @@ function CopyBlock({ label, text }: { label: string; text: string }) {
   </div>;
 }
 
+/** Real agent logos, bundled under public/brand/agents (see provenance.json); never hotlinked. */
+export const AGENT_LOGOS = Object.freeze({
+  hermes: '/brand/agents/hermes.png',
+  claude: '/brand/agents/claude.png',
+  cursor: '/brand/agents/cursor.png',
+} as const);
+type AgentLogoId = keyof typeof AGENT_LOGOS;
+const AGENT_INITIALS: Record<AgentLogoId, string> = { hermes: 'H', claude: 'C', cursor: 'Cu' };
+
+function AgentLogo({ agent }: { agent: AgentLogoId }) {
+  const [failed, setFailed] = useState(false);
+  return <span className="agent-logo" aria-hidden="true">
+    {failed
+      ? <span>{AGENT_INITIALS[agent]}</span>
+      // Local bundled asset only; no remote optimizer.
+      // eslint-disable-next-line @next/next/no-img-element
+      : <img src={AGENT_LOGOS[agent]} alt="" width={32} height={32} decoding="async" onError={() => setFailed(true)} />}
+  </span>;
+}
+
+const MCP_AGENTS: readonly { id: 'claude' | 'cursor'; name: string; howto: string }[] = [
+  { id: 'claude', name: 'Claude', howto: 'En Claude Desktop: Ajustes → Desarrollador → Editar configuración (claude_desktop_config.json).' },
+  { id: 'cursor', name: 'Cursor', howto: 'En Cursor: Settings → MCP → Add new MCP server (archivo mcp.json).' },
+];
+
+const MCP_CONFIG = JSON.stringify({
+  mcpServers: {
+    efesto: {
+      command: 'node',
+      args: ['C:\\Users\\TU_USUARIO\\AppData\\Local\\Efesto\\app\\apps\\local-kernel\\mcp-server.mjs'],
+      env: { HEPHAESTUS_DATA_DIR: 'C:\\Users\\TU_USUARIO\\AppData\\Local\\Efesto\\kernel-data' },
+    },
+  },
+}, null, 2);
+
 type ConnectorProps = {
   connected: boolean;
   kernelUrl?: string;
@@ -79,6 +113,9 @@ type ConnectorProps = {
  */
 export function AgentConnector({ connected, kernelUrl, agents, missions, onConnectKernel, onTest, now = Date.now }: ConnectorProps) {
   const [shell, setShell] = useState<ShellKind>('bash');
+  const [advanced, setAdvanced] = useState(false);
+  const [mcpOpen, setMcpOpen] = useState<string>();
+  const advancedId = useId();
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string }>();
   const [, setTick] = useState(0);
@@ -104,9 +141,15 @@ export function AgentConnector({ connected, kernelUrl, agents, missions, onConne
     }
   }
 
+  const hermesButton = !connected
+    ? { label: 'Conectar', aria: 'Conectar Hermes Agent', action: onConnectKernel }
+    : agentReady
+      ? { label: 'Conectado · comprobar', aria: 'Comprobar Hermes Agent', action: () => void test() }
+      : { label: 'Conectar', aria: 'Conectar Hermes Agent', action: () => void test() };
+
   return <div className="agent-connector">
     <section className="agent-status" data-tone={copy.tone} aria-labelledby={statusId}>
-      <span className="agent-status-mark" aria-hidden="true">{hermes?.id === 'hermes' ? <SourceMark url="https://hermes-agent.nousresearch.com" /> : <Bot />}<i /></span>
+      <span className="agent-status-mark" aria-hidden="true"><AgentLogo agent="hermes" /><i /></span>
       <div>
         <small>HERMES AGENT · ESTADO DEL KERNEL</small>
         <h3 id={statusId}>{copy.title}</h3>
@@ -114,41 +157,63 @@ export function AgentConnector({ connected, kernelUrl, agents, missions, onConne
       </div>
     </section>
 
-    <ol className="agent-steps">
-      <li data-done={connected ? 'true' : undefined}>
-        <span className="agent-step-n" aria-hidden="true">{connected ? <Check /> : '1'}</span>
-        <div>
-          <strong>Conecta el Kernel</strong>
-          {connected
-            ? <p>Conectado a <code>{kernelUrl}</code>.</p>
-            : <><p>El agente trabaja a través de tu Kernel local.</p><button type="button" className="agent-inline-action" onClick={onConnectKernel}>Conectar Kernel <ChevronRight aria-hidden="true" /></button></>}
+    <ul className="agent-cards" aria-label="Agentes">
+      <li className="agent-card" data-ready={agentReady ? 'true' : undefined}>
+        <AgentLogo agent="hermes" />
+        <div className="agent-card-text">
+          <strong>Hermes Agent</strong>
+          <small>{connected ? copy.short : 'Sin Kernel'}</small>
+          <p>Investiga en la web para tus objetivos. Con el instalador de Windows, Efesto lo arranca solo.</p>
         </div>
+        <button type="button" className="agent-connect" aria-label={hermesButton.aria} onClick={hermesButton.action} disabled={testing}>
+          {testing ? <RefreshCw className="is-spinning" aria-hidden="true" /> : agentReady ? <Check aria-hidden="true" /> : <PlugZap aria-hidden="true" />}
+          {testing ? 'Comprobando…' : hermesButton.label}
+        </button>
+        {result ? <p className="agent-test-result" data-ok={result.ok ? 'true' : 'false'} role="status">{result.ok ? <Check aria-hidden="true" /> : <X aria-hidden="true" />}{result.message}</p> : null}
       </li>
+      {MCP_AGENTS.map((agent) => <li key={agent.id} className="agent-card">
+        <AgentLogo agent={agent.id} />
+        <div className="agent-card-text">
+          <strong>{agent.name}</strong>
+          <small>Solo lectura · se configura en {agent.name}</small>
+          <p>Consulta tu memoria verificada desde {agent.name}. No puede cambiar nada en Efesto.</p>
+        </div>
+        <button type="button" className="agent-connect" aria-label={`Conectar ${agent.name}`} aria-expanded={mcpOpen === agent.id} onClick={() => setMcpOpen(mcpOpen === agent.id ? undefined : agent.id)}>
+          <PlugZap aria-hidden="true" />Conectar
+        </button>
+        {mcpOpen === agent.id ? <div className="agent-card-howto">
+          <p>{agent.howto} Añade este bloque y reinicia {agent.name}. Cambia las rutas por las de tu instalación (en Windows: <code>%LOCALAPPDATA%\\Efesto</code>).</p>
+          <CopyBlock label={`Configuración MCP para ${agent.name}`} text={MCP_CONFIG} />
+        </div> : null}
+      </li>)}
+    </ul>
+
+    <button type="button" className="agent-advanced-toggle" aria-expanded={advanced} aria-controls={advancedId} onClick={() => setAdvanced((value) => !value)}>
+      <ChevronRight aria-hidden="true" />Avanzado
+    </button>
+    {advanced ? <div id={advancedId} className="agent-advanced">
+    <ol className="agent-steps">
       <li>
-        <span className="agent-step-n" aria-hidden="true">2</span>
+        <span className="agent-step-n" aria-hidden="true">1</span>
         <div>
           <strong>Configura el worker donde está Hermes</strong>
-          <p>En una terminal, en la carpeta de Efesto. El token no aparece aquí: el comando lo lee del archivo privado del Kernel.</p>
+          <p>Solo si Hermes está en otro equipo o no usas el instalador. En una terminal, en la carpeta de Efesto. El token no aparece aquí: el comando lo lee del archivo privado del Kernel.</p>
           <div className="agent-shells" role="radiogroup" aria-label="Terminal">
             {(['bash', 'powershell'] as const).map((kind) => <button key={kind} type="button" role="radio" aria-checked={shell === kind} onClick={() => setShell(kind)}>{kind === 'bash' ? 'macOS / Linux' : 'Windows PowerShell'}</button>)}
           </div>
           <CopyBlock label="Configuración del worker" text={commands.configure} />
         </div>
       </li>
-      <li data-done={agentReady ? 'true' : undefined}>
-        <span className="agent-step-n" aria-hidden="true">{agentReady ? <Check /> : '3'}</span>
+      <li>
+        <span className="agent-step-n" aria-hidden="true">2</span>
         <div>
           <strong>Comprueba la conexión</strong>
-          <p>El doctor verifica el token contra el Kernel y deja constancia del contacto. Después, pulsa «Probar conexión».</p>
+          <p>El doctor verifica el token contra el Kernel y deja constancia del contacto. Después, pulsa «Conectar» en Hermes Agent.</p>
           <CopyBlock label="Doctor del worker" text={commands.doctor} />
-          <button type="button" className="agent-test" onClick={() => void test()} disabled={!connected || testing}>
-            {testing ? <RefreshCw className="is-spinning" aria-hidden="true" /> : <PlugZap aria-hidden="true" />}{testing ? 'Comprobando…' : 'Probar conexión'}
-          </button>
-          {result ? <p className="agent-test-result" data-ok={result.ok ? 'true' : 'false'} role="status">{result.ok ? <Check aria-hidden="true" /> : <X aria-hidden="true" />}{result.message}</p> : null}
         </div>
       </li>
       <li>
-        <span className="agent-step-n" aria-hidden="true">4</span>
+        <span className="agent-step-n" aria-hidden="true">3</span>
         <div>
           <strong>Déjalo recogiendo misiones</strong>
           <p>Cada ciclo reclama una misión confirmada, investiga y termina; el bucle recoge las siguientes.</p>
@@ -156,12 +221,8 @@ export function AgentConnector({ connected, kernelUrl, agents, missions, onConne
         </div>
       </li>
     </ol>
-
-    <details className="agent-other">
-      <summary>¿Otro agente?</summary>
-      <p>Cualquier agente puede trabajar para Efesto con el mismo contrato: reclama con <code>POST /api/agent-missions/claim</code> y devuelve candidatos a <code>/api/agent-missions/:id/results</code>. El Kernel lee y verifica cada fuente; el agente nunca escribe Evidence ni Finds. Hoy el Kernel registra todo worker de misiones como «Hermes».</p>
-      <p>Para que un cliente MCP (Claude, Cursor…) consulte tu memoria verificada en solo lectura, registra <code>apps/local-kernel/mcp-server.mjs</code> con <code>HEPHAESTUS_DATA_DIR</code> y <code>HEPHAESTUS_API_TOKEN</code> (ver MCP_SERVER.md).</p>
-    </details>
+    <p className="agent-other">Cualquier agente puede trabajar para Efesto con el mismo contrato: reclama con <code>POST /api/agent-missions/claim</code> y devuelve candidatos a <code>/api/agent-missions/:id/results</code>. El Kernel lee y verifica cada fuente; el agente nunca escribe Evidence ni Finds. Hoy el Kernel registra todo worker de misiones como «Hermes».</p>
+    </div> : null}
   </div>;
 }
 

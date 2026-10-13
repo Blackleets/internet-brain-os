@@ -278,6 +278,11 @@ Goal from Lewis: install like the ChatGPT/Grok desktop apps. No browser extensio
   - The Kernel starts with `HEPHAESTUS_PAIRING=0` and `EFESTO_PAIRING_OPTIONAL=1`. Launcher repair then reuses an unpaired Kernel instead of restarting it to show a pairing code.
 - **The extension is optional:** `install-efesto.ps1 -SkipExtension -SkipLauncherRepair` is used by the one-click flow. `Iniciar Efesto.cmd` no longer copies the token. `copy-token` stays only for manual or extension pairing.
 - **Uninstall:** "Efesto" appears in Apps & features (HKCU). The uninstaller stops Efesto, removes `%LOCALAPPDATA%\Efesto\app` and the shortcuts, and asks (default No) whether to also delete the data in `%LOCALAPPDATA%\Efesto`.
+- **Agentes screen (Agent Hub / Conexiones), simplified at Lewis's request:**
+  - One card per agent: Hermes Agent, Claude and Cursor. Each card has its real logo, bundled in `public/brand/agents/` (source and date in `provenance.json`; never hotlinked; initials if a logo fails to load) and a single **Conectar** button.
+  - Hermes: Conectar connects the Kernel if needed, otherwise re-checks the contact the Kernel recorded. It never fakes a connection.
+  - Claude and Cursor: Conectar shows a short Spanish how-to with a read-only MCP config (no token).
+  - The worker commands (shell picker, doctor, loop) and the agent contract are behind **Avanzado**.
 - **Pending and limits:**
   - **No code signing yet**, so SmartScreen shows "Windows protegió su PC" (Más información → Ejecutar de todas formas).
   - CI only smoke-tests a silent `/DRYRUN=1` install and uninstall. The real downloads (winget, Hermes pip, the 2-3 GB model, `pnpm install`/`next build`) have not been exercised on a real PC.
