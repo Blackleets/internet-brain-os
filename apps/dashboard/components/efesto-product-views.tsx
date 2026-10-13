@@ -1,10 +1,12 @@
 'use client';
 
 import type { GoalEditRequest } from './forge/goal-edit-sheet';
+import { hermesReadiness } from '../lib/kernel/agent-connection-copy';
 import { EfestoMark } from './brand/efesto-mark';
+import { HomeWallpaper } from './home/home-wallpaper';
 import {
   Activity, Bot, BrainCircuit, Check, ChevronDown, ChevronRight, CircleOff, Database, ExternalLink, FileSearch,
-  History, Menu, MessageSquare, Pause, Plug, RefreshCw, Search, Send, Settings, ShieldCheck, Sparkles, Target, Workflow, X,
+  History, Lightbulb, Menu, MessageSquare, Pause, Plug, RefreshCw, Search, ArrowUp, Send, Settings, ShieldCheck, Sparkles, Target, Workflow, X,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { CaseSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
@@ -47,7 +49,7 @@ const starterGoals = [
   'Ayúdame a tomar una decisión',
 ];
 
-export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, navExpanded, supportedFinds = [], forgeSupportedFindCount = 0, missions, onFindFeedback, onOpenCase, forgeModel, onOpenFinds, onRelaunchMission, relaunchPending = false, onSearchMore, onReviseGoal, onOpenConnections }: {
+export function HomeView({ phase, chatMode, messages, preparedGoal, connected, goalPending, input, onInputChange, onSubmit, onToggleChat, chatPending, onStopChat, chatAvailable, submitDisabled, onConfirmGoal, onEditGoal, onStarterGoal, onStarterChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, onSelectModel, onOpenSettings, onOpenNav, navExpanded, supportedFinds = [], forgeSupportedFindCount = 0, missions, onFindFeedback, onOpenCase, forgeModel, onOpenFinds, onRelaunchMission, relaunchPending = false, onSearchMore, onReviseGoal, onOpenConnections, onOpenView }: {
   phase: BrainPhase; chatMode: boolean; messages: ChatMessage[]; preparedGoal: string; connected: boolean; goalPending: boolean;
   input: string; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onToggleChat: (value: boolean) => void; chatPending: boolean; onStopChat: () => void; chatAvailable: boolean; submitDisabled: boolean;
@@ -56,6 +58,8 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; onOpenNav: (opener?: HTMLElement) => void; navExpanded?: boolean;
   /** Top connector: Kernel + agent connection sheet (only once a Kernel is connected). */
   onOpenConnections?: () => void;
+  /** Opens an existing product area from the home chip row. */
+  onOpenView?: (view: HomeChipView) => void;
   supportedFinds?: OpportunitySummary[];
   /** Focused-mission SUPPORT count (Living Forge). Not global inbox length. */
   forgeSupportedFindCount?: number;
@@ -121,9 +125,17 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
     connected={connected}
     onSelectModel={onSelectModel}
     onOpenSettings={onOpenSettings}
+    chips={showForge ? null : <>
+      <div className="forge-composer-tray" aria-label="Acciones del Kernel">
+        {onOpenFinds ? <button type="button" onClick={onOpenFinds}><Sparkles aria-hidden="true" />Hallazgos</button> : null}
+        <button type="button" onClick={onOpenModels}><BrainCircuit aria-hidden="true" />Modelos locales</button>
+      </div>
+      {onOpenView ? <PageChips onOpenView={onOpenView} /> : null}
+    </>}
   />;
 
-  return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal') + (showForge ? ' has-forge' : '')} aria-label={surfaceAria}>
+  return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal') + (showForge ? ' has-forge' : '') + (showSuggestions && !chatMode ? ' is-idle' : '')} aria-label={surfaceAria}>
+    {showSuggestions && !chatMode ? <HomeWallpaper /> : null}
     <header className="forge-surface-bar">
       <div className="forge-surface-leading">
         <button type="button" className="forge-menu-button" onClick={(event) => onOpenNav(event.currentTarget)} aria-label="Alternar navegación" aria-controls="efesto-sidebar" aria-expanded={navExpanded}>
@@ -191,11 +203,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
           ? <div className="find-grid">{supportedFinds.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFindFeedback ?? (() => undefined)} onOpenCase={onOpenCase} />)}</div>
           : <p className="truth-card"><ShieldCheck /> Find SUPPORT forjado en la misión; sin tarjetas de inbox que mostrar.</p>}
       </section> : showForge ? null : <section className="forge-empty forge-goal-empty" aria-label="Crear un Goal">
-        <span className="forge-empty-mark"><Target /></span>
-        <small>EFESTO · CONTROLLED MISSION</small>
-        <h1>¿Qué estás buscando?</h1>
-        <p>Un Goal en una línea. Preparar no autoriza red ni misiones.</p>
-        <div className="forge-empty-meta"><span><ShieldCheck /> Controlado por el Kernel</span><span><i /> Confirmación humana</span></div>
+        <h1 className="forge-wordmark"><EfestoMark size={46} /><b aria-hidden="true">EFESTO</b><span className="forge-sr-only">¿Qué estás buscando?</span></h1>
       </section>}
       {showForge ? composer : null}
       </>}
@@ -205,6 +213,25 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   </section>;
 }
 
+export type HomeChipView = 'goals' | 'evidence' | 'memory' | 'activity' | 'agents';
+const homeChips: { id: HomeChipView; label: string; icon: typeof Target }[] = [
+  { id: 'goals', label: 'Objetivos', icon: Target },
+  { id: 'evidence', label: 'Evidencia', icon: ShieldCheck },
+  { id: 'memory', label: 'Memoria', icon: Database },
+  { id: 'activity', label: 'Actividad', icon: Activity },
+  { id: 'agents', label: 'Agentes', icon: Bot },
+];
+
+function PageChips({ onOpenView }: { onOpenView: (view: HomeChipView) => void }) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  return <div className="forge-page-chips">
+    <div className="forge-page-chips-row" ref={rowRef} role="group" aria-label="Ir a">
+      {homeChips.map(({ id, label, icon: Icon }) => <button type="button" key={id} onClick={() => onOpenView(id)}><Icon aria-hidden="true" />{label}</button>)}
+    </div>
+    <button type="button" className="forge-page-chips-more" aria-label="Más accesos" onClick={() => rowRef.current?.scrollBy({ left: 160, behavior: 'smooth' })}><ChevronRight aria-hidden="true" /></button>
+  </div>;
+}
+
 function ModeSwitcher({ chatMode, onToggleChat }: { chatMode: boolean; onToggleChat: (value: boolean) => void }) {
   return <div className="forge-mode-switcher" role="group" aria-label="Modo de trabajo">
     <button type="button" aria-pressed={chatMode} className={chatMode ? 'active' : ''} onClick={() => onToggleChat(true)}><MessageSquare /> <span>Chat</span></button>
@@ -212,14 +239,15 @@ function ModeSwitcher({ chatMode, onToggleChat }: { chatMode: boolean; onToggleC
   </div>;
 }
 
-function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisabled, suggestions, onSuggestion, onInputChange, onSubmit, onStopChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, connected, onSelectModel, onOpenSettings }: {
+function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisabled, suggestions, onSuggestion, onInputChange, onSubmit, onStopChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, connected, onSelectModel, onOpenSettings, chips }: {
   input: string; chatMode: boolean; chatAvailable: boolean; chatPending: boolean; submitDisabled: boolean; suggestions: string[];
   onSuggestion: (value: string) => void; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onStopChat: () => void; onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
-  connected: boolean; onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void;
+  connected: boolean; onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; chips?: ReactNode;
 }) {
+  const [ideasOpen, setIdeasOpen] = useState(false);
   return <div className={'forge-composer-zone ' + (suggestions.length ? 'has-suggestions' : '')}>
-    {suggestions.length ? <div className="forge-quick-prompts" aria-label={chatMode ? 'Sugerencias para empezar' : 'Ideas para nuevos Goals'}>
+    {suggestions.length && ideasOpen ? <div className="forge-quick-prompts" id="forge-ideas" aria-label={chatMode ? 'Sugerencias para empezar' : 'Ideas para nuevos Goals'}>
       {suggestions.map((suggestion) => <button type="button" key={suggestion} onClick={() => onSuggestion(suggestion)}>
         {chatMode ? <Sparkles /> : <Target />}
         <span>{suggestion}</span>
@@ -234,7 +262,7 @@ function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisab
         value={input}
         onChange={(event) => onInputChange(event.target.value)}
         rows={1}
-        placeholder={chatMode ? (chatAvailable ? 'Pregunta lo que quieras…' : 'Configura un modelo para empezar…') : '¿Qué estás buscando?'}
+        placeholder={chatMode ? (chatAvailable ? 'Pregunta lo que quieras…' : 'Configura un modelo para empezar…') : 'Describe tu Goal…'}
         onKeyDown={(event) => {
           if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
             event.preventDefault();
@@ -254,13 +282,15 @@ function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisab
             onSelectModel={onSelectModel}
             onOpenModels={onOpenModels}
             onOpenSettings={onOpenSettings}
-          /> : <span className="forge-kernel-gate"><ShieldCheck /> Kernel-gated</span>}
+          /> : null}
         </div>
-        <span className="forge-shortcut">Enter para enviar</span>
-        {chatPending ? <button type="button" className="forge-send stop" onClick={onStopChat} aria-label="Detener generación"><Pause /></button> : <button type="submit" className="forge-send" disabled={submitDisabled} aria-label={chatMode ? 'Enviar mensaje' : 'Preparar Goal'}><Send /></button>}
+        {chatMode ? null : <span className="forge-mode-label">Goal <span>Kernel-gated</span></span>}
+        {chatPending ? <button type="button" className="forge-send stop" onClick={onStopChat} aria-label="Detener generación"><Pause /></button> : <button type="submit" className="forge-send" disabled={submitDisabled} aria-label={chatMode ? 'Enviar mensaje' : 'Preparar Goal'}><ArrowUp /></button>}
       </footer>
     </form>
     <p className="forge-composer-hint" id="forge-composer-note">{chatMode ? 'La conversación permanece separada de Evidence y memoria.' : 'Preparar no ejecuta ninguna acción externa.'}</p>
+    {chips}
+    {suggestions.length ? <button type="button" className="forge-explore-ideas" aria-expanded={ideasOpen} aria-controls="forge-ideas" onClick={() => setIdeasOpen((open) => !open)}><Lightbulb aria-hidden="true" />{ideasOpen ? 'Ocultar ideas' : 'Explorar ideas'}</button> : null}
   </div>;
 }
 
@@ -498,7 +528,7 @@ export function AutomationsView({ missions, connected, onNewGoal }: { missions: 
 export function SettingsView({ connected, connecting, rememberSession, snapshot, kernelBaseUrl, onConnect, onExtensionConnect, onDisconnect, onRefresh }: { connected: boolean; connecting: boolean; rememberSession: boolean; snapshot?: OverviewSnapshot; kernelBaseUrl?: string; onConnect: (event: FormEvent<HTMLFormElement>) => void; onExtensionConnect?: () => void; onDisconnect: () => void; onRefresh: () => void }) {
   const bootstrap = snapshot?.readiness.bootstrap;
   return <Workspace icon={Settings} eyebrow="Control del propietario" title="Ajustes" copy="Conexión local, readiness y recuperación. Los secretos no se imprimen.">
-    <div className="settings-layout"><form className="connection-card" onSubmit={onConnect}><header><span className={`kernel-dot ${connected ? 'online' : 'offline'}`} /><div><small>DISPOSITIVO ACTUAL</small><strong>{connected ? 'Autorizado' : 'Conectar Kernel'}</strong></div></header>{!connected ? <><button type="button" className="primary-action" onClick={onExtensionConnect} disabled={connecting || !onExtensionConnect}>Conectar con extensión</button><p>Empareja la extensión una vez y activa su reconexión automática. Después bastará con abrir Efesto.</p><label>URL del Kernel<input name="baseUrl" aria-label="URL del Kernel" type="url" defaultValue="http://127.0.0.1:4000" required /></label><label>Token privado<input name="token" aria-label="Token privado" type="password" autoComplete="off" placeholder="Opcional si usas pairing" /></label><label>Código de emparejamiento<input name="pairingCode" aria-label="Código de emparejamiento" inputMode="text" autoComplete="off" placeholder="ABCD-1234" /></label><label className="remember-row"><input name="rememberSession" type="checkbox" defaultChecked={rememberSession} /><span><strong>Recordar durante esta sesión</strong><small>sessionStorage; no persistencia indefinida.</small></span></label><div className="connection-actions"><button type="submit" name="action" value="pair" className="primary-action" disabled={connecting}>{connecting ? 'Emparejando…' : 'Emparejar con código'}</button><button type="submit" name="action" value="token" className="secondary-action" disabled={connecting}>Autorizar dispositivo</button></div></> : <div className="connection-actions"><button type="button" className="primary-action" onClick={onRefresh}><RefreshCw /> Comprobar ahora</button><button type="button" className="danger-action" onClick={onDisconnect}>Desconectar</button></div>}</form><section className="readiness-card"><header><ShieldCheck /><div><small>READINESS REAL</small><strong>{bootstrap?.overall ?? (connected ? 'connected' : 'offline')}</strong></div></header><ReadinessRow label="Kernel" value={snapshot?.readiness.kernel === 'offline' ? 'offline' : bootstrap?.kernel ?? (connected ? 'ready' : 'offline')} ready={connected && snapshot?.readiness.kernel !== 'offline'} /><ReadinessRow label="Hermes" value={bootstrap?.hermes ?? 'sin diagnóstico'} ready={bootstrap?.hermes === 'ready'} /><ReadinessRow label="Obsidian" value={bootstrap?.obsidian ?? 'sin configurar'} ready={bootstrap?.obsidian === 'ready'} /><ReadinessRow label="Extensión" value={bootstrap?.pairing ?? 'sin emparejar'} ready={bootstrap?.pairing === 'paired'} /><a href={replayLabHref(kernelBaseUrl)} target="_blank" rel="noreferrer">Abrir Replay Lab <ExternalLink /></a></section></div>
+    <div className="settings-layout"><form className="connection-card" onSubmit={onConnect}><header><span className={`kernel-dot ${connected ? 'online' : 'offline'}`} /><div><small>DISPOSITIVO ACTUAL</small><strong>{connected ? 'Autorizado' : 'Conectar Kernel'}</strong></div></header>{!connected ? <><button type="button" className="primary-action" onClick={onExtensionConnect} disabled={connecting || !onExtensionConnect}>Conectar con extensión</button><p>Empareja la extensión una vez y activa su reconexión automática. Después bastará con abrir Efesto.</p><label>URL del Kernel<input name="baseUrl" aria-label="URL del Kernel" type="url" defaultValue="http://127.0.0.1:4000" required /></label><label>Token privado<input name="token" aria-label="Token privado" type="password" autoComplete="off" placeholder="Opcional si usas pairing" /></label><label>Código de emparejamiento<input name="pairingCode" aria-label="Código de emparejamiento" inputMode="text" autoComplete="off" placeholder="ABCD-1234" /></label><label className="remember-row"><input name="rememberSession" type="checkbox" defaultChecked={rememberSession} /><span><strong>Recordar durante esta sesión</strong><small>sessionStorage; no persistencia indefinida.</small></span></label><div className="connection-actions"><button type="submit" name="action" value="pair" className="primary-action" disabled={connecting}>{connecting ? 'Emparejando…' : 'Emparejar con código'}</button><button type="submit" name="action" value="token" className="secondary-action" disabled={connecting}>Autorizar dispositivo</button></div></> : <div className="connection-actions"><button type="button" className="primary-action" onClick={onRefresh}><RefreshCw /> Comprobar ahora</button><button type="button" className="danger-action" onClick={onDisconnect}>Desconectar</button></div>}</form><section className="readiness-card"><header><ShieldCheck /><div><small>READINESS REAL</small><strong>{bootstrap?.overall ?? (connected ? 'connected' : 'offline')}</strong></div></header><ReadinessRow label="Kernel" value={snapshot?.readiness.kernel === 'offline' ? 'offline' : bootstrap?.kernel ?? (connected ? 'ready' : 'offline')} ready={connected && snapshot?.readiness.kernel !== 'offline'} />{(() => { const hermes = hermesReadiness(bootstrap?.hermes, snapshot?.agents?.agents.find((agent) => agent.id === 'hermes')); return <ReadinessRow label="Hermes" value={hermes.value} ready={hermes.ready} />; })()}<ReadinessRow label="Obsidian" value={bootstrap?.obsidian ?? 'sin configurar'} ready={bootstrap?.obsidian === 'ready'} /><ReadinessRow label="Extensión" value={bootstrap?.pairing ?? 'sin emparejar'} ready={bootstrap?.pairing === 'paired'} /><a href={replayLabHref(kernelBaseUrl)} target="_blank" rel="noreferrer">Abrir Replay Lab <ExternalLink /></a></section></div>
   </Workspace>;
 }
 

@@ -37,7 +37,13 @@ const PHASES: Record<string, string> = { forged: 'forjada', verifying: 'verifica
  * Human copy for one agent, derived only from the Kernel's own state. `available === false` means
  * the Kernel does not publish /api/agents (older build): we say that instead of guessing.
  */
-export function agentConnectionCopy(agent: AgentStatus | undefined, available: boolean, nowMs: number): AgentCopy {
+export function agentConnectionCopy(agent: AgentStatus | undefined, available: boolean, nowMs: number, missions?: readonly { id: string; status?: string }[]): AgentCopy {
+  // /api/agents and /api/agent-missions are read together; if the Mission the agent was "working" on
+  // is already settled in the Missions list, the agent is no longer working on it.
+  const activeId = agent?.state === 'working' ? agent.activeMission?.id : undefined;
+  if (agent && activeId && missions?.some((m) => m.id === activeId && (m.status === 'failed' || m.status === 'completed'))) {
+    agent = { ...agent, state: 'online', activeMission: undefined, lastSeenAt: agent.lastSeenAt ?? new Date(nowMs).toISOString() };
+  }
   if (!available || !agent) {
     return { tone: 'off', short: 'Sin estado', title: 'Estado de agentes no disponible', detail: 'Este Kernel no publica /api/agents. Actualízalo para ver conexiones reales; no mostramos una conexión que no podamos comprobar.' };
   }
@@ -72,4 +78,15 @@ export function connectionTestResult(agent: AgentStatus | undefined, available: 
   const windowMin = Math.round(agent.onlineWindowMs / 60_000);
   const seen = agent.lastSeenAt ? ` El último contacto fue ${formatAgo(agent.lastSeenAt, nowMs)}.` : '';
   return { ok: false, message: `Aún no: el Kernel no ha recibido a ${agent.label} en los últimos ${windowMin} min.${seen} Ejecuta el doctor (paso 3) en la máquina del agente y vuelve a probar.` };
+}
+
+/**
+ * Hermes readiness as one truth for Ajustes and the header: bootstrap.hermes describes the Kernel's
+ * own bundled Hermes install; an external worker the Kernel sees online/working is also ready.
+ */
+export function hermesReadiness(bootstrapHermes: string | undefined, agent: AgentStatus | undefined): { value: string; ready: boolean } {
+  if (agent?.state === 'working') return { value: 'trabajando (worker)', ready: true };
+  if (agent?.state === 'online') return { value: 'conectado (worker)', ready: true };
+  if (bootstrapHermes) return { value: bootstrapHermes, ready: bootstrapHermes === 'ready' };
+  return { value: 'sin diagnóstico', ready: false };
 }

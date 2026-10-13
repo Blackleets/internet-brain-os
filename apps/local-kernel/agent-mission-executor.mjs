@@ -17,6 +17,7 @@ const MAX_TELEMETRY_RESULT_TITLE_CHARS = 160;
 const SENSITIVE_QUERY_KEY = /^(?:token|access_token|auth|authorization|api[_-]?key|code|session|signature|sig)$/i;
 // Funnel counts are bounded by the adapter contract (at most 20 findings per Hermes answer).
 const MAX_TELEMETRY_FINDINGS = 20;
+export const SEARCH_TELEMETRY_SOURCES = Object.freeze(['ddgs', 'wikipedia']);
 export const FUNNEL_DROP_REASONS = Object.freeze(['malformed_url', 'per_domain_cap', 'duplicate', 'other']);
 
 export class AgentMissionExecutor extends LegacyAgentMissionExecutor {
@@ -134,13 +135,18 @@ export function normalizeSearchTelemetry(value, { findingsSubmitted } = {}) {
   const normalized = [];
   let totalResults = 0;
   for (const search of searches) {
-    if (!isPlainObject(search) || !onlyKeys(search, ['query', 'limit', 'resultCount', 'results'])) return undefined;
+    if (!isPlainObject(search) || !onlyKeys(search, ['query', 'limit', 'resultCount', 'results', 'source'])) return undefined;
     const query = telemetryQuery(search.query);
     if (!query) return undefined;
     const entry = { query };
     if (search.limit !== undefined) {
       if (!Number.isInteger(search.limit) || search.limit < 1 || search.limit > MAX_TELEMETRY_LIMIT) return undefined;
       entry.limit = search.limit;
+    }
+    // Which keyless public source answered this query (display-only): DuckDuckGo, or the Wikipedia fallback.
+    if (search.source !== undefined) {
+      if (!SEARCH_TELEMETRY_SOURCES.includes(search.source)) return undefined;
+      entry.source = search.source;
     }
     if (search.resultCount !== undefined) {
       if (!Number.isInteger(search.resultCount) || search.resultCount < 0 || search.resultCount > MAX_TELEMETRY_RESULT_COUNT) return undefined;

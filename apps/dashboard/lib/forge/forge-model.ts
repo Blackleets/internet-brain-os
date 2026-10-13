@@ -191,7 +191,7 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
   const evidence = input.evidence ?? { status: 'idle' as const };
   const sources = buildSources(row, evidence, input.opportunities);
   const counts = countSources(sources, evidence);
-  const phase = derivePhase(surfaceMission.workState, Boolean(surfaceMission.blockedReason || blockedOnRow(row)), counts, sources);
+  const phase = derivePhase(settledWorkState(surfaceMission.workState, row), Boolean(surfaceMission.blockedReason || blockedOnRow(row)), counts, sources);
   const { label, detail } = phaseCopy(phase, counts, row);
   const goalTitle = input.surface.goal.title || (typeof row?.goalTitle === 'string' ? row.goalTitle : '');
   const searchKeywords = missionKeywords(row);
@@ -561,6 +561,20 @@ function countSources(sources: readonly ForgeSource[], evidence: ForgeEvidenceLo
     evidence: evidenceCount,
     supported: sources.filter((item) => item.state === 'supported').length,
   };
+}
+
+const LIVE_WORK_STATES = new Set(['waiting_for_agent', 'queued', 'running', 'investigating', 'verifying']);
+
+/**
+ * The Mission row (GET /api/agent-missions) can already be settled while the Goal surface read in the
+ * same refresh still says it is working. A settled row wins, so no surface keeps a live clock or
+ * "intento 3 de 3" after the Kernel settled the Mission.
+ */
+export function settledWorkState(surfaceWorkState: string, row?: MissionSummary): string {
+  if (!row || !LIVE_WORK_STATES.has(surfaceWorkState)) return surfaceWorkState;
+  if (row.status === 'failed') return 'failed';
+  if (row.status === 'completed') return str(row.executionPhase) === 'forged' ? 'forged' : 'completed';
+  return surfaceWorkState;
 }
 
 function derivePhase(workState: string, blocked: boolean, counts: ForgeCounts, sources: readonly ForgeSource[]): ForgePhase {

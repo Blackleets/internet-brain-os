@@ -64,6 +64,8 @@ type ConnectorProps = {
   connected: boolean;
   kernelUrl?: string;
   agents?: AgentsSnapshot;
+  /** Missions read in the same refresh: a settled Mission is never shown as being worked on. */
+  missions?: readonly { id: string; status?: string }[];
   onConnectKernel: () => void;
   /** Re-reads GET /api/agents from the Kernel; resolves undefined when the Kernel does not publish it. */
   onTest: () => Promise<AgentsSnapshot | undefined>;
@@ -75,7 +77,7 @@ type ConnectorProps = {
  * dashboard cannot mark an agent as connected, and "Probar conexión" passes only when the Kernel
  * itself recorded a recent contact from the agent (doctor ping, mission poll, claim or result).
  */
-export function AgentConnector({ connected, kernelUrl, agents, onConnectKernel, onTest, now = Date.now }: ConnectorProps) {
+export function AgentConnector({ connected, kernelUrl, agents, missions, onConnectKernel, onTest, now = Date.now }: ConnectorProps) {
   const [shell, setShell] = useState<ShellKind>('bash');
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string }>();
@@ -84,7 +86,7 @@ export function AgentConnector({ connected, kernelUrl, agents, onConnectKernel, 
   useEffect(() => { const id = setInterval(() => setTick((value) => value + 1), 15_000); return () => clearInterval(id); }, []);
   const hermes: AgentStatus | undefined = agents?.agents.find((agent) => agent.id === 'hermes') ?? agents?.agents[0];
   const available = connected && Boolean(agents);
-  const copy = connected ? agentConnectionCopy(hermes, available, now()) : { tone: 'off' as const, short: 'Sin Kernel', title: 'Conecta primero el Kernel', detail: 'El estado de los agentes lo publica el Kernel; sin él no hay nada que comprobar.' };
+  const copy = connected ? agentConnectionCopy(hermes, available, now(), missions) : { tone: 'off' as const, short: 'Sin Kernel', title: 'Conecta primero el Kernel', detail: 'El estado de los agentes lo publica el Kernel; sin él no hay nada que comprobar.' };
   const commands = workerSetupCommands(kernelUrl ?? 'http://127.0.0.1:4000', shell);
   const agentReady = hermes?.state === 'working' || hermes?.state === 'online';
 
