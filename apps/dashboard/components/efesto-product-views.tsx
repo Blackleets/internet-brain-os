@@ -122,6 +122,10 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
     connected={connected}
     onSelectModel={onSelectModel}
     onOpenSettings={onOpenSettings}
+    chips={showForge ? null : <div className="forge-mode-chips" aria-label="Acciones rápidas">
+      {onOpenFinds ? <button type="button" onClick={onOpenFinds}><Sparkles aria-hidden="true" />Hallazgos</button> : null}
+      <button type="button" onClick={onOpenModels}><ShieldCheck aria-hidden="true" />Modelos locales</button>
+    </div>}
   />;
 
   return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal') + (showForge ? ' has-forge' : '')} aria-label={surfaceAria}>
@@ -192,8 +196,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
           ? <div className="find-grid">{supportedFinds.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFindFeedback ?? (() => undefined)} onOpenCase={onOpenCase} />)}</div>
           : <p className="truth-card"><ShieldCheck /> Find SUPPORT forjado en la misión; sin tarjetas de inbox que mostrar.</p>}
       </section> : showForge ? null : <section className="forge-empty forge-goal-empty" aria-label="Crear un Goal">
-        <span className="forge-empty-mark"><Target /></span>
-        <small>EFESTO · CONTROLLED MISSION</small>
+        <span className="forge-wordmark" aria-hidden="true"><EfestoMark size={46} /><b>EFESTO</b></span>
         <h1>¿Qué estás buscando?</h1>
         <p>Un Goal en una línea. Preparar no autoriza red ni misiones.</p>
         <div className="forge-empty-meta"><span><ShieldCheck /> Controlado por el Kernel</span><span><i /> Confirmación humana</span></div>
@@ -213,11 +216,11 @@ function ModeSwitcher({ chatMode, onToggleChat }: { chatMode: boolean; onToggleC
   </div>;
 }
 
-function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisabled, suggestions, onSuggestion, onInputChange, onSubmit, onStopChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, connected, onSelectModel, onOpenSettings }: {
+function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisabled, suggestions, onSuggestion, onInputChange, onSubmit, onStopChat, onOpenModels, modelLabel, providers, selectedProviderId, selectedModel, connected, onSelectModel, onOpenSettings, chips }: {
   input: string; chatMode: boolean; chatAvailable: boolean; chatPending: boolean; submitDisabled: boolean; suggestions: string[];
   onSuggestion: (value: string) => void; onInputChange: (value: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onStopChat: () => void; onOpenModels: () => void; modelLabel: string; providers: Provider[]; selectedProviderId: string; selectedModel: string;
-  connected: boolean; onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void;
+  connected: boolean; onSelectModel: (providerId: string, model: string) => void; onOpenSettings: () => void; chips?: ReactNode;
 }) {
   return <div className={'forge-composer-zone ' + (suggestions.length ? 'has-suggestions' : '')}>
     {suggestions.length ? <div className="forge-quick-prompts" aria-label={chatMode ? 'Sugerencias para empezar' : 'Ideas para nuevos Goals'}>
@@ -235,7 +238,7 @@ function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisab
         value={input}
         onChange={(event) => onInputChange(event.target.value)}
         rows={1}
-        placeholder={chatMode ? (chatAvailable ? 'Pregunta lo que quieras…' : 'Configura un modelo para empezar…') : '¿Qué estás buscando?'}
+        placeholder={chatMode ? (chatAvailable ? 'Pregunta lo que quieras…' : 'Configura un modelo para empezar…') : 'Describe tu Goal…'}
         onKeyDown={(event) => {
           if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
             event.preventDefault();
@@ -262,6 +265,7 @@ function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisab
       </footer>
     </form>
     <p className="forge-composer-hint" id="forge-composer-note">{chatMode ? 'La conversación permanece separada de Evidence y memoria.' : 'Preparar no ejecuta ninguna acción externa.'}</p>
+    {chips}
   </div>;
 }
 
