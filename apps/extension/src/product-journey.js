@@ -15,19 +15,31 @@ export function newestMission(missions = []) {
  * Living Forge / mission-state / presentMission already say Research completed
  * (zero SUPPORT). Mirror completed-without-Evidence: Verification complete,
  * Forged pending until verificationResults/findCount prove SUPPORT.
+ *
+ * Kernel settleVerificationWithoutFind verified_without_support (pages read → Evidence,
+ * none passed SUPPORT) is the same honest outcome as mission card / orb / watchtower
+ * "Read without Kernel SUPPORT" — Verification finished, Forged pending. Must not paint
+ * Verification as error (red failed chrome) while those surfaces stay neutral.
  */
 export function missionJourney(mission) {
   if (!mission) return { state: 'idle', stages: MISSION_STAGES.map((stage) => ({ ...stage, state: 'pending' })) };
   const forged = mission.executionPhase === 'forged' || mission.workState === 'forged';
   const forgedWithSupport = forged && countMissionSupportedFinds(mission) > 0;
-  const activeIndex = mission.executionPhase === 'verifying'
+  const readWithoutSupport = isVerifiedWithoutSupportSettlement(mission);
+  const activeIndex = readWithoutSupport
     ? 2
-    : { waiting_for_agent: 0, queued: 1, running: 1, completed: forgedWithSupport ? 3 : 2, failed: Math.min(Number(mission.attempt ?? 1), 2) }[mission.status] ?? 0;
+    : mission.executionPhase === 'verifying'
+      ? 2
+      : { waiting_for_agent: 0, queued: 1, running: 1, completed: forgedWithSupport ? 3 : 2, failed: Math.min(Number(mission.attempt ?? 1), 2) }[mission.status] ?? 0;
   return {
     state: mission.status,
     stages: MISSION_STAGES.map((stage, index) => ({
       ...stage,
-      state: mission.status === 'failed' && index === activeIndex ? 'error' : index < activeIndex || (mission.status === 'completed' && (forgedWithSupport || stage.id !== 'forged')) ? 'complete' : index === activeIndex ? 'active' : 'pending',
+      state: readWithoutSupport
+        ? (index < 3 ? 'complete' : 'pending')
+        : mission.status === 'failed' && index === activeIndex ? 'error'
+          : index < activeIndex || (mission.status === 'completed' && (forgedWithSupport || stage.id !== 'forged')) ? 'complete'
+            : index === activeIndex ? 'active' : 'pending',
     })),
   };
 }
@@ -45,6 +57,16 @@ function countMissionSupportedFinds(mission) {
   const findCount = mission?.findCount;
   if (typeof findCount === 'number' && Number.isSafeInteger(findCount) && findCount >= 0) return findCount;
   return 0;
+}
+
+/**
+ * Same settlement gate as presentMission / orb (mission-verification-settlement.mjs):
+ * failed + verified_without_support + zero Kernel SUPPORT Finds.
+ */
+function isVerifiedWithoutSupportSettlement(mission) {
+  if (mission?.status !== 'failed') return false;
+  if (mission?.lastFailure?.code !== 'verified_without_support') return false;
+  return countMissionSupportedFinds(mission) === 0;
 }
 
 export function onboardingJourney({ connected = false, goalCount = 0, radarEnabled = false, findCount = 0 } = {}) {
