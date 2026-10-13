@@ -7,6 +7,12 @@ const STATUS_COPY = Object.freeze({
   failed: { label: 'Research stopped safely', detail: 'Three bounded attempts were exhausted. The Goal and existing Evidence remain intact.' },
 });
 
+// Kernel settlement codes (apps/local-kernel/mission-verification-settlement.mjs): the Kernel itself
+// settled a single attempt's web.read verification as failed without a Find. Not exhausted retries,
+// not a provider error: a page read (HTTP 200 → Evidence) is RETRIEVED only, never Kernel SUPPORT.
+const VERIFIED_WITHOUT_SUPPORT = 'verified_without_support';
+const WEB_READ_FAILED = 'web_read_failed';
+
 export function presentMission(mission) {
   const status = missionStatusCopy(mission);
   const summary = mission?.resultSummary ?? {};
@@ -18,7 +24,9 @@ export function presentMission(mission) {
     attemptLabel: `${Math.min(Math.max(Number(mission?.attempt ?? 0), 0), 3)} of 3 attempts`,
     received: boundedCount(summary.received), evidenceCreated: boundedCount(summary.evidenceCreated),
     opportunitiesPromoted: finds, timeline: missionTimeline(mission),
-    failureDetail: cleanProviderDetail(mission?.lastFailure?.reason),
+    // Kernel settlement reasons are the Kernel's own verdict, already stated in statusDetail:
+    // never re-label them as "Provider detail".
+    failureDetail: kernelSettlementCode(mission) ? undefined : cleanProviderDetail(mission?.lastFailure?.reason),
   };
 }
 
@@ -53,6 +61,21 @@ function missionStatusCopy(mission) {
     };
   }
   if (mission?.status === 'completed') return STATUS_COPY.completedWithoutForge;
+  const settlement = kernelSettlementCode(mission);
+  if (settlement === VERIFIED_WITHOUT_SUPPORT) {
+    const read = countVerifiedReads(mission?.verificationResults);
+    const pages = read > 0 ? `${read} ${read === 1 ? 'page' : 'pages'}` : 'the candidate pages';
+    return {
+      label: 'Read without Kernel SUPPORT',
+      detail: `The Kernel read ${pages} as Evidence; none passed Kernel SUPPORT, so no Find was forged. Open Efesto to review that Evidence.`,
+    };
+  }
+  if (settlement === WEB_READ_FAILED) {
+    return {
+      label: 'Candidate pages could not be read',
+      detail: 'The Kernel could not read any candidate page, so no page became Evidence and no Find was forged.',
+    };
+  }
   return STATUS_COPY[mission?.status] ?? { label: 'Unknown mission state', detail: 'Inspect the persisted mission before taking action.' };
 }
 
@@ -61,8 +84,15 @@ export function missionTimeline(mission = {}) {
   addEvent(events, mission.createdAt, 'Commission authorized', 'Efesto stored the Goal scope after explicit approval.');
   addEvent(events, mission.claimedAt, `Hermes claimed attempt ${boundedCount(mission.attempt) || 1}`, 'A temporary execution lease was issued.');
   addEvent(events, mission.verifyingAt, 'Kernel verification started', 'Returned material entered local validation; no Kernel SUPPORT Find is sealed yet.');
-  addEvent(events, mission.lastFailure?.recordedAt, `Attempt ${boundedCount(mission.lastFailure?.attempt) || 1} failed safely`, 'The failure was recorded and the retry remained bounded.');
   const finds = countSupportedFinds(mission.verificationResults);
+  const settlement = kernelSettlementCode(mission);
+  if (settlement === VERIFIED_WITHOUT_SUPPORT || settlement === WEB_READ_FAILED) {
+    // Kernel settled the verification itself: no retry is pending and no Find was sealed.
+    addEvent(events, mission.lastFailure?.recordedAt, settlement === VERIFIED_WITHOUT_SUPPORT ? 'Kernel verification settled without SUPPORT' : 'Kernel could not read candidate pages',
+      `${countVerifiedReads(mission.verificationResults)} read · ${boundedCount(mission.resultSummary?.evidenceCreated)} Evidence · ${finds} Finds`);
+  } else {
+    addEvent(events, mission.lastFailure?.recordedAt, `Attempt ${boundedCount(mission.lastFailure?.attempt) || 1} failed safely`, 'The failure was recorded and the retry remained bounded.');
+  }
   const counts = `${boundedCount(mission.resultSummary?.received)} received · ${boundedCount(mission.resultSummary?.evidenceCreated)} Evidence · ${finds} Finds`;
   const forged = typeof mission.forgedAt === 'string'
     || mission.executionPhase === 'forged'
@@ -79,6 +109,22 @@ export function missionTimeline(mission = {}) {
     addEvent(events, mission.completedAt, 'Research ended without Evidence', counts);
   }
   return events.sort((left, right) => left.at.localeCompare(right.at));
+}
+
+function kernelSettlementCode(mission) {
+  if (mission?.status !== 'failed' || countSupportedFinds(mission?.verificationResults) > 0) return undefined;
+  const code = mission?.lastFailure?.code;
+  return code === VERIFIED_WITHOUT_SUPPORT || code === WEB_READ_FAILED ? code : undefined;
+}
+
+/** Pages the Kernel web.read actually fetched (status verified). A read is RETRIEVED, not SUPPORT. */
+function countVerifiedReads(results) {
+  if (!Array.isArray(results)) return 0;
+  let n = 0;
+  for (const entry of results) {
+    if (entry && typeof entry === 'object' && entry.status === 'verified') n += 1;
+  }
+  return boundedCount(n);
 }
 
 /** Count verificationResults with supported === true. opportunitiesPromoted is ignored. */
