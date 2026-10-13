@@ -36,6 +36,9 @@ import {
   missionKnownSourceUrls,
   dropKnownFindings,
 } from './hermes-efesto-adapter.mjs';
+
+// These fixtures run offline: the keyless Wikipedia fallback is covered with a fake fetch elsewhere.
+process.env.HEPHAESTUS_SEARCH_FALLBACK = 'off';
 import { normalizeSearchTelemetry } from '../apps/local-kernel/agent-mission-executor.mjs';
 import { adapterSearchTelemetry } from '../apps/local-kernel/hermes-mission-worker.mjs';
 
@@ -134,14 +137,15 @@ describe('Hermes Efesto adapter', () => {
       process.stdout.write(JSON.stringify({ ok: true, results: base.map((url, i) => ({ title: 'T' + i + ' '.repeat(3) + 'x'.repeat(300), url, description: 'd\\u0007' + i, position: i + 1 })) }));`);
     const { searches, results } = await runPlannedSearches(['q1', 'q2', 'q-fail', 'q-extra'], worker, { env: { PATH: process.env.PATH, OPENROUTER_API_KEY: 'must-not-leak' } });
     // at most 3 queries; the failed one is recorded as sent, with no invented count
-    expect(searches.map(({ results: _shown, ...rest }) => rest)).toEqual([{ query: 'q1', limit: 10, resultCount: 4 }, { query: 'q2', limit: 10, resultCount: 2 }, { query: 'q-fail', limit: 10 }]);
+    expect(searches.map(({ results: _shown, ...rest }) => rest)).toEqual([{ query: 'q1', limit: 10, source: 'ddgs', resultCount: 4 }, { query: 'q2', limit: 10, source: 'ddgs', resultCount: 2 }, { query: 'q-fail', limit: 10, source: 'ddgs' }]);
     // what each search returned, for display: public web URLs only, per query (repeats across queries stay)
     expect(searches[0].results.map((item) => item.url)).toEqual(['https://a.example/1', 'https://www.a.example/1/', 'https://b.example/x']);
     expect(searches[1].results.map((item) => item.url)).toEqual(['https://b.example/x', 'https://c.example/y']);
     expect(searches[0].results[0].title.length).toBeLessThanOrEqual(120);
     expect(searches[2]).not.toHaveProperty('results');
     const requests = (await readFile(seen, 'utf8')).trim().split('\n').map((line) => JSON.parse(line));
-    expect(requests).toEqual([{ query: 'q1', safe_limit: 10 }, { query: 'q2', safe_limit: 10 }, { query: 'q-fail', safe_limit: 10 }]);
+    // the queries run in parallel: same set, any arrival order
+    expect([...requests].sort((a, b) => a.query.localeCompare(b.query))).toEqual([{ query: 'q-fail', safe_limit: 10 }, { query: 'q1', safe_limit: 10 }, { query: 'q2', safe_limit: 10 }]);
     // de-duplicated across queries (www./trailing slash), only web URLs, clipped text without controls
     expect(results.map((item) => item.url)).toEqual(['https://a.example/1', 'https://b.example/x', 'https://c.example/y']);
     expect(results[0].title.length).toBeLessThanOrEqual(120);
@@ -209,7 +213,7 @@ process.stdout.write(${JSON.stringify(JSON.stringify(answer))});
 `, 'utf8');
       const result = await runHermesOneShot({ schemaVersion: 'efesto.hermes-mission.v1', mission }, { executable: process.execPath, searchWorker: WORKER, hermesHome: home, timeoutMs: 4_000, env: { ...process.env, HERMES_HOME: home } });
       expect(result.plannedQueries).toEqual(planned);
-      expect(result.searches.map(({ results: _shown, ...rest }) => rest)).toEqual(planned.map((query) => ({ query, limit: 10, resultCount: 6 })));
+      expect(result.searches.map(({ results: _shown, ...rest }) => rest)).toEqual(planned.map((query) => ({ query, limit: 10, source: 'ddgs', resultCount: 6 })));
       expect(result.searches.every((search) => search.results.length > 0 && search.results.length <= 6)).toBe(true);
       const prompt = await readFile(join(home, 'prompt.txt'), 'utf8');
       expect(prompt).toContain('Search results (6, JSON)');
@@ -241,7 +245,7 @@ process.stdout.write(JSON.stringify({ findings: [{ url: 'https://example.com/a' 
       const empty = fakeSearchWorker('empty', "process.stdout.write(JSON.stringify({ ok: true, results: [] }));");
       await writeFile(join(home, 'chat'), 'process.exit(5);\n', 'utf8');
       const none = await runHermesOneShot(payload, { executable: process.execPath, searchWorker: empty, hermesHome: home, timeoutMs: 4_000, env: { ...process.env, HERMES_HOME: home } });
-      expect(none).toEqual({ findings: [], searches: [{ query: 'grants', limit: 10, resultCount: 0 }], plannedQueries: ['grants'], funnel: { findingsReturned: 0, dropped: {} } });
+      expect(none).toEqual({ findings: [], searches: [{ query: 'grants', limit: 10, source: 'ddgs', resultCount: 0 }], plannedQueries: ['grants'], funnel: { findingsReturned: 0, dropped: {} } });
     } finally {
       await rm(home, { recursive: true, force: true });
     }
