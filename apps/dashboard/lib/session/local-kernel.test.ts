@@ -13,7 +13,7 @@ describe('installed-mode local Kernel transport', () => {
   });
 
   it('reports unavailable when the bridge is disabled (hosted dashboard)', async () => {
-    const fetcher = (async () => new Response('{"ok":false}', { status: 404 })) as unknown as typeof fetch;
+    const fetcher = (async () => new Response('{"ok":true,"enabled":false}')) as unknown as typeof fetch;
     await expect(discoverLocalKernelConnection(undefined, fetcher)).rejects.toThrow('LOCAL_UNAVAILABLE');
   });
 

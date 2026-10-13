@@ -15,7 +15,8 @@ function recorder(response = new Response('{"ok":true}', { status: 200, headers:
 
 describe('local Kernel bridge (installed Windows dashboard)', () => {
   it('is disabled unless the stack configured the token file (hosted builds stay off)', async () => {
-    expect((await localStatus(req('/efesto-local/status'), { env: {} })).status).toBe(404);
+    const off = await localStatus(req('/efesto-local/status'), { env: {} });
+    expect(await off.json()).toEqual({ ok: true, enabled: false });
     const { calls, fetcher } = recorder();
     expect((await proxyToLocalKernel(req('/x'), ['api', 'cases'], { env: {}, fetcher })).status).toBe(404);
     expect(calls).toHaveLength(0);

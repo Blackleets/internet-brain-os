@@ -66,7 +66,8 @@ export function kernelPathFrom(segments: string[]): string | undefined {
 
 export async function localStatus(request: Request, deps: LocalProxyDeps = {}): Promise<Response> {
   const env = deps.env ?? process.env;
-  if (!localProxyEnabled(env)) return json(404, { ok: false, code: 'LOCAL_KERNEL_DISABLED' });
+  // 200 + enabled:false (not 404) so a hosted/dev dashboard probing it logs no browser error.
+  if (!localProxyEnabled(env)) return json(200, { ok: true, enabled: false });
   const guard = checkLocalRequest(request);
   if (!guard.ok) return json(guard.status, { ok: false, code: guard.code });
   return json(200, { ok: true, enabled: true });

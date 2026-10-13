@@ -118,7 +118,9 @@ test('disconnect removes the session credential and returns truthful offline sta
   await page.getByRole('dialog', { name: 'Kernel y agentes' }).getByRole('button', { name: /Gestionar Kernel/ }).click();
   await page.getByRole('button', { name: 'Desconectar', exact: true }).click();
   // Back in Settings after disconnect: the connection card flips to its
-  // offline form (URL/token inputs visible again).
+  // offline form: one auto-connect button, manual URL/token behind Avanzado.
+  await expect(page.getByRole('button', { name: 'Conectar automáticamente' })).toBeVisible();
+  await page.locator('details.connection-advanced > summary').click();
   await expect(page.getByRole('textbox', { name: 'URL del Kernel' })).toBeVisible();
   // The scorecard's truthful unavailable copy appears once no snapshot exists.
   await page.locator('.efesto-sidebar nav').getByRole('button', { name: /^Objetivos/ }).click();

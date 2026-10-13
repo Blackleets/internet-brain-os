@@ -11,8 +11,10 @@ export async function discoverLocalKernelConnection(signal?: AbortSignal, fetche
   if (typeof window === 'undefined' || !LOOPBACK.has(window.location.hostname) || window.location.protocol !== 'http:' || window !== window.top) {
     throw new Error('LOCAL_UNAVAILABLE');
   }
-  const response = await fetcher('/efesto-local/status', { cache: 'no-store', headers: { 'x-efesto-local': '1' }, signal });
-  if (!response.ok) throw new Error('LOCAL_UNAVAILABLE');
+  // Tiny same-origin probe: not tied to the caller's signal (an aborted probe would surface as a failed
+  // request in the browser); the result is simply ignored once the caller aborted.
+  const response = await fetcher('/efesto-local/status', { cache: 'no-store', headers: { 'x-efesto-local': '1' } });
+  if (signal?.aborted || !response.ok) throw new Error('LOCAL_UNAVAILABLE');
   const body = await response.json().catch(() => undefined) as { ok?: unknown; enabled?: unknown } | undefined;
   if (body?.ok !== true || body.enabled !== true) throw new Error('LOCAL_UNAVAILABLE');
   return { baseUrl: normalizeKernelBaseUrl(LOCAL_KERNEL_BASE_URL), token: LOCAL_TRANSPORT };
