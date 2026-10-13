@@ -738,6 +738,16 @@ function goalStatusLabel(surface: GoalSurface, missions?: readonly MissionSummar
   // GoalSurface may omit findCount; the raw Mission rows carry Kernel SUPPORT verdicts.
   const raw = missions?.find((item) => item.id === mission.id);
   const finds = mission.findCount ?? (raw ? countMissionKernelSupportedFinds(raw) : 0);
+  // Fail-close (same proof as Home brainPhase): the Kernel read pages and none passed SUPPORT
+  // (settled failed · verified_without_support, or legacy left verifying). That is an honest
+  // research outcome, not "falló" (red) nor "Kernel leyendo" (still working) — Home, Goals and
+  // the scorecard already treat it as Sin SUPPORT / not a technical failure.
+  if (!mission.blockedReason && (mission.workState === 'failed' || mission.workState === 'verifying')) {
+    const proof = raw && Array.isArray(raw.verificationResults)
+      ? { workState: mission.workState, verificationResults: raw.verificationResults }
+      : mission;
+    if (missionVerifiedWithoutSupport(proof)) return { label: 'sin SUPPORT', tone: 'idle' };
+  }
   switch (mission.workState) {
     case 'forged': return finds > 0 ? { label: `${finds} ${finds === 1 ? 'Find' : 'Finds'} · forjado`, tone: 'gold' } : { label: 'investigación terminada', tone: 'idle' };
     case 'verifying': return { label: 'Kernel leyendo', tone: 'hot' };
