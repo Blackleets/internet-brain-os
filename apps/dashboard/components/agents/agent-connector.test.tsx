@@ -80,9 +80,11 @@ describe('AgentConnector simple flow', () => {
   it('the logo files exist in public/ and have recorded provenance', async () => {
     const { existsSync, readFileSync } = await import('node:fs');
     const { join } = await import('node:path');
-    const prov = JSON.parse(readFileSync(join(process.cwd(), 'public/brand/agents/provenance.json'), 'utf8'));
+    // Runs from apps/dashboard (pnpm --filter) or from the repo root (pnpm test).
+    const dir = [join(process.cwd(), 'public/brand/agents'), join(process.cwd(), 'apps/dashboard/public/brand/agents')].find((d) => existsSync(d)) ?? '';
+    const prov = JSON.parse(readFileSync(join(dir, 'provenance.json'), 'utf8'));
     for (const file of ['hermes.png', 'claude.png', 'cursor.png']) {
-      expect(existsSync(join(process.cwd(), 'public/brand/agents', file))).toBe(true);
+      expect(existsSync(join(dir, file))).toBe(true);
       expect(prov.assets.some((a: { file: string; source: string }) => a.file === file && a.source.startsWith('https://'))).toBe(true);
     }
   });
