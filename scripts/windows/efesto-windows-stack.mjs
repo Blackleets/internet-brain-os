@@ -7,6 +7,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm, writeFile, open } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readLauncherConfig, writeLauncherConfig } from '../efesto-bootstrap.mjs';
 
 export const KERNEL_PORT = 4310;
 export const DASHBOARD_PORT = 3311;
@@ -23,7 +24,12 @@ export function windowsStackPaths(env = process.env, repoRoot = DEFAULT_REPO_ROO
     ? resolve(env.EFESTO_HOME)
     : env.LOCALAPPDATA ? join(env.LOCALAPPDATA, 'Efesto') : join(env.HOME ?? env.USERPROFILE ?? '.', '.efesto');
   const dataDir = join(base, 'kernel-data');
-  const hermesRoot = env.LOCALAPPDATA ? join(env.LOCALAPPDATA, 'hermes', 'hermes-agent') : join(base, 'hermes-agent');
+  // Efesto-owned pinned Hermes (installed when the user's Hermes is not at the validated revision)
+  // wins over the user's standard install; EFESTO_HERMES_ROOT is set by the installer.
+  const ownHermes = join(base, 'hermes-agent');
+  const hermesRoot = env.EFESTO_HERMES_ROOT
+    ? resolve(env.EFESTO_HERMES_ROOT)
+    : existsSync(ownHermes) || !env.LOCALAPPDATA ? ownHermes : join(env.LOCALAPPDATA, 'hermes', 'hermes-agent');
   const win = (env.EFESTO_PLATFORM ?? process.platform) === 'win32';
   return {
     repoRoot,
@@ -122,7 +128,13 @@ export async function writeConfig(paths) {
   const next = renderWorkerEnv(paths);
   const prev = existsSync(paths.workerEnvFile) ? await readFile(paths.workerEnvFile, 'utf8') : '';
   if (prev !== next) await writeFile(paths.workerEnvFile, next, 'utf8');
-  return { changed: prev !== next };
+  // Persist the Hermes the Kernel must certify in the launcher config, so a Kernel started
+  // later (login autostart, "Iniciar Efesto") certifies the same executable status reports.
+  const launcherOpts = { env: kernelEnv(paths), cwd: paths.repoRoot };
+  const current = await readLauncherConfig(launcherOpts);
+  const launcherChanged = current.hermesExecutable !== paths.hermesExecutable || Number(current.port) !== KERNEL_PORT;
+  if (launcherChanged) await writeLauncherConfig({ hermesExecutable: paths.hermesExecutable, port: KERNEL_PORT }, launcherOpts);
+  return { changed: prev !== next || launcherChanged };
 }
 
 async function ensureOllama(paths, state) {

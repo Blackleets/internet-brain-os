@@ -131,11 +131,35 @@ describe('installer native calls under Windows PowerShell 5.1', () => {
     expect(installer).toMatch(/function Invoke-Checked[\s\S]*?\$r = Invoke-Native \$Exe \$Arguments\s*\n\s*if \(\$r\.Code -ne 0\)/);
     expect(installer).not.toContain('$LASTEXITCODE -ne 0) { throw');
   });
-  it('keeps an existing Hermes at its own revision and only adds ddgs', () => {
-    const block = installer.slice(installer.indexOf('if (Test-Path $HermesExe) {'), installer.indexOf('if (Test-Path $HermesRoot) {'));
-    expect(block).toContain("'rev-parse'");
-    expect(block).not.toContain("'checkout'");
-    expect(block).toContain("'ddgs==9.16.0'");
-    expect(block).toContain("Invoke-Native $venvPython @('-c', 'import ddgs') -Quiet");
+  it('uses the user Hermes only at the validated revision, otherwise installs an Efesto-owned pinned copy', () => {
+    const fn = installer.slice(installer.indexOf('function Ensure-HermesAgent {'), installer.indexOf('function Ensure-OllamaModel'));
+    expect(installer).toContain("$EfestoHermesRoot = Join-Path $env:LOCALAPPDATA 'Efesto\\hermes-agent'");
+    expect(fn).toMatch(/\$rev\.StartsWith\(\$HermesRevision\)[\s\S]*Use-HermesRoot \$UserHermesRoot/);
+    expect(fn).toMatch(/Install-PinnedHermes \$EfestoHermesRoot[\s\S]*Use-HermesRoot \$EfestoHermesRoot/);
+    const pinned = installer.slice(installer.indexOf('function Install-PinnedHermes'), installer.indexOf('function Ensure-HermesAgent {'));
+    expect(pinned).toContain("'checkout', '--quiet', $HermesRevision");
+    expect(pinned).toContain('"$Root[ddgs]"');
+    // The user's Hermes is never checked out or updated.
+    expect(fn).not.toContain("'checkout'");
+    expect(installer).not.toMatch(/'-C', \$UserHermesRoot, 'checkout'/);
+  });
+  it('exports the chosen Hermes to every later step (install-efesto.ps1, launcher, Kernel, stack)', () => {
+    const use = installer.slice(installer.indexOf('function Use-HermesRoot'), installer.indexOf('function Install-PinnedHermes'));
+    expect(use).toContain('$env:HEPHAESTUS_HERMES_EXECUTABLE = $script:HermesExe');
+    expect(use).toContain('$env:EFESTO_HERMES_ROOT = $Root');
+    expect(installer.indexOf('Ensure-HermesAgent\n')).toBeLessThan(installer.indexOf("scripts\\install-efesto.ps1"));
+  });
+  it('prefers EFESTO_HERMES_ROOT, then the Efesto-owned copy, then the user Hermes', () => {
+    const p = windowsStackPaths({ ...winEnv, EFESTO_HERMES_ROOT: 'C:\\Users\\Usuario\\AppData\\Local\\Efesto\\hermes-agent' }, repo);
+    expect(p.hermesExecutable.replaceAll('/', '\\')).toMatch(/Efesto\\hermes-agent\\venv\\Scripts\\hermes\.exe$/);
+  });
+  it('persists the Hermes executable and port 4310 in the launcher config status reads', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'efesto-cfg-'));
+    const p = windowsStackPaths({ EFESTO_HOME: home, EFESTO_HERMES_ROOT: join(home, 'hermes-agent') }, repo);
+    await writeConfig(p);
+    const cfg = JSON.parse(await readFile(join(p.dataDir, 'efesto-launcher-config.json'), 'utf8'));
+    expect(cfg.hermesExecutable).toBe(p.hermesExecutable);
+    expect(cfg.port).toBe(KERNEL_PORT);
+    expect(KERNEL_PORT).toBe(4310);
   });
 });

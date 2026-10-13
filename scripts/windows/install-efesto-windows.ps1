@@ -20,7 +20,11 @@ Set-Location $RepoRoot
 $HermesRepo = 'https://github.com/NousResearch/hermes-agent.git'
 $HermesRevision = 'ae3f9f9c'
 $Model = 'qwen3.5:2b'
-$HermesRoot = Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent'
+# The user's own Hermes is never modified beyond adding the ddgs extra. If it is not at the
+# validated revision, Efesto installs its own pinned copy in %LOCALAPPDATA%\Efesto\hermes-agent.
+$UserHermesRoot = Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent'
+$EfestoHermesRoot = Join-Path $env:LOCALAPPDATA 'Efesto\hermes-agent'
+$HermesRoot = $UserHermesRoot
 $HermesExe = Join-Path $HermesRoot 'venv\Scripts\hermes.exe'
 
 $script:StepNumber = 0
@@ -133,47 +137,85 @@ function Ensure-Prerequisites {
   if (-not (Test-Command 'ollama')) { throw 'Ollama no está disponible. Cierra esta ventana y vuelve a ejecutar "Instalar Efesto".' }
 }
 
+function Get-HermesRevision([string]$Root) {
+  if (-not (Test-Path (Join-Path $Root '.git'))) { return '' }
+  $rev = Invoke-Native 'git' @('-C', $Root, 'rev-parse', '--short=11', 'HEAD') -Quiet
+  if ($rev.Code -eq 0 -and $rev.Output) { return ([string]$rev.Output).Trim() }
+  return ''
+}
+
+function Ensure-HermesDdgs([string]$Root) {
+  $venvPython = Join-Path $Root 'venv\Scripts\python.exe'
+  if ($DryRun) { Write-Info '(simulación) se comprobaría ddgs.'; return }
+  $probe = Invoke-Native $venvPython @('-c', 'import ddgs') -Quiet
+  if ($probe.Code -eq 0) { Write-Ok 'Hermes Agent con búsqueda DuckDuckGo.'; return }
+  Write-Info 'A Hermes le falta la búsqueda DuckDuckGo; se añade (ddgs==9.16.0).'
+  Invoke-Checked $venvPython @('-m', 'pip', 'install', '--quiet', 'ddgs==9.16.0') 'No se pudo añadir la búsqueda a Hermes'
+  $probe = Invoke-Native $venvPython @('-c', 'import ddgs') -Quiet
+  if ($probe.Code -ne 0) { throw 'Se instaló ddgs pero Hermes sigue sin poder importarlo.' }
+  Write-Ok 'Búsqueda DuckDuckGo añadida a Hermes Agent.'
+}
+
+function Use-HermesRoot([string]$Root) {
+  $script:HermesRoot = $Root
+  $script:HermesExe = Join-Path $Root 'venv\Scripts\hermes.exe'
+  # Inherited by install-efesto.ps1, the launcher repair, the Kernel and efesto-windows-stack.mjs.
+  $env:HEPHAESTUS_HERMES_EXECUTABLE = $script:HermesExe
+  $env:EFESTO_HERMES_ROOT = $Root
+  Write-Info "Efesto usará Hermes en $script:HermesExe"
+}
+
+function Install-PinnedHermes([string]$Root) {
+  if (Test-Path $Root) {
+    if (-not (Test-Path (Join-Path $Root '.git'))) { throw "Existe $Root pero no es una instalación de Hermes reconocible. Renómbrala y vuelve a ejecutar." }
+    Invoke-Checked 'git' @('-C', $Root, 'fetch', '--quiet', 'origin') 'No se pudo actualizar la copia de Hermes de Efesto'
+  } else {
+    if (-not $DryRun) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Root) | Out-Null }
+    Invoke-Checked 'git' @('clone', '--quiet', $HermesRepo, $Root) 'No se pudo descargar Hermes Agent'
+  }
+  Invoke-Checked 'git' @('-C', $Root, 'checkout', '--quiet', $HermesRevision) 'No se pudo fijar la versión de Hermes Agent'
+  $python = Get-HermesPython
+  if ($DryRun -and -not $python) { $python = 'py' }
+  $venv = Join-Path $Root 'venv'
+  if (-not (Test-Path (Join-Path $venv 'Scripts\python.exe'))) {
+    Invoke-Checked $python @('-m', 'venv', $venv) 'No se pudo crear el entorno de Python de Hermes'
+  }
+  $venvPython = Join-Path $venv 'Scripts\python.exe'
+  Invoke-Checked $venvPython @('-m', 'pip', 'install', '--quiet', '--upgrade', 'pip') 'No se pudo actualizar pip'
+  Invoke-Checked $venvPython @('-m', 'pip', 'install', '--quiet', '-e', "$Root[ddgs]") 'No se pudo instalar Hermes Agent'
+  if (-not $DryRun -and -not (Test-Path (Join-Path $venv 'Scripts\hermes.exe'))) { throw 'Hermes se instaló pero no se encuentra hermes.exe.' }
+  if ($DryRun) { Write-Info "(simulación) Hermes Agent $HermesRevision quedaría instalado en $Root." } else { Write-Ok "Hermes Agent $HermesRevision instalado en $Root." }
+}
+
 function Ensure-HermesAgent {
   Write-Step 'Instalando Hermes Agent (búsqueda web DuckDuckGo)'
   if (-not [string]::IsNullOrWhiteSpace($env:HEPHAESTUS_HERMES_EXECUTABLE)) {
     Write-Ok "Se usa el Hermes configurado en HEPHAESTUS_HERMES_EXECUTABLE; no se modifica."
     return
   }
-  if (Test-Path $HermesExe) {
-    $venvPython = Join-Path $HermesRoot 'venv\Scripts\python.exe'
-    # An existing install is kept as it is (no checkout of the user's Hermes); only the search extra is added.
-    if (Test-Path (Join-Path $HermesRoot '.git')) {
-      $rev = Invoke-Native 'git' @('-C', $HermesRoot, 'rev-parse', '--short=11', 'HEAD') -Quiet
-      if ($rev.Code -eq 0 -and $rev.Output) {
-        if ($rev.Output.StartsWith($HermesRevision)) { Write-Info "Hermes Agent existente en la revisión validada $($rev.Output)." }
-        else { Write-Info "Hermes Agent existente en la revisión $($rev.Output) (Efesto se valida con $HermesRevision); se conserva sin cambiarla." }
-      }
+  # 1. The user's Hermes is used only when it is exactly the validated revision.
+  $userExe = Join-Path $UserHermesRoot 'venv\Scripts\hermes.exe'
+  if (Test-Path $userExe) {
+    $rev = Get-HermesRevision $UserHermesRoot
+    if ($rev -and $rev.StartsWith($HermesRevision)) {
+      Write-Info "Hermes Agent existente en la revisión validada $rev."
+      Ensure-HermesDdgs $UserHermesRoot
+      Use-HermesRoot $UserHermesRoot
+      return
     }
-    if ($DryRun) { Write-Ok 'Hermes Agent ya instalado (simulación: no se comprueba ddgs).'; return }
-    $probe = Invoke-Native $venvPython @('-c', 'import ddgs') -Quiet
-    if ($probe.Code -eq 0) { Write-Ok 'Hermes Agent ya instalado con búsqueda DuckDuckGo.'; return }
-    Write-Info 'Hermes está instalado pero le falta la búsqueda DuckDuckGo; se añade (ddgs==9.16.0).'
-    Invoke-Checked $venvPython @('-m', 'pip', 'install', '--quiet', 'ddgs==9.16.0') 'No se pudo añadir la búsqueda a Hermes'
-    $probe = Invoke-Native $venvPython @('-c', 'import ddgs') -Quiet
-    if ($probe.Code -ne 0) { throw 'Se instaló ddgs pero Hermes sigue sin poder importarlo.' }
-    Write-Ok 'Búsqueda DuckDuckGo añadida a Hermes Agent.'
-    return
+    $shown = if ($rev) { $rev } else { 'desconocida' }
+    Write-Info "Tu Hermes Agent está en la revisión $shown (Efesto se valida con $HermesRevision); no se toca. Efesto instala su propia copia fijada."
   }
-  if (Test-Path $HermesRoot) {
-    if (-not (Test-Path (Join-Path $HermesRoot '.git'))) { throw "Existe $HermesRoot pero no es una instalación de Hermes reconocible. Renómbrala y vuelve a ejecutar." }
+  # 2. Otherwise Efesto's own pinned copy (reused when already at the pin).
+  $ownExe = Join-Path $EfestoHermesRoot 'venv\Scripts\hermes.exe'
+  $ownRev = Get-HermesRevision $EfestoHermesRoot
+  if ((Test-Path $ownExe) -and $ownRev -and $ownRev.StartsWith($HermesRevision)) {
+    Write-Info "Copia de Hermes de Efesto ya en $ownRev."
+    Ensure-HermesDdgs $EfestoHermesRoot
   } else {
-    if (-not $DryRun) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $HermesRoot) | Out-Null }
-    Invoke-Checked 'git' @('clone', '--quiet', $HermesRepo, $HermesRoot) 'No se pudo descargar Hermes Agent'
+    Install-PinnedHermes $EfestoHermesRoot
   }
-  Invoke-Checked 'git' @('-C', $HermesRoot, 'checkout', '--quiet', $HermesRevision) 'No se pudo fijar la versión de Hermes Agent'
-  $python = Get-HermesPython
-  if ($DryRun -and -not $python) { $python = 'py' }
-  Invoke-Checked $python @('-m', 'venv', (Join-Path $HermesRoot 'venv')) 'No se pudo crear el entorno de Python de Hermes'
-  $venvPython = Join-Path $HermesRoot 'venv\Scripts\python.exe'
-  Invoke-Checked $venvPython @('-m', 'pip', 'install', '--quiet', '--upgrade', 'pip') 'No se pudo actualizar pip'
-  Invoke-Checked $venvPython @('-m', 'pip', 'install', '--quiet', '-e', "$HermesRoot[ddgs]") 'No se pudo instalar Hermes Agent'
-  if (-not $DryRun -and -not (Test-Path $HermesExe)) { throw 'Hermes se instaló pero no se encuentra hermes.exe.' }
-  if ($DryRun) { Write-Info '(simulación) Hermes Agent quedaría instalado.' } else { Write-Ok 'Hermes Agent instalado.' }
+  Use-HermesRoot $EfestoHermesRoot
 }
 
 function Ensure-OllamaModel {
