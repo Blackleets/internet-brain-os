@@ -1,0 +1,168 @@
+/* EFESTO v3 · premium chrome (Phase 3).
+   Chrome only: tokens, type, borders, cards, buttons, inputs, header/nav, panels, focus.
+   Loaded last. Deliberately never selects .forge-live (anvil, spider, canvases, effects stay exactly as they are). */
+
+:root {
+  /* surfaces: warm near-black, three steps, each with a faint top light */
+  --pc-bg: #080706;
+  --pc-s1: #0e0c0a;
+  --pc-s2: #131110;
+  --pc-s3: #1a1715;
+  --pc-grad: linear-gradient(180deg, rgba(255, 228, 200, .028), rgba(255, 228, 200, 0) 42%);
+  /* hairlines: warm alpha instead of grey, plus an inner top highlight */
+  --pc-line: rgba(255, 214, 178, .075);
+  --pc-line-2: rgba(255, 214, 178, .13);
+  --pc-line-hi: inset 0 1px 0 rgba(255, 236, 216, .045);
+  --pc-shadow: 0 1px 0 rgba(0, 0, 0, .4), 0 18px 48px -18px rgba(0, 0, 0, .7);
+  /* brand */
+  --pc-ember: #ee8748;
+  --pc-ember-deep: #c8622a;
+  --pc-gold: #f5c451;
+  --pc-text: #f4eee7;
+  --pc-text-2: #cbc2b8;
+  --pc-muted: #938a82;
+  /* focus: a two-tone ring (bg gap + gold) — on brand, high contrast, never a filled box */
+  --pc-ring: 0 0 0 2px var(--pc-bg), 0 0 0 3.5px rgba(245, 196, 81, .85);
+  --pc-ring-soft: 0 0 0 1px rgba(238, 135, 72, .55), 0 0 0 5px rgba(238, 135, 72, .09);
+  --pc-r-card: 14px;
+  --pc-r-ctl: 10px;
+}
+
+/* ---------- typography ---------- */
+.efesto-product { font-family: var(--v3-sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-feature-settings: 'ss01', 'cv11'; }
+.efesto-product .workspace-heading h1 { font-size: 30px; font-weight: 620; letter-spacing: -.025em; line-height: 1.1; color: var(--pc-text); }
+.efesto-product .workspace-heading p { color: var(--pc-muted); font-size: 13px; line-height: 1.55; }
+.efesto-product .workspace-heading small,
+.efesto-product .nav-label,
+.efesto-product .connection-card header small,
+.efesto-product .readiness-card header small,
+.efesto-product .find-card .lead-label { font-family: var(--v3-mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: #8b7867; }
+.efesto-product .find-card h3 { letter-spacing: -.012em; font-weight: 620; line-height: 1.3; }
+
+/* ---------- shell: sidebar + topbar ---------- */
+.efesto-product .efesto-sidebar { background: linear-gradient(180deg, #0c0a09, #090807); border-right: 1px solid var(--pc-line); }
+.efesto-product .efesto-sidebar .nav-group button,
+.efesto-product .efesto-sidebar .sidebar-system button { border-radius: var(--pc-r-ctl); border: 1px solid transparent; color: var(--pc-text-2); transition: background .15s ease, border-color .15s ease, color .15s ease; }
+.efesto-product .efesto-sidebar .nav-group button:hover,
+.efesto-product .efesto-sidebar .sidebar-system button:hover { background: rgba(255, 220, 190, .035); color: var(--pc-text); }
+.efesto-product .efesto-sidebar .nav-group button.active,
+.efesto-product .efesto-sidebar .sidebar-system button.active { background: var(--pc-grad), var(--pc-s2); border-color: var(--pc-line-2); box-shadow: var(--pc-line-hi); color: var(--pc-text); }
+.efesto-product .efesto-sidebar .nav-group button.active::before,
+.efesto-product .efesto-sidebar .sidebar-system button.active::before { background: linear-gradient(180deg, var(--pc-gold), var(--pc-ember)); }
+.efesto-product .new-goal { border: 1px solid rgba(238, 135, 72, .38); background: linear-gradient(180deg, rgba(238, 135, 72, .16), rgba(238, 135, 72, .06)); box-shadow: var(--pc-line-hi), 0 8px 24px -12px rgba(238, 135, 72, .45); border-radius: var(--pc-r-ctl); color: #fbe6d4; font-weight: 600; letter-spacing: .01em; }
+.efesto-product .new-goal:hover { border-color: rgba(245, 196, 81, .5); }
+.efesto-product .new-chat { border: 1px solid var(--pc-line-2); background: var(--pc-s2); border-radius: var(--pc-r-ctl); }
+.efesto-product .sidebar-goals > * { border-radius: var(--pc-r-ctl); }
+.efesto-product .forge-surface-bar,
+.efesto-product .efesto-topbar { border-bottom: 1px solid var(--pc-line); background: linear-gradient(180deg, rgba(8, 7, 6, .92), rgba(8, 7, 6, .78)); backdrop-filter: blur(14px) saturate(1.1); }
+.efesto-product .forge-mode-switcher { padding: 3px; border: 1px solid var(--pc-line-2); border-radius: 12px; background: var(--pc-s1); box-shadow: var(--pc-line-hi); }
+.efesto-product .forge-mode-switcher button { border-radius: 9px; letter-spacing: .01em; }
+.efesto-product .forge-mode-switcher button.active { background: var(--pc-grad), var(--pc-s3); border: 1px solid rgba(238, 135, 72, .35); color: var(--pc-text); box-shadow: 0 6px 18px -10px rgba(238, 135, 72, .5); }
+.efesto-product .forge-state-action,
+.efesto-product .top-actions > button,
+.efesto-product .kernel-summary { border: 1px solid var(--pc-line-2); border-radius: 999px; background: var(--pc-s1); box-shadow: var(--pc-line-hi); }
+
+/* ---------- cards & panels ---------- */
+.efesto-product .find-card,
+.efesto-product .connection-card,
+.efesto-product .readiness-card,
+.efesto-product .record-list > *,
+.efesto-product .product-scorecard-view,
+.efesto-product .case-list,
+.efesto-product .evidence-detail,
+.efesto-product .model-list,
+.efesto-product .provider-form {
+  border: 1px solid var(--pc-line);
+  border-radius: var(--pc-r-card);
+  background: var(--pc-grad), var(--pc-s1);
+  box-shadow: var(--pc-line-hi), var(--pc-shadow);
+}
+.efesto-product .find-card { padding: 18px 18px 16px; transition: border-color .18s ease, transform .18s ease; }
+.efesto-product .find-card:hover { border-color: var(--pc-line-2); }
+.efesto-product .find-card .kernel-support { border-radius: 999px; border-color: rgba(143, 209, 158, .28); background: rgba(143, 209, 158, .07); letter-spacing: .1em; }
+.efesto-product .find-card .find-next { border: 1px solid var(--pc-line); border-radius: var(--pc-r-ctl); background: var(--pc-s2); }
+.efesto-product .kernel-id-chip { border-color: var(--pc-line-2); border-radius: 8px; background: var(--pc-s2); }
+.efesto-product .workspace-heading { border-bottom: 1px solid var(--pc-line); padding-bottom: 28px; }
+.efesto-product .workspace-heading > span { border: 1px solid rgba(238, 135, 72, .3); border-radius: 12px; background: radial-gradient(120% 120% at 30% 20%, rgba(238, 135, 72, .18), rgba(238, 135, 72, .03)); box-shadow: var(--pc-line-hi); }
+.efesto-product .readiness-row { border-color: var(--pc-line) !important; }
+
+/* ---------- buttons ---------- */
+.efesto-product .primary-action,
+.efesto-product .danger-action,
+.efesto-product .find-actions button,
+.efesto-product .empty-state-action {
+  min-height: 36px;
+  border-radius: var(--pc-r-ctl);
+  font-weight: 560;
+  letter-spacing: .005em;
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, color .15s ease;
+}
+.efesto-product .primary-action { border: 1px solid rgba(255, 190, 140, .35); background: linear-gradient(180deg, #f0904f, var(--pc-ember-deep)); color: #1a0f08; box-shadow: inset 0 1px 0 rgba(255, 240, 225, .35), 0 10px 24px -12px rgba(238, 135, 72, .7); }
+.efesto-product .primary-action:hover { background: linear-gradient(180deg, #f59c5e, #d26c32); }
+.efesto-product .danger-action { border: 1px solid rgba(227, 118, 95, .35); background: rgba(227, 118, 95, .07); color: #f1c0b3; }
+.efesto-product .danger-action:hover { background: rgba(227, 118, 95, .12); }
+.efesto-product .find-actions button { border: 1px solid var(--pc-line-2); background: var(--pc-s2); color: var(--pc-text-2); box-shadow: var(--pc-line-hi); }
+.efesto-product .find-actions button:hover { border-color: rgba(245, 196, 81, .35); color: var(--pc-text); }
+
+/* ---------- inputs ---------- */
+.efesto-product .connection-card input,
+.efesto-product .provider-form input,
+.efesto-product .provider-form select,
+.efesto-product .settings-card input,
+.efesto-product .settings-card select {
+  border: 1px solid var(--pc-line-2);
+  border-radius: var(--pc-r-ctl);
+  background: var(--pc-bg);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .45);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.efesto-product .connection-card input:focus,
+.efesto-product .provider-form input:focus,
+.efesto-product .provider-form select:focus,
+.efesto-product .settings-card input:focus,
+.efesto-product .settings-card select:focus { outline: 2px solid transparent; border-color: rgba(238, 135, 72, .6); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .45), var(--pc-ring-soft); }
+
+/* ---------- Goal composer: the field is the forge mouth, not an orange box ---------- */
+.efesto-product .forge-composer {
+  border: 1px solid var(--pc-line-2);
+  border-radius: 18px;
+  background: var(--pc-grad), linear-gradient(180deg, #151210, #110f0d);
+  box-shadow: var(--pc-line-hi), 0 22px 60px -22px rgba(0, 0, 0, .85);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.efesto-product .forge-composer:focus-within {
+  border-color: rgba(238, 135, 72, .45);
+  box-shadow:
+    var(--pc-line-hi),
+    0 0 0 4px rgba(238, 135, 72, .07),
+    0 -1px 0 0 rgba(245, 196, 81, .22) inset,
+    0 22px 60px -20px rgba(238, 135, 72, .28);
+}
+/* The textarea itself never draws a box; keyboard users still see the composer ring above. */
+.efesto-product .forge-composer textarea,
+.efesto-product .forge-composer textarea:focus,
+.efesto-product .forge-composer textarea:focus-visible,
+.efesto-product .goal-dock textarea:focus-visible { outline: 2px solid transparent; outline-offset: 0; box-shadow: none; }
+.efesto-product .forge-composer textarea { caret-color: var(--pc-gold); color: var(--pc-text); font-size: 15px; letter-spacing: -.005em; }
+.efesto-product .forge-composer textarea::placeholder { color: #6f665f; }
+.efesto-product .forge-composer textarea::selection { background: rgba(238, 135, 72, .32); }
+.efesto-product .forge-send { border-radius: 12px; background: linear-gradient(180deg, #f39a5c, var(--pc-ember-deep)); box-shadow: inset 0 1px 0 rgba(255, 240, 225, .35), 0 8px 20px -10px rgba(238, 135, 72, .8); }
+.efesto-product .forge-kernel-gate,
+.efesto-product .forge-shortcut { font-family: var(--v3-mono); font-size: 10.5px; letter-spacing: .04em; }
+
+/* ---------- focus: one accessible, on-brand ring for every control (outside the forge scene) ---------- */
+.efesto-product button:not(.forge-live *):focus-visible,
+.efesto-product a:not(.forge-live *):focus-visible,
+.efesto-product select:not(.forge-live *):focus-visible,
+.efesto-product summary:not(.forge-live *):focus-visible,
+.efesto-product input[type='checkbox']:focus-visible {
+  outline: 2px solid transparent; /* kept for Windows high-contrast */
+  outline-offset: 2px;
+  box-shadow: var(--pc-ring);
+}
+@media (forced-colors: active) {
+  .efesto-product .forge-composer:focus-within { outline: 2px solid Highlight; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .efesto-product .forge-composer, .efesto-product .find-card, .efesto-product .primary-action { transition: none; }
+}
