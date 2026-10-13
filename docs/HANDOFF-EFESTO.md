@@ -252,4 +252,36 @@ For Lewis's PC (Windows, `C:\Users\Usuario`). Everything a user touches is in Sp
 - Logs are in `%LOCALAPPDATA%\Efesto\logs\`.
 - Worker pause file: `%LOCALAPPDATA%\Efesto\hermes-worker.pause`.
 - `queue-worker.mjs` now reads `EFESTO_REPO_ROOT`, `EFESTO_KERNEL_URL`, `EFESTO_KERNEL_TOKEN_FILE`, `EFESTO_WORKER_PAUSE_FILE` and `EFESTO_WORKER_RUNS_FILE`. The box defaults are unchanged.
+### 10.1 EfestoSetup.exe — one download, double-click, done (2026-10-14)
+
+Goal from Lewis: install like the ChatGPT/Grok desktop apps. No browser extension in the default flow, no consoles, no pairing codes.
+
+- **Installer:** `installer/windows/efesto.iss` (Inno Setup 6). It is built by `.github/workflows/windows-installer.yml` on `windows-latest` and uploaded as the **`EfestoSetup`** artifact of that workflow run.
+  - Per-user install, no admin (`PrivilegesRequired=lowest`). The program goes to `%LOCALAPPDATA%\Efesto\app`; data stays in `%LOCALAPPDATA%\Efesto` (kernel-data, hermes-agent, node, logs).
+  - It copies the tracked sources (`git archive`) and runs `scripts/windows/install-efesto-windows.ps1 -SkipShortcuts -NoStart -ProgressFile … -LogFile …` in a hidden window.
+  - The wizard shows a Spanish progress page ("Paso N de 9"). The full log goes to `%LOCALAPPDATA%\Efesto\logs\instalacion.log`.
+  - If something fails, the user gets a Spanish message with the log path. Re-running the setup is safe.
+- **Prerequisites, all per user:**
+  - Node 22 is a portable `v22.23.3` zip in `%LOCALAPPDATA%\Efesto\node`, checked against the official SHA-256. The MSI from `OpenJS.NodeJS.LTS` is no longer used.
+  - Python 3.14 via `winget --scope user`.
+  - Git and Ollama via winget `--scope user`. If no user-scope installer exists, it falls back to the standard winget installer, which may ask for UAC.
+  - Hermes pinned to `ae3f9f9c` and `qwen3.5:2b`, as before.
+  - Kernel and dashboard as a production build (`next build` / `next start -H 127.0.0.1`).
+- **Shortcuts:** "Efesto" on the desktop and in the Start menu, plus "Detener Efesto" and "Desinstalar Efesto" in the Start menu.
+  - They run `wscript scripts/windows/efesto-launch.vbs open|stop` (window style 0, so no console). That calls `efesto-windows-stack.mjs open`: it starts Ollama → Kernel → dashboard → worker hidden, then opens `http://127.0.0.1:3311/` (the spider home) with `rundll32 url.dll,FileProtocolHandler`.
+  - Errors show a Spanish MsgBox. The log is in `logs\launcher.log`.
+- **No extension, no pairing:** the dashboard has a same-origin loopback bridge, `app/efesto-local/{status,kernel/[...path]}` → `lib/server/local-kernel-proxy.ts`.
+  - It is enabled only when the stack starts `next start` with `EFESTO_LOCAL_KERNEL_TOKEN_FILE`, so it is off on Vercel.
+  - The server reads the token file the Kernel writes and adds `x-hephaestus-token`. The token never reaches the browser, URLs, logs or responses.
+  - Requests are refused unless all of these hold: a loopback `Host` (anti DNS-rebinding), `Origin` equal to its own origin, `Sec-Fetch-Site` same-origin, the `x-efesto-local: 1` header (which forces a CORS preflight, so other sites cannot call it), and a path of only `/health|/status|/bootstrap/status|/api/*`. The Kernel URL must be loopback.
+  - The browser side (`lib/session/local-kernel.ts`, sentinel `efesto-local-transport-v1`, never stored in sessionStorage) auto-connects on load before trying the optional extension.
+  - The Kernel starts with `HEPHAESTUS_PAIRING=0` and `EFESTO_PAIRING_OPTIONAL=1`. Launcher repair then reuses an unpaired Kernel instead of restarting it to show a pairing code.
+- **The extension is optional:** `install-efesto.ps1 -SkipExtension -SkipLauncherRepair` is used by the one-click flow. `Iniciar Efesto.cmd` no longer copies the token. `copy-token` stays only for manual or extension pairing.
+- **Uninstall:** "Efesto" appears in Apps & features (HKCU). The uninstaller stops Efesto, removes `%LOCALAPPDATA%\Efesto\app` and the shortcuts, and asks (default No) whether to also delete the data in `%LOCALAPPDATA%\Efesto`.
+- **Pending and limits:**
+  - **No code signing yet**, so SmartScreen shows "Windows protegió su PC" (Más información → Ejecutar de todas formas).
+  - CI only smoke-tests a silent `/DRYRUN=1` install and uninstall. The real downloads (winget, Hermes pip, the 2-3 GB model, `pnpm install`/`next build`) have not been exercised on a real PC.
+  - The installer needs internet and winget (App Installer). x64 only.
+  - `publicLaunchApproved` stays false.
+
 - **Not yet verified on a real Windows PC.** CI (`windows-one-click.yml`) only parses the scripts and runs the dry run and config generation on windows-2022. No winget installs, Hermes pip install, model pull or real start have been exercised.

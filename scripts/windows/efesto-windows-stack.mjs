@@ -1,7 +1,9 @@
 // One-click Windows stack for Efesto: Ollama (qwen3.5:2b) → Kernel :4310 (via the existing launcher)
 // → dashboard :3311 (next start) → Hermes queue worker (supervised). Idempotent: anything already
 // healthy is reused, never duplicated. Tokens are never printed; the Kernel creates and owns its token.
-// Usage: node scripts/windows/efesto-windows-stack.mjs [plan|write-config|start|stop|status|supervise-worker]
+// The dashboard is a production build (next start) bound to 127.0.0.1 that reaches the Kernel through its own
+// same-origin loopback bridge (EFESTO_LOCAL_KERNEL_TOKEN_FILE): no browser extension and no pairing code.
+// Usage: node scripts/windows/efesto-windows-stack.mjs [plan|write-config|start|open|stop|status|supervise-worker]
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm, writeFile, open } from 'node:fs/promises';
@@ -84,7 +86,21 @@ export function parseEnvFile(text) {
 
 /** Env for the Kernel: fixed port 4310, private data dir under %LOCALAPPDATA%. */
 export function kernelEnv(paths, env = process.env) {
-  return { ...env, HEPHAESTUS_PORT: String(KERNEL_PORT), HEPHAESTUS_DATA_DIR: paths.dataDir, HEPHAESTUS_OBSIDIAN_DIR: paths.obsidianDir, HEPHAESTUS_HERMES_EXECUTABLE: paths.hermesExecutable };
+  // Extension pairing is optional in the installed product: the Kernel never shows a pairing code
+  // and the launcher never restarts it to issue one (EFESTO_PAIRING_OPTIONAL, efesto-launcher-core.mjs).
+  return { ...env, HEPHAESTUS_PORT: String(KERNEL_PORT), HEPHAESTUS_DATA_DIR: paths.dataDir, HEPHAESTUS_OBSIDIAN_DIR: paths.obsidianDir, HEPHAESTUS_HERMES_EXECUTABLE: paths.hermesExecutable, HEPHAESTUS_PAIRING: '0', EFESTO_PAIRING_OPTIONAL: '1' };
+}
+
+export const DASHBOARD_URL = `http://127.0.0.1:${DASHBOARD_PORT}/`;
+
+/** Env for `next start`: production, loopback-only bridge to the Kernel. Only the token *path* is passed. */
+export function dashboardEnv(paths, env = process.env) {
+  return { ...env, NODE_ENV: 'production', NEXT_TELEMETRY_DISABLED: '1', EFESTO_LOCAL_KERNEL_TOKEN_FILE: paths.tokenFile, EFESTO_LOCAL_KERNEL_URL: `http://127.0.0.1:${KERNEL_PORT}` };
+}
+
+/** How the default browser is opened on Windows (no console window). */
+export function browserOpenCommand(url = DASHBOARD_URL) {
+  return { command: 'rundll32.exe', args: ['url.dll,FileProtocolHandler', url] };
 }
 
 /** The ordered steps `start` performs; `plan` prints these without touching anything. */
@@ -137,17 +153,23 @@ export async function writeConfig(paths) {
   return { changed: prev !== next || launcherChanged };
 }
 
+/** Ollama's per-user install dir, used when Explorer's PATH predates the install (shortcut launch). */
+export function ollamaExecutable(env = process.env) {
+  const local = env.LOCALAPPDATA ? join(env.LOCALAPPDATA, 'Programs', 'Ollama', 'ollama.exe') : '';
+  return local && existsSync(local) ? local : 'ollama';
+}
+
 async function ensureOllama(paths, state) {
   const base = `http://${OLLAMA_HOST}`;
   if (!(await httpOk(`${base}/api/tags`))) {
     say('Arrancando Ollama...');
-    state.ollama = await spawnDetached('ollama', ['serve'], { env: { ...process.env, OLLAMA_HOST, OLLAMA_CONTEXT_LENGTH: '8192' }, logFile: join(paths.logsDir, 'ollama.log') });
+    state.ollama = await spawnDetached(ollamaExecutable(), ['serve'], { env: { ...process.env, OLLAMA_HOST, OLLAMA_CONTEXT_LENGTH: '8192' }, logFile: join(paths.logsDir, 'ollama.log') });
     if (!(await waitFor(() => httpOk(`${base}/api/tags`), 60_000))) throw new Error('Ollama no responde en 127.0.0.1:11434. ¿Está instalado? Vuelve a ejecutar "Instalar Efesto".');
   } else say('Ollama ya está en marcha.');
   const tags = await (await fetch(`${base}/api/tags`)).json().catch(() => ({}));
   if (!(tags.models ?? []).some((m) => m?.name === MODEL || m?.model === MODEL)) {
     say(`Descargando el modelo ${MODEL} (solo la primera vez, puede tardar varios minutos)...`);
-    if ((await runToEnd('ollama', ['pull', MODEL])) !== 0) throw new Error(`No se pudo descargar el modelo ${MODEL}.`);
+    if ((await runToEnd(ollamaExecutable(), ['pull', MODEL])) !== 0) throw new Error(`No se pudo descargar el modelo ${MODEL}.`);
   } else say(`Modelo ${MODEL} disponible.`);
 }
 
@@ -165,7 +187,7 @@ async function ensureDashboard(paths, state) {
   if (!existsSync(join(dash, '.next', 'BUILD_ID'))) throw new Error('El panel no está compilado. Vuelve a ejecutar "Instalar Efesto".');
   say(`Arrancando el panel en http://127.0.0.1:${DASHBOARD_PORT} ...`);
   const bin = join(dash, 'node_modules', 'next', 'dist', 'bin', 'next');
-  state.dashboard = await spawnDetached(process.execPath, [bin, 'start', '-H', '127.0.0.1', '-p', String(DASHBOARD_PORT)], { cwd: dash, env: process.env, logFile: join(paths.logsDir, 'dashboard.log') });
+  state.dashboard = await spawnDetached(process.execPath, [bin, 'start', '-H', '127.0.0.1', '-p', String(DASHBOARD_PORT)], { cwd: dash, env: dashboardEnv(paths), logFile: join(paths.logsDir, 'dashboard.log') });
   if (!(await waitFor(() => httpOk(`http://127.0.0.1:${DASHBOARD_PORT}/`), 90_000))) throw new Error(`El panel no respondió. Revisa ${join(paths.logsDir, 'dashboard.log')}.`);
 }
 
@@ -203,7 +225,15 @@ export async function start(paths) {
     await run[s.id]();
     await save();
   }
-  say(`Listo. Abre http://127.0.0.1:${DASHBOARD_PORT} en el navegador.`);
+  say(`Listo. Efesto está en ${DASHBOARD_URL}`);
+}
+
+/** Desktop/Start-menu "Efesto": start everything hidden, then open the dashboard in the default browser. */
+export async function openEfesto(paths) {
+  await start(paths);
+  const { command, args } = browserOpenCommand();
+  if (process.platform === 'win32') await runToEnd(command, args, { stdio: 'ignore' });
+  else say(`Abre ${DASHBOARD_URL} en el navegador.`);
 }
 
 export async function stop(paths) {
@@ -236,6 +266,7 @@ async function main(argv) {
   if (command === 'plan') { console.log(JSON.stringify({ paths, steps: stackPlan(paths), workerEnv: Object.fromEntries(workerEnvEntries(paths)) }, null, 2)); return; }
   if (command === 'write-config') { const r = await writeConfig(paths); say(r.changed ? 'Configuración escrita.' : 'Configuración ya al día.'); return; }
   if (command === 'start') return start(paths);
+  if (command === 'open') return openEfesto(paths);
   if (command === 'stop') return stop(paths);
   if (command === 'status') {
     const s = await status(paths); const yes = (b) => (b ? 'sí' : 'no');
@@ -244,7 +275,8 @@ async function main(argv) {
     return;
   }
   if (command === 'copy-token') {
-    // Clipboard only (clip.exe via stdin) so the dashboard's "Conectar Kernel" can be pasted; never printed.
+    // Optional (browser-extension / manual pairing only; the installed dashboard does not need it).
+    // Clipboard only (clip.exe via stdin); never printed.
     if (!existsSync(paths.tokenFile)) { say('Todavía no hay código de conexión (arranca Efesto primero).'); return; }
     const token = (await readFile(paths.tokenFile, 'utf8')).trim();
     const ok = await new Promise((res) => { const c = spawn('clip.exe', [], { stdio: ['pipe', 'ignore', 'ignore'], windowsHide: true }); c.on('error', () => res(false)); c.on('close', (code) => res(code === 0)); c.stdin.end(token); });

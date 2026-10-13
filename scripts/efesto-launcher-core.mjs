@@ -7,10 +7,13 @@ import { defaultEfestoPaths, inspectEfestoBootstrap, readLauncherConfig } from '
 
 export async function repairEfestoLauncher(options = {}) {
   const ops = launcherOps(options);
+  // Installed Windows mode: the local dashboard reaches the Kernel through its own loopback bridge,
+  // so extension pairing is optional and never triggers a restart or a visible pairing code.
+  const pairingOptional = options.pairingOptional ?? (options.env ?? process.env).EFESTO_PAIRING_OPTIONAL === '1';
   let before = await ops.inspect();
   await ops.ensureDirectories();
 
-  if (before.kernel === 'ready' && before.pairing === 'paired') {
+  if (before.kernel === 'ready' && (before.pairing === 'paired' || pairingOptional)) {
     if (before.hermes !== 'ready') {
       // Hermes certification is computed once, when the Kernel starts. A Kernel that was
       // started before Hermes was installed/fixed (or by an older clone) keeps reporting
@@ -30,7 +33,7 @@ export async function repairEfestoLauncher(options = {}) {
     }
   }
 
-  if (before.kernel === 'ready' && before.pairing === 'required') {
+  if (!pairingOptional && before.kernel === 'ready' && before.pairing === 'required') {
     const kernel = before.diagnostics?.kernel ?? {};
     if (!(kernel.pid && kernel.owned === true && kernel.verified === true)) {
       await ops.writeLog(`Pairing recovery blocked because the existing Kernel process is not safely verified (${kernel.reason ?? 'not_verified'}).`);
@@ -57,7 +60,7 @@ export async function repairEfestoLauncher(options = {}) {
     return { started: false, status: before };
   }
   if (before.kernel === 'stale') await ops.removeStalePidFile(before.diagnostics?.kernel?.pid);
-  const started = await ops.startKernel({ showPairing: before.pairing === 'required' });
+  const started = await ops.startKernel({ showPairing: !pairingOptional && before.pairing === 'required' });
   const status = await ops.waitForReady(started);
   await ops.writeLog(`Repair finished with ${status.overall}.`);
   return { started: true, pid: started?.pid, status };

@@ -18,6 +18,7 @@ import { keywordsFromGoal } from '../lib/kernel/goal-keywords';
 import { focusGoalSurface } from '../lib/forge/forge-focus';
 import { discoverExtensionConnection, revokeExtensionConnection, EXTENSION_TRANSPORT } from '../lib/session/extension-bridge';
 import { connectionStore } from '../lib/session/connection-store';
+import { discoverLocalKernelConnection, LOCAL_TRANSPORT } from '../lib/session/local-kernel';
 import { startVisiblePoller } from '../lib/ui/visible-poller';
 import { subscribeToKernelEvents } from '../lib/kernel/events';
 import { refreshOnKernelEvents } from '../lib/kernel/live-refresh';
@@ -166,6 +167,13 @@ export default function EfestoProductShell() {
     const restore = async () => {
       if (controller.signal.aborted || automaticPaused.current || connectionStore.get()) return;
       try {
+        // Installed mode first: same-origin bridge to the local Kernel, no extension or pairing.
+        const local = await discoverLocalKernelConnection(controller.signal);
+        if (!controller.signal.aborted && !automaticPaused.current && !connectionStore.get()) {
+          if (await connectWith(local, false)) return;
+        }
+      } catch { /* Not the installed dashboard; try the optional extension below. */ }
+      try {
         const candidate = await discoverExtensionConnection(controller.signal);
         if (!controller.signal.aborted && !automaticPaused.current && !connectionStore.get()) {
           if (await connectWith(candidate, false)) return;
@@ -176,7 +184,7 @@ export default function EfestoProductShell() {
     try {
       const saved = window.sessionStorage.getItem(SESSION_CONNECTION_KEY);
       const parsed = saved ? JSON.parse(saved) as Partial<Connection> : undefined;
-      if (parsed && typeof parsed.baseUrl === 'string' && typeof parsed.token === 'string' && parsed.token !== EXTENSION_TRANSPORT) {
+      if (parsed && typeof parsed.baseUrl === 'string' && typeof parsed.token === 'string' && parsed.token !== EXTENSION_TRANSPORT && parsed.token !== LOCAL_TRANSPORT) {
         setRememberSession(true);
         void connectWith({ baseUrl: parsed.baseUrl, token: parsed.token }, true);
       } else void restore();
@@ -394,7 +402,7 @@ export default function EfestoProductShell() {
       setProviders(nextProviders);
       setGoalSurfaces(nextGoalSurfaces);
       connectionStore.set(verified);
-      if (remember && verified.token !== EXTENSION_TRANSPORT) window.sessionStorage.setItem(SESSION_CONNECTION_KEY, JSON.stringify(verified));
+      if (remember && verified.token !== EXTENSION_TRANSPORT && verified.token !== LOCAL_TRANSPORT) window.sessionStorage.setItem(SESSION_CONNECTION_KEY, JSON.stringify(verified));
       else window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
       setToast('Kernel conectado. La interfaz muestra estado persistido real.');
       return true;

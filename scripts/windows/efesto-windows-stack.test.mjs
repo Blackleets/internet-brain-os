@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import {
-  DASHBOARD_PORT, KERNEL_PORT, MODEL, kernelEnv, parseEnvFile, renderWorkerEnv, stackPlan, windowsStackPaths, workerEnvEntries, writeConfig,
+  DASHBOARD_PORT, DASHBOARD_URL, KERNEL_PORT, MODEL, browserOpenCommand, dashboardEnv, kernelEnv, parseEnvFile, renderWorkerEnv, stackPlan, windowsStackPaths, workerEnvEntries, writeConfig,
 } from './efesto-windows-stack.mjs';
 
 const winEnv = { LOCALAPPDATA: 'C:\\Users\\Usuario\\AppData\\Local', EFESTO_PLATFORM: 'win32' };
@@ -65,7 +65,11 @@ describe('Windows one-click stack configuration', () => {
 describe('Windows one-click entry points', () => {
   const installer = text('scripts/windows/install-efesto-windows.ps1');
   it('installs missing prerequisites with winget and the pinned Hermes + model', () => {
-    for (const id of ['Git.Git', 'OpenJS.NodeJS.LTS', 'Python.Python.3.14', 'Ollama.Ollama']) expect(installer).toContain(`'${id}'`);
+    for (const id of ['Git.Git', 'Python.Python.3.14', 'Ollama.Ollama']) expect(installer).toContain(`'${id}'`);
+    // Node 22 is a per-user portable copy verified against the official SHA-256 (no admin, no MSI).
+    expect(installer).not.toContain("'OpenJS.NodeJS.LTS'");
+    expect(installer).toMatch(/\$NodeZipSha256 = '[0-9a-f]{64}'/);
+    expect(installer).toContain('Get-FileHash -Algorithm SHA256');
     expect(installer).toContain("$Model = 'qwen3.5:2b'");
     expect(installer).toMatch(/\$HermesRevision = '[0-9a-f]{7,40}'/);
     expect(installer).toContain('[ddgs]');
@@ -84,8 +88,8 @@ describe('Windows one-click entry points', () => {
   it('the three .cmd files are CRLF batch files that call the right scripts', () => {
     const start = text('Iniciar Efesto.cmd'); const stop = text('Detener Efesto.cmd'); const install = text('Instalar Efesto.cmd');
     for (const t of [start, stop, install]) { expect(t.startsWith('@echo off\r\n')).toBe(true); expect(t.replaceAll('\r\n', '')).not.toContain('\n'); }
-    expect(start).toContain('efesto-windows-stack.mjs" start');
-    expect(start).toContain('copy-token');
+    expect(start).toContain('efesto-windows-stack.mjs" open');
+    expect(start).not.toContain('copy-token');
     expect(start).toContain('install-efesto-windows.ps1');
     expect(stop).toContain('efesto-windows-stack.mjs" stop');
     expect(install).toContain('install-efesto-windows.ps1');
@@ -173,5 +177,73 @@ describe('installer native calls under Windows PowerShell 5.1', () => {
     expect(cfg.hermesExecutable).toBe(p.hermesExecutable);
     expect(cfg.port).toBe(KERNEL_PORT);
     expect(KERNEL_PORT).toBe(4310);
+  });
+});
+
+describe('installed product: no extension, no pairing, no console', () => {
+  const installer = text('scripts/windows/install-efesto-windows.ps1');
+  const iss = text('installer/windows/efesto.iss');
+  const vbs = text('scripts/windows/efesto-launch.vbs');
+  const workflow = text('.github/workflows/windows-installer.yml');
+  const p = windowsStackPaths(winEnv, repo);
+
+  it('starts the Kernel with pairing optional (never restarted for, nor showing, a pairing code)', () => {
+    const env = kernelEnv(p, {});
+    expect(env.HEPHAESTUS_PAIRING).toBe('0');
+    expect(env.EFESTO_PAIRING_OPTIONAL).toBe('1');
+  });
+
+  it('serves the dashboard in production on loopback with the bridge pointed at the token *file* only', () => {
+    const env = dashboardEnv(p, { SOME: 'x' });
+    expect(env.NODE_ENV).toBe('production');
+    expect(env.EFESTO_LOCAL_KERNEL_TOKEN_FILE).toBe(p.tokenFile);
+    expect(env.EFESTO_LOCAL_KERNEL_URL).toBe('http://127.0.0.1:4310');
+    expect(Object.keys(env).some((k) => /^HEPHAESTUS_API_TOKEN$/.test(k))).toBe(false);
+    expect(DASHBOARD_URL).toBe('http://127.0.0.1:3311/');
+    expect(browserOpenCommand().args).toContain(DASHBOARD_URL);
+    expect(text('scripts/windows/efesto-windows-stack.mjs')).toContain("[bin, 'start', '-H', '127.0.0.1'");
+  });
+
+  it('keeps the browser extension out of the default install (it stays optional)', () => {
+    expect(installer).toContain("'-SkipExtension', '-SkipLauncherRepair'");
+    const core = text('scripts/install-efesto.ps1');
+    expect(core).toMatch(/if \(\$SkipExtension\)[\s\S]*build:extension/);
+    for (const t of [iss, vbs, text('Iniciar Efesto.cmd')]) expect(t).not.toMatch(/copy-token|chrome:\/\/extensions|Conectar Kernel|Ctrl\+V/i);
+  });
+
+  it('the "Efesto" shortcut runs hidden via wscript and opens the dashboard; failures show a Spanish message', () => {
+    expect(vbs).toContain('efesto-windows-stack.mjs');
+    expect(vbs).toMatch(/shell\.Run\(cmd, 0, True\)/);
+    expect(vbs).toContain('node-path.txt');
+    expect(vbs).toContain('MsgBox "Efesto no pudo');
+    expect(vbs).toMatch(/^[\x00-\x7f]*$/);
+    expect(installer).toContain("'scripts\\windows\\efesto-launch.vbs'");
+  });
+
+  it('EfestoSetup.exe is per user, under %LOCALAPPDATA%\\Efesto, Spanish, hidden install with progress, uninstaller', () => {
+    expect(iss).toContain('PrivilegesRequired=lowest');
+    expect(iss).toContain('DefaultDirName={localappdata}\\Efesto\\app');
+    expect(iss).toContain('OutputBaseFilename=EfestoSetup');
+    expect(iss).toContain('compiler:Languages\\Spanish.isl');
+    expect(iss).toMatch(/install-efesto-windows\.ps1[\s\S]*-SkipShortcuts -NoStart -ProgressFile/);
+    expect(iss).toContain('SW_HIDE');
+    expect(iss).toContain('CreateOutputProgressPage');
+    expect(iss).toContain('{userdesktop}\\Efesto');
+    expect(iss).toContain('{userprograms}\\Efesto\\Desinstalar Efesto');
+    expect(iss).toContain('[UninstallRun]');
+    expect(iss).toMatch(/efesto-launch\.vbs"" stop \/quiet/);
+    expect(iss).not.toMatch(/SignTool/i);
+    expect(installer).toContain('Write-Progress-File "STEP|');
+    expect(installer).toContain("Write-Progress-File 'DONE|0|");
+    expect(installer).toContain('Write-Progress-File "DONE|1|');
+  });
+
+  it('CI builds the installer on windows-latest, smoke-tests install/uninstall and uploads the artifact', () => {
+    expect(workflow).toContain('runs-on: windows-latest');
+    expect(workflow).toContain('installer/windows/efesto.iss');
+    expect(workflow).toContain('/DRYRUN=1');
+    expect(workflow).toContain('unins000.exe');
+    expect(workflow).toContain('actions/upload-artifact@v4');
+    expect(workflow).toContain('build/installer/EfestoSetup.exe');
   });
 });

@@ -1,4 +1,5 @@
 import { normalizeKernelBaseUrl } from '../kernel/url';
+import { LOCAL_TRANSPORT, localFetch } from './local-kernel';
 
 // A transport selector, never a credential. The real token stays in the extension.
 export const EXTENSION_TRANSPORT = 'efesto-extension-transport-v1';
@@ -64,6 +65,7 @@ export async function revokeExtensionConnection(): Promise<void> {
 }
 
 export function kernelFetch(token: string): typeof fetch {
+  if (token === LOCAL_TRANSPORT) return localFetch();
   return token === EXTENSION_TRANSPORT ? extensionFetch : (input, init) => globalThis.fetch(input, init);
 }
 

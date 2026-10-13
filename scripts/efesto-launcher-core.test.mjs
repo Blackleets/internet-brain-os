@@ -43,6 +43,23 @@ describe('Efesto Windows launcher core', () => {
     expect(calls).toContainEqual(['startKernel', { showPairing: true }]);
   });
 
+  it('installed dashboard mode: an unpaired ready Kernel is reused, never restarted for a pairing code', async () => {
+    const { calls, ops } = harness({ status: pairingRequired });
+    const result = await repairEfestoLauncher({ ops, pairingOptional: true });
+    expect(result.started).toBe(false);
+    expect(calls.map((call) => call[0])).not.toContain('stopOwnedProcess');
+    expect(calls.map((call) => call[0])).not.toContain('startKernel');
+  });
+
+  it('installed dashboard mode: first start is hidden (no visible pairing output)', async () => {
+    const { calls, ops } = harness({
+      status: { kernel: 'offline', hermes: 'ready', obsidian: 'ready', pairing: 'required', overall: 'needs_setup', diagnostics: { kernel: {} } },
+      afterStartStatus: pairingRequired,
+    });
+    await repairEfestoLauncher({ ops, env: { EFESTO_PAIRING_OPTIONAL: '1' } });
+    expect(calls).toContainEqual(['startKernel', { showPairing: false }]);
+  });
+
   it('does not duplicate processes when the Kernel is already paired and ready', async () => {
     const { calls, ops } = harness({ status: ready });
     const result = await repairEfestoLauncher({ ops });

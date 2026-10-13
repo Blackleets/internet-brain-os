@@ -7,12 +7,9 @@ where node >nul 2>&1
 if errorlevel 1 goto INSTALL
 if not exist "%~dp0node_modules" goto INSTALL
 if not exist "%~dp0apps\dashboard\.next\BUILD_ID" goto INSTALL
-node "%~dp0scripts\windows\efesto-windows-stack.mjs" start
+rem Arranca todo y abre el panel local (sin extension ni codigo de emparejamiento).
+node "%~dp0scripts\windows\efesto-windows-stack.mjs" open
 set EXIT_CODE=%ERRORLEVEL%
-if "%EXIT_CODE%"=="0" (
-  node "%~dp0scripts\windows\efesto-windows-stack.mjs" copy-token
-  start "" "http://127.0.0.1:3311"
-)
 goto FINISH
 :INSTALL
 echo Falta parte de la instalacion. Ejecutando "Instalar Efesto"...

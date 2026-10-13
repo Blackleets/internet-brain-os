@@ -1,12 +1,18 @@
 ﻿# Efesto: instalación completa en un clic para Windows.
 # Comprueba/instala Git, Node.js 22+, Python 3.14 y Ollama (winget), instala Hermes Agent con búsqueda
 # DuckDuckGo, descarga qwen3.5:2b, compila Efesto (install-efesto.ps1 + panel), crea los accesos
-# "Iniciar Efesto" y "Detener Efesto" y arranca Kernel :4310, panel :3311 y el trabajador de Hermes.
+# "Efesto" y "Detener Efesto" y arranca Kernel :4310, panel :3311 y el trabajador de Hermes.
+# La extensión del navegador es opcional y no forma parte de este flujo: el panel local habla con el
+# Kernel por su propio puente de loopback (sin código de emparejamiento).
+# EfestoSetup.exe (installer/windows/efesto.iss) lo ejecuta oculto con -ProgressFile/-LogFile.
 # Se puede volver a ejecutar sin riesgo: lo que ya está bien se deja como está.
 param(
   [switch]$DryRun,
   [switch]$SkipShortcuts,
-  [switch]$NoStart
+  [switch]$NoStart,
+  # Usados por EfestoSetup.exe: progreso legible por el asistente y registro completo en disco.
+  [string]$ProgressFile = '',
+  [string]$LogFile = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -27,10 +33,21 @@ $EfestoHermesRoot = Join-Path $env:LOCALAPPDATA 'Efesto\hermes-agent'
 $HermesRoot = $UserHermesRoot
 $HermesExe = Join-Path $HermesRoot 'venv\Scripts\hermes.exe'
 
+# Portable Node.js (per user, no admin) when Node 22+ is missing. SHA-256 from nodejs.org/dist/v22.23.3/SHASUMS256.txt.
+$NodeVersion = 'v22.23.3'
+$NodeZipSha256 = '2b0ff57b049cda1bbcea2240eec20467018713c1efe1f7360c2681859b90ed71'
+$EfestoBase = Join-Path $env:LOCALAPPDATA 'Efesto'
+$PortableNodeDir = Join-Path $EfestoBase 'node'
+
 $script:StepNumber = 0
 $TotalSteps = 9
+function Write-Progress-File([string]$Line) {
+  if ([string]::IsNullOrWhiteSpace($ProgressFile)) { return }
+  try { [System.IO.File]::WriteAllText($ProgressFile, $Line, (New-Object System.Text.UTF8Encoding($false))) } catch {}
+}
 function Write-Step([string]$Message) {
   $script:StepNumber++
+  Write-Progress-File "STEP|$($script:StepNumber)|$TotalSteps|$Message"
   Write-Host ''
   Write-Host "[Efesto] Paso $($script:StepNumber) de ${TotalSteps}: $Message" -ForegroundColor Cyan
 }
@@ -43,6 +60,7 @@ function Refresh-ProcessPath {
   $env:Path = @($machine, $user) -join ';'
   $ollamaDir = Join-Path $env:LOCALAPPDATA 'Programs\Ollama'
   if (Test-Path $ollamaDir) { $env:Path = "$env:Path;$ollamaDir" }
+  if (Test-Path (Join-Path $PortableNodeDir 'node.exe')) { $env:Path = "$PortableNodeDir;$env:Path" }
 }
 function Test-Command([string]$Name) { return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue) }
 
@@ -73,15 +91,40 @@ function Invoke-Native([string]$Exe, [string[]]$Arguments = @(), [switch]$Quiet)
   return [pscustomobject]@{ Code = [int]$code; Output = (($lines -join "`n").Trim()) }
 }
 
-function Install-WithWinget([string]$Id, [string]$Name, [string[]]$Extra = @()) {
+function Install-WithWinget([string]$Id, [string]$Name, [string[]]$Extra = @(), [switch]$AllowMachineScopeFallback) {
   if ($DryRun) { Write-Info "(simulación) winget install --id $Id $($Extra -join ' ')"; return }
   if (-not (Test-Command 'winget')) {
     throw "Falta $Name y este equipo no tiene winget (Instalador de aplicaciones de Microsoft). Instala 'App Installer' desde Microsoft Store y vuelve a ejecutar."
   }
   Write-Info "Instalando $Name con winget (puede tardar unos minutos)..."
-  $r = Invoke-Native 'winget' @('install', '--id', $Id, '--exact', '--accept-package-agreements', '--accept-source-agreements', '--silent') + $Extra
+  $base = @('install', '--id', $Id, '--exact', '--accept-package-agreements', '--accept-source-agreements', '--silent', '--disable-interactivity')
+  $r = Invoke-Native 'winget' ($base + $Extra)
+  if ($r.Code -ne 0 -and $AllowMachineScopeFallback) {
+    Write-Info "$Name no tiene instalador por usuario en winget; se intenta el instalador estándar."
+    $r = Invoke-Native 'winget' $base
+  }
   if ($r.Code -ne 0) { throw "winget no pudo instalar $Name (código $($r.Code))." }
   Refresh-ProcessPath
+}
+
+function Install-PortableNode {
+  if ($DryRun) { Write-Info "(simulación) Node.js $NodeVersion portátil en $PortableNodeDir"; return }
+  $zipName = "node-$NodeVersion-win-x64"
+  $zip = Join-Path $env:TEMP "$zipName.zip"
+  Write-Info "Descargando Node.js $NodeVersion (solo para tu usuario, sin permisos de administrador)..."
+  Invoke-WebRequest -UseBasicParsing -Uri "https://nodejs.org/dist/$NodeVersion/$zipName.zip" -OutFile $zip
+  $hash = (Get-FileHash -Algorithm SHA256 -Path $zip).Hash.ToLowerInvariant()
+  if ($hash -ne $NodeZipSha256) { Remove-Item -Force $zip; throw 'La descarga de Node.js no coincide con la huella oficial; no se instala.' }
+  $tmp = Join-Path $EfestoBase 'node-extract'
+  if (Test-Path $tmp) { Remove-Item -Recurse -Force $tmp }
+  Expand-Archive -Path $zip -DestinationPath $tmp -Force
+  if (Test-Path $PortableNodeDir) { Remove-Item -Recurse -Force $PortableNodeDir }
+  Move-Item -Path (Join-Path $tmp $zipName) -Destination $PortableNodeDir
+  Remove-Item -Recurse -Force $tmp
+  Remove-Item -Force $zip
+  Refresh-ProcessPath
+  # npm -g (pnpm) goes next to the portable node.exe, which is already on this process PATH.
+  Write-Ok "Node.js $NodeVersion instalado en $PortableNodeDir."
 }
 
 function Get-NodeMajor {
@@ -137,12 +180,12 @@ function Invoke-Checked([string]$Exe, [string[]]$Arguments, [string]$Failure) {
 function Ensure-Prerequisites {
   Write-Step 'Comprobando Git, Node.js, Python y Ollama'
   Refresh-ProcessPath
-  if (Test-Command 'git') { Write-Ok 'Git instalado.' } else { Install-WithWinget 'Git.Git' 'Git' }
-  if ((Get-NodeMajor) -ge 22) { Write-Ok "Node.js $(Get-NodeMajor) instalado." } else { Install-WithWinget 'OpenJS.NodeJS.LTS' 'Node.js' }
+  if (Test-Command 'git') { Write-Ok 'Git instalado.' } else { Install-WithWinget 'Git.Git' 'Git' @('--scope', 'user') -AllowMachineScopeFallback }
+  if ((Get-NodeMajor) -ge 22) { Write-Ok "Node.js $(Get-NodeMajor) instalado." } else { Install-PortableNode }
   $foundPython = Get-HermesPython
   # Other Pythons the user has are kept; only 3.14 is added (per user, no admin) when missing.
   if ($foundPython) { Write-Ok "Python 3.14 encontrado: $foundPython" } else { Install-WithWinget 'Python.Python.3.14' 'Python 3.14' @('--scope', 'user') }
-  if (Test-Command 'ollama') { Write-Ok 'Ollama instalado.' } else { Install-WithWinget 'Ollama.Ollama' 'Ollama' }
+  if (Test-Command 'ollama') { Write-Ok 'Ollama instalado.' } else { Install-WithWinget 'Ollama.Ollama' 'Ollama' @('--scope', 'user') -AllowMachineScopeFallback }
   if ($DryRun) { return }
   if (-not (Test-Command 'git')) { throw 'Git se instaló pero no aparece todavía. Cierra esta ventana y vuelve a ejecutar "Instalar Efesto".' }
   if ((Get-NodeMajor) -lt 22) { throw 'Node.js 22 o superior no está disponible. Cierra esta ventana y vuelve a ejecutar "Instalar Efesto".' }
@@ -262,19 +305,38 @@ function Ensure-OllamaModel {
   Write-Ok "Modelo $Model descargado."
 }
 
-function New-EfestoShortcut([string]$Name, [string]$Target, [string]$Description) {
-  $desktop = [Environment]::GetFolderPath('Desktop')
-  if ([string]::IsNullOrWhiteSpace($desktop)) { return }
-  $path = Join-Path $desktop "$Name.lnk"
+# "Efesto" opens everything hidden (wscript + efesto-launch.vbs: no console) and then the dashboard
+# in the default browser. EfestoSetup.exe creates the same shortcuts itself.
+function New-EfestoShortcut([string]$Folder, [string]$Name, [string]$Action, [string]$Description) {
+  if ([string]::IsNullOrWhiteSpace($Folder)) { return }
+  $path = Join-Path $Folder "$Name.lnk"
   if ($DryRun) { Write-Info "(simulación) acceso directo $path"; return }
+  New-Item -ItemType Directory -Force -Path $Folder | Out-Null
+  $vbs = Join-Path $RepoRoot 'scripts\windows\efesto-launch.vbs'
   $shell = New-Object -ComObject WScript.Shell
   $shortcut = $shell.CreateShortcut($path)
-  $shortcut.TargetPath = $env:ComSpec
-  $shortcut.Arguments = "/c `"`"$Target`"`""
+  $shortcut.TargetPath = Join-Path $env:SystemRoot 'System32\wscript.exe'
+  $shortcut.Arguments = "`"$vbs`" $Action"
   $shortcut.WorkingDirectory = $RepoRoot
   $shortcut.Description = $Description
+  $icon = Join-Path $RepoRoot 'installer\windows\efesto.ico'
+  if (Test-Path $icon) { $shortcut.IconLocation = $icon }
   $shortcut.Save()
-  Write-Ok "Acceso directo en el escritorio: $Name"
+  Write-Ok "Acceso directo: $path"
+}
+
+function Save-NodePath {
+  # efesto-launch.vbs runs from Explorer, whose PATH may not include a Node installed minutes ago.
+  if ($DryRun) { return }
+  $node = Get-Command 'node' -ErrorAction SilentlyContinue
+  if (-not $node) { throw 'Node.js no está disponible.' }
+  New-Item -ItemType Directory -Force -Path $EfestoBase | Out-Null
+  [System.IO.File]::WriteAllText((Join-Path $EfestoBase 'node-path.txt'), $node.Source, (New-Object System.Text.UTF8Encoding($false)))
+}
+
+if (-not [string]::IsNullOrWhiteSpace($LogFile) -and -not $DryRun) {
+  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $LogFile) | Out-Null
+  try { Start-Transcript -Path $LogFile -Append | Out-Null } catch {}
 }
 
 try {
@@ -285,8 +347,9 @@ try {
   Ensure-HermesAgent
   Ensure-OllamaModel
 
-  Write-Step 'Instalando y verificando el núcleo de Efesto (dependencias, Kernel, extensión)'
-  $coreArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $RepoRoot 'scripts\install-efesto.ps1'), '-SkipNodeInstall', '-SkipShortcut')
+  Write-Step 'Instalando y verificando el núcleo de Efesto (dependencias y Kernel)'
+  # The browser extension is optional and the Kernel is started later by the stack, hidden and without pairing.
+  $coreArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $RepoRoot 'scripts\install-efesto.ps1'), '-SkipNodeInstall', '-SkipShortcut', '-SkipExtension', '-SkipLauncherRepair')
   $env:HEPHAESTUS_PORT = '4310'
   $env:HEPHAESTUS_DATA_DIR = Join-Path $env:LOCALAPPDATA 'Efesto\kernel-data'
   Invoke-Checked 'powershell.exe' $coreArgs 'La instalación del núcleo de Efesto necesita atención'
@@ -296,27 +359,32 @@ try {
 
   Write-Step 'Escribiendo la configuración local'
   Invoke-Checked 'node' @('scripts/windows/efesto-windows-stack.mjs', 'write-config') 'No se pudo escribir la configuración'
+  Save-NodePath
 
-  Write-Step 'Creando los accesos directos "Iniciar Efesto" y "Detener Efesto"'
+  Write-Step 'Creando el acceso directo "Efesto"'
   if (-not $SkipShortcuts) {
-    New-EfestoShortcut 'Iniciar Efesto' (Join-Path $RepoRoot 'Iniciar Efesto.cmd') 'Arranca Efesto (Kernel, panel, Hermes y Ollama)'
-    New-EfestoShortcut 'Detener Efesto' (Join-Path $RepoRoot 'Detener Efesto.cmd') 'Detiene Efesto'
+    $programs = Join-Path ([Environment]::GetFolderPath('Programs')) 'Efesto'
+    New-EfestoShortcut ([Environment]::GetFolderPath('Desktop')) 'Efesto' 'open' 'Abre Efesto'
+    New-EfestoShortcut $programs 'Efesto' 'open' 'Abre Efesto'
+    New-EfestoShortcut $programs 'Detener Efesto' 'stop' 'Detiene Efesto'
   } else { Write-Info 'Omitido.' }
 
   Write-Step 'Arrancando Efesto'
-  if (-not $NoStart) { Invoke-Checked 'node' @('scripts/windows/efesto-windows-stack.mjs', 'start') 'Efesto no pudo arrancar' } else { Write-Info 'Omitido.' }
+  if (-not $NoStart) { Invoke-Checked 'node' @('scripts/windows/efesto-windows-stack.mjs', 'open') 'Efesto no pudo arrancar' } else { Write-Info 'Omitido.' }
 
   Write-Step 'Comprobación final'
   if (-not $NoStart) { Invoke-Checked 'node' @('scripts/windows/efesto-windows-stack.mjs', 'status') 'Alguna pieza de Efesto no está en marcha' } else { Write-Info 'Omitido.' }
 
   Write-Host ''
-  if ($DryRun) { Write-Host 'Simulación terminada: no se ha instalado ni cambiado nada.' -ForegroundColor Yellow; exit 0 }
+  if ($DryRun) { Write-Host 'Simulación terminada: no se ha instalado ni cambiado nada.' -ForegroundColor Yellow; Write-Progress-File 'DONE|0|Simulación terminada.'; exit 0 }
   Write-Host 'Efesto está instalado.' -ForegroundColor Green
-  Write-Host 'A partir de ahora usa el icono "Iniciar Efesto" del escritorio.'
+  Write-Host 'A partir de ahora usa el icono "Efesto" del escritorio o del menú Inicio.'
+  Write-Progress-File 'DONE|0|Efesto está instalado.'
   exit 0
 } catch {
   Write-Host ''
   Write-Host "Efesto necesita atención: $($_.Exception.Message)" -ForegroundColor Red
   Write-Host 'Puedes volver a ejecutar "Instalar Efesto" cuando quieras: lo ya instalado no se repite.'
+  Write-Progress-File "DONE|1|$($_.Exception.Message)"
   exit 1
 }
