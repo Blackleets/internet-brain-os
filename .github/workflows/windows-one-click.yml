@@ -30,7 +30,7 @@ jobs:
           foreach ($f in @('scripts/windows/install-efesto-windows.ps1', 'scripts/install-efesto.ps1')) {
             $errors = $null
             [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $f), [ref]$null, [ref]$errors)
-            if ($errors.Count) { $failed = $true; $errors | ForEach-Object { Write-Host "$f: $($_.Message)" } }
+            if ($errors.Count) { $failed = $true; $errors | ForEach-Object { Write-Host "${f}: $($_.Message)" } }
           }
           if ($failed) { exit 1 }
       - name: Installer dry run (Windows PowerShell 5.1, changes nothing)
