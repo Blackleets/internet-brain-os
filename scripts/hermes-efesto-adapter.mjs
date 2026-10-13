@@ -260,7 +260,7 @@ export async function runPlannedSearches(planned, worker, options = {}) {
     if (!outcome.ok) continue;
     for (const hit of outcome.results) {
       const url = typeof hit?.url === 'string' ? hit.url.trim() : '';
-      if (!url || url.length > 2048 || !isWellFormedWebUrl(url)) continue;
+      if (!url || url.length > 2048 || !isWellFormedWebUrl(url) || isAdRedirect(url)) continue;
       const key = comparableUrl(url);
       if (!key || seen.has(key)) continue;
       seen.add(key);
@@ -268,6 +268,17 @@ export async function runPlannedSearches(planned, worker, options = {}) {
     }
   }
   return { searches, results };
+}
+
+/** Search-engine ad click redirects (e.g. bing.com/aclick) are never candidates: they are ads, not sources. */
+export function isAdRedirect(raw) {
+  try {
+    const url = new URL(raw);
+    const host = url.hostname.toLowerCase().replace(/^www\./, '');
+    return (/(^|\.)bing\.com$/.test(host) && /^\/aclick/i.test(url.pathname))
+      || (/(^|\.)duckduckgo\.com$/.test(host) && /^\/y\.js/i.test(url.pathname))
+      || (/(^|\.)googleadservices\.com$/.test(host));
+  } catch { return false; }
 }
 
 const SENSITIVE_QUERY_KEY = /^(?:token|access_token|auth|authorization|api[_-]?key|code|session|signature|sig)$/i;
@@ -334,7 +345,10 @@ export function parseSelectionOutput(text, results) {
 }
 
 const SELECTION_BACKENDS = new Set(['hermes', 'ollama-structured']);
-const OLLAMA_SELECTION_MAX_MS = 180_000;
+const OLLAMA_SELECTION_MAX_MS = 300_000;
+const OLLAMA_SELECTION_MARGIN_MS = 30_000;
+// The prompt carries up to 30 results (~5k tokens); Ollama's default context would silently cut it.
+const OLLAMA_SELECTION_NUM_CTX = 8192;
 
 export function selectionBackend(env = process.env) {
   const value = typeof env.HEPHAESTUS_SELECTION_BACKEND === 'string' ? env.HEPHAESTUS_SELECTION_BACKEND.trim() : '';
@@ -361,13 +375,14 @@ export async function runOllamaSelection({ prompt, results, env = process.env, t
   const host = String(env.HEPHAESTUS_SELECTION_OLLAMA_URL || `http://${env.OLLAMA_HOST || '127.0.0.1:11434'}`).replace(/\/+$/, '');
   const model = normalizeRouteValue(env.HERMES_INFERENCE_MODEL, 'model');
   if (!model) throw new Error('HERMES_INFERENCE_MODEL is required for ollama-structured selection');
-  const budget = Math.min(timeoutMs ?? OLLAMA_SELECTION_MAX_MS, OLLAMA_SELECTION_MAX_MS);
+  // Leave the attempt a margin to report its own failure before the worker's timeout.
+  const budget = Math.max(30_000, Math.min((timeoutMs ?? OLLAMA_SELECTION_MAX_MS) - OLLAMA_SELECTION_MARGIN_MS, OLLAMA_SELECTION_MAX_MS));
   let response;
   try {
     response = await fetchImpl(`${host}/api/chat`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ model, stream: false, think: false, format: selectionSchema(results), options: { temperature: 0, num_predict: 1024 }, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model, stream: false, think: false, format: selectionSchema(results), options: { temperature: 0, num_predict: 1024, num_ctx: OLLAMA_SELECTION_NUM_CTX }, messages: [{ role: 'user', content: prompt }] }),
       signal: AbortSignal.timeout(budget),
     });
   } catch (error) {

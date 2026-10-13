@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   goalCoreTerms, planSearchQueries, findingsFromResultRefs, parseSelectionOutput,
-  selectionSchema, selectionBackend, runOllamaSelection, runHermesProcess,
+  selectionSchema, selectionBackend, runOllamaSelection, runHermesProcess, isAdRedirect,
 } from './hermes-efesto-adapter.mjs';
 
 const goal = {
@@ -54,6 +54,7 @@ describe('ollama-structured selection', () => {
     const out = await runOllamaSelection({ prompt: 'p', results, env: { OLLAMA_HOST: '127.0.0.1:11434', HERMES_INFERENCE_MODEL: 'qwen3.5:2b' }, timeoutMs: 60_000, fetchImpl });
     expect(sent.url).toBe('http://127.0.0.1:11434/api/chat');
     expect(sent.body.think).toBe(false);
+    expect(sent.body.options.num_ctx).toBe(8192);
     expect(sent.body.format.properties.findings.items.properties.url.enum).toHaveLength(3);
     expect(out.findings.map((f) => f.url)).toEqual([results[2].url]);
   });
@@ -72,5 +73,14 @@ describe('Hermes nonzero exit after a usable answer', () => {
   it('still fails when the nonzero exit carries nothing usable', async () => {
     const script = 'process.stderr.write("boom"); process.exit(1);';
     await expect(runHermesProcess({ executable: process.execPath, args: ['-e', script], timeoutMs: 10_000, env: process.env, cwd: process.cwd(), results })).rejects.toThrow('Hermes exited with code 1');
+  });
+});
+
+describe('ad redirects are not candidates', () => {
+  it('recognises search-engine ad click URLs and leaves normal pages alone', () => {
+    expect(isAdRedirect('https://www.bing.com/aclick?ld=abc&u=xyz')).toBe(true);
+    expect(isAdRedirect('https://duckduckgo.com/y.js?ad_domain=x')).toBe(true);
+    expect(isAdRedirect('https://www.bing.com/search?q=ia')).toBe(false);
+    expect(isAdRedirect('https://leadsales.io/blog/mejores-ia-gratis-negocios/')).toBe(false);
   });
 });
