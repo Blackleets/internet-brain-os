@@ -2,6 +2,7 @@
 // Implements automatic page analysis based on navigation events
 
 import { listGoals, sendPageContext } from './local-transport.js';
+import { evaluateAutoCapture } from './auto-capture-policy.js';
 
 const DEFAULT_KERNEL_BASE_URL = 'http://127.0.0.1:4000';
 
@@ -241,8 +242,9 @@ export class AutoRadar {
         return { allowed: false, reason: 'localhost_blocked' };
       }
 
-      // Verificar si el origen está en la lista autorizada
-      if (this.allowedOrigins.length > 0 && !this.allowedOrigins.includes(urlObj.origin)) {
+      // Fail-closed: an empty list means no site is authorized (popup radarEnabled = size > 0),
+      // never "every site". Revoking the last site must not turn Auto Radar into capture-all.
+      if (!Array.isArray(this.allowedOrigins) || !this.allowedOrigins.includes(urlObj.origin)) {
         return { allowed: false, reason: 'site_not_authorized' };
       }
 
@@ -470,9 +472,14 @@ export class AutoRadar {
 
       const context = captured.context;
 
-      // Verificar si la URL está permitida
+      // Verificar si la URL está permitida. Same policy as background autoCapture
+      // (auto-capture-policy): authorized origin only, no sensitive path/query, no user
+      // selection, and the #fragment (e.g. OAuth access_token) never leaves the browser.
       const urlCheck = this.isUrlAllowed(context.url);
-      if (!urlCheck.allowed) {
+      const policy = urlCheck.allowed
+        ? evaluateAutoCapture(context, { allowedOrigins: this.allowedOrigins })
+        : urlCheck;
+      if (!policy.allowed) {
         await this.setState(AUTO_RADAR_STATES.BLOCKED);
         // Esperar un momento antes de volver a observar
         setTimeout(() => this.setState(AUTO_RADAR_STATES.OBSERVING), 2000);
@@ -512,10 +519,11 @@ export class AutoRadar {
 
       // Estado a enviando
       await this.setState(AUTO_RADAR_STATES.SUBMITTING);
+      const safeContext = { ...context, url: policy.safeUrl, selection: undefined };
 
       // Enviar al Kernel
       try {
-        await sendPageContext(context, {
+        await sendPageContext(safeContext, {
           baseUrl: this.kernelBaseUrl,
           apiToken: this.kernelApiToken,
         });
@@ -523,7 +531,7 @@ export class AutoRadar {
         // sendPageContext persists Evidence only — not Kernel ADMITTED and not a Find.
         await this.setState(AUTO_RADAR_STATES.CAPTURED);
         await chrome.storage.local.set({
-          lastRadarEvent: radarEventAfterEvidenceCapture(context),
+          lastRadarEvent: radarEventAfterEvidenceCapture(safeContext),
         });
 
         // Después de un breve momento, volver a observar
@@ -538,7 +546,7 @@ export class AutoRadar {
         });
 
         // Enqueue for retry if we haven't exceeded max retries
-        await this.enqueueForRetry(context.url, context.title);
+        await this.enqueueForRetry(safeContext.url, context.title);
 
         // Después de un breve momento, volver a observar
         setTimeout(() => this.setState(AUTO_RADAR_STATES.OBSERVING), 3000);

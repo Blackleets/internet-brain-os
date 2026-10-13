@@ -242,7 +242,8 @@ describe('AutoRadar Evidence-only capture is not a Find', () => {
     try {
       const radar = makeRadar();
       radar.enabled = true;
-      radar.allowedOrigins = [];
+      // Auto Radar only captures sites the user authorized (empty list = none).
+      radar.allowedOrigins = ['https://jwt.io'];
       radar.queue = [];
       await radar.evaluatePage({ id: 7, url: 'https://jwt.io/', title: 'JSON Web Tokens - jwt.io' });
       expect(sendPageContext).toHaveBeenCalledOnce();
@@ -259,5 +260,96 @@ describe('AutoRadar Evidence-only capture is not a Find', () => {
       if (originalChrome === undefined) delete globalThis.chrome;
       else globalThis.chrome = originalChrome;
     }
+  });
+});
+
+describe('AutoRadar fail-closed capture policy (same as background autoCapture)', () => {
+  function chromeWith(context) {
+    const storageSet = vi.fn().mockResolvedValue(undefined);
+    return {
+      storageSet,
+      chrome: {
+        action: {
+          setBadgeText: vi.fn().mockResolvedValue(undefined),
+          setBadgeBackgroundColor: vi.fn().mockResolvedValue(undefined),
+          setTitle: vi.fn().mockResolvedValue(undefined),
+        },
+        storage: { local: { set: storageSet, get: vi.fn().mockResolvedValue({}) } },
+        tabs: { sendMessage: vi.fn().mockResolvedValue({ ok: true, context }) },
+      },
+    };
+  }
+
+  async function evaluate(context, allowedOrigins) {
+    vi.useFakeTimers();
+    const originalChrome = globalThis.chrome;
+    const env = chromeWith(context);
+    globalThis.chrome = env.chrome;
+    listGoals.mockClear();
+    sendPageContext.mockClear();
+    listGoals.mockResolvedValue([{ id: 'g-rider', title: 'Rider jobs', keywords: 'rider, delivery' }]);
+    sendPageContext.mockResolvedValue({ ok: true, receiptId: 'r', caseId: 'c', evidenceId: 'e' });
+    try {
+      const radar = makeRadar();
+      radar.enabled = true;
+      radar.allowedOrigins = allowedOrigins;
+      radar.queue = [];
+      await radar.evaluatePage({ id: 9, url: context.url, title: context.title });
+      return { radar, storageSet: env.storageSet };
+    } finally {
+      vi.useRealTimers();
+      if (originalChrome === undefined) delete globalThis.chrome;
+      else globalThis.chrome = originalChrome;
+    }
+  }
+
+  const riderPage = (overrides) => ({
+    url: 'https://jobs.example.com/rider-delivery',
+    title: 'Rider delivery jobs',
+    visibleText: 'Rider delivery jobs in your city. Apply as a delivery rider today.',
+    ...overrides,
+  });
+
+  it('treats an empty authorized-site list as no site, never every site', async () => {
+    const radar = makeRadar();
+    radar.allowedOrigins = [];
+    expect(radar.isUrlAllowed('https://mail.example.com/inbox')).toEqual({ allowed: false, reason: 'site_not_authorized' });
+    const { radar: evaluated } = await evaluate(riderPage(), []);
+    expect(sendPageContext).not.toHaveBeenCalled();
+    expect(listGoals).not.toHaveBeenCalled();
+    expect(evaluated.state).toBe(AUTO_RADAR_STATES.BLOCKED);
+  });
+
+  it('does not capture an origin outside the authorized list', async () => {
+    await evaluate(riderPage({ url: 'https://other.example.org/rider-delivery' }), ['https://jobs.example.com']);
+    expect(sendPageContext).not.toHaveBeenCalled();
+  });
+
+  it('blocks sensitive query and path on an authorized origin', async () => {
+    await evaluate(riderPage({ url: 'https://jobs.example.com/rider-delivery?access_token=secret-value' }), ['https://jobs.example.com']);
+    expect(sendPageContext).not.toHaveBeenCalled();
+    await evaluate(riderPage({ url: 'https://jobs.example.com/login' }), ['https://jobs.example.com']);
+    expect(sendPageContext).not.toHaveBeenCalled();
+  });
+
+  it('never auto-sends a user selection', async () => {
+    await evaluate(riderPage({ selection: 'my private note about rider delivery' }), ['https://jobs.example.com']);
+    expect(sendPageContext).not.toHaveBeenCalled();
+  });
+
+  it('strips the #fragment from the captured URL and the stored radar event', async () => {
+    const { radar, storageSet } = await evaluate(
+      riderPage({ url: 'https://jobs.example.com/rider-delivery#access_token=secret-value' }),
+      ['https://jobs.example.com'],
+    );
+    expect(sendPageContext).toHaveBeenCalledOnce();
+    const [sent] = sendPageContext.mock.calls[0];
+    expect(sent.url).toBe('https://jobs.example.com/rider-delivery');
+    expect(sent.selection).toBeUndefined();
+    expect(JSON.stringify(sent)).not.toContain('secret-value');
+    expect(radar.state).toBe(AUTO_RADAR_STATES.CAPTURED);
+    const events = storageSet.mock.calls.map((call) => call[0]?.lastRadarEvent).filter(Boolean);
+    expect(events.at(-1).url).toBe('https://jobs.example.com/rider-delivery');
+    expect(JSON.stringify(storageSet.mock.calls)).not.toContain('secret-value');
   });
 });
