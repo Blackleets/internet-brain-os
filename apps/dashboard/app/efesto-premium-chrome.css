@@ -1,0 +1,408 @@
+/* EFESTO v3 · premium chrome (Phase 3).
+   Chrome only: tokens, type, borders, cards, buttons, inputs, header/nav, panels, focus.
+   Loaded last. Deliberately never selects .forge-live (anvil, spider, canvases, effects stay exactly as they are). */
+
+:root {
+  /* surfaces: warm near-black, three steps, each with a faint top light */
+  --pc-bg: #080706;
+  --pc-s1: #0e0c0a;
+  --pc-s2: #131110;
+  --pc-s3: #1a1715;
+  --pc-grad: linear-gradient(180deg, rgba(255, 228, 200, .028), rgba(255, 228, 200, 0) 42%);
+  /* hairlines: warm alpha instead of grey, plus an inner top highlight */
+  --pc-line: rgba(255, 214, 178, .075);
+  --pc-line-2: rgba(255, 214, 178, .13);
+  --pc-line-hi: inset 0 1px 0 rgba(255, 236, 216, .045);
+  --pc-shadow: 0 1px 0 rgba(0, 0, 0, .4), 0 18px 48px -18px rgba(0, 0, 0, .7);
+  /* brand */
+  --pc-ember: #ee8748;
+  --pc-ember-deep: #c8622a;
+  --pc-gold: #f5c451;
+  --pc-text: #f4eee7;
+  --pc-text-2: #cbc2b8;
+  --pc-muted: #938a82;
+  /* focus: a two-tone ring (bg gap + gold) — on brand, high contrast, never a filled box */
+  --pc-ring: 0 0 0 2px var(--pc-bg), 0 0 0 3.5px rgba(245, 196, 81, .85);
+  --pc-ring-soft: 0 0 0 1px rgba(238, 135, 72, .55), 0 0 0 5px rgba(238, 135, 72, .09);
+  --pc-r-card: 14px;
+  --pc-r-ctl: 10px;
+}
+
+/* ---------- typography ---------- */
+.efesto-product { font-family: var(--v3-sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-feature-settings: 'ss01', 'cv11'; }
+.efesto-product .workspace-heading h1 { font-size: 30px; font-weight: 620; letter-spacing: -.025em; line-height: 1.1; color: var(--pc-text); }
+.efesto-product .workspace-heading p { color: var(--pc-muted); font-size: 13px; line-height: 1.55; }
+.efesto-product .workspace-heading small,
+.efesto-product .nav-label,
+.efesto-product .connection-card header small,
+.efesto-product .readiness-card header small,
+.efesto-product .find-card .lead-label { font-family: var(--v3-mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: #a3907e; }
+.efesto-product .find-card h3 { letter-spacing: -.012em; font-weight: 620; line-height: 1.3; }
+
+/* ---------- shell: sidebar + topbar ---------- */
+.efesto-product .efesto-sidebar { background: linear-gradient(180deg, #0c0a09, #090807); border-right: 1px solid var(--pc-line); }
+.efesto-product .efesto-sidebar .nav-group button,
+.efesto-product .efesto-sidebar .sidebar-system button { border-radius: var(--pc-r-ctl); border: 1px solid transparent; color: var(--pc-text-2); transition: background .15s ease, border-color .15s ease, color .15s ease; }
+.efesto-product .efesto-sidebar .nav-group button:hover,
+.efesto-product .efesto-sidebar .sidebar-system button:hover { background: rgba(255, 220, 190, .035); color: var(--pc-text); }
+.efesto-product .efesto-sidebar .nav-group button.active,
+.efesto-product .efesto-sidebar .sidebar-system button.active { background: var(--pc-grad), var(--pc-s2); border-color: var(--pc-line-2); box-shadow: var(--pc-line-hi); color: var(--pc-text); }
+.efesto-product .efesto-sidebar .nav-group button.active::before,
+.efesto-product .efesto-sidebar .sidebar-system button.active::before { background: linear-gradient(180deg, var(--pc-gold), var(--pc-ember)); }
+.efesto-product .new-goal { border: 1px solid rgba(238, 135, 72, .38); background: linear-gradient(180deg, rgba(238, 135, 72, .16), rgba(238, 135, 72, .06)); box-shadow: var(--pc-line-hi), 0 8px 24px -12px rgba(238, 135, 72, .45); border-radius: var(--pc-r-ctl); color: #fbe6d4; font-weight: 600; letter-spacing: .01em; }
+.efesto-product .new-goal:hover { border-color: rgba(245, 196, 81, .5); }
+.efesto-product .new-chat { border: 1px solid var(--pc-line-2); background: var(--pc-s2); border-radius: var(--pc-r-ctl); }
+.efesto-product .sidebar-goals > * { border-radius: var(--pc-r-ctl); }
+.efesto-product .forge-surface-bar,
+.efesto-product .efesto-topbar { border-bottom: 1px solid var(--pc-line); background: linear-gradient(180deg, rgba(8, 7, 6, .92), rgba(8, 7, 6, .78)); backdrop-filter: blur(14px) saturate(1.1); }
+.efesto-product .forge-mode-switcher { padding: 3px; border: 1px solid var(--pc-line-2); border-radius: 12px; background: var(--pc-s1); box-shadow: var(--pc-line-hi); }
+.efesto-product .forge-mode-switcher button { border-radius: 9px; letter-spacing: .01em; }
+.efesto-product .forge-mode-switcher button.active { background: var(--pc-grad), var(--pc-s3); border: 1px solid rgba(238, 135, 72, .35); color: var(--pc-text); box-shadow: 0 6px 18px -10px rgba(238, 135, 72, .5); }
+.efesto-product .forge-state-action,
+.efesto-product .top-actions > button,
+.efesto-product .kernel-summary { border: 1px solid var(--pc-line-2); border-radius: 999px; background: var(--pc-s1); box-shadow: var(--pc-line-hi); }
+
+/* ---------- cards & panels ---------- */
+.efesto-product .find-card,
+.efesto-product .connection-card,
+.efesto-product .readiness-card,
+.efesto-product .record-list > *,
+.efesto-product .product-scorecard-view,
+.efesto-product .case-list,
+.efesto-product .evidence-detail,
+.efesto-product .model-list,
+.efesto-product .provider-form {
+  border: 1px solid var(--pc-line);
+  border-radius: var(--pc-r-card);
+  background: var(--pc-grad), var(--pc-s1);
+  box-shadow: var(--pc-line-hi), var(--pc-shadow);
+}
+.efesto-product .find-card { padding: 18px 18px 16px; transition: border-color .18s ease, transform .18s ease; }
+.efesto-product .find-card:hover { border-color: var(--pc-line-2); }
+.efesto-product .find-card .kernel-support { border-radius: 999px; border-color: rgba(143, 209, 158, .28); background: rgba(143, 209, 158, .07); letter-spacing: .1em; }
+.efesto-product .find-card .find-next { border: 1px solid var(--pc-line); border-radius: var(--pc-r-ctl); background: var(--pc-s2); }
+.efesto-product .kernel-id-chip { border-color: var(--pc-line-2); border-radius: 8px; background: var(--pc-s2); }
+.efesto-product .workspace-heading { border-bottom: 1px solid var(--pc-line); padding-bottom: 28px; }
+.efesto-product .workspace-heading > span { border: 1px solid rgba(238, 135, 72, .3); border-radius: 12px; background: radial-gradient(120% 120% at 30% 20%, rgba(238, 135, 72, .18), rgba(238, 135, 72, .03)); box-shadow: var(--pc-line-hi); }
+.efesto-product .readiness-row { border-color: var(--pc-line) !important; }
+
+/* ---------- buttons ---------- */
+.efesto-product .primary-action,
+.efesto-product .danger-action,
+.efesto-product .find-actions button,
+.efesto-product .empty-state-action {
+  min-height: 36px;
+  border-radius: var(--pc-r-ctl);
+  font-weight: 560;
+  letter-spacing: .005em;
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, color .15s ease;
+}
+.efesto-product .primary-action { border: 1px solid rgba(255, 190, 140, .35); background: linear-gradient(180deg, #f0904f, var(--pc-ember-deep)); color: #1a0f08; box-shadow: inset 0 1px 0 rgba(255, 240, 225, .35), 0 10px 24px -12px rgba(238, 135, 72, .7); }
+.efesto-product .primary-action:hover { background: linear-gradient(180deg, #f59c5e, #d26c32); }
+.efesto-product .danger-action { border: 1px solid rgba(227, 118, 95, .35); background: rgba(227, 118, 95, .07); color: #f1c0b3; }
+.efesto-product .danger-action:hover { background: rgba(227, 118, 95, .12); }
+.efesto-product .find-actions button { border: 1px solid var(--pc-line-2); background: var(--pc-s2); color: var(--pc-text-2); box-shadow: var(--pc-line-hi); }
+.efesto-product .find-actions button:hover { border-color: rgba(245, 196, 81, .35); color: var(--pc-text); }
+
+/* ---------- inputs ---------- */
+.efesto-product .connection-card input,
+.efesto-product .provider-form input,
+.efesto-product .provider-form select,
+.efesto-product .settings-card input,
+.efesto-product .settings-card select {
+  border: 1px solid var(--pc-line-2);
+  border-radius: var(--pc-r-ctl);
+  background: var(--pc-bg);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .45);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.efesto-product .connection-card input:focus,
+.efesto-product .provider-form input:focus,
+.efesto-product .provider-form select:focus,
+.efesto-product .settings-card input:focus,
+.efesto-product .settings-card select:focus { outline: 2px solid transparent; border-color: rgba(238, 135, 72, .6); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .45), var(--pc-ring-soft); }
+
+/* ---------- Goal composer: the field is the forge mouth, not an orange box ---------- */
+.efesto-product .forge-composer {
+  border: 1px solid var(--pc-line-2);
+  border-radius: 18px;
+  background: var(--pc-grad), linear-gradient(180deg, #151210, #110f0d);
+  box-shadow: var(--pc-line-hi), 0 22px 60px -22px rgba(0, 0, 0, .85);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.efesto-product .forge-composer:focus-within {
+  border-color: rgba(238, 135, 72, .45);
+  box-shadow:
+    var(--pc-line-hi),
+    0 0 0 4px rgba(238, 135, 72, .07),
+    0 -1px 0 0 rgba(245, 196, 81, .22) inset,
+    0 22px 60px -20px rgba(238, 135, 72, .28);
+}
+/* The textarea itself never draws a box; keyboard users still see the composer ring above. */
+.efesto-product .forge-composer textarea,
+.efesto-product .forge-composer textarea:focus,
+.efesto-product .forge-composer textarea:focus-visible,
+.efesto-product .goal-dock textarea:focus-visible { outline: 2px solid transparent; outline-offset: 0; box-shadow: none; }
+.efesto-product .forge-composer textarea { caret-color: var(--pc-gold); color: var(--pc-text); font-size: 15px; letter-spacing: -.005em; }
+.efesto-product .forge-composer textarea::placeholder { color: #6f665f; }
+.efesto-product .forge-composer textarea::selection { background: rgba(238, 135, 72, .32); }
+.efesto-product .forge-send { border-radius: 12px; background: linear-gradient(180deg, #f39a5c, var(--pc-ember-deep)); box-shadow: inset 0 1px 0 rgba(255, 240, 225, .35), 0 8px 20px -10px rgba(238, 135, 72, .8); }
+.efesto-product .forge-kernel-gate,
+.efesto-product .forge-shortcut { font-family: var(--v3-mono); font-size: 10.5px; letter-spacing: .04em; }
+
+/* ---------- focus: one accessible, on-brand ring for every control (outside the forge scene) ---------- */
+.efesto-product button:not(.forge-live *):focus-visible,
+.efesto-product a:not(.forge-live *):focus-visible,
+.efesto-product select:not(.forge-live *):focus-visible,
+.efesto-product summary:not(.forge-live *):focus-visible,
+.efesto-product input[type='checkbox']:focus-visible {
+  outline: 2px solid transparent; /* kept for Windows high-contrast */
+  outline-offset: 2px;
+  box-shadow: var(--pc-ring);
+}
+@media (forced-colors: active) {
+  .efesto-product .forge-composer:focus-within { outline: 2px solid Highlight; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .efesto-product .forge-composer, .efesto-product .find-card, .efesto-product .primary-action { transition: none; }
+}
+
+/* ---------- Phase 3b · Kimi-inspired minimal layout, Efesto identity ----------
+   Home: centered wordmark, one large rounded composer, soft tray + pill chips beneath.
+   Sidebar: calm drawer, bordered "Nuevo Goal", icon+label list, muted section labels.
+   Still chrome only — no selector touches the forge scene. */
+
+/* home hero → centered wordmark */
+.efesto-product .forge-goal-empty { display: grid; justify-items: center; gap: 10px; text-align: center; padding: clamp(40px, 14vh, 140px) 16px 22px; background: none; border: 0; box-shadow: none; }
+.efesto-product .forge-goal-empty .forge-wordmark { display: inline-flex; align-items: center; gap: 14px; }
+.efesto-product .forge-goal-empty .forge-wordmark b { font-family: var(--v3-sans); font-size: clamp(34px, 6vw, 46px); font-weight: 680; letter-spacing: .16em; color: var(--pc-text); background: linear-gradient(180deg, #fbeee0 10%, #e9b88c 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.efesto-product .forge-goal-empty h1 { font-size: 15px; font-weight: 500; letter-spacing: 0; color: var(--pc-text-2); margin: 4px 0 0; }
+.efesto-product .forge-goal-empty p { font-size: 12.5px; color: var(--pc-muted); margin: 0; }
+.efesto-product .forge-goal-empty .forge-empty-meta { display: none; }
+
+/* composer zone: composer first, then a soft tray of starters, then pill chips */
+.efesto-product .forge-composer-zone { display: flex; flex-direction: column; gap: 12px; width: min(720px, 100%); margin-inline: auto; }
+.efesto-product .forge-composer-zone > .forge-composer { order: 1; }
+.efesto-product .forge-composer-zone > .forge-composer-hint { order: 2; text-align: center; font-size: 11.5px; color: var(--pc-muted); margin: -2px 0 0; }
+.efesto-product .forge-composer-zone > .forge-mode-chips { order: 3; }
+.efesto-product .forge-composer-zone > .forge-quick-prompts { order: 4; }
+
+.efesto-product .forge-composer { border-radius: 24px; border: 1px solid var(--pc-line-2); background: var(--pc-s2); box-shadow: var(--pc-line-hi), 0 24px 60px -30px rgba(0, 0, 0, .8); padding: 16px 16px 12px; }
+.efesto-product .forge-composer textarea { min-height: 64px; font-size: 16px; line-height: 1.5; background: transparent; border: 0; color: var(--pc-text); resize: none; }
+.efesto-product .forge-composer textarea::placeholder { color: #8f867e; }
+.efesto-product .forge-composer footer { display: flex; align-items: center; gap: 10px; border: 0; padding: 6px 0 0; }
+.efesto-product .forge-composer .forge-kernel-gate { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--pc-line); font-size: 12px; color: var(--pc-text-2); background: transparent; }
+.efesto-product .forge-composer .forge-shortcut { margin-left: auto; font-size: 11px; color: var(--pc-muted); }
+.efesto-product .forge-composer .forge-send { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; border: 0; background: linear-gradient(180deg, #f3a565, var(--pc-ember-deep)); color: #160c05; box-shadow: 0 6px 18px -6px rgba(238, 135, 72, .55); }
+.efesto-product .forge-composer .forge-send:disabled { background: var(--pc-s3); color: #6d645d; box-shadow: none; }
+
+/* pill chips (real actions: Goal / Chat mode, Hallazgos) */
+.efesto-product .forge-mode-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.efesto-product .forge-mode-chips button { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 15px; border-radius: 999px; border: 1px solid var(--pc-line-2); background: transparent; color: var(--pc-text-2); font-size: 13px; cursor: pointer; transition: border-color .15s, color .15s, background .15s; }
+.efesto-product .forge-mode-chips button svg { width: 15px; height: 15px; color: var(--pc-muted); }
+.efesto-product .forge-mode-chips button:hover { border-color: rgba(245, 196, 81, .32); color: var(--pc-text); }
+.efesto-product .forge-mode-chips button.active { border-color: rgba(238, 135, 72, .45); color: #f6d9bf; background: rgba(238, 135, 72, .07); }
+.efesto-product .forge-mode-chips button.active svg { color: var(--pc-ember); }
+
+/* soft tray of starters under the composer */
+.efesto-product .forge-quick-prompts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; padding: 6px; border-radius: 18px; background: rgba(255, 228, 200, .018); border: 1px solid var(--pc-line); }
+.efesto-product .forge-quick-prompts button { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; border-radius: 12px; background: transparent; color: var(--pc-text-2); font-size: 13px; text-align: left; box-shadow: none; }
+.efesto-product .forge-quick-prompts button:hover { background: rgba(255, 228, 200, .04); color: var(--pc-text); }
+.efesto-product .forge-quick-prompts button svg { width: 15px; height: 15px; color: #8b7867; flex: none; }
+.efesto-product .forge-quick-prompts button svg:last-child { margin-left: auto; opacity: .5; }
+@media (max-width: 720px) {
+  .efesto-product .forge-quick-prompts { grid-template-columns: 1fr; }
+  .efesto-product .forge-quick-prompts button:nth-child(n+5) { display: none; }
+  .efesto-product .forge-goal-empty { padding-top: 9vh; }
+}
+
+/* sidebar drawer */
+.efesto-product .efesto-sidebar { background: #0b0a09; border-right: 1px solid var(--pc-line); padding: 14px 12px; gap: 6px; }
+.efesto-product .sidebar-actions { display: grid; gap: 6px; margin: 10px 0 14px; }
+.efesto-product .sidebar-actions .new-goal { justify-content: flex-start; gap: 10px; height: 42px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--pc-line-2); background: var(--pc-s2); color: var(--pc-text); font-weight: 560; box-shadow: var(--pc-line-hi); }
+.efesto-product .sidebar-actions .new-goal svg { color: var(--pc-ember); }
+.efesto-product .efesto-sidebar .sidebar-actions .new-chat { display: flex; align-items: center; box-shadow: none; width: 100%; justify-content: flex-start; gap: 10px; height: 38px; padding: 0 14px; border-radius: 12px; border: 0; background: transparent; color: var(--pc-text-2); }
+.efesto-product .efesto-sidebar nav button,
+.efesto-product .sidebar-goals button { gap: 12px; height: 40px; padding: 0 12px; border-radius: 10px; border: 0; background: transparent; color: var(--pc-text-2); font-size: 14px; font-weight: 450; }
+.efesto-product .efesto-sidebar nav button:hover,
+.efesto-product .sidebar-goals button:hover { background: rgba(255, 228, 200, .035); color: var(--pc-text); }
+.efesto-product .efesto-sidebar nav button.active,
+.efesto-product .sidebar-goals button.active { background: rgba(255, 228, 200, .055); color: var(--pc-text); box-shadow: none; }
+.efesto-product .efesto-sidebar nav button svg { width: 18px; height: 18px; color: var(--pc-muted); }
+.efesto-product .efesto-sidebar nav button.active svg { color: var(--pc-ember); }
+.efesto-product .efesto-sidebar .nav-label { display: block; padding: 14px 12px 6px; font-family: var(--v3-sans); font-size: 12px; letter-spacing: 0; text-transform: none; color: #8f867e; }
+.efesto-product .kernel-summary { border-radius: 14px; border: 1px solid var(--pc-line); background: var(--pc-s1); padding: 10px 12px; }
+.efesto-product .sidebar-actions { grid-template-columns: 1fr; }
+.efesto-product .sidebar-actions .new-chat { width: 100%; }
+.efesto-product .efesto-sidebar .sidebar-actions .new-chat span { position: static; width: auto; height: auto; overflow: visible; clip-path: none; display: inline; font-size: 13px; font-weight: 500; }
+.efesto-product .efesto-sidebar nav button.active { border: 0; outline: 0; }
+.efesto-product .sidebar-goals button { height: auto; min-height: 40px; padding: 8px 12px; font-size: 13px; line-height: 1.35; }
+.efesto-product .forge-goal-empty h1 { margin-top: 18px; }
+.efesto-product .forge-goal-empty p { margin-top: -4px; }
+/* refined focus: a quiet warm hairline lift, not an orange box or halo */
+.efesto-product .forge-composer:focus-within { border-color: rgba(255, 222, 190, .30); box-shadow: var(--pc-line-hi), 0 0 0 3px rgba(245, 196, 81, .10), 0 24px 60px -30px rgba(0, 0, 0, .8); }
+
+/* ---------- Phase 3c · polish ---------- */
+.efesto-product .forge-composer .forge-send { margin-left: auto; flex: none; }
+.efesto-product .forge-composer .forge-shortcut + .forge-send { margin-left: 0; }
+/* top bar: one quiet hairline language for every pill */
+.efesto-product .forge-surface-bar,
+.efesto-product .efesto-topbar { border-bottom: 1px solid var(--pc-line); background: rgba(8, 7, 6, .86); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.efesto-product .forge-state-action,
+.efesto-product .connection-pill { border-radius: 999px; border: 1px solid var(--pc-line-2); background: transparent; box-shadow: none; }
+/* mobile tab bar matches the drawer: warm near-black, hairline, ember active */
+.efesto-product .efesto-tabbar { background: rgba(10, 9, 8, .94); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border-top: 1px solid var(--pc-line); box-shadow: none; }
+.efesto-product .efesto-tabbar button { color: var(--pc-muted); font-size: 11px; font-weight: 500; letter-spacing: 0; }
+.efesto-product .efesto-tabbar button.active { color: var(--pc-text); }
+.efesto-product .efesto-tabbar button.active svg { color: var(--pc-ember); }
+/* connected home: the Hallazgos block above the composer speaks the same calm language */
+.efesto-product .forge-home-finds > header small { font-family: var(--v3-mono); font-size: 10.5px; letter-spacing: .14em; color: #a08b78; }
+.efesto-product .forge-home-finds > header h1 { font-size: 22px; font-weight: 620; letter-spacing: -.02em; color: var(--pc-text); }
+.efesto-product .forge-home-finds > header p { font-size: 13px; line-height: 1.55; color: var(--pc-text-2); max-width: 62ch; }
+@media (max-width: 720px) {
+  .efesto-product .forge-composer { border-radius: 22px; padding: 14px 14px 10px; }
+  .efesto-product .forge-composer textarea { min-height: 56px; font-size: 16px; }
+  .efesto-product .forge-quick-prompts { padding: 4px; border-radius: 16px; }
+  .efesto-product .forge-quick-prompts button { padding: 12px 12px; font-size: 13.5px; line-height: 1.35; }
+  .efesto-product .forge-goal-empty .forge-wordmark b { font-size: clamp(30px, 9vw, 40px); letter-spacing: .14em; }
+  .efesto-product .forge-goal-empty .forge-wordmark { gap: 12px; }
+  .efesto-product .forge-goal-empty p { max-width: 30ch; }
+  .efesto-product .forge-mode-chips button { height: 36px; }
+}
+@media (max-width: 370px) {
+  .efesto-product .forge-mode-chips button { padding: 0 12px; font-size: 12.5px; }
+}
+/* keep the gold keyboard ring on the restyled drawer items (wins over the flat states above) */
+.efesto-product .efesto-sidebar .sidebar-actions button:focus-visible,
+.efesto-product .efesto-sidebar nav button:focus-visible,
+.efesto-product .efesto-sidebar nav button.active:focus-visible,
+.efesto-product .sidebar-goals button:focus-visible,
+.efesto-product .forge-mode-chips button:focus-visible,
+.efesto-product .forge-quick-prompts button:focus-visible,
+.efesto-product .efesto-tabbar button:focus-visible { outline: 2px solid transparent; box-shadow: var(--pc-ring); }
+
+/* ---------- Phase 3d · closer Kimi fidelity (neutral greys, ember as accent) ---------- */
+.efesto-product {
+  --k-bg: #121110; --k-panel: #1b1a19; --k-panel-2: #232220; --k-line: rgba(255, 255, 255, .085); --k-line-2: rgba(255, 255, 255, .13);
+  --k-text: #ecebe9; --k-text-2: #c2bfbb; --k-muted: #96928d;
+}
+/* idle home: wordmark ⟶ composer ⟶ tray ⟶ pills, "Explorar ideas" at the bottom */
+.efesto-product .forge-surface.is-idle { display: flex; flex-direction: column; background: var(--k-bg); }
+.efesto-product .forge-surface.is-idle > .forge-scroll { flex: 1 1 0; display: flex; align-items: flex-end; justify-content: center; overflow: visible; min-height: 0; }
+.efesto-product .forge-surface.is-idle > .forge-composer-zone { flex: 1.25 1 0; padding: 0 16px max(14px, env(safe-area-inset-bottom)); width: min(760px, 100%); }
+.efesto-product .forge-goal-empty { padding: 0 16px 30px; }
+.efesto-product .forge-goal-empty .forge-wordmark { margin: 0; display: inline-flex; align-items: center; gap: 12px; font-size: inherit; }
+.efesto-product .forge-goal-empty .forge-wordmark b { font-size: clamp(40px, 11vw, 56px); font-weight: 700; letter-spacing: .06em; background: none; -webkit-text-fill-color: currentColor; color: #e7e3df; }
+.efesto-product .forge-goal-empty .forge-wordmark svg { width: 40px; height: 40px; }
+/* header: toggle left, pills right; no crumb on the idle home */
+.efesto-product .forge-surface.is-idle .forge-surface-bar { border-bottom: 0; background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.efesto-product .forge-surface.is-idle .forge-product-title { display: none; }
+.efesto-product .forge-surface-bar { display: flex; align-items: center; gap: 8px; }
+.efesto-product .forge-surface-bar .forge-surface-leading { flex: 1 1 auto; min-width: 0; }
+.efesto-product .forge-mode-switcher { border-radius: 12px; border: 0; background: var(--k-panel); padding: 3px; gap: 2px; box-shadow: none; }
+.efesto-product .forge-mode-switcher button { height: 32px; border-radius: 9px; padding: 0 12px; font-size: 13.5px; color: var(--k-muted); border: 0; background: transparent; box-shadow: none; }
+.efesto-product .forge-mode-switcher button.active { background: var(--k-panel-2); color: var(--k-text); }
+.efesto-product .forge-mode-switcher button svg { display: none; }
+.efesto-product .forge-surface-bar .forge-state-action { height: 38px; border-radius: 12px; padding: 0 14px; border: 0; background: #e9e6e2; color: #171615; font-weight: 560; }
+.efesto-product .forge-surface-bar .forge-state-action > svg { display: none; }
+.efesto-product .forge-surface-bar .forge-state-action > i { background: var(--pc-ember); box-shadow: none; }
+@media (max-width: 720px) {
+  .efesto-product .forge-surface.is-idle .forge-menu-brand { display: none; }
+  .efesto-product .forge-surface.is-idle .forge-menu-icon { display: block; }
+  .efesto-product .forge-surface-bar .forge-state-action span { max-width: 9.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .efesto-product:has(.forge-surface.is-idle) .efesto-tabbar { display: none; }
+}
+/* composer: tall card, placeholder top-left, mode label + round send bottom-right */
+.efesto-product .forge-surface.is-idle .forge-composer,
+.efesto-product .forge-composer { position: relative; z-index: 1; min-height: 150px; display: flex; flex-direction: column; border-radius: 26px; border: 1px solid var(--k-line-2); background: var(--k-panel); box-shadow: none; padding: 18px 16px 12px 22px; }
+.efesto-product .forge-composer textarea { flex: 1; min-height: 70px; padding: 0; font-size: 17px; color: var(--k-text); }
+.efesto-product .forge-composer textarea::placeholder { color: #8f8b86; }
+.efesto-product .forge-composer footer { margin-top: auto; }
+.efesto-product .forge-composer .forge-composer-context:empty { display: none; }
+.efesto-product .forge-composer .forge-shortcut { display: none; }
+.efesto-product .forge-mode-label { margin-left: auto; font-size: 15px; color: var(--k-text); }
+.efesto-product .forge-mode-label span { color: var(--k-muted); margin-left: 4px; }
+.efesto-product .forge-composer .forge-send { margin-left: 4px; width: 44px; height: 44px; background: var(--pc-ember-deep); color: #fff4ea; box-shadow: none; }
+.efesto-product .forge-composer .forge-send svg { width: 20px; height: 20px; }
+.efesto-product .forge-composer .forge-send:disabled { background: #3a3836; color: #8f8b86; }
+.efesto-product .forge-composer:focus-within { border-color: rgba(255, 255, 255, .22); box-shadow: 0 0 0 3px rgba(238, 135, 72, .14); }
+.efesto-product .forge-composer-zone > .forge-composer-hint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* soft attached tray under the composer */
+.efesto-product .forge-composer-zone { gap: 0; }
+.efesto-product .forge-composer-tray { order: 3; display: flex; justify-content: center; gap: 4px; margin: -1px 26px 0; padding: 6px 8px; border-radius: 0 0 20px 20px; background: #181716; border: 1px solid var(--k-line); border-top: 0; }
+.efesto-product .forge-composer-tray button { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; border: 0; border-radius: 12px; background: transparent; color: var(--k-text-2); font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.efesto-product .forge-composer-tray button:hover { background: rgba(255, 255, 255, .04); color: var(--k-text); }
+.efesto-product .forge-composer-tray button svg { width: 18px; height: 18px; flex: none; color: var(--k-muted); }
+/* scrollable pill chips + circular ">" */
+.efesto-product .forge-page-chips { order: 4; position: relative; display: flex; align-items: center; margin: 22px auto 0; max-width: 100%; }
+.efesto-product .forge-page-chips-row { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 2px 46px 2px 2px; -webkit-mask-image: linear-gradient(90deg, #000 78%, transparent); mask-image: linear-gradient(90deg, #000 78%, transparent); }
+.efesto-product .forge-page-chips-row::-webkit-scrollbar { display: none; }
+.efesto-product .forge-page-chips-row button { flex: none; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--k-line-2); background: transparent; color: var(--k-text-2); font-size: 14.5px; }
+.efesto-product .forge-page-chips-row button:hover { color: var(--k-text); border-color: rgba(255, 255, 255, .2); }
+.efesto-product .forge-page-chips-row button svg { width: 17px; height: 17px; color: var(--k-muted); }
+.efesto-product .forge-page-chips-more { position: absolute; right: 0; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--k-line-2); background: var(--k-bg); color: var(--k-text); }
+.efesto-product .forge-page-chips-more svg { width: 18px; height: 18px; }
+.efesto-product .forge-mode-chips { display: none; }
+/* ideas collapsed behind a quiet bottom link */
+.efesto-product .forge-explore-ideas { order: 6; margin: auto auto 0; padding: 10px 14px; display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent; color: var(--k-muted); font-size: 14.5px; }
+.efesto-product .forge-explore-ideas svg { width: 17px; height: 17px; }
+.efesto-product .forge-explore-ideas:hover { color: var(--k-text); }
+.efesto-product .forge-composer-zone > .forge-quick-prompts { order: 5; margin-top: 18px; }
+/* sidebar drawer: Kimi-like plain list */
+.efesto-product .efesto-sidebar { background: #171615; border-right: 1px solid var(--k-line); }
+.efesto-product .efesto-brand .efesto-lockup-words { display: none; }
+.efesto-product .efesto-brand .efesto-lockup { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: #221d19; border: 1px solid var(--k-line-2); }
+.efesto-product .efesto-brand .efesto-lockup svg { width: 28px; height: 28px; }
+.efesto-product .efesto-sidebar .sidebar-actions .new-goal { height: 46px; border-radius: 14px; border: 1px solid var(--k-line-2); background: var(--k-panel); color: var(--k-text); font-size: 15px; font-weight: 560; }
+.efesto-product .efesto-sidebar nav button,
+.efesto-product .efesto-sidebar .sidebar-actions .new-chat { height: 46px; font-size: 15px; color: var(--k-text); }
+.efesto-product .efesto-sidebar .sidebar-actions .new-chat span { font-size: 15px; font-weight: 450; }
+.efesto-product .efesto-sidebar nav button svg,
+.efesto-product .efesto-sidebar .sidebar-actions .new-chat svg { stroke-width: 1.6; color: var(--k-text-2); }
+.efesto-product .efesto-sidebar nav button .nav-count,
+.efesto-product .efesto-sidebar nav button > b,
+.efesto-product .efesto-sidebar nav button > small { border: 0; background: transparent; color: var(--k-muted); }
+.efesto-product .efesto-sidebar .nav-label { font-size: 14px; color: var(--k-muted); padding: 16px 12px 6px; }
+.efesto-product .efesto-sidebar nav button.active { background: rgba(255, 255, 255, .05); }
+.efesto-product .efesto-sidebar nav button.active svg { color: var(--pc-ember); }
+.efesto-product .sidebar-menu-card { display: grid; gap: 0; padding: 6px; border-radius: 16px; border: 1px solid var(--k-line); background: #201f1d; box-shadow: 0 18px 40px -20px rgba(0, 0, 0, .8); border-top: 1px solid var(--k-line) !important; }
+.efesto-product .sidebar-menu-card button { display: flex; align-items: center; }
+.efesto-product .sidebar-menu-card .menu-chevron { margin-left: auto; width: 16px !important; height: 16px !important; color: var(--k-muted) !important; }
+.efesto-product .kernel-summary { background: transparent; border-color: transparent; }
+.efesto-product .forge-surface-bar .forge-state-action span { display: inline-block; position: static; width: auto; height: auto; clip-path: none; font-size: 14px; color: #171615; }
+.efesto-product .forge-surface-bar .forge-state-action { width: auto; min-width: 0; gap: 8px; display: inline-flex; align-items: center; }
+.efesto-product .efesto-sidebar .sidebar-actions .new-goal span { font-size: 15px; font-weight: 560; }
+.efesto-product .sidebar-menu-card button { color: var(--k-text); }
+.efesto-product .forge-mode-switcher button.active { border: 0; outline: 0; box-shadow: none; }
+.efesto-product .forge-surface-bar .forge-state-action:focus-visible,
+.efesto-product .forge-mode-switcher button:focus-visible,
+.efesto-product .forge-page-chips button:focus-visible,
+.efesto-product .forge-composer-tray button:focus-visible,
+.efesto-product .forge-explore-ideas:focus-visible,
+.efesto-product .sidebar-menu-card button:focus-visible { outline: 2px solid transparent; box-shadow: var(--pc-ring); }
+.efesto-product .forge-surface.is-idle > .forge-scroll { width: 100%; padding: 0; }
+.efesto-product .forge-surface.is-idle .forge-goal-empty { width: 100%; max-width: none; margin: 0; justify-items: center; }
+.efesto-product .forge-surface.is-idle > .forge-composer-zone { flex: 1.7 1 0; background: transparent; border: 0; box-shadow: none; margin-inline: auto; }
+.efesto-product .forge-surface.is-idle > .forge-composer-zone::before,
+.efesto-product .forge-surface.is-idle > .forge-composer-zone::after { display: none; }
+.efesto-product .forge-surface-bar .forge-state-action > i { position: static; width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.efesto-product .forge-surface.is-idle .forge-goal-empty { display: flex; justify-content: center; align-items: flex-end; min-height: 0; height: auto; flex: none; grid-template-columns: none; }
+@media (max-width: 720px) {
+  .efesto-product.has-tabbar:has(.forge-surface.is-idle),
+  .efesto-product:has(.forge-surface.is-idle) .efesto-stage,
+  .efesto-product:has(.forge-surface.is-idle) .efesto-main { padding-bottom: 0; }
+}
+.efesto-product .forge-surface.is-idle .forge-goal-empty { flex-direction: column; align-items: center; justify-content: flex-end; }
+.efesto-product .forge-surface.is-idle .forge-goal-empty > .forge-wordmark { margin: 0 auto; max-width: none; text-align: center; }
+
+/* ---------- Phase 3e · living wallpaper behind the idle home (decorative, no data) ---------- */
+.efesto-product .forge-surface.is-idle { position: relative; isolation: isolate; }
+.efesto-product .home-wallpaper { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: .62; }
+.efesto-product .forge-surface.is-idle > :not(.home-wallpaper) { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { .efesto-product .home-wallpaper { opacity: .4; } }
+@media (max-width: 720px) {
+  /* idle home hides the tab bar, so it gets the full viewport (no dark band at the bottom) */
+  .efesto-product.has-tabbar:has(.forge-surface.is-idle) .efesto-stage,
+  .efesto-product.has-tabbar.efesto-home-active:has(.forge-surface.is-idle) .efesto-main,
+  .efesto-product.has-tabbar .forge-surface.is-idle { height: 100dvh; }
+}
