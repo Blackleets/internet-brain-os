@@ -189,7 +189,7 @@
 
 .efesto-product .forge-composer { border-radius: 24px; border: 1px solid var(--pc-line-2); background: var(--pc-s2); box-shadow: var(--pc-line-hi), 0 24px 60px -30px rgba(0, 0, 0, .8); padding: 16px 16px 12px; }
 .efesto-product .forge-composer textarea { min-height: 64px; font-size: 16px; line-height: 1.5; background: transparent; border: 0; color: var(--pc-text); resize: none; }
-.efesto-product .forge-composer textarea::placeholder { color: #7d746c; }
+.efesto-product .forge-composer textarea::placeholder { color: #8f867e; }
 .efesto-product .forge-composer footer { display: flex; align-items: center; gap: 10px; border: 0; padding: 6px 0 0; }
 .efesto-product .forge-composer .forge-kernel-gate { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--pc-line); font-size: 12px; color: var(--pc-text-2); background: transparent; }
 .efesto-product .forge-composer .forge-shortcut { margin-left: auto; font-size: 11px; color: var(--pc-muted); }
@@ -221,7 +221,7 @@
 .efesto-product .sidebar-actions { display: grid; gap: 6px; margin: 10px 0 14px; }
 .efesto-product .sidebar-actions .new-goal { justify-content: flex-start; gap: 10px; height: 42px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--pc-line-2); background: var(--pc-s2); color: var(--pc-text); font-weight: 560; box-shadow: var(--pc-line-hi); }
 .efesto-product .sidebar-actions .new-goal svg { color: var(--pc-ember); }
-.efesto-product .sidebar-actions .new-chat { justify-content: flex-start; gap: 10px; height: 38px; padding: 0 14px; border-radius: 12px; border: 0; background: transparent; color: var(--pc-text-2); }
+.efesto-product .efesto-sidebar .sidebar-actions .new-chat { display: flex; align-items: center; box-shadow: none; width: 100%; justify-content: flex-start; gap: 10px; height: 38px; padding: 0 14px; border-radius: 12px; border: 0; background: transparent; color: var(--pc-text-2); }
 .efesto-product .efesto-sidebar nav button,
 .efesto-product .sidebar-goals button { gap: 12px; height: 40px; padding: 0 12px; border-radius: 10px; border: 0; background: transparent; color: var(--pc-text-2); font-size: 14px; font-weight: 450; }
 .efesto-product .efesto-sidebar nav button:hover,
@@ -230,14 +230,53 @@
 .efesto-product .sidebar-goals button.active { background: rgba(255, 228, 200, .055); color: var(--pc-text); box-shadow: none; }
 .efesto-product .efesto-sidebar nav button svg { width: 18px; height: 18px; color: var(--pc-muted); }
 .efesto-product .efesto-sidebar nav button.active svg { color: var(--pc-ember); }
-.efesto-product .efesto-sidebar .nav-label { display: block; padding: 14px 12px 6px; font-family: var(--v3-sans); font-size: 12px; letter-spacing: 0; text-transform: none; color: #7a716a; }
+.efesto-product .efesto-sidebar .nav-label { display: block; padding: 14px 12px 6px; font-family: var(--v3-sans); font-size: 12px; letter-spacing: 0; text-transform: none; color: #8f867e; }
 .efesto-product .kernel-summary { border-radius: 14px; border: 1px solid var(--pc-line); background: var(--pc-s1); padding: 10px 12px; }
 .efesto-product .sidebar-actions { grid-template-columns: 1fr; }
 .efesto-product .sidebar-actions .new-chat { width: 100%; }
-.efesto-product .sidebar-actions .new-chat span { display: inline; }
+.efesto-product .efesto-sidebar .sidebar-actions .new-chat span { position: static; width: auto; height: auto; overflow: visible; clip-path: none; display: inline; font-size: 13px; font-weight: 500; }
 .efesto-product .efesto-sidebar nav button.active { border: 0; outline: 0; }
 .efesto-product .sidebar-goals button { height: auto; min-height: 40px; padding: 8px 12px; font-size: 13px; line-height: 1.35; }
 .efesto-product .forge-goal-empty h1 { margin-top: 18px; }
 .efesto-product .forge-goal-empty p { margin-top: -4px; }
 /* refined focus: a quiet warm hairline lift, not an orange box or halo */
 .efesto-product .forge-composer:focus-within { border-color: rgba(255, 222, 190, .30); box-shadow: var(--pc-line-hi), 0 0 0 3px rgba(245, 196, 81, .10), 0 24px 60px -30px rgba(0, 0, 0, .8); }
+
+/* ---------- Phase 3c · polish ---------- */
+.efesto-product .forge-composer .forge-send { margin-left: auto; flex: none; }
+.efesto-product .forge-composer .forge-shortcut + .forge-send { margin-left: 0; }
+/* top bar: one quiet hairline language for every pill */
+.efesto-product .forge-surface-bar,
+.efesto-product .efesto-topbar { border-bottom: 1px solid var(--pc-line); background: rgba(8, 7, 6, .86); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.efesto-product .forge-state-action,
+.efesto-product .connection-pill { border-radius: 999px; border: 1px solid var(--pc-line-2); background: transparent; box-shadow: none; }
+/* mobile tab bar matches the drawer: warm near-black, hairline, ember active */
+.efesto-product .efesto-tabbar { background: rgba(10, 9, 8, .94); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border-top: 1px solid var(--pc-line); box-shadow: none; }
+.efesto-product .efesto-tabbar button { color: var(--pc-muted); font-size: 11px; font-weight: 500; letter-spacing: 0; }
+.efesto-product .efesto-tabbar button.active { color: var(--pc-text); }
+.efesto-product .efesto-tabbar button.active svg { color: var(--pc-ember); }
+/* connected home: the Hallazgos block above the composer speaks the same calm language */
+.efesto-product .forge-home-finds > header small { font-family: var(--v3-mono); font-size: 10.5px; letter-spacing: .14em; color: #a08b78; }
+.efesto-product .forge-home-finds > header h1 { font-size: 22px; font-weight: 620; letter-spacing: -.02em; color: var(--pc-text); }
+.efesto-product .forge-home-finds > header p { font-size: 13px; line-height: 1.55; color: var(--pc-text-2); max-width: 62ch; }
+@media (max-width: 720px) {
+  .efesto-product .forge-composer { border-radius: 22px; padding: 14px 14px 10px; }
+  .efesto-product .forge-composer textarea { min-height: 56px; font-size: 16px; }
+  .efesto-product .forge-quick-prompts { padding: 4px; border-radius: 16px; }
+  .efesto-product .forge-quick-prompts button { padding: 12px 12px; font-size: 13.5px; line-height: 1.35; }
+  .efesto-product .forge-goal-empty .forge-wordmark b { font-size: clamp(30px, 9vw, 40px); letter-spacing: .14em; }
+  .efesto-product .forge-goal-empty .forge-wordmark { gap: 12px; }
+  .efesto-product .forge-goal-empty p { max-width: 30ch; }
+  .efesto-product .forge-mode-chips button { height: 36px; }
+}
+@media (max-width: 370px) {
+  .efesto-product .forge-mode-chips button { padding: 0 12px; font-size: 12.5px; }
+}
+/* keep the gold keyboard ring on the restyled drawer items (wins over the flat states above) */
+.efesto-product .efesto-sidebar .sidebar-actions button:focus-visible,
+.efesto-product .efesto-sidebar nav button:focus-visible,
+.efesto-product .efesto-sidebar nav button.active:focus-visible,
+.efesto-product .sidebar-goals button:focus-visible,
+.efesto-product .forge-mode-chips button:focus-visible,
+.efesto-product .forge-quick-prompts button:focus-visible,
+.efesto-product .efesto-tabbar button:focus-visible { outline: 2px solid transparent; box-shadow: var(--pc-ring); }
