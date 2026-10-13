@@ -65,7 +65,7 @@ describe('Windows one-click stack configuration', () => {
 describe('Windows one-click entry points', () => {
   const installer = text('scripts/windows/install-efesto-windows.ps1');
   it('installs missing prerequisites with winget and the pinned Hermes + model', () => {
-    for (const id of ['Git.Git', 'OpenJS.NodeJS.LTS', 'Python.Python.3.13', 'Ollama.Ollama']) expect(installer).toContain(`'${id}'`);
+    for (const id of ['Git.Git', 'OpenJS.NodeJS.LTS', 'Python.Python.3.14', 'Ollama.Ollama']) expect(installer).toContain(`'${id}'`);
     expect(installer).toContain("$Model = 'qwen3.5:2b'");
     expect(installer).toMatch(/\$HermesRevision = '[0-9a-f]{7,40}'/);
     expect(installer).toContain('[ddgs]');
@@ -105,11 +105,23 @@ describe('Windows PowerShell 5.1 compatibility', () => {
       expect([bytes[0], bytes[1], bytes[2]], file).toEqual([0xef, 0xbb, 0xbf]);
     }
   });
-  it('accepts any installed Python 3.11–3.14 (Hermes Agent requires-python >=3.11,<3.15) before installing one', () => {
+  it('uses Python 3.14 exactly for Hermes (ae3f9f9c gates every core dependency on python_version >= 3.14)', () => {
     const installer = readFileSync(join(process.cwd(), 'scripts/windows/install-efesto-windows.ps1'), 'utf8');
-    expect(installer).toContain('$PythonMinor = @(14, 13, 12, 11)');
-    expect(installer).not.toContain('Python.Python.3.14');
-    expect(installer).toMatch(/if \(\$foundPython\)[^\n]*else \{ Install-WithWinget 'Python\.Python\.3\.13'/);
+    expect(installer).toContain("$HermesPythonVersion = '3.14'");
+    expect(installer).not.toContain('Python.Python.3.13');
+    expect(installer).not.toContain('$PythonMinor');
+    expect(installer).toMatch(/Install-WithWinget 'Python\.Python\.3\.14' 'Python 3\.14' @\('--scope', 'user'\)/);
+    expect(installer).toContain("Invoke-Native 'py' @(\"-$HermesPythonVersion\"");
+  });
+  it('rebuilds a non-3.14 or broken Efesto venv and smoke-checks hermes chat --help after pip install', () => {
+    const installer = readFileSync(join(process.cwd(), 'scripts/windows/install-efesto-windows.ps1'), 'utf8');
+    const pinned = installer.slice(installer.indexOf('function Install-PinnedHermes'), installer.indexOf('function Ensure-HermesAgent {'));
+    expect(pinned).toMatch(/-not \(\(Test-HermesPython \$venvPython\) -and \(Test-HermesChatHelp \$venvHermes\)\)[\s\S]*Remove-Item -Recurse -Force \$venv/);
+    expect(pinned.indexOf('"$Root[ddgs]"')).toBeLessThan(pinned.indexOf('if (-not (Test-HermesChatHelp $venvHermes))'));
+    expect(pinned).toContain("throw \"Hermes se instaló pero 'hermes chat --help' no funciona");
+    const help = installer.slice(installer.indexOf('function Test-HermesChatHelp'), installer.indexOf('function Invoke-Checked'));
+    expect(help).toContain("Invoke-Native $Exe @('chat', '--help') -Quiet");
+    for (const flag of ['--query', '--quiet', '--max-turns', '--toolsets', '--ignore-rules']) expect(help).toContain(flag);
   });
 });
 

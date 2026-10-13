@@ -1,5 +1,5 @@
 ﻿# Efesto: instalación completa en un clic para Windows.
-# Comprueba/instala Git, Node.js 22+, Python 3.11–3.14 y Ollama (winget), instala Hermes Agent con búsqueda
+# Comprueba/instala Git, Node.js 22+, Python 3.14 y Ollama (winget), instala Hermes Agent con búsqueda
 # DuckDuckGo, descarga qwen3.5:2b, compila Efesto (install-efesto.ps1 + panel), crea los accesos
 # "Iniciar Efesto" y "Detener Efesto" y arranca Kernel :4310, panel :3311 y el trabajador de Hermes.
 # Se puede volver a ejecutar sin riesgo: lo que ya está bien se deja como está.
@@ -73,13 +73,13 @@ function Invoke-Native([string]$Exe, [string[]]$Arguments = @(), [switch]$Quiet)
   return [pscustomobject]@{ Code = [int]$code; Output = (($lines -join "`n").Trim()) }
 }
 
-function Install-WithWinget([string]$Id, [string]$Name) {
-  if ($DryRun) { Write-Info "(simulación) winget install --id $Id"; return }
+function Install-WithWinget([string]$Id, [string]$Name, [string[]]$Extra = @()) {
+  if ($DryRun) { Write-Info "(simulación) winget install --id $Id $($Extra -join ' ')"; return }
   if (-not (Test-Command 'winget')) {
     throw "Falta $Name y este equipo no tiene winget (Instalador de aplicaciones de Microsoft). Instala 'App Installer' desde Microsoft Store y vuelve a ejecutar."
   }
   Write-Info "Instalando $Name con winget (puede tardar unos minutos)..."
-  $r = Invoke-Native 'winget' @('install', '--id', $Id, '--exact', '--accept-package-agreements', '--accept-source-agreements', '--silent')
+  $r = Invoke-Native 'winget' @('install', '--id', $Id, '--exact', '--accept-package-agreements', '--accept-source-agreements', '--silent') + $Extra
   if ($r.Code -ne 0) { throw "winget no pudo instalar $Name (código $($r.Code))." }
   Refresh-ProcessPath
 }
@@ -91,29 +91,41 @@ function Get-NodeMajor {
   try { return [int]$r.Output } catch { return 0 }
 }
 
-# Hermes Agent ae3f9f9c declares requires-python = ">=3.11,<3.15" (pyproject.toml): any installed 3.11–3.14 works.
-$PythonMinor = @(14, 13, 12, 11)
+# Hermes Agent ae3f9f9c declares requires-python ">=3.11,<3.15", BUT every core dependency is gated
+# `; python_version >= '3.14'` ("we *only* support 3.14"). On 3.13 the venv installs without ruamel.yaml,
+# python-dotenv… and hermes.exe crashes (seen on Lewis's PC). So the Hermes venv must be Python 3.14 exactly.
+$HermesPythonVersion = '3.14'
 function Test-HermesPython([string]$Exe) {
+  if ([string]::IsNullOrWhiteSpace($Exe)) { return $false }
   $r = Invoke-Native $Exe @('-c', "import sys; print('%d.%d' % sys.version_info[:2])") -Quiet
   if ($r.Code -ne 0 -or -not $r.Output) { return $false }
-  try { $parts = $r.Output.Split('.'); return ([int]$parts[0] -eq 3 -and [int]$parts[1] -ge 11 -and [int]$parts[1] -le 14) } catch { return $false }
+  return ([string]$r.Output).Trim() -eq $HermesPythonVersion
 }
 function Get-HermesPython {
   if (Test-Command 'py') {
-    foreach ($m in $PythonMinor) {
-      $r = Invoke-Native 'py' @("-3.$m", '-c', 'import sys; print(sys.executable)') -Quiet
-      if ($r.Code -eq 0 -and $r.Output) { return $r.Output }
-    }
+    $r = Invoke-Native 'py' @("-$HermesPythonVersion", '-c', 'import sys; print(sys.executable)') -Quiet
+    if ($r.Code -eq 0 -and $r.Output -and (Test-HermesPython ([string]$r.Output).Trim())) { return ([string]$r.Output).Trim() }
   }
-  foreach ($name in @('python', 'python3')) {
+  foreach ($name in @('python3.14', 'python', 'python3')) {
     $cmd = Get-Command $name -ErrorAction SilentlyContinue
     if ($cmd -and $cmd.Source -notlike '*WindowsApps*' -and (Test-HermesPython $cmd.Source)) { return $cmd.Source }
   }
-  foreach ($m in $PythonMinor) {
-    $candidate = Join-Path $env:LOCALAPPDATA "Programs\Python\Python3$m\python.exe"
-    if (Test-Path $candidate) { return $candidate }
+  foreach ($candidate in @((Join-Path $env:LOCALAPPDATA 'Programs\Python\Python314\python.exe'), (Join-Path $env:ProgramFiles 'Python314\python.exe'))) {
+    if ((Test-Path $candidate) -and (Test-HermesPython $candidate)) { return $candidate }
   }
   return $null
+}
+
+# Same flags as install-efesto.ps1 Test-HermesSafeSearchRuntime and the Kernel's hermes-runtime.mjs.
+function Test-HermesChatHelp([string]$Exe) {
+  if (-not (Test-Path $Exe)) { return $false }
+  $r = Invoke-Native $Exe @('chat', '--help') -Quiet
+  if ($r.Code -ne 0) { return $false }
+  $help = [string]($r.Output -join "`n")
+  foreach ($p in @('(^|\s)-q(,|\s)|--query', '(^|\s)-Q(,|\s)|--quiet', '--max-turns', '--toolsets', '--ignore-rules')) {
+    if ($help -notmatch $p) { return $false }
+  }
+  return $true
 }
 
 function Invoke-Checked([string]$Exe, [string[]]$Arguments, [string]$Failure) {
@@ -128,12 +140,13 @@ function Ensure-Prerequisites {
   if (Test-Command 'git') { Write-Ok 'Git instalado.' } else { Install-WithWinget 'Git.Git' 'Git' }
   if ((Get-NodeMajor) -ge 22) { Write-Ok "Node.js $(Get-NodeMajor) instalado." } else { Install-WithWinget 'OpenJS.NodeJS.LTS' 'Node.js' }
   $foundPython = Get-HermesPython
-  if ($foundPython) { Write-Ok "Python compatible encontrado: $foundPython" } else { Install-WithWinget 'Python.Python.3.13' 'Python 3.13' }
+  # Other Pythons the user has are kept; only 3.14 is added (per user, no admin) when missing.
+  if ($foundPython) { Write-Ok "Python 3.14 encontrado: $foundPython" } else { Install-WithWinget 'Python.Python.3.14' 'Python 3.14' @('--scope', 'user') }
   if (Test-Command 'ollama') { Write-Ok 'Ollama instalado.' } else { Install-WithWinget 'Ollama.Ollama' 'Ollama' }
   if ($DryRun) { return }
   if (-not (Test-Command 'git')) { throw 'Git se instaló pero no aparece todavía. Cierra esta ventana y vuelve a ejecutar "Instalar Efesto".' }
   if ((Get-NodeMajor) -lt 22) { throw 'Node.js 22 o superior no está disponible. Cierra esta ventana y vuelve a ejecutar "Instalar Efesto".' }
-  if (-not (Get-HermesPython)) { throw 'No hay Python 3.11–3.14 disponible. Cierra esta ventana y vuelve a ejecutar "Instalar Efesto".' }
+  if (-not (Get-HermesPython)) { throw 'No hay Python 3.14 disponible (Hermes Agent solo funciona con 3.14). Cierra esta ventana y vuelve a ejecutar "Instalar Efesto".' }
   if (-not (Test-Command 'ollama')) { throw 'Ollama no está disponible. Cierra esta ventana y vuelve a ejecutar "Instalar Efesto".' }
 }
 
@@ -176,14 +189,27 @@ function Install-PinnedHermes([string]$Root) {
   Invoke-Checked 'git' @('-C', $Root, 'checkout', '--quiet', $HermesRevision) 'No se pudo fijar la versión de Hermes Agent'
   $python = Get-HermesPython
   if ($DryRun -and -not $python) { $python = 'py' }
+  if (-not $python) { throw 'No hay Python 3.14 para el entorno de Hermes. Cierra esta ventana y vuelve a ejecutar "Instalar Efesto".' }
   $venv = Join-Path $Root 'venv'
-  if (-not (Test-Path (Join-Path $venv 'Scripts\python.exe'))) {
-    Invoke-Checked $python @('-m', 'venv', $venv) 'No se pudo crear el entorno de Python de Hermes'
-  }
   $venvPython = Join-Path $venv 'Scripts\python.exe'
+  $venvHermes = Join-Path $venv 'Scripts\hermes.exe'
+  # A venv on another Python (e.g. 3.13 from an earlier install) or a broken hermes.exe is rebuilt.
+  if ((Test-Path $venv) -and -not $DryRun -and -not ((Test-HermesPython $venvPython) -and (Test-HermesChatHelp $venvHermes))) {
+    Write-Info 'El entorno de Hermes de Efesto no es Python 3.14 o no funciona; se vuelve a crear.'
+    Remove-Item -Recurse -Force $venv
+  }
+  if (-not (Test-Path $venvPython)) {
+    Invoke-Checked $python @('-m', 'venv', $venv) 'No se pudo crear el entorno de Python 3.14 de Hermes'
+  }
   Invoke-Checked $venvPython @('-m', 'pip', 'install', '--quiet', '--upgrade', 'pip') 'No se pudo actualizar pip'
   Invoke-Checked $venvPython @('-m', 'pip', 'install', '--quiet', '-e', "$Root[ddgs]") 'No se pudo instalar Hermes Agent'
-  if (-not $DryRun -and -not (Test-Path (Join-Path $venv 'Scripts\hermes.exe'))) { throw 'Hermes se instaló pero no se encuentra hermes.exe.' }
+  if (-not $DryRun) {
+    if (-not (Test-Path $venvHermes)) { throw 'Hermes se instaló pero no se encuentra hermes.exe.' }
+    if (-not (Test-HermesChatHelp $venvHermes)) {
+      throw "Hermes se instaló pero 'hermes chat --help' no funciona o no muestra la búsqueda segura (--query, --quiet, --max-turns, --toolsets, --ignore-rules). Revisa que el entorno use Python 3.14: $venvPython"
+    }
+    Write-Ok 'Hermes responde a chat --help con la búsqueda segura.'
+  }
   if ($DryRun) { Write-Info "(simulación) Hermes Agent $HermesRevision quedaría instalado en $Root." } else { Write-Ok "Hermes Agent $HermesRevision instalado en $Root." }
 }
 
@@ -197,7 +223,7 @@ function Ensure-HermesAgent {
   $userExe = Join-Path $UserHermesRoot 'venv\Scripts\hermes.exe'
   if (Test-Path $userExe) {
     $rev = Get-HermesRevision $UserHermesRoot
-    if ($rev -and $rev.StartsWith($HermesRevision)) {
+    if ($rev -and $rev.StartsWith($HermesRevision) -and (Test-HermesChatHelp $userExe)) {
       Write-Info "Hermes Agent existente en la revisión validada $rev."
       Ensure-HermesDdgs $UserHermesRoot
       Use-HermesRoot $UserHermesRoot
@@ -209,7 +235,8 @@ function Ensure-HermesAgent {
   # 2. Otherwise Efesto's own pinned copy (reused when already at the pin).
   $ownExe = Join-Path $EfestoHermesRoot 'venv\Scripts\hermes.exe'
   $ownRev = Get-HermesRevision $EfestoHermesRoot
-  if ((Test-Path $ownExe) -and $ownRev -and $ownRev.StartsWith($HermesRevision)) {
+  $ownPython = Join-Path $EfestoHermesRoot 'venv\Scripts\python.exe'
+  if ((Test-Path $ownExe) -and $ownRev -and $ownRev.StartsWith($HermesRevision) -and (Test-HermesPython $ownPython) -and (Test-HermesChatHelp $ownExe)) {
     Write-Info "Copia de Hermes de Efesto ya en $ownRev."
     Ensure-HermesDdgs $EfestoHermesRoot
   } else {
