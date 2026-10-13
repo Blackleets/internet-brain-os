@@ -132,3 +132,9 @@
 .agent-advanced .agent-other { margin: 12px 0 0; color: var(--v3-muted); font-size: 12.5px; line-height: 19px; }
 @media (max-width: 520px) { .agent-card { grid-template-columns: auto 1fr; } .agent-connect { grid-column: 1 / -1; width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .agent-connect .is-spinning { animation: none; } .agent-advanced-toggle svg { transition: none; } }
+
+/* Ajustes: manual Kernel fields live behind "Avanzado" (auto-connect is the default). */
+.connection-advanced { margin-top: 14px; padding: 10px 12px; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(255, 205, 165, .1); }
+.connection-advanced > summary { min-height: 32px; display: flex; align-items: center; cursor: pointer; font-weight: 600; font-size: 13.5px; }
+.connection-advanced[open] > summary { margin-bottom: 8px; }
+.connection-advanced > label, .connection-advanced > button, .connection-advanced > .connection-actions { margin-top: 10px; }

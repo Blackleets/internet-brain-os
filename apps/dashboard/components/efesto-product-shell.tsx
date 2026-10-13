@@ -415,6 +415,18 @@ export default function EfestoProductShell() {
     } finally { if (attempt === connectionAttempt.current) setConnecting(false); }
   }
 
+  async function connectLocal() {
+    automaticPaused.current = true;
+    const attempt = ++connectionAttempt.current;
+    setConnecting(true);
+    try {
+      const candidate = await discoverLocalKernelConnection();
+      if (attempt === connectionAttempt.current) await connectWith(candidate, false);
+    }
+    catch { setToast('No se encontró el Kernel local. Abre Efesto desde su icono del escritorio y vuelve a intentarlo.'); }
+    finally { setConnecting(false); }
+  }
+
   async function connectExtension() {
     automaticPaused.current = true;
     const attempt = ++connectionAttempt.current;
@@ -722,7 +734,7 @@ export default function EfestoProductShell() {
         {view === 'activity' ? <ActivityView snapshot={snapshot} connected={Boolean(connection)} /> : null}
         {view === 'models' ? <ModelsView providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} modelForge={snapshot?.readiness.modelForge} connected={Boolean(connection)} onSelect={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); setChatMode(true); navigate('home'); }} onAdd={addProvider} /> : null}
         {view === 'agents' ? <AgentsView snapshot={snapshot} connected={Boolean(connection)} kernelUrl={connection?.baseUrl} onTestAgents={testAgents} onSettings={() => navigate('settings')} onNewGoal={newGoal} /> : null}
-        {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} kernelBaseUrl={connection?.baseUrl} onConnect={connect} onExtensionConnect={() => void connectExtension()} onDisconnect={disconnect} onRefresh={() => void refresh()} /> : null}
+        {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} kernelBaseUrl={connection?.baseUrl} onConnect={connect} onLocalConnect={() => void connectLocal()} onExtensionConnect={() => void connectExtension()} onDisconnect={disconnect} onRefresh={() => void refresh()} /> : null}
       </main>
 
       {connectionsOpen && connection ? <ConnectionsSheet missions={snapshot?.missions} kernelOnline={snapshot?.readiness.kernel === 'online'} connected kernelUrl={connection.baseUrl} agents={snapshot?.agents} onTest={testAgents} onConnectKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onManageKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onClose={() => setConnectionsOpen(false)} /> : null}

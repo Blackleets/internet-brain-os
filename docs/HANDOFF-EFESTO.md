@@ -283,6 +283,7 @@ Goal from Lewis: install like the ChatGPT/Grok desktop apps. No browser extensio
   - Hermes: Conectar connects the Kernel if needed, otherwise re-checks the contact the Kernel recorded. It never fakes a connection.
   - Claude and Cursor: Conectar shows a short Spanish how-to with a read-only MCP config (no token).
   - The worker commands (shell picker, doctor, loop) and the agent contract are behind **Avanzado**.
+- **Ajustes → Conectar Kernel:** the default action is one **Conectar automáticamente** button, which uses the local bridge. The URL (default now `http://127.0.0.1:4310`, the installer's Kernel), token, pairing code and extension button are behind **Avanzado**. Once connected, the card shows just **Conectado**. The Extensión readiness row reads "opcional". Auto-connect works only when the dashboard was started by the stack (`EFESTO_LOCAL_KERNEL_TOKEN_FILE`), not with a plain `pnpm dashboard:dev` on :3000.
 - **Pending and limits:**
   - **No code signing yet**, so SmartScreen shows "Windows protegió su PC" (Más información → Ejecutar de todas formas).
   - CI only smoke-tests a silent `/DRYRUN=1` install and uninstall. The real downloads (winget, Hermes pip, the 2-3 GB model, `pnpm install`/`next build`) have not been exercised on a real PC.

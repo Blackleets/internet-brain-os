@@ -22,6 +22,7 @@ test.afterEach(async ({ page }) => { expect(browserProblems.get(page) ?? []).toE
 async function connect(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Conectar Kernel' }).first().click();
   await expect(page.getByRole('heading', { name: 'Ajustes', exact: true })).toBeVisible();
+  await page.locator('details.connection-advanced > summary').click();
   await page.getByRole('textbox', { name: 'URL del Kernel', exact: true }).fill('http://127.0.0.1:4100');
   await page.getByLabel('Token privado', { exact: true }).fill(token);
   await page.getByRole('button', { name: 'Autorizar dispositivo', exact: true }).click();
