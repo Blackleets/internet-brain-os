@@ -5,15 +5,19 @@
 // Pause between Missions: touch /tmp/hermes-worker.pause (the current Mission always finishes).
 import { readFile, appendFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-const repo = '/workspace/ibos-forge-live';
-const { runHermesMissionWorker } = await import(`${repo}/apps/local-kernel/hermes-mission-worker.mjs`);
-const { requestMissionCandidateVerification } = await import(`${repo}/apps/local-kernel/automatic-mission-verification-client.mjs`);
-const baseUrl = 'http://127.0.0.1:4310';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+// Box defaults below; the Windows one-click stack (scripts/windows/efesto-windows-stack.mjs) sets EFESTO_* .
+const repo = process.env.EFESTO_REPO_ROOT ?? '/workspace/ibos-forge-live';
+const repoModule = (rel) => pathToFileURL(join(repo, rel)).href;
+const { runHermesMissionWorker } = await import(repoModule('apps/local-kernel/hermes-mission-worker.mjs'));
+const { requestMissionCandidateVerification } = await import(repoModule('apps/local-kernel/automatic-mission-verification-client.mjs'));
+const baseUrl = process.env.EFESTO_KERNEL_URL ?? 'http://127.0.0.1:4310';
 const ollama = `http://${process.env.OLLAMA_HOST ?? '127.0.0.1:11434'}`;
 const model = process.env.HERMES_INFERENCE_MODEL ?? 'qwen3.5:2b';
-const apiToken = (await readFile('/tmp/forge-kernel-token', 'utf8')).trim();
-const PAUSE = '/tmp/hermes-worker.pause';
-const RUNS = '/tmp/hermes-worker-runs.jsonl';
+const apiToken = (await readFile(process.env.EFESTO_KERNEL_TOKEN_FILE ?? '/tmp/forge-kernel-token', 'utf8')).trim();
+const PAUSE = process.env.EFESTO_WORKER_PAUSE_FILE ?? '/tmp/hermes-worker.pause';
+const RUNS = process.env.EFESTO_WORKER_RUNS_FILE ?? '/tmp/hermes-worker-runs.jsonl';
 const log = (m) => console.log(`${new Date().toISOString()} ${m}`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -48,7 +52,7 @@ async function runMission(mission) {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     const a0 = Date.now();
     log(`«${mission.goalTitle}» attempt ${attempt}: claiming ${mission.id}`);
-    const result = await runHermesMissionWorker({ baseUrl, apiToken, missionId: mission.id, command: process.execPath, args: [`${repo}/scripts/hermes-efesto-adapter.mjs`] });
+    const result = await runHermesMissionWorker({ baseUrl, apiToken, missionId: mission.id, command: process.execPath, args: [join(repo, 'scripts', 'hermes-efesto-adapter.mjs')] });
     const entry = { attempt, ms: Date.now() - a0, status: result.status, ...(result.reason ? { reason: result.reason } : {}) };
     run.attempts.push(entry);
     log(`worker result: ${JSON.stringify(entry)}`);
@@ -81,7 +85,7 @@ const verifyTried = new Set();
 for (;;) {
   try {
     if (existsSync(PAUSE)) {
-      if (lastIdle !== 'paused') { log('paused (remove /tmp/hermes-worker.pause to resume)'); lastIdle = 'paused'; }
+      if (lastIdle !== 'paused') { log(`paused (remove ${PAUSE} to resume)`); lastIdle = 'paused'; }
     } else {
       await ping();
       const all = await missions();

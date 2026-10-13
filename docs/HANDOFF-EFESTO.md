@@ -168,3 +168,25 @@ Report: `/workspace/ref/forge-v3-polish/queue-report.json`.
 4. Model robustness: JSON-only output for qwen, and more free or local model options.
 5. Search quality: attribute every drop reason, avoid sources that are bot-blocked, add more sources beyond ddgs.
 6. When Lewis asks: merge in the §3 order and verify Vercel production.
+
+## 9. Windows one-click install (Phase 2, draft)
+
+For Lewis's PC (Windows, `C:\Users\Usuario`). Everything a user touches is in Spanish.
+
+- **`Instalar Efesto.cmd`** runs `scripts/windows/install-efesto-windows.ps1`. It is safe to re-run.
+  1. Checks Git, Node 22+, Python 3.14 and Ollama, and installs any that are missing with winget.
+  2. Installs Hermes Agent, pinned to `ae3f9f9c`, with `[ddgs]`, into `%LOCALAPPDATA%\hermes\hermes-agent\venv`. That is the path the launcher already detects.
+  3. Runs `ollama pull qwen3.5:2b`.
+  4. Runs the existing `scripts/install-efesto.ps1` with `HEPHAESTUS_PORT=4310` and the data dir in `%LOCALAPPDATA%\Efesto\kernel-data`.
+  5. Runs `pnpm dashboard:build` and writes `%LOCALAPPDATA%\Efesto\hermes-worker.env`, the Windows equivalent of `hermes-worker-env.example`.
+  6. Creates the desktop shortcuts **Iniciar Efesto** and **Detener Efesto**, then starts everything.
+  - `-DryRun` prints every step and changes nothing.
+- **`Iniciar Efesto.cmd`** runs `node scripts/windows/efesto-windows-stack.mjs start`, in this order: config → Ollama and model → Kernel :4310 (through `efesto-launcher.mjs repair`) → dashboard :3311 (`next start`) → Hermes worker.
+  - Anything already healthy is reused. The worker is supervised and restarts after 15 s.
+  - It then copies the Kernel token to the clipboard with `clip.exe` (the token is never printed) and opens `http://127.0.0.1:3311`, so the user can paste it into Conectar Kernel.
+  - If prerequisites are missing, it falls back to the installer.
+- **`Detener Efesto.cmd`** stops the worker and the dashboard (pids in `%LOCALAPPDATA%\Efesto\stack-processes.json`) and asks the launcher to shut down the Kernel. Ollama is left running.
+- Logs are in `%LOCALAPPDATA%\Efesto\logs\`.
+- Worker pause file: `%LOCALAPPDATA%\Efesto\hermes-worker.pause`.
+- `queue-worker.mjs` now reads `EFESTO_REPO_ROOT`, `EFESTO_KERNEL_URL`, `EFESTO_KERNEL_TOKEN_FILE`, `EFESTO_WORKER_PAUSE_FILE` and `EFESTO_WORKER_RUNS_FILE`. The box defaults are unchanged.
+- **Not yet verified on a real Windows PC.** CI (`windows-one-click.yml`) only parses the scripts and runs the dry run and config generation on windows-2022. No winget installs, Hermes pip install, model pull or real start have been exercised.
