@@ -3,6 +3,7 @@
 import type { GoalEditRequest } from './forge/goal-edit-sheet';
 import { hermesReadiness } from '../lib/kernel/agent-connection-copy';
 import { EfestoMark } from './brand/efesto-mark';
+import { HomeWallpaper } from './home/home-wallpaper';
 import {
   Activity, Bot, BrainCircuit, Check, ChevronDown, ChevronRight, CircleOff, Database, ExternalLink, FileSearch,
   History, Lightbulb, Menu, MessageSquare, Pause, Plug, RefreshCw, Search, ArrowUp, Send, Settings, ShieldCheck, Sparkles, Target, Workflow, X,
@@ -134,6 +135,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
   />;
 
   return <section className={'forge-surface ' + (chatMode ? 'is-chat' : 'is-goal') + (showForge ? ' has-forge' : '') + (showSuggestions && !chatMode ? ' is-idle' : '')} aria-label={surfaceAria}>
+    {showSuggestions && !chatMode ? <HomeWallpaper /> : null}
     <header className="forge-surface-bar">
       <div className="forge-surface-leading">
         <button type="button" className="forge-menu-button" onClick={(event) => onOpenNav(event.currentTarget)} aria-label="Alternar navegación" aria-controls="efesto-sidebar" aria-expanded={navExpanded}>

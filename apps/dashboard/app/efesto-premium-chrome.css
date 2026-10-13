@@ -394,3 +394,15 @@
 }
 .efesto-product .forge-surface.is-idle .forge-goal-empty { flex-direction: column; align-items: center; justify-content: flex-end; }
 .efesto-product .forge-surface.is-idle .forge-goal-empty > .forge-wordmark { margin: 0 auto; max-width: none; text-align: center; }
+
+/* ---------- Phase 3e · living wallpaper behind the idle home (decorative, no data) ---------- */
+.efesto-product .forge-surface.is-idle { position: relative; isolation: isolate; }
+.efesto-product .home-wallpaper { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: .62; }
+.efesto-product .forge-surface.is-idle > :not(.home-wallpaper) { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { .efesto-product .home-wallpaper { opacity: .4; } }
+@media (max-width: 720px) {
+  /* idle home hides the tab bar, so it gets the full viewport (no dark band at the bottom) */
+  .efesto-product.has-tabbar:has(.forge-surface.is-idle) .efesto-stage,
+  .efesto-product.has-tabbar.efesto-home-active:has(.forge-surface.is-idle) .efesto-main,
+  .efesto-product.has-tabbar .forge-surface.is-idle { height: 100dvh; }
+}
