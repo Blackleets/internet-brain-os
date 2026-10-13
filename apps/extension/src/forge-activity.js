@@ -87,7 +87,11 @@ function countMissionSupportedFinds(mission) {
 
 export function temporaryForgeActivity(kind) {
   if (kind === 'capture') return { ...ACTIVITIES.working, detail: 'Efesto is analyzing this public page.' };
-  if (kind === 'capture-success') return { label: 'Evidence preserved', detail: 'The page was preserved as private Evidence.', tone: 'success' };
+  // Fail-close Living Forge chrome: a manual page capture mints Case+Evidence only (server.mjs
+  // /api/browser/page-context; popup status already says it is not a Kernel SUPPORT Find).
+  // data-activity=success (green badge + celebrate) is reserved for Kernel SUPPORT Finds, so a
+  // capture must not paint it; neutral idle chrome, same as completed-without-Evidence.
+  if (kind === 'capture-success') return { label: 'Evidence preserved', detail: 'The page was preserved as private Evidence. Capture is not a Kernel SUPPORT Find.', tone: 'idle' };
   if (kind === 'capture-error') return { ...ACTIVITIES.error, detail: 'The page was rejected or could not be analyzed.' };
   return ACTIVITIES.idle;
 }

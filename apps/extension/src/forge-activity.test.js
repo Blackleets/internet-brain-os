@@ -143,12 +143,28 @@ it('reports Kernel-supported Find counts without inventing findings', () => {
   it('uses explicit temporary states for manual capture', () => {
     expect(temporaryForgeActivity('capture').tone).toBe('working');
     expect(temporaryForgeActivity('capture-success')).toMatchObject({
-      tone: 'success',
+      tone: 'idle',
       label: 'Evidence preserved',
-      detail: 'The page was preserved as private Evidence.',
+      detail: 'The page was preserved as private Evidence. Capture is not a Kernel SUPPORT Find.',
     });
     expect(temporaryForgeActivity('capture-success').label).not.toMatch(/lead|Find|forged/i);
     expect(temporaryForgeActivity('capture-error').tone).toBe('error');
+  });
+
+  it('keeps manual page capture (Evidence only) off Kernel SUPPORT success celebrate chrome', () => {
+    // popup.js capture() → setForgeActivity(temporaryForgeActivity('capture-success')).
+    // data-activity=success (green badge + celebrate) is reserved for Kernel SUPPORT Finds
+    // (forgeActivityForMission / central-forge-power-controller). A capture mints Evidence only.
+    const captured = temporaryForgeActivity('capture-success');
+    expect(captured.tone).not.toBe('success');
+    expect(captured.tone).toBe(forgeActivityForMission({ status: 'completed' }).tone);
+    expect(captured.detail).toMatch(/not a Kernel SUPPORT Find/);
+    expect(captured.tone).not.toBe(forgeActivityForMission(forgedMission, [supported]).tone);
+
+    const el = { dataset: {}, querySelector: () => null };
+    applyLivingForgeActivity(el, captured.tone);
+    expect(el.dataset.activity).not.toBe('success');
+    expect(el.dataset.activity).toBe('idle');
   });
 
   it('does not claim EN VIVO when Living Forge is idle without mission', () => {
