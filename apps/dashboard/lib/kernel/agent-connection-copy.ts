@@ -30,7 +30,8 @@ export function formatClock(iso: string | undefined): string {
 }
 
 // "completed" without a Kernel forge is not finished work: same wording as the sidebar Goal status.
-const PHASES: Record<string, string> = { forged: 'forjada', verifying: 'verificando', investigating: 'investigando', failed: 'fallida', queued: 'en cola', completed: 'terminada sin Evidence', completed_without_forge: 'terminada sin Evidence', running: 'en curso' };
+// verified_without_support (pages read, none passed SUPPORT) is not "fallida": sidebar "sin SUPPORT".
+const PHASES: Record<string, string> = { forged: 'forjada', verifying: 'verificando', investigating: 'investigando', failed: 'fallida', queued: 'en cola', completed: 'terminada sin Evidence', completed_without_forge: 'terminada sin Evidence', verified_without_support: 'sin SUPPORT', running: 'en curso' };
 
 /**
  * Human copy for one agent, derived only from the Kernel's own state. `available === false` means
