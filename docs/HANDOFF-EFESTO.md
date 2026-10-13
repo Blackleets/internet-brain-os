@@ -1,6 +1,63 @@
-# Efesto handoff (state as of 2026-10-04 ~16:40 Europe/Paris)
+# Efesto handoff
 
-This doc lets another engineer or agent continue from the last step. It lives on `feat/forge-live-view` (PR #244).
+**Read §0 first.** It is the current state, as of 2026-10-13 ~17:15 Europe/Paris, on `main`. §1–§8 are the 2026-10-04 snapshot, kept for history. Their PRs, branches, paths and SHAs are outdated unless §0 or §9 repeats them.
+
+## 0. Current state (2026-10-13)
+
+**`main`**
+- Merged today, all squash-merged with Lewis's explicit OK:
+  - #267 `caddbe2`: the adapter funnel no longer labels candidates as Hallazgos. Only Kernel SUPPORT is a Find.
+  - #268 `d071f32`: Hermes selection fix: structured local-model selection (see §9), keeps Goal acronyms, fails fast, readable failure copy.
+  - #270 `68595cc`, Phase 1:
+    - Planned searches run in parallel.
+    - Keyless Wikipedia fallback when ddgs errors or returns 0 hits. Each search records `source` `ddgs | wikipedia`. Off with `HEPHAESTUS_SEARCH_FALLBACK=off`.
+    - Ollama selection by number (integer enum), `keep_alive` 30m.
+    - The worker polls every 3 s.
+    - Adapter one-shot about 8–12 s, down from 17–27 s.
+    - Settled-state and Hermes readiness consistency.
+  - #273 `1604f84`, Phase 3: Kimi-style premium chrome:
+    - Wordmark-only home with the large Goal composer, tray and page chips.
+    - Plain sidebar drawer.
+    - Decorative home spider wallpaper `apps/dashboard/components/home/home-wallpaper-engine.ts`:
+      - It weaves orb webs, and a fly comes rarely.
+      - It is `aria-hidden`, ignores the pointer and pauses when the tab is hidden. Reduced motion draws one still frame.
+      - It carries no data.
+    - The forge/anvil/spider scene and its effects are untouched. `apps/dashboard/lib/premium-chrome-css.test.ts` enforces that the chrome CSS never targets the forge scene.
+  - #274 `eb7e381`: extension `#mission-progress` shows a Kernel read without SUPPORT as such, not as "Verification error".
+- **Open drafts, NOT merged:**
+  - #271 `feat/phase2-windows-one-click`:
+    - Windows one-click install: `Instalar Efesto.cmd` / `Iniciar Efesto.cmd` / `Detener Efesto.cmd`.
+    - Not yet tested on a real PC.
+    - The old `Install Efesto.cmd` (on main) coexists with it.
+  - #272 `fix/living-forge-read-without-support`: the Living Forge names a read without SUPPORT.
+  - #266: another writer's PR. Don't touch it.
+
+**Roadmap to 100%**
+1. Phase 1, search/selection speed and robustness: **done** (#268, #270).
+2. Phase 2, Windows installer: #271, waiting for a real-PC test.
+3. Phase 3, polish: **done** (#273, #274).
+4. Phase 4: full test on Lewis's Windows PC, with video.
+5. Phase 5: launch only with Lewis's approval. `publicLaunchApproved` stays **false**.
+
+**Rules (always)**
+- Never fabricate data.
+- The only path to a Find is Goal → Evidence → Kernel SUPPORT → Find.
+- Never merge to `main` without Lewis's explicit OK. PRs stay drafts. Never force-push.
+- Show a mockup or video before any visual change.
+- Reply to Lewis in Spanish.
+
+**Box/dev notes**
+- **pnpm:** use the repo's pnpm 11.11.0 (`packageManager`): `npx -y pnpm@11.11.0 install --frozen-lockfile`. The box's global pnpm is 9.15.9 and fails with `ERR_PNPM_BROKEN_LOCKFILE`.
+- **Node:** Node 22 (`/home/box/.local/node22/bin`).
+- **Box DNS:** the sinkhole (198.18.0.0/15, §9) blocks page reads on the box. The Kernel correctly refuses those reads as a private network. Don't weaken the guard.
+- **Flaky checks:**
+  - The "Hermes live public-web acceptance" workflow (`.github/workflows/hermes-live-public-web-acceptance.yml`) has been flaky. Re-run it once before treating it as red.
+  - `scripts/hermes-boundary-acceptance.e2e.test.mjs` fails in a fresh `git worktree` (known gap, §7 #11).
+- **Live box (2026-10-13):**
+  - Kernel :4310 runs `apps/local-kernel/server.mjs` from `/workspace/phase1`. The token file is `/tmp/forge-kernel-token`; never print it.
+  - Dashboard :3311 runs `next start` from the `/workspace/main-eb7e381` worktree.
+  - Ollama runs from `/workspace/runtime`. The Hermes worker is `/workspace/runtime/efesto-live/run-hermes-worker.sh` → `queue-worker.mjs`.
+  - `next build` rewrites `apps/dashboard/next-env.d.ts`. Run `git checkout --` on it before committing.
 
 ## 1. North star
 
@@ -168,3 +225,9 @@ Report: `/workspace/ref/forge-v3-polish/queue-report.json`.
 4. Model robustness: JSON-only output for qwen, and more free or local model options.
 5. Search quality: attribute every drop reason, avoid sources that are bot-blocked, add more sources beyond ddgs.
 6. When Lewis asks: merge in the §3 order and verify Vercel production.
+
+## 9. Update 2026-10-13
+
+- **Local-model selection (#268, on `main`):** set `HEPHAESTUS_SELECTION_BACKEND=ollama-structured` in the worker env to have the adapter pick candidates through Ollama `/api/chat`. It runs with `think:false` and `num_ctx 8192`, and its `format` is a JSON schema whose `url` is an enum of the listed search hits, so the model cannot invent a URL. The default stays `hermes`. Attempts now default to 4 min (`HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS`); the live-box example uses 240000 / 300000. Uppercase Goal acronyms (IA, AI) are kept in queries, and ad redirects are dropped. With qwen3.5:2b, the first attempt yields 5–6 real candidates in about 50–150 s.
+- **Box DNS limitation:** the box now resolves every public host to `198.18.0.1` (egress tunnel, benchmark range 198.18.0.0/15). The Kernel correctly refuses it as a private network, so on the box every candidate ends "Sin lectura · red privada" and no Finds are forged. Do not weaken the guard in the repo. On 2026-10-13 Lewis approved a one-off, uncommitted, env-gated box exception: it forged 7 Finds and was removed right after. Real Finds need a machine with real DNS, such as Lewis's PC.
+- **Box toolchain:** see §0 "Box/dev notes" for the current, verified paths. Note: `setsid nohup … & echo $!` records the wrapper pid, so read the real pids from `ss -ltnp`.
