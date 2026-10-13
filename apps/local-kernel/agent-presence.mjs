@@ -7,6 +7,8 @@
 // Nothing here can be set by the dashboard: the ping refuses browser origins, so a "connected" state
 // always means an agent process reached the Kernel with the token.
 
+import { VERIFIED_WITHOUT_SUPPORT } from './mission-verification-settlement.mjs';
+
 export const AGENT_ONLINE_WINDOW_MS = 120_000;
 export const KNOWN_AGENTS = Object.freeze({ hermes: 'Hermes Agent' });
 const CONTACT_KINDS = new Set(['poll', 'claim', 'result', 'failure', 'ping']);
@@ -53,6 +55,11 @@ function hasKernelSupport(mission) {
     && typeof item.evidenceId === 'string' && item.evidenceId.trim().length > 0);
 }
 
+function readWithoutSupport(mission) {
+  const rows = Array.isArray(mission?.verificationResults) ? mission.verificationResults : [];
+  return rows.some((item) => item?.status === 'verified') && !rows.some((item) => item?.supported === true);
+}
+
 /**
  * The last Mission's phase as the Kernel can prove it. "forged" only when the Mission completed with a
  * Kernel SUPPORT verdict on fetched Evidence; any other completion (no candidates, snippet-only, HTTP 200
@@ -60,6 +67,10 @@ function hasKernelSupport(mission) {
  */
 function provenPhase(mission) {
   if (mission.status === 'completed') return mission.executionPhase === 'forged' && hasKernelSupport(mission) ? 'forged' : 'completed_without_forge';
+  // Settled read-without-SUPPORT (Kernel read ≥1 page, none supports the Goal) is an honest research
+  // outcome, not a technical failure: same as Home/sidebar "sin SUPPORT". Proven from the rows, not
+  // from the failure code alone; web_read_failed and real failures stay `failed`.
+  if (mission.status === 'failed' && mission.lastFailure?.code === VERIFIED_WITHOUT_SUPPORT && readWithoutSupport(mission)) return VERIFIED_WITHOUT_SUPPORT;
   if (mission.executionPhase === 'forged') return mission.status;
   return mission.executionPhase ?? mission.status;
 }

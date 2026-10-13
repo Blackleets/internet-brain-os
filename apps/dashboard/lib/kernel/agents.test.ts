@@ -41,6 +41,9 @@ describe('agentConnectionCopy: last Mission phase never reads as finished work w
     expect(history('completed')).not.toContain('completada');
     expect(history('completed_without_forge')).toContain('(terminada sin Evidence)');
     expect(history('forged')).toContain('(forjada)');
+    // Read without Kernel SUPPORT is an honest outcome: "sin SUPPORT", never "fallida" nor "forjada".
+    expect(history('verified_without_support')).toContain('(sin SUPPORT)');
+    expect(history('verified_without_support')).not.toMatch(/fallida|forjada|verified_without_support/);
   });
 });
 

@@ -353,14 +353,14 @@ function metaPill(model: ForgeMissionModel, replaying: boolean): [string, string
 
 const FUNNEL_REASON_LABELS: Record<string, string> = { malformed_url: 'URL mal formada', per_domain_cap: 'tope por dominio', duplicate: 'duplicado', other: 'otros' };
 
-/** "N hallazgos devueltos · M descartados": the adapter funnel exactly as the Kernel recorded it. */
+/** "N candidatos devueltos · M descartados": adapter funnel before Kernel SUPPORT — never Hallazgos. */
 export function funnelLine(funnel: { returned: number; discarded: number }): string {
-  return `${funnel.returned} ${funnel.returned === 1 ? 'hallazgo devuelto' : 'hallazgos devueltos'} · ${funnel.discarded} ${funnel.discarded === 1 ? 'descartado' : 'descartados'}`;
+  return `${funnel.returned} ${funnel.returned === 1 ? 'candidato devuelto' : 'candidatos devueltos'} · ${funnel.discarded} ${funnel.discarded === 1 ? 'descartado' : 'descartados'}`;
 }
 
 function funnelTitle(funnel: { byReason: Record<string, number | undefined> }): string {
   const parts = Object.entries(funnel.byReason).filter(([, n]) => n).map(([reason, n]) => `${FUNNEL_REASON_LABELS[reason] ?? reason}: ${n}`);
-  return parts.length ? `Descartados por el adaptador antes del Kernel — ${parts.join(' · ')}` : 'El adaptador no descartó ningún hallazgo';
+  return parts.length ? `Descartados por el adaptador antes del Kernel — ${parts.join(' · ')}` : 'El adaptador no descartó ningún candidato';
 }
 
 function shortId(id: string): string {

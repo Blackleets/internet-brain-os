@@ -13,6 +13,19 @@ export function deriveEfestoOrbState({ enabled = false, kernel = 'offline', serv
   if (!enabled) return base('idle', 'START EFESTO', 'The forge is off. Active missions are not invented.', { enabled, active: false, smithActive: false, services: { hermesReady, obsidian } });
   if (!mission) return base('starting', 'Starting the forge', 'Selecting the highest-priority active Goal.', { enabled, active: true, smithActive: false, services: { hermesReady, obsidian } });
   if (mission.status === 'waiting_for_agent') return base('failed', 'Hermes not available', 'Connect Hermes before this Goal can run.', { enabled, active: false, smithActive: false, services: { hermesReady: false, obsidian }, action: 'Retry safely', mission });
+  // Fail-close Central Forge orb: the Kernel itself settled this attempt's web.read verification
+  // as verified_without_support (pages read → Evidence, none passed SUPPORT, no Find). That is an
+  // honest research outcome, not "Research stopped safely" / "Attempts exhausted" with a red
+  // Retry safely (same settlement copy as mission card, watchtower, sidebar and agents). Neutral
+  // research_completed chrome; a page read is RETRIEVED only, never Completado.
+  if (isReadWithoutSupportSettlement(mission)) {
+    const read = countVerifiedReads(mission?.verificationResults);
+    const pages = read > 0 ? `${read} ${read === 1 ? 'page' : 'pages'}` : 'the candidate pages';
+    return base('research_completed', 'Read without Kernel SUPPORT', `The Kernel read ${pages} as Evidence; none passed Kernel SUPPORT, so no Find was forged.`, {
+      enabled, active: false, smithActive: false, services: { hermesReady, obsidian }, mission,
+      summary: missionSummary(mission), obsidianReceipt: obsidianReceipt(mission, obsidian),
+    });
+  }
   if (mission.status === 'failed' || expired || exhausted) return base('failed', failureTitle(mission, expired, exhausted), cleanFailure(mission?.lastFailure?.reason) ?? 'Research stopped safely.', { enabled, active: false, smithActive: false, services: { hermesReady, obsidian }, action: 'Retry safely', mission });
   if (mission.executionPhase === 'verifying') return base('verifying', 'Efesto verifying', 'Kernel validation is preserving returned material. Finds still require Kernel SUPPORT.', { enabled, active: true, smithActive: true, services: { hermesReady, obsidian }, mission });
   if (mission.executionPhase === 'syncing') return base('syncing', 'Syncing Obsidian', 'Writing only Kernel-confirmed notes to the private vault.', { enabled, active: true, smithActive: true, services: { hermesReady, obsidian }, mission });
@@ -85,6 +98,21 @@ function missionSummary(mission = {}) {
     opportunitiesForged: countSupportedFinds(mission.verificationResults),
     obsidianNotesWritten: count(summary.obsidianNotesWritten),
   };
+}
+/** Kernel settlement (mission-verification-settlement.mjs): failed + verified_without_support, zero SUPPORT. */
+function isReadWithoutSupportSettlement(mission) {
+  return mission?.status === 'failed'
+    && mission?.lastFailure?.code === 'verified_without_support'
+    && countSupportedFinds(mission?.verificationResults) === 0;
+}
+/** Pages the Kernel web.read actually fetched (status verified). A read is RETRIEVED, not SUPPORT. */
+function countVerifiedReads(results) {
+  if (!Array.isArray(results)) return 0;
+  let n = 0;
+  for (const entry of results) {
+    if (entry && typeof entry === 'object' && entry.status === 'verified') n += 1;
+  }
+  return count(n);
 }
 /** Count verificationResults with supported === true. opportunitiesPromoted is ignored. */
 function countSupportedFinds(results) {

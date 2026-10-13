@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { missionTimeline, presentMission } from './mission-presentation.js';
+import { settleVerificationWithoutFind } from '../../local-kernel/mission-verification-settlement.mjs';
 
 describe('mission presentation', () => {
   it('derives an auditable timeline only from persisted timestamps', () => {
@@ -42,6 +43,54 @@ describe('mission presentation', () => {
     expect(view.statusDetail).toContain('Three bounded attempts');
     expect(view.failureDetail.length).toBeLessThanOrEqual(160);
     expect(view.failureDetail).not.toContain('\n');
+  });
+
+  it('Kernel settlement read-without-SUPPORT is not exhausted retries, provider error or a Find', () => {
+    // Real Kernel mint path: one attempt, pages fetched (HTTP 200 → Evidence), none passed SUPPORT.
+    const verifying = {
+      id: 'mission:1', goalTitle: 'Rust ownership', status: 'running', executionPhase: 'verifying', attempt: 1,
+      createdAt: '2026-10-13T07:00:00.000Z', claimedAt: '2026-10-13T07:01:00.000Z', verifyingAt: '2026-10-13T07:02:00.000Z',
+      resultSummary: { received: 3, evidenceCreated: 2, opportunitiesPromoted: 0 },
+    };
+    const results = [
+      { candidateId: 'c1', status: 'verified', sourceUrl: 'https://a.example/', evidenceId: 'evidence:a', supported: false, supportReason: 'insufficient_term_coverage' },
+      { candidateId: 'c2', status: 'verified', sourceUrl: 'https://b.example/', evidenceId: 'evidence:b', supported: false, supportReason: 'insufficient_term_coverage' },
+      { candidateId: 'c3', status: 'verification_failed', reason: 'http_status' },
+    ];
+    const settled = { ...settleVerificationWithoutFind(verifying, results, '2026-10-13T07:03:00.000Z'), verificationResults: results };
+    const view = presentMission(settled);
+    expect(view.statusLabel).toBe('Read without Kernel SUPPORT');
+    expect(view.statusDetail).toBe('The Kernel read 2 pages as Evidence; none passed Kernel SUPPORT, so no Find was forged. Open Efesto to review that Evidence.');
+    expect(view.statusDetail).not.toMatch(/three bounded attempts|exhausted/i);
+    expect(view.opportunitiesPromoted).toBe(0);
+    // The Kernel's own verdict is not a provider message.
+    expect(view.failureDetail).toBeUndefined();
+    const labels = view.timeline.map((event) => event.label);
+    expect(labels).toContain('Kernel verification settled without SUPPORT');
+    expect(labels.join(' ')).not.toMatch(/failed safely|sealed|forged|completed/i);
+    expect(view.timeline.at(-1).detail).toBe('2 read · 2 Evidence · 0 Finds');
+    expect(view.timeline.at(-1).detail).not.toMatch(/retry/i);
+  });
+
+  it('Kernel settlement web_read_failed says nothing was read, not exhausted retries', () => {
+    const verifying = { status: 'running', executionPhase: 'verifying', attempt: 1, verifyingAt: '2026-10-13T07:02:00.000Z', resultSummary: { received: 1, evidenceCreated: 0, opportunitiesPromoted: 0 } };
+    const results = [{ candidateId: 'c1', status: 'verification_failed', reason: 'http_status' }];
+    const settled = { ...settleVerificationWithoutFind(verifying, results, '2026-10-13T07:03:00.000Z'), verificationResults: results };
+    const view = presentMission(settled);
+    expect(view.statusLabel).toBe('Candidate pages could not be read');
+    expect(view.statusDetail).toMatch(/no page became Evidence and no Find was forged/);
+    expect(view.statusDetail).not.toMatch(/three bounded attempts|exhausted/i);
+    expect(view.failureDetail).toBeUndefined();
+    expect(view.timeline.map((event) => event.label)).toContain('Kernel could not read candidate pages');
+  });
+
+  it('a settlement code never overrides a Kernel SUPPORT row, and plain failures keep provider detail', () => {
+    const contradictory = presentMission({ status: 'failed', lastFailure: { code: 'verified_without_support', reason: 'x', recordedAt: '2026-10-13T07:03:00.000Z' }, verificationResults: [{ status: 'verified', evidenceId: 'evidence:a', supported: true }] });
+    expect(contradictory.statusLabel).toBe('Research stopped safely');
+    expect(contradictory.statusLabel).not.toMatch(/without Kernel SUPPORT/);
+    const exhausted = presentMission({ status: 'failed', attempt: 3, lastFailure: { reason: 'Hermes did not complete before the final lease expired', recordedAt: '2026-10-13T07:03:00.000Z', attempt: 3 } });
+    expect(exhausted.statusDetail).toContain('Three bounded attempts');
+    expect(exhausted.failureDetail).toBe('Hermes did not complete before the final lease expired');
   });
 
   it('presents a persisted verification phase without claiming completion', () => {

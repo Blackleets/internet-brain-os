@@ -28,7 +28,6 @@ export function buildProductValueScorecard(data = {}, options = {}) {
     if (!previous || Date.parse(execution.decidedAt) < Date.parse(previous.decidedAt)) {
       executedGoals.set(execution.key, execution);
     }
-    if (isKernelForgedMission(mission)) completedGoalKeys.add(execution.key);
   }
 
   for (const opportunity of opportunities) {
@@ -40,6 +39,22 @@ export function buildProductValueScorecard(data = {}, options = {}) {
     // Fail-closed: evidenceId/URL alone is not a Kernel Find — require SUPPORT stamp.
     if (!isKernelSupportedOpportunity(opportunity, mission)) continue;
     goalLinkedFinds.set(opportunity.id, { opportunity, execution });
+  }
+
+  // SUPPORT-proven missions: verificationResults SUPPORT (agent-presence hasKernelSupport)
+  // or a goal-linked Find that already passed isKernelSupportedOpportunity.
+  const supportProvenMissionIds = new Set();
+  for (const mission of missions) {
+    if (validId(mission?.id) && missionHasKernelSupport(mission)) supportProvenMissionIds.add(mission.id);
+  }
+  for (const linked of goalLinkedFinds.values()) {
+    if (validId(linked.execution.missionId)) supportProvenMissionIds.add(linked.execution.missionId);
+  }
+
+  for (const mission of missions) {
+    const execution = executionIdentity(mission);
+    if (!execution) continue;
+    if (isKernelForgedMission(mission, supportProvenMissionIds)) completedGoalKeys.add(execution.key);
   }
 
   const positiveFindIds = new Set();
@@ -114,7 +129,7 @@ export function buildProductValueScorecard(data = {}, options = {}) {
           }),
     },
     drivers: {
-      missionCompletionRate: ratioMetric(missions.filter(isKernelForgedMission).length, missions.length, 'no_missions'),
+      missionCompletionRate: ratioMetric(missions.filter((mission) => isKernelForgedMission(mission, supportProvenMissionIds)).length, missions.length, 'no_missions'),
       findsPerCompletedGoal: averageMetric(completedGoalFindIds.length, completedGoalKeys.size, 'no_completed_goals'),
       usefulSavedFindShare: ratioMetric(positiveFindIds.size, goalLinkedFinds.size, 'no_goal_linked_finds'),
       installationToFirstGoalActivationRate: productCohort.status === 'valid'
@@ -150,11 +165,20 @@ export function buildProductValueScorecard(data = {}, options = {}) {
 }
 
 
-function isKernelForgedMission(mission) {
+/**
+ * Fail-closed: Misiones forjadas only after Kernel SUPPORT on fetched Evidence.
+ * Mirrors agent-presence hasKernelSupport + provenPhase — bare forged / forgedAt is not finished work.
+ */
+function missionHasKernelSupport(mission) {
+  return Array.isArray(mission?.verificationResults) && mission.verificationResults.some((item) => item?.supported === true
+    && typeof item.evidenceId === 'string' && item.evidenceId.trim().length > 0);
+}
+
+function isKernelForgedMission(mission, supportProvenMissionIds) {
   if (mission?.status !== 'completed') return false;
-  return mission.executionPhase === 'forged'
-    || mission.workState === 'forged'
-    || (typeof mission.forgedAt === 'string' && mission.forgedAt.length > 0);
+  if (!(mission.executionPhase === 'forged' || mission.workState === 'forged')) return false;
+  if (!validId(mission?.id) || !(supportProvenMissionIds instanceof Set)) return false;
+  return supportProvenMissionIds.has(mission.id);
 }
 
 function isVerifiedWithoutSupportSettlement(mission) {

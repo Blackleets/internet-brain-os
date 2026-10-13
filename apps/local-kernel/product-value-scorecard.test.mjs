@@ -110,7 +110,7 @@ describe('local-first product value scorecard', () => {
     expect(scorecard.coverage).toMatchObject({ goalLinkedFinds: 1, orphanFeedbackEvents: 1, invalidTimestampEvents: 1 });
   });
 
-  it('does not count unsupported opportunity with evidenceId as a Find for completed Goals', () => {
+  it('does not count unsupported opportunity with evidenceId as a Find, nor bare forged as completed Goal', () => {
     const scorecard = buildProductValueScorecard({
       productCohort,
       agentMissions: [
@@ -126,18 +126,56 @@ describe('local-first product value scorecard', () => {
       opportunities: [{ id: 'opportunity:1', evidenceId: 'evidence:1' }],
     }, { now: '2026-08-10T12:00:00.000Z' });
 
-    expect(scorecard.coverage.completedGoals).toBe(1);
+    // Bare forged stamp without Kernel SUPPORT is not a completed/forged Goal (agent-presence provenPhase).
+    expect(scorecard.coverage.completedGoals).toBe(0);
     expect(scorecard.coverage.goalLinkedFinds).toBe(0);
+    expect(scorecard.drivers.missionCompletionRate).toMatchObject({ status: 'measured', value: 0, numerator: 0, denominator: 1 });
     expect(scorecard.drivers.findsPerCompletedGoal).toMatchObject({
-      status: 'measured',
-      value: 0,
-      numerator: 0,
-      denominator: 1,
+      status: 'not_measurable',
+      value: null,
+      reason: 'no_completed_goals',
     });
     expect(scorecard.drivers.usefulSavedFindShare).toMatchObject({
       status: 'not_measurable',
       reason: 'no_goal_linked_finds',
     });
+  });
+
+  it('does not count forged-without-SUPPORT or bare forgedAt as Misiones forjadas', () => {
+    const unsupported = buildProductValueScorecard({
+      productCohort,
+      agentMissions: [
+        {
+          id: 'mission:unsupported',
+          goalId: 'goal:u',
+          status: 'completed',
+          executionPhase: 'forged',
+          authorization: authorization('goal:u', '2026-08-10T10:00:00.000Z'),
+          verificationResults: [{ evidenceId: 'evidence:u', supported: false }],
+        },
+      ],
+      evidence: [{ id: 'evidence:u', missionId: 'mission:unsupported' }],
+      opportunities: [{ id: 'opportunity:u', evidenceId: 'evidence:u' }],
+    }, { now: '2026-08-10T12:00:00.000Z' });
+
+    expect(unsupported.drivers.missionCompletionRate).toMatchObject({ status: 'measured', value: 0, numerator: 0, denominator: 1 });
+    expect(unsupported.coverage.completedGoals).toBe(0);
+
+    const forgedAtOnly = buildProductValueScorecard({
+      productCohort,
+      agentMissions: [
+        {
+          id: 'mission:stamp-only',
+          goalId: 'goal:s',
+          status: 'completed',
+          forgedAt: '2026-08-10T10:05:00.000Z',
+          authorization: authorization('goal:s', '2026-08-10T10:00:00.000Z'),
+        },
+      ],
+    }, { now: '2026-08-10T12:00:00.000Z' });
+
+    expect(forgedAtOnly.drivers.missionCompletionRate).toMatchObject({ status: 'measured', value: 0, numerator: 0, denominator: 1 });
+    expect(forgedAtOnly.coverage.completedGoals).toBe(0);
   });
 
   it('counts Kernel-supported Finds via opportunity.supported or verificationResults SUPPORT', () => {

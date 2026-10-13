@@ -49,6 +49,19 @@ describe('describeAgent: connection states only from Kernel-observed facts', () 
     expect(describeAgent('hermes', { now: T0, missions: [{ ...base, id: 'r', status: 'running', executionPhase: 'forged' }] }).lastMission.phase).toBe('running');
   });
 
+  it('a settled read without Kernel SUPPORT is "verified_without_support", never failed nor forged', () => {
+    const base = { agent: 'hermes', status: 'failed', executionPhase: 'failed', claimedAt: '2026-10-03T09:00:00.000Z', failedAt: '2026-10-03T09:05:00.000Z' };
+    // jwt.io-style HTTP 200 read: Evidence written, no SUPPORT → honest research outcome, not "fallida".
+    const ash = { ...base, id: 'ash', lastFailure: { code: 'verified_without_support' }, verificationResults: [{ candidateId: 'c', status: 'verified', evidenceId: 'evidence:jwt', supported: false }] };
+    expect(describeAgent('hermes', { now: T0, missions: [ash] }).lastMission.phase).toBe('verified_without_support');
+    // The failure code alone is not proof: rows must show a read page and no SUPPORT.
+    expect(describeAgent('hermes', { now: T0, missions: [{ ...ash, id: 'bare', verificationResults: undefined }] }).lastMission.phase).toBe('failed');
+    expect(describeAgent('hermes', { now: T0, missions: [{ ...ash, id: 'noread', verificationResults: [{ candidateId: 'c', status: 'verification_failed' }] }] }).lastMission.phase).toBe('failed');
+    expect(describeAgent('hermes', { now: T0, missions: [{ ...ash, id: 'sup', verificationResults: [{ candidateId: 'c', status: 'verified', evidenceId: 'evidence:drill', supported: true }] }] }).lastMission.phase).toBe('failed');
+    // Every read failed stays a real failure.
+    expect(describeAgent('hermes', { now: T0, missions: [{ ...base, id: 'wrf', lastFailure: { code: 'web_read_failed' }, verificationResults: [{ candidateId: 'c', status: 'verification_failed' }] }] }).lastMission.phase).toBe('failed');
+  });
+
   it('counts queued missions waiting for the agent', () => {
     expect(describeAgent('hermes', { now: T0, missions: [{ id: 'q', agent: 'hermes', status: 'queued' }] }).queuedMissions).toBe(1);
     // Missions parked until Hermes is ready are exactly what "esperan a un agente" must count.
