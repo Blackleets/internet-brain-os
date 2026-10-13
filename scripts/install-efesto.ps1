@@ -1,4 +1,4 @@
-param(
+﻿param(
   [switch]$SkipNodeInstall,
   [switch]$SkipShortcut,
   [switch]$EnableAutoStart

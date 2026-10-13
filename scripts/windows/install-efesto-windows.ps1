@@ -1,5 +1,5 @@
-# Efesto: instalación completa en un clic para Windows.
-# Comprueba/instala Git, Node.js 22+, Python 3.14 y Ollama (winget), instala Hermes Agent con búsqueda
+﻿# Efesto: instalación completa en un clic para Windows.
+# Comprueba/instala Git, Node.js 22+, Python 3.11–3.14 y Ollama (winget), instala Hermes Agent con búsqueda
 # DuckDuckGo, descarga qwen3.5:2b, compila Efesto (install-efesto.ps1 + panel), crea los accesos
 # "Iniciar Efesto" y "Detener Efesto" y arranca Kernel :4310, panel :3311 y el trabajador de Hermes.
 # Se puede volver a ejecutar sin riesgo: lo que ya está bien se deja como está.
@@ -58,12 +58,29 @@ function Get-NodeMajor {
   try { return [int](& node -p "process.versions.node.split('.')[0]") } catch { return 0 }
 }
 
-function Get-Python314 {
+# Hermes Agent ae3f9f9c declares requires-python = ">=3.11,<3.15" (pyproject.toml): any installed 3.11–3.14 works.
+$PythonMinor = @(14, 13, 12, 11)
+function Test-HermesPython([string]$Exe) {
+  try {
+    $v = (& $Exe -c "import sys; print('%d.%d' % sys.version_info[:2])" 2>$null)
+    if ($LASTEXITCODE -ne 0 -or -not $v) { return $false }
+    $parts = $v.Trim().Split('.'); return ([int]$parts[0] -eq 3 -and [int]$parts[1] -ge 11 -and [int]$parts[1] -le 14)
+  } catch { return $false }
+}
+function Get-HermesPython {
   if (Test-Command 'py') {
-    try { $p = (& py -3.14 -c "import sys; print(sys.executable)" 2>$null); if ($LASTEXITCODE -eq 0 -and $p) { return $p.Trim() } } catch {}
+    foreach ($m in $PythonMinor) {
+      try { $p = (& py "-3.$m" -c "import sys; print(sys.executable)" 2>$null); if ($LASTEXITCODE -eq 0 -and $p) { return $p.Trim() } } catch {}
+    }
   }
-  $candidate = Join-Path $env:LOCALAPPDATA 'Programs\Python\Python314\python.exe'
-  if (Test-Path $candidate) { return $candidate }
+  foreach ($name in @('python', 'python3')) {
+    $cmd = Get-Command $name -ErrorAction SilentlyContinue
+    if ($cmd -and $cmd.Source -notlike '*WindowsApps*' -and (Test-HermesPython $cmd.Source)) { return $cmd.Source }
+  }
+  foreach ($m in $PythonMinor) {
+    $candidate = Join-Path $env:LOCALAPPDATA "Programs\Python\Python3$m\python.exe"
+    if (Test-Path $candidate) { return $candidate }
+  }
   return $null
 }
 
@@ -78,12 +95,13 @@ function Ensure-Prerequisites {
   Refresh-ProcessPath
   if (Test-Command 'git') { Write-Ok 'Git instalado.' } else { Install-WithWinget 'Git.Git' 'Git' }
   if ((Get-NodeMajor) -ge 22) { Write-Ok "Node.js $(Get-NodeMajor) instalado." } else { Install-WithWinget 'OpenJS.NodeJS.LTS' 'Node.js' }
-  if (Get-Python314) { Write-Ok 'Python 3.14 instalado.' } else { Install-WithWinget 'Python.Python.3.14' 'Python 3.14' }
+  $foundPython = Get-HermesPython
+  if ($foundPython) { Write-Ok "Python compatible encontrado: $foundPython" } else { Install-WithWinget 'Python.Python.3.13' 'Python 3.13' }
   if (Test-Command 'ollama') { Write-Ok 'Ollama instalado.' } else { Install-WithWinget 'Ollama.Ollama' 'Ollama' }
   if ($DryRun) { return }
   if (-not (Test-Command 'git')) { throw 'Git se instaló pero no aparece todavía. Cierra esta ventana y vuelve a ejecutar "Instalar Efesto".' }
   if ((Get-NodeMajor) -lt 22) { throw 'Node.js 22 o superior no está disponible. Cierra esta ventana y vuelve a ejecutar "Instalar Efesto".' }
-  if (-not (Get-Python314)) { throw 'Python 3.14 no está disponible. Cierra esta ventana y vuelve a ejecutar "Instalar Efesto".' }
+  if (-not (Get-HermesPython)) { throw 'No hay Python 3.11–3.14 disponible. Cierra esta ventana y vuelve a ejecutar "Instalar Efesto".' }
   if (-not (Test-Command 'ollama')) { throw 'Ollama no está disponible. Cierra esta ventana y vuelve a ejecutar "Instalar Efesto".' }
 }
 
@@ -108,7 +126,7 @@ function Ensure-HermesAgent {
     Invoke-Checked 'git' @('clone', '--quiet', $HermesRepo, $HermesRoot) 'No se pudo descargar Hermes Agent'
   }
   Invoke-Checked 'git' @('-C', $HermesRoot, 'checkout', '--quiet', $HermesRevision) 'No se pudo fijar la versión de Hermes Agent'
-  $python = Get-Python314
+  $python = Get-HermesPython
   if ($DryRun -and -not $python) { $python = 'py' }
   Invoke-Checked $python @('-m', 'venv', (Join-Path $HermesRoot 'venv')) 'No se pudo crear el entorno de Python de Hermes'
   $venvPython = Join-Path $HermesRoot 'venv\Scripts\python.exe'

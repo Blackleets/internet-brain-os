@@ -65,7 +65,7 @@ describe('Windows one-click stack configuration', () => {
 describe('Windows one-click entry points', () => {
   const installer = text('scripts/windows/install-efesto-windows.ps1');
   it('installs missing prerequisites with winget and the pinned Hermes + model', () => {
-    for (const id of ['Git.Git', 'OpenJS.NodeJS.LTS', 'Python.Python.3.14', 'Ollama.Ollama']) expect(installer).toContain(`'${id}'`);
+    for (const id of ['Git.Git', 'OpenJS.NodeJS.LTS', 'Python.Python.3.13', 'Ollama.Ollama']) expect(installer).toContain(`'${id}'`);
     expect(installer).toContain("$Model = 'qwen3.5:2b'");
     expect(installer).toMatch(/\$HermesRevision = '[0-9a-f]{7,40}'/);
     expect(installer).toContain('[ddgs]');
@@ -94,5 +94,21 @@ describe('Windows one-click entry points', () => {
     const w = text('scripts/live-box/queue-worker.mjs');
     for (const k of ['EFESTO_REPO_ROOT', 'EFESTO_KERNEL_URL', 'EFESTO_KERNEL_TOKEN_FILE', 'EFESTO_WORKER_PAUSE_FILE', 'EFESTO_WORKER_RUNS_FILE']) expect(w).toContain(`process.env.${k}`);
     expect(w).toContain('pathToFileURL');
+  });
+});
+
+describe('Windows PowerShell 5.1 compatibility', () => {
+  // PS 5.1 reads a BOM-less .ps1 as the ANSI code page, which garbles Spanish accents (seen on Lewis's PC).
+  it('saves the installer scripts with non-ASCII text as UTF-8 with BOM', () => {
+    for (const file of ['scripts/windows/install-efesto-windows.ps1', 'scripts/install-efesto.ps1']) {
+      const bytes = readFileSync(join(process.cwd(), file));
+      expect([bytes[0], bytes[1], bytes[2]], file).toEqual([0xef, 0xbb, 0xbf]);
+    }
+  });
+  it('accepts any installed Python 3.11–3.14 (Hermes Agent requires-python >=3.11,<3.15) before installing one', () => {
+    const installer = readFileSync(join(process.cwd(), 'scripts/windows/install-efesto-windows.ps1'), 'utf8');
+    expect(installer).toContain('$PythonMinor = @(14, 13, 12, 11)');
+    expect(installer).not.toContain('Python.Python.3.14');
+    expect(installer).toMatch(/if \(\$foundPython\)[^\n]*else \{ Install-WithWinget 'Python\.Python\.3\.13'/);
   });
 });
