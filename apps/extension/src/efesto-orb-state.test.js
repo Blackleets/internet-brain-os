@@ -10,6 +10,26 @@ describe('Efesto orb deterministic UI state', () => {
     expect(deriveEfestoOrbState({ enabled: false, kernel: 'ready', services }).state).toBe('idle');
   });
 
+  it('names a Kernel read-without-SUPPORT settlement, not a failed/exhausted Retry safely', () => {
+    // jwt.io-style HTTP 200 read: Evidence written, no SUPPORT → Kernel settles failed/verified_without_support.
+    const settled = { status: 'failed', executionPhase: 'failed', attempt: 3, lastFailure: { code: 'verified_without_support', reason: 'Kernel web.read read 2 pages; none supports the Goal' }, verificationResults: [{ candidateId: 'a', status: 'verified', evidenceId: 'evidence:a', supported: false }, { candidateId: 'b', status: 'verified', evidenceId: 'evidence:b', supported: false }] };
+    const view = deriveEfestoOrbState({ enabled: true, kernel: 'ready', services, mission: settled, now });
+    expect(view).toMatchObject({ state: 'research_completed', label: 'Read without Kernel SUPPORT', active: false, smithActive: false });
+    expect(view.detail).toContain('read 2 pages');
+    expect(view.detail).toContain('no Find was forged');
+    expect(view.action).toBeUndefined();
+    expect(view.label).not.toMatch(/stopped|exhausted|complete/i);
+    expect(view.summary.opportunitiesForged).toBe(0);
+    expect(resolveForgePowerIntent({ enabled: true, state: view.state }).retry).toBe(false);
+  });
+
+  it('keeps web_read_failed and bare failures as failed attention', () => {
+    const unread = deriveEfestoOrbState({ enabled: true, kernel: 'ready', services, mission: { status: 'failed', lastFailure: { code: 'web_read_failed', reason: 'Kernel web.read could not read any candidate page' }, verificationResults: [{ candidateId: 'a', status: 'verification_failed' }] }, now });
+    expect(unread).toMatchObject({ state: 'failed', action: 'Retry safely' });
+    const supported = deriveEfestoOrbState({ enabled: true, kernel: 'ready', services, mission: { status: 'failed', lastFailure: { code: 'verified_without_support' }, verificationResults: [{ candidateId: 'a', status: 'verified', supported: true }] }, now });
+    expect(supported.state).toBe('failed');
+  });
+
   it('stops the orb for failed missions', () => {
     const view = deriveEfestoOrbState({ enabled: true, kernel: 'ready', services, mission: { status: 'failed', lastFailure: { reason: 'provider down' } }, now });
     expect(view).toMatchObject({ state: 'failed', active: false, smithActive: false, action: 'Retry safely' });
