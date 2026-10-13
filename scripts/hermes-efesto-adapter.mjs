@@ -9,7 +9,8 @@ const MAX_INPUT_BYTES = 128 * 1024;
 const MAX_OUTPUT_BYTES = 512 * 1024;
 // One attempt is one search round + one short selection call; 8 min leaves room for a slow local
 // model and fails the attempt early enough for the Kernel's bounded retries (3) to finish in time.
-const DEFAULT_TIMEOUT_MS = 8 * 60_000;
+// One attempt fails fast: a selection that has not answered in 4 minutes will not answer usefully.
+const DEFAULT_TIMEOUT_MS = 4 * 60_000;
 // Output budget of the selection call (reasoning included). The answer is a JSON list of at most
 // 20 findings (~1k tokens). Without a cap a small local model can think until its context window
 // is full (run 6: 5,294 tokens, 5m49s, empty answer) and an attempt stalls for its whole timeout.
@@ -65,7 +66,29 @@ export function goalCoreTerms(mission) {
     terms.push(term);
     if (terms.length === MAX_CORE_TERMS) break;
   }
+  if (keywords.length) insertGoalAcronyms(terms, String(mission?.goalTitle ?? ''));
   return terms;
+}
+
+/**
+ * Short acronyms the Goal writes in capitals ("IA", "AI", "UX", "CRM") are topic, not filler, even
+ * when the Kernel's keywords dropped them for being short. Each one missing from the terms is
+ * inserted after the term that precedes it in the Goal title (or first), within MAX_CORE_TERMS.
+ * Only words the Goal itself wrote; nothing is invented or translated.
+ */
+function insertGoalAcronyms(terms, title) {
+  const words = title.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  words.forEach((word, index) => {
+    if (!/^\p{Lu}{2,5}$/u.test(word)) return;
+    const term = word.toLowerCase();
+    if (terms.includes(term) || terms.length >= MAX_CORE_TERMS) return;
+    let at = 0;
+    for (let back = index - 1; back >= 0; back -= 1) {
+      const position = terms.indexOf(words[back].toLowerCase());
+      if (position >= 0) { at = position + 1; break; }
+    }
+    terms.splice(at, 0, term);
+  });
 }
 
 const MAX_QUERY_TERMS = 6;
@@ -281,6 +304,78 @@ export function keepListedFindings(findings, results) {
   const kept = list.filter((finding) => listed.has(comparableUrl(finding?.url)));
   const removed = list.length - kept.length;
   return { findings: kept, dropped: removed ? { other: removed } : {} };
+}
+
+/**
+ * Results the output points at by their listed number ("n:14", "n=3", "\"n\": 7"), mapped back to the
+ * real search hits. Numbers outside the list are ignored; nothing is invented.
+ */
+export function findingsFromResultRefs(text, results) {
+  const list = Array.isArray(results) ? results : [];
+  const out = [];
+  for (const match of String(text ?? '').matchAll(/(?:^|[^\p{L}\p{N}_])"?n"?\s*[:=]\s*(\d{1,3})(?!\d)/gu)) {
+    const hit = list[Number(match[1]) - 1];
+    if (hit && !out.some((finding) => finding.url === hit.url)) out.push({ url: hit.url });
+    if (out.length >= 20) break;
+  }
+  return out;
+}
+
+/** Parse a selection reply; when it has no JSON or URLs, fall back to "n:K" references to the listed hits. */
+export function parseSelectionOutput(text, results) {
+  try {
+    const parsed = parseHermesFindingsWithFunnel(text);
+    if (parsed.findings.length || !findingsFromResultRefs(text, results).length) return parsed;
+  } catch (error) {
+    const refs = findingsFromResultRefs(text, results);
+    if (!refs.length) throw error;
+  }
+  return parseHermesFindingsWithFunnel(JSON.stringify({ findings: findingsFromResultRefs(text, results) }));
+}
+
+const SELECTION_BACKENDS = new Set(['hermes', 'ollama-structured']);
+const OLLAMA_SELECTION_MAX_MS = 180_000;
+
+export function selectionBackend(env = process.env) {
+  const value = typeof env.HEPHAESTUS_SELECTION_BACKEND === 'string' ? env.HEPHAESTUS_SELECTION_BACKEND.trim() : '';
+  if (!value) return 'hermes';
+  if (!SELECTION_BACKENDS.has(value)) throw new Error('HEPHAESTUS_SELECTION_BACKEND must be hermes or ollama-structured');
+  return value;
+}
+
+/**
+ * JSON schema for Ollama structured output: every url must be one of the listed search hits
+ * (enum), so the local model cannot invent or alter a URL.
+ */
+export function selectionSchema(results) {
+  const urls = [...new Set((Array.isArray(results) ? results : []).map((item) => item.url))];
+  return {
+    type: 'object',
+    properties: { findings: { type: 'array', maxItems: MAX_FINDINGS, items: { type: 'object', properties: { url: { type: 'string', enum: urls } }, required: ['url'] } } },
+    required: ['findings'],
+  };
+}
+
+/** Selection through the local Ollama model with structured output (format = schema) and thinking off. */
+export async function runOllamaSelection({ prompt, results, env = process.env, timeoutMs, fetchImpl = fetch }) {
+  const host = String(env.HEPHAESTUS_SELECTION_OLLAMA_URL || `http://${env.OLLAMA_HOST || '127.0.0.1:11434'}`).replace(/\/+$/, '');
+  const model = normalizeRouteValue(env.HERMES_INFERENCE_MODEL, 'model');
+  if (!model) throw new Error('HERMES_INFERENCE_MODEL is required for ollama-structured selection');
+  const budget = Math.min(timeoutMs ?? OLLAMA_SELECTION_MAX_MS, OLLAMA_SELECTION_MAX_MS);
+  let response;
+  try {
+    response = await fetchImpl(`${host}/api/chat`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ model, stream: false, think: false, format: selectionSchema(results), options: { temperature: 0, num_predict: 1024 }, messages: [{ role: 'user', content: prompt }] }),
+      signal: AbortSignal.timeout(budget),
+    });
+  } catch (error) {
+    throw new Error(error?.name === 'TimeoutError' ? 'Local model selection timed out' : 'Local model selection could not reach Ollama');
+  }
+  if (!response.ok) throw new Error(`Local model selection failed (HTTP ${response.status})`);
+  const body = await response.json().catch(() => ({}));
+  return parseSelectionOutput(String(body?.message?.content ?? ''), results);
 }
 
 export function buildHermesArgs(prompt, maxTurns = DEFAULT_AGENT_TURNS, provider, model) {
@@ -706,6 +801,16 @@ export async function runHermesOneShot(payload, options = {}) {
   if (!results.length) return { findings: [], ...telemetry, funnel: { findingsReturned: 0, dropped: {} } };
 
   const prompt = buildSelectionPrompt(payload, results);
+  const finalize = (selected) => {
+    const listed = keepListedFindings(selected.findings, results);
+    const fresh = dropKnownFindings(listed.findings, missionKnownSourceUrls(payload.mission));
+    const diverse = diversifyFindingsWithCounts(fresh.findings);
+    const funnel = [listed.dropped, fresh.dropped, diverse.dropped].reduce((acc, dropped) => mergeFindingsFunnel(acc, dropped), selected.funnel);
+    return { findings: diverse.findings, ...telemetry, funnel };
+  };
+  if (selectionBackend(baseEnv) === 'ollama-structured') {
+    return finalize(await (options.runOllamaSelection ?? runOllamaSelection)({ prompt, results, env: baseEnv, timeoutMs }));
+  }
   const ownsHermesHome = options.hermesHome === undefined;
   const hermesHome = options.hermesHome ?? await mkdtemp(join(tmpdir(), 'efesto-hermes-'));
   const args = buildHermesArgs(prompt, SELECTION_TURNS, baseEnv.HERMES_INFERENCE_PROVIDER, baseEnv.HERMES_INFERENCE_MODEL);
@@ -721,14 +826,11 @@ export async function runHermesOneShot(payload, options = {}) {
       timeoutMs,
       env: buildHermesEnvironment(baseEnv, hermesHome),
       cwd: hermesHome,
+      results,
     });
     // The selection step has no tools; a web_search in its log would mean it searched anyway.
     if ((await collectHermesSearchTelemetry(hermesHome)).length) throw new Error('Hermes searched during the selection step');
-    const listed = keepListedFindings(result.findings, results);
-    const fresh = dropKnownFindings(listed.findings, missionKnownSourceUrls(payload.mission));
-    const diverse = diversifyFindingsWithCounts(fresh.findings);
-    const funnel = [listed.dropped, fresh.dropped, diverse.dropped].reduce((acc, dropped) => mergeFindingsFunnel(acc, dropped), result.funnel);
-    return { findings: diverse.findings, ...telemetry, funnel };
+    return finalize(result);
   } finally {
     await wipeCopiedHermesCredentials(hermesHome, copied);
     if (ownsHermesHome) {
@@ -784,7 +886,7 @@ export function parseHermesSearchCalls(calls) {
   return searches;
 }
 
-export function runHermesProcess({ executable, args, timeoutMs, env, cwd }) {
+export function runHermesProcess({ executable, args, timeoutMs, env, cwd, results }) {
   return new Promise((resolve, reject) => {
     const child = spawn(executable, args, {
       shell: false,
@@ -820,9 +922,15 @@ export function runHermesProcess({ executable, args, timeoutMs, env, cwd }) {
     child.on('close', async (code) => {
       if (pendingError) return finish(pendingError);
       if (code !== 0) {
+        // A nonzero exit after a usable answer (e.g. the turn budget ran out right after replying)
+        // still yields only listed hits; anything else fails the attempt.
+        try {
+          const salvaged = results ? parseSelectionOutput(stdout, results) : parseHermesFindingsWithFunnel(stdout);
+          if (salvaged.findings.length) return finish(undefined, salvaged);
+        } catch { /* fall through to the process failure */ }
         return finish(new Error(processFailure('Hermes', code, stderr)));
       }
-      try { finish(undefined, parseHermesFindingsWithFunnel(stdout)); }
+      try { finish(undefined, results ? parseSelectionOutput(stdout, results) : parseHermesFindingsWithFunnel(stdout)); }
       catch (error) { finish(error); }
     });
   });
