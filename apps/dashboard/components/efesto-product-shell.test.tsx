@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { within, act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EfestoProductShell from './efesto-product-shell';
 import * as extensionBridge from '../lib/session/extension-bridge';
@@ -76,8 +76,9 @@ describe('Efesto goal-first product shell', () => {
     const stateAction = screen.getByRole('button', { name: 'Conectar Kernel' });
     expect(stateAction.className).toContain('phase-offline');
     expect(screen.getAllByText('Privado por diseño').length).toBeGreaterThan(0);
-    expect(screen.getByText('Controlado por el Kernel')).toBeTruthy();
-    expect(screen.getByText('Confirmación humana')).toBeTruthy();
+    // Kimi-style minimal home: the Kernel boundary is stated by the composer mode label and its description.
+    expect(screen.getByText('Kernel-gated')).toBeTruthy();
+    expect(screen.getByText('Preparar no ejecuta ninguna acción externa.')).toBeTruthy();
     expect(screen.getByLabelText('Goal')).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Modo de trabajo' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Chat' }).getAttribute('aria-pressed')).toBe('false');
@@ -87,6 +88,8 @@ describe('Efesto goal-first product shell', () => {
   });
   it('fills the Goal composer from example chips without mutating the Kernel', () => {
     render(<EfestoProductShell />);
+    // Example Goals sit behind "Explorar ideas" on the minimal home.
+    fireEvent.click(screen.getByRole('button', { name: 'Explorar ideas' }));
     fireEvent.click(screen.getByRole('button', { name: 'Investiga esta empresa' }));
     expect((screen.getByLabelText('Goal') as HTMLTextAreaElement).value).toBe('Investiga esta empresa');
     expect(requests).toHaveLength(0);
@@ -234,11 +237,11 @@ describe('Efesto goal-first product shell', () => {
 
   it('keeps Memory honest and never treats chat as durable memory', async () => {
     render(<EfestoProductShell />);
-    fireEvent.click(screen.getByRole('button', { name: /^Memoria/ }));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Áreas de Efesto' })).getByRole('button', { name: /^Memoria/ }));
     expect(screen.getByRole('heading', { name: 'Memoria' })).toBeTruthy();
     expect(screen.getByText('Kernel sin conexión')).toBeTruthy();
     await connect();
-    fireEvent.click(screen.getByRole('button', { name: /^Memoria/ }));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Áreas de Efesto' })).getByRole('button', { name: /^Memoria/ }));
     expect(screen.getByText('Memoria no disponible')).toBeTruthy();
     expect(screen.queryByText('Respuesta real del fixture.')).toBeNull();
   });
