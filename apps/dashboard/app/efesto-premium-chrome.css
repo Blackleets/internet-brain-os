@@ -280,3 +280,117 @@
 .efesto-product .forge-mode-chips button:focus-visible,
 .efesto-product .forge-quick-prompts button:focus-visible,
 .efesto-product .efesto-tabbar button:focus-visible { outline: 2px solid transparent; box-shadow: var(--pc-ring); }
+
+/* ---------- Phase 3d · closer Kimi fidelity (neutral greys, ember as accent) ---------- */
+.efesto-product {
+  --k-bg: #121110; --k-panel: #1b1a19; --k-panel-2: #232220; --k-line: rgba(255, 255, 255, .085); --k-line-2: rgba(255, 255, 255, .13);
+  --k-text: #ecebe9; --k-text-2: #c2bfbb; --k-muted: #96928d;
+}
+/* idle home: wordmark ⟶ composer ⟶ tray ⟶ pills, "Explorar ideas" at the bottom */
+.efesto-product .forge-surface.is-idle { display: flex; flex-direction: column; background: var(--k-bg); }
+.efesto-product .forge-surface.is-idle > .forge-scroll { flex: 1 1 0; display: flex; align-items: flex-end; justify-content: center; overflow: visible; min-height: 0; }
+.efesto-product .forge-surface.is-idle > .forge-composer-zone { flex: 1.25 1 0; padding: 0 16px max(14px, env(safe-area-inset-bottom)); width: min(760px, 100%); }
+.efesto-product .forge-goal-empty { padding: 0 16px 30px; }
+.efesto-product .forge-goal-empty .forge-wordmark { margin: 0; display: inline-flex; align-items: center; gap: 12px; font-size: inherit; }
+.efesto-product .forge-goal-empty .forge-wordmark b { font-size: clamp(40px, 11vw, 56px); font-weight: 700; letter-spacing: .06em; background: none; -webkit-text-fill-color: currentColor; color: #e7e3df; }
+.efesto-product .forge-goal-empty .forge-wordmark svg { width: 40px; height: 40px; }
+/* header: toggle left, pills right; no crumb on the idle home */
+.efesto-product .forge-surface.is-idle .forge-surface-bar { border-bottom: 0; background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.efesto-product .forge-surface.is-idle .forge-product-title { display: none; }
+.efesto-product .forge-surface-bar { display: flex; align-items: center; gap: 8px; }
+.efesto-product .forge-surface-bar .forge-surface-leading { flex: 1 1 auto; min-width: 0; }
+.efesto-product .forge-mode-switcher { border-radius: 12px; border: 0; background: var(--k-panel); padding: 3px; gap: 2px; box-shadow: none; }
+.efesto-product .forge-mode-switcher button { height: 32px; border-radius: 9px; padding: 0 12px; font-size: 13.5px; color: var(--k-muted); border: 0; background: transparent; box-shadow: none; }
+.efesto-product .forge-mode-switcher button.active { background: var(--k-panel-2); color: var(--k-text); }
+.efesto-product .forge-mode-switcher button svg { display: none; }
+.efesto-product .forge-surface-bar .forge-state-action { height: 38px; border-radius: 12px; padding: 0 14px; border: 0; background: #e9e6e2; color: #171615; font-weight: 560; }
+.efesto-product .forge-surface-bar .forge-state-action > svg { display: none; }
+.efesto-product .forge-surface-bar .forge-state-action > i { background: var(--pc-ember); box-shadow: none; }
+@media (max-width: 720px) {
+  .efesto-product .forge-surface.is-idle .forge-menu-brand { display: none; }
+  .efesto-product .forge-surface.is-idle .forge-menu-icon { display: block; }
+  .efesto-product .forge-surface-bar .forge-state-action span { max-width: 9.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .efesto-product:has(.forge-surface.is-idle) .efesto-tabbar { display: none; }
+}
+/* composer: tall card, placeholder top-left, mode label + round send bottom-right */
+.efesto-product .forge-surface.is-idle .forge-composer,
+.efesto-product .forge-composer { position: relative; z-index: 1; min-height: 150px; display: flex; flex-direction: column; border-radius: 26px; border: 1px solid var(--k-line-2); background: var(--k-panel); box-shadow: none; padding: 18px 16px 12px 22px; }
+.efesto-product .forge-composer textarea { flex: 1; min-height: 70px; padding: 0; font-size: 17px; color: var(--k-text); }
+.efesto-product .forge-composer textarea::placeholder { color: #8f8b86; }
+.efesto-product .forge-composer footer { margin-top: auto; }
+.efesto-product .forge-composer .forge-composer-context:empty { display: none; }
+.efesto-product .forge-composer .forge-shortcut { display: none; }
+.efesto-product .forge-mode-label { margin-left: auto; font-size: 15px; color: var(--k-text); }
+.efesto-product .forge-mode-label span { color: var(--k-muted); margin-left: 4px; }
+.efesto-product .forge-composer .forge-send { margin-left: 4px; width: 44px; height: 44px; background: var(--pc-ember-deep); color: #fff4ea; box-shadow: none; }
+.efesto-product .forge-composer .forge-send svg { width: 20px; height: 20px; }
+.efesto-product .forge-composer .forge-send:disabled { background: #3a3836; color: #8f8b86; }
+.efesto-product .forge-composer:focus-within { border-color: rgba(255, 255, 255, .22); box-shadow: 0 0 0 3px rgba(238, 135, 72, .14); }
+.efesto-product .forge-composer-zone > .forge-composer-hint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* soft attached tray under the composer */
+.efesto-product .forge-composer-zone { gap: 0; }
+.efesto-product .forge-composer-tray { order: 3; display: flex; justify-content: center; gap: 4px; margin: -1px 26px 0; padding: 6px 8px; border-radius: 0 0 20px 20px; background: #181716; border: 1px solid var(--k-line); border-top: 0; }
+.efesto-product .forge-composer-tray button { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; border: 0; border-radius: 12px; background: transparent; color: var(--k-text-2); font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.efesto-product .forge-composer-tray button:hover { background: rgba(255, 255, 255, .04); color: var(--k-text); }
+.efesto-product .forge-composer-tray button svg { width: 18px; height: 18px; flex: none; color: var(--k-muted); }
+/* scrollable pill chips + circular ">" */
+.efesto-product .forge-page-chips { order: 4; position: relative; display: flex; align-items: center; margin: 22px auto 0; max-width: 100%; }
+.efesto-product .forge-page-chips-row { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 2px 46px 2px 2px; -webkit-mask-image: linear-gradient(90deg, #000 78%, transparent); mask-image: linear-gradient(90deg, #000 78%, transparent); }
+.efesto-product .forge-page-chips-row::-webkit-scrollbar { display: none; }
+.efesto-product .forge-page-chips-row button { flex: none; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--k-line-2); background: transparent; color: var(--k-text-2); font-size: 14.5px; }
+.efesto-product .forge-page-chips-row button:hover { color: var(--k-text); border-color: rgba(255, 255, 255, .2); }
+.efesto-product .forge-page-chips-row button svg { width: 17px; height: 17px; color: var(--k-muted); }
+.efesto-product .forge-page-chips-more { position: absolute; right: 0; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--k-line-2); background: var(--k-bg); color: var(--k-text); }
+.efesto-product .forge-page-chips-more svg { width: 18px; height: 18px; }
+.efesto-product .forge-mode-chips { display: none; }
+/* ideas collapsed behind a quiet bottom link */
+.efesto-product .forge-explore-ideas { order: 6; margin: auto auto 0; padding: 10px 14px; display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent; color: var(--k-muted); font-size: 14.5px; }
+.efesto-product .forge-explore-ideas svg { width: 17px; height: 17px; }
+.efesto-product .forge-explore-ideas:hover { color: var(--k-text); }
+.efesto-product .forge-composer-zone > .forge-quick-prompts { order: 5; margin-top: 18px; }
+/* sidebar drawer: Kimi-like plain list */
+.efesto-product .efesto-sidebar { background: #171615; border-right: 1px solid var(--k-line); }
+.efesto-product .efesto-brand .efesto-lockup-words { display: none; }
+.efesto-product .efesto-brand .efesto-lockup { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: #221d19; border: 1px solid var(--k-line-2); }
+.efesto-product .efesto-brand .efesto-lockup svg { width: 28px; height: 28px; }
+.efesto-product .efesto-sidebar .sidebar-actions .new-goal { height: 46px; border-radius: 14px; border: 1px solid var(--k-line-2); background: var(--k-panel); color: var(--k-text); font-size: 15px; font-weight: 560; }
+.efesto-product .efesto-sidebar nav button,
+.efesto-product .efesto-sidebar .sidebar-actions .new-chat { height: 46px; font-size: 15px; color: var(--k-text); }
+.efesto-product .efesto-sidebar .sidebar-actions .new-chat span { font-size: 15px; font-weight: 450; }
+.efesto-product .efesto-sidebar nav button svg,
+.efesto-product .efesto-sidebar .sidebar-actions .new-chat svg { stroke-width: 1.6; color: var(--k-text-2); }
+.efesto-product .efesto-sidebar nav button .nav-count,
+.efesto-product .efesto-sidebar nav button > b,
+.efesto-product .efesto-sidebar nav button > small { border: 0; background: transparent; color: var(--k-muted); }
+.efesto-product .efesto-sidebar .nav-label { font-size: 14px; color: var(--k-muted); padding: 16px 12px 6px; }
+.efesto-product .efesto-sidebar nav button.active { background: rgba(255, 255, 255, .05); }
+.efesto-product .efesto-sidebar nav button.active svg { color: var(--pc-ember); }
+.efesto-product .sidebar-menu-card { display: grid; gap: 0; padding: 6px; border-radius: 16px; border: 1px solid var(--k-line); background: #201f1d; box-shadow: 0 18px 40px -20px rgba(0, 0, 0, .8); border-top: 1px solid var(--k-line) !important; }
+.efesto-product .sidebar-menu-card button { display: flex; align-items: center; }
+.efesto-product .sidebar-menu-card .menu-chevron { margin-left: auto; width: 16px !important; height: 16px !important; color: var(--k-muted) !important; }
+.efesto-product .kernel-summary { background: transparent; border-color: transparent; }
+.efesto-product .forge-surface-bar .forge-state-action span { display: inline-block; position: static; width: auto; height: auto; clip-path: none; font-size: 14px; color: #171615; }
+.efesto-product .forge-surface-bar .forge-state-action { width: auto; min-width: 0; gap: 8px; display: inline-flex; align-items: center; }
+.efesto-product .efesto-sidebar .sidebar-actions .new-goal span { font-size: 15px; font-weight: 560; }
+.efesto-product .sidebar-menu-card button { color: var(--k-text); }
+.efesto-product .forge-mode-switcher button.active { border: 0; outline: 0; box-shadow: none; }
+.efesto-product .forge-surface-bar .forge-state-action:focus-visible,
+.efesto-product .forge-mode-switcher button:focus-visible,
+.efesto-product .forge-page-chips button:focus-visible,
+.efesto-product .forge-composer-tray button:focus-visible,
+.efesto-product .forge-explore-ideas:focus-visible,
+.efesto-product .sidebar-menu-card button:focus-visible { outline: 2px solid transparent; box-shadow: var(--pc-ring); }
+.efesto-product .forge-surface.is-idle > .forge-scroll { width: 100%; padding: 0; }
+.efesto-product .forge-surface.is-idle .forge-goal-empty { width: 100%; max-width: none; margin: 0; justify-items: center; }
+.efesto-product .forge-surface.is-idle > .forge-composer-zone { flex: 1.7 1 0; background: transparent; border: 0; box-shadow: none; margin-inline: auto; }
+.efesto-product .forge-surface.is-idle > .forge-composer-zone::before,
+.efesto-product .forge-surface.is-idle > .forge-composer-zone::after { display: none; }
+.efesto-product .forge-surface-bar .forge-state-action > i { position: static; width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.efesto-product .forge-surface.is-idle .forge-goal-empty { display: flex; justify-content: center; align-items: flex-end; min-height: 0; height: auto; flex: none; grid-template-columns: none; }
+@media (max-width: 720px) {
+  .efesto-product.has-tabbar:has(.forge-surface.is-idle),
+  .efesto-product:has(.forge-surface.is-idle) .efesto-stage,
+  .efesto-product:has(.forge-surface.is-idle) .efesto-main { padding-bottom: 0; }
+}
+.efesto-product .forge-surface.is-idle .forge-goal-empty { flex-direction: column; align-items: center; justify-content: flex-end; }
+.efesto-product .forge-surface.is-idle .forge-goal-empty > .forge-wordmark { margin: 0 auto; max-width: none; text-align: center; }
