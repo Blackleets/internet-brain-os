@@ -162,7 +162,8 @@ describe('buildForgeModel', () => {
     expect(mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('queued', { blockedReason: 'policy' }) })).phase).toBe('blocked');
     const failed = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('failed'), mission: row({ status: 'failed', searchCandidates: undefined, lastFailure: { reason: 'Hermes lease expired' } }) }));
     expect(failed.phase).toBe('failed');
-    expect(failed.phaseDetail).toContain('Hermes lease expired');
+    // The Kernel's raw reason is mapped to readable Spanish (it used to be echoed verbatim).
+    expect(failed.phaseDetail).toContain('Hermes no terminó a tiempo');
     const empty = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('completed'), mission: row({ status: 'completed', searchCandidates: undefined }) }));
     expect(empty.phase).toBe('completed_empty');
     expect(empty.sources).toEqual([]);
