@@ -10,6 +10,8 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:3000',
     viewport: { width: 1536, height: 1024 },
     trace: 'retain-on-failure',
+    // Existing acceptance specs assert the es catalog; English (the default) is covered by i18n.spec.ts.
+    locale: 'es-ES',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1536, height: 1024 } } }],
   webServer: [

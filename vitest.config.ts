@@ -14,6 +14,7 @@ export default defineConfig({
   },
   test: {
     passWithNoTests: true,
+    setupFiles: [fileURLToPath(new URL('./apps/dashboard/lib/i18n/test-setup.ts', import.meta.url))],
     // Keep vitest's default excludes (node_modules, dist, etc.) and add the
     // dashboard e2e specs, which are Playwright files that must not run under vitest.
     exclude: [
