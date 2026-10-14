@@ -138,3 +138,17 @@
 .connection-advanced > summary, .readiness-advanced > summary { min-height: 32px; display: flex; align-items: center; cursor: pointer; font-weight: 600; font-size: 13.5px; }
 .connection-advanced[open] > summary, .readiness-advanced[open] > summary { margin-bottom: 8px; }
 .connection-advanced > label, .connection-advanced > button, .connection-advanced > .connection-actions { margin-top: 10px; }
+
+/* Agentes v3 (approved mockup): Hermes once, real logo in the header, status + action inline. */
+.agent-connector[data-variant="hero"] > .agent-hero { grid-template-columns: 64px minmax(0, 1fr); align-items: start; }
+.agent-mark-logo { position: relative; display: block; width: 64px; height: 64px; padding: 0; overflow: visible; background: none; box-shadow: none; }
+.agent-mark-logo .agent-logo { width: 64px; height: 64px; border-radius: 16px; }
+.agent-mark-logo > i { position: absolute; right: -3px; bottom: -3px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #111; background: #6b6b6b; }
+.agent-hero[data-tone="live"] .agent-mark-logo > i, .agent-hero[data-tone="ok"] .agent-mark-logo > i { background: #7bd389; box-shadow: 0 0 8px #7bd389; }
+.efesto-product .agent-connector .agent-hero .agent-hero-status { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 6px; margin-top: 10px; font-size: 13px; line-height: 1.45; color: #d8cfc7; }
+.agent-hero-status > i { flex: none; align-self: center; width: 8px; height: 8px; border-radius: 50%; background: #6b6b6b; }
+.agent-hero[data-tone="live"] .agent-hero-status > i, .agent-hero[data-tone="ok"] .agent-hero-status > i { background: #7bd389; box-shadow: 0 0 8px #7bd389; }
+.agent-hero[data-tone="live"] .agent-hero-status strong, .agent-hero[data-tone="ok"] .agent-hero-status strong { color: #bfe8b0; }
+.agent-hero-action { display: grid; justify-items: start; gap: 8px; margin-top: 12px; }
+@media (max-width: 720px) { .agent-hero-action .agent-connect { width: 100%; justify-content: center; } }
+.efesto-product .agent-connector .agent-hero .agent-hero-status strong { font-size: 13px; }

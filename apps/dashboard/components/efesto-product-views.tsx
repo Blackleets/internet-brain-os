@@ -527,8 +527,7 @@ export function ModelsView({ providers, selectedProviderId, selectedModel, model
 
 export function AgentsView({ snapshot, onSettings, onNewGoal, connected = Boolean(snapshot), kernelUrl, onTestAgents }: { snapshot?: OverviewSnapshot; onSettings: () => void; onNewGoal: () => void; connected?: boolean; kernelUrl?: string; onTestAgents?: () => Promise<AgentsSnapshot | undefined> }) {
   return <Workspace icon={Bot} eyebrow="Ejecución controlada" title="Agentes" copy="Hermes y futuros agentes pueden ejecutar herramientas; el Kernel conserva la autoridad." action={<button type="button" className="secondary-action" onClick={onSettings}><Settings /> Kernel</button>}>
-    <div className="agent-hero"><div className="agent-mark"><Bot /></div><div><small>NOUS RESEARCH</small><h2>Hermes Agent</h2><p>Busca e investiga por ti con límites claros. Solo se muestra como hallazgo lo que el Kernel verifica con una fuente real.</p></div></div>
-    <AgentConnector connected={connected} kernelUrl={kernelUrl} agents={snapshot?.agents} onConnectKernel={onSettings} onTest={onTestAgents ?? (async () => snapshot?.agents)} />
+    <AgentConnector variant="hero" connected={connected} kernelUrl={kernelUrl} agents={snapshot?.agents} onConnectKernel={onSettings} onTest={onTestAgents ?? (async () => snapshot?.agents)} />
     <button type="button" className="primary-action" onClick={onNewGoal}><Target /> Preparar una misión</button>
   </Workspace>;
 }

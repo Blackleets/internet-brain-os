@@ -740,7 +740,7 @@ export default function EfestoProductShell() {
       </main>
 
       {connectionsOpen && connection ? <ConnectionsSheet missions={snapshot?.missions} kernelOnline={snapshot?.readiness.kernel === 'online'} connected kernelUrl={connection.baseUrl} agents={snapshot?.agents} onTest={testAgents} onConnectKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onManageKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onClose={() => setConnectionsOpen(false)} /> : null}
-      {toast ? <div className="efesto-toast" role="status"><ShieldCheck /><span>{toast}</span><button type="button" onClick={() => setToast('')} aria-label="Cerrar aviso"><X /></button></div> : null}
+      {toast ? <div className="efesto-toast" role="status"><ShieldCheck /><span title={toast}>{toast}</span><button type="button" onClick={() => setToast('')} aria-label="Cerrar aviso"><X /></button></div> : null}
     </section>
     {mobileViewport ? <nav className="efesto-tabbar" aria-label="Navegación rápida" aria-hidden={navOpen ? true : undefined} inert={navOpen ? true : undefined}>
       {tabNav.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} aria-current={view === id ? 'page' : undefined} onClick={() => navigate(id)}>

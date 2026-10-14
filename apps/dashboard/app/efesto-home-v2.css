@@ -55,3 +55,9 @@
   .efesto-product .forge-goal-lede { font-size: 13.5px; padding: 6px 10px; border-radius: 14px; background: radial-gradient(closest-side, rgba(0, 0, 0, .88), rgba(0, 0, 0, .55) 70%, transparent); }
   .efesto-product .forge-surface.is-idle .forge-composer.is-goal { margin-top: 28px; }
 }
+
+/* v3 (approved): on phones the status toast sits at the top, one line, so it never covers actions. */
+@media (max-width: 720px) {
+  .efesto-product .efesto-toast, .efesto-product.has-tabbar .efesto-toast { top: calc(58px + env(safe-area-inset-top)); bottom: auto; left: 12px; right: 12px; width: auto; max-width: none; transform: none; padding: 8px 10px; font-size: 12px; }
+  .efesto-product .efesto-toast span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
