@@ -15,9 +15,18 @@ export async function discoverLocalKernelConnection(signal?: AbortSignal, fetche
   // request in the browser); the result is simply ignored once the caller aborted.
   const response = await fetcher('/efesto-local/status', { cache: 'no-store', headers: { 'x-efesto-local': '1' } });
   if (signal?.aborted || !response.ok) throw new Error('LOCAL_UNAVAILABLE');
-  const body = await response.json().catch(() => undefined) as { ok?: unknown; enabled?: unknown } | undefined;
+  const body = await response.json().catch(() => undefined) as { ok?: unknown; enabled?: unknown; kernelUrl?: unknown } | undefined;
   if (body?.ok !== true || body.enabled !== true) throw new Error('LOCAL_UNAVAILABLE');
-  return { baseUrl: normalizeKernelBaseUrl(LOCAL_KERNEL_BASE_URL), token: LOCAL_TRANSPORT };
+  return { baseUrl: normalizeKernelBaseUrl(loopbackKernelUrl(body.kernelUrl) ?? LOCAL_KERNEL_BASE_URL), token: LOCAL_TRANSPORT };
+}
+
+/** Only an http loopback origin from the bridge is accepted; anything else falls back to the default. */
+export function loopbackKernelUrl(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' && LOOPBACK.has(url.hostname) ? url.origin : undefined;
+  } catch { return undefined; }
 }
 
 /** Rewrites Kernel URLs to the same-origin bridge; the sentinel never leaves the browser as a credential. */

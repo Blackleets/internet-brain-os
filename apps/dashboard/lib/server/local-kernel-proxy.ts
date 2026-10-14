@@ -70,7 +70,11 @@ export async function localStatus(request: Request, deps: LocalProxyDeps = {}): 
   if (!localProxyEnabled(env)) return json(200, { ok: true, enabled: false });
   const guard = checkLocalRequest(request);
   if (!guard.ok) return json(guard.status, { ok: false, code: guard.code });
-  return json(200, { ok: true, enabled: true });
+  // The loopback Kernel origin is not a secret (the token never leaves the server); publishing it lets the
+  // UI show the real port instead of assuming 4310.
+  let kernelUrl: string;
+  try { kernelUrl = localKernelUrl(env); } catch { return json(200, { ok: true, enabled: false, code: 'NON_LOOPBACK_KERNEL_URL' }); }
+  return json(200, { ok: true, enabled: true, kernelUrl });
 }
 
 export async function proxyToLocalKernel(request: Request, segments: string[], deps: LocalProxyDeps = {}): Promise<Response> {

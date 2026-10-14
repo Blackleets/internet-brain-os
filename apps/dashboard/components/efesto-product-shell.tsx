@@ -793,10 +793,14 @@ function goalStatusLabel(surface: GoalSurface, missions?: readonly MissionSummar
 /** Kernel chip: the local Kernel address it talks to and whether it answers. */
 function kernelChipDetail(baseUrl: string | undefined, snapshot: OverviewSnapshot | undefined): string {
   if (!baseUrl) return 'Sin conexión';
-  let host = baseUrl;
-  try { host = new URL(baseUrl).host; } catch { /* keep the raw value */ }
-  if (!snapshot) return `${host} · conectando`;
-  return `${host} · ${snapshot.readiness.kernel === 'online' ? 'en línea' : 'sin respuesta'}`;
+  let where = baseUrl;
+  try {
+    const url = new URL(baseUrl);
+    // A loopback Kernel is "this computer": show its real port, not a raw IP.
+    where = ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) ? `puerto ${url.port || '80'}` : url.host;
+  } catch { /* keep the raw value */ }
+  if (!snapshot) return `Conectando · ${where}`;
+  return `${snapshot.readiness.kernel === 'online' ? 'Conectado' : 'Sin respuesta'} · ${where}`;
 }
 function slug(value: string) { return value.toLocaleLowerCase('en').replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || `provider-${Date.now()}`; }
 function viewLabel(view: View) { return nav.find((item) => item.id === view)?.label ?? 'Inicio'; }
