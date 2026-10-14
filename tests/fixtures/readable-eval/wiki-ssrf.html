@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html class="client-nojs vector-feature-language-in-header-enabled vector-feature-language-in-main-menu-disabled vector-feature-language-in-main-page-header-disabled vector-feature-page-tools-pinned-disabled vector-feature-toc-pinned-clientpref-1 vector-feature-main-menu-pinned-disabled vector-feature-limited-width-clientpref-1 vector-feature-limited-width-content-enabled vector-feature-custom-font-size-clientpref-1 vector-feature-appearance-pinned-clientpref-1 skin-theme-clientpref-day vector-sticky-header-enabled vector-toc-available skin-thumbsize-clientpref-standard" lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<title>Server-side request forgery - Wikipedia</title>
+<script>(function(){var className="client-js vector-feature-language-in-header-enabled vector-feature-language-in-main-menu-disabled vector-feature-language-in-main-page-header-disabled vector-feature-page-tools-pinned-disabled vector-feature-toc-pinned-clientpref-1 vector-feature-main-menu-pinned-disabled vector-feature-limited-width-clientpref-1 vector-feature-limited-width-content-enabled vector-feature-custom-font-size-clientpref-1 vector-feature-appearance-pinned-clientpref-1 skin-theme-clientpref-day vector-sticky-header-enabled vector-toc-available skin-thumbsize-clientpref-standard";var cookie=document.cookie.match(/(?:^|; )enwikimwclientpreferences=([^;]+)/);if(cookie){cookie[1].split('%2C').forEach(function(pref){className=className.replace(new RegExp('(^| )'+pref.replace(/-clientpref-\w+$|[^\w-]+/g,'')+'-clientpref-\\w+( |$)'),'$1'+pref+'$2');});}document.documentElement.className=className;}());RLCONF={"wgBreakFrames":false,"wgSeparatorTransformTable":["",""],"wgDigitTransformTable":["",""],"wgDefaultDateFormat":"dmy","wgMonthNames":["","January","February","March","April","May","June","July","August","September","October","November","December"],"wgRequestId":"60d6e30e-1d6f-4979-9c39-2b6d83dbc1a3","wgCanonicalNamespace":"","wgCanonicalSpecialPageName":false,"wgNamespaceNumber":0,"wgPageName":"Server-side_request_forgery","wgTitle":"Server-side request forgery","wgCurRevisionId":1322851731,"wgRevisionId":1322851731,"wgArticleId":57971303,"wgIsArticle":true,"wgIsRedirect":false,"wgAction":"view","wgUserName":null,"wgUserGroups":["*"],"wgCategories":["Articles with short description","Short description is different from Wikidata","Articles needing additional references from October 2022","All articles needing additional references","CS1 maint: url-status","CS1 maint: multiple names: authors list","CS1 maint: numeric names: authors list","Computer security exploits","Internet security","Deception","Security breaches"],"wgPageViewLanguage":"en","wgPageContentLanguage":"en","wgPageContentModel":"wikitext","wgRelevantPageName":"Server-side_request_forgery","wgRelevantArticleId":57971303,"wgTempUserName":null,"wgIsProbablyEditable":true,"wgRelevantPageIsProbablyEditable":true,"wgRestrictionEdit":[],"wgRestrictionMove":[],"wgNoticeProject":"wikipedia","wgFlaggedRevsParams":{"tags":{"status":{"levels":1}},"namespaces":[0,4]},"wgConfirmEditCaptchaNeededForGenericEdit":"hcaptcha","wgConfirmEditForceShowCaptcha":false,"wgConfirmEditHCaptchaSiteKey":"5d0c670e-a5f4-4258-ad16-1f42792c9c62","wgMediaViewerOnClick":true,"wgMediaViewerEnabledByDefault":true,"wgMediaViewerMobileBeta":false,"wgPopupsFlags":0,"wgVisualEditor":{"pageLanguageCode":"en","pageLanguageDir":"ltr","pageVariantFallbacks":"en"},"wgMFDisplayWikibaseDescriptions":{"search":true,"watchlist":true,"tagline":false,"nearby":true},"wgWMESchemaEditAttemptStepOversample":false,"wgWMEPageLength":7000,"wgParsoidHtmlVersion":"2.8.0","parsermigration-parsoid":true,"wgPageAssessments":{"Computer security":{"class":"Stub","importance":"Unknown"},"Computer security/WikiProject Computing":{"class":"Stub","importance":"Unknown"},"Project-independent assessment":{"class":"Stub","importance":""}},"wgTestKitchenUserExperiments":{"overrides":[],"enrolled":[],"assigned":[],"subject_ids":[]},"wgEditSubmitButtonLabelPublish":true,"wgVisualEditorPageIsDisambiguation":false,"wgULSPosition":"interlanguage","wgULSisCompactLinksEnabled":false,"wgVector2022LanguageInHeader":true,"wgULSisLanguageSelectorEmpty":false,"wgULSLanguageSelectorV2Enabled":true,"wgWikibaseItemId":"Q56064107","wgCheckUserClientHintsHeadersJsApi":["brands","architecture","bitness","fullVersionList","mobile","model","platform","platformVersion"],"wgCheckUserClientHintsInEditRequest":true,"wgPersonalDashboardMenuVisible":false};
+RLSTATE={"ext.globalCssJs.user.styles":"ready","site.styles":"ready","user.styles":"ready","ext.globalCssJs.user":"ready","user":"ready","user.options":"loading","ext.cite.parsoid.styles":"ready","ext.cite.styles":"ready","mediawiki.skinning.content.parsoid":"ready","ext.wikimediamessages.styles":"ready","skins.vector.search.codex.styles":"ready","skins.vector.styles":"ready","skins.vector.icons":"ready","jquery.makeCollapsible.styles":"ready","ext.visualEditor.desktopArticleTarget.noscript":"ready","ext.uls.interlanguage":"ready","wikibase.client.init":"ready"};RLPAGEMODULES=["ext.cite.ux-enhancements","mediawiki.page.media","site","mediawiki.page.ready","jquery.makeCollapsible","mediawiki.toc","skins.vector.js","ext.centralNotice.geoIP","ext.centralNotice.startUp","ext.gadget.ReferenceTooltips","ext.gadget.switcher","ext.urlShortener.toolbar","ext.centralauth.centralautologin","ext.testKitchen","ext.wikimediaCustomizations.discordSurvey","ext.wikimediaCustomizations.donorAccountCreation","mmv.bootstrap","ext.popups","ext.visualEditor.desktopArticleTarget.init","ext.echo.centralauth","ext.eventLogging","ext.wikimediaEvents","ext.navigationTiming","ext.uls.interface","ext.cx.eventlogging.campaigns","ext.cx.uls.quick.actions","wikibase.client.vector-2022","wikibase.databox.fromWikidata","ext.checkUser.clientHints","ext.quicksurveys.init","ext.readerExperiments/preferredSources"];</script>
+<script>(RLQ=window.RLQ||[]).push(function(){mw.loader.impl(function(){return["user.options@12s5i",function($,jQuery,require,module){mw.user.tokens.set({"patrolToken":"+\\","watchToken":"+\\","csrfToken":"+\\"});mw.user.options.set({"usecodemirror":1});
+}];});});</script>
+<link rel="stylesheet" href="/w/load.php?lang=en&amp;modules=ext.cite.parsoid.styles%7Cext.cite.styles%7Cext.uls.interlanguage%7Cext.visualEditor.desktopArticleTarget.noscript%7Cext.wikimediamessages.styles%7Cjquery.makeCollapsible.styles%7Cmediawiki.skinning.content.parsoid%7Cskins.vector.icons%2Cstyles%7Cskins.vector.search.codex.styles%7Cwikibase.client.init&amp;only=styles&amp;skin=vector-2022">
+<script async="" src="/w/load.php?lang=en&amp;modules=startup&amp;only=scripts&amp;raw=1&amp;skin=vector-2022"></script>
+<meta name="ResourceLoaderDynamicStyles" content="">
+<link rel="stylesheet" href="/w/load.php?lang=en&amp;modules=site.styles&amp;only=styles&amp;skin=vector-2022">
+<meta name="generator" content="MediaWiki 1.47.0-wmf.23">
+<meta name="referrer" content="origin">
+<meta name="referrer" content="origin-when-cross-origin">
+<meta name="robots" content="max-image-preview:standard">
+<meta name="format-detection" content="telephone=no">
+<meta name="viewport" content="width=1120">
+<meta property="og:title" content="Server-side request forgery - Wikipedia">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="//thumb.wikimedia.org">
+<link rel="discord:component-embed" type="application/json" href="https://en.wikipedia.org/w/rest.php/discord/v0-internal/discord-preview?title=Server-side+request+forgery&amp;db=enwiki&amp;lang=en">
+<link rel="alternate" type="application/x-wiki" title="Edit this page" href="/w/index.php?title=Server-side_request_forgery&amp;action=edit">
+<link rel="apple-touch-icon" href="/static/apple-touch/wikipedia.png">
+<link rel="icon" href="/static/favicon/wikipedia.ico">
+<link rel="search" type="application/opensearchdescription+xml" href="/w/rest.php/v1/search" title="Wikipedia (en)">
+<link rel="EditURI" type="application/rsd+xml" href="//en.wikipedia.org/w/api.php?action=rsd">
+<link rel="canonical" href="https://en.wikipedia.org/wiki/Server-side_request_forgery">
+<link rel="license" href="https://creativecommons.org/licenses/by-sa/4.0/deed.en">
+<link rel="alternate" type="application/atom+xml" title="Wikipedia Atom feed" href="/w/index.php?title=Special:RecentChanges&amp;feed=atom">
+<link rel="dns-prefetch" href="//meta.wikimedia.org" />
+<link rel="dns-prefetch" href="auth.wikimedia.org">
+</head>
+<body class="skin--responsive skin-vector skin-vector-search-vue mediawiki ltr sitedir-ltr mw-hide-empty-elt ns-0 ns-subject mw-editable page-Server-side_request_forgery rootpage-Server-side_request_forgery skin-vector-2022 action-view">
+<div id="mw-aria-live-region" class="mw-aria-live-region" aria-live="polite"></div><a class="mw-jump-link" href="#bodyContent">Jump to content</a>
+<div class="vector-header-container">
+	<header class="vector-header mw-header no-font-mode-scale">
+		<div class="vector-header-start">
+			<nav class="vector-main-menu-landmark" aria-label="Site">
+				
+<div id="vector-main-menu-dropdown" class="vector-dropdown vector-main-menu-dropdown vector-button-flush-left vector-button-flush-right"  title="Main menu" >
+	<input type="checkbox" id="vector-main-menu-dropdown-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-vector-main-menu-dropdown" class="vector-dropdown-checkbox "  aria-label="Main menu"   >
+	<label id="vector-main-menu-dropdown-label" for="vector-main-menu-dropdown-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only " aria-hidden="true"  ><span class="vector-icon mw-ui-icon-menu mw-ui-icon-wikimedia-menu cdx-button__icon"></span>
+
+<span class="vector-dropdown-label-text">Main menu</span>
+	</label>
+	<div class="vector-dropdown-content">
+
+
+				<div id="vector-main-menu-unpinned-container" class="vector-unpinned-container">
+		
+<div id="vector-main-menu" class="vector-main-menu vector-pinnable-element">
+	<div
+	class="vector-pinnable-header vector-main-menu-pinnable-header vector-pinnable-header-unpinned"
+	data-feature-name="main-menu-pinned"
+	data-pinnable-element-id="vector-main-menu"
+	data-pinned-container-id="vector-main-menu-pinned-container"
+	data-unpinned-container-id="vector-main-menu-unpinned-container"
+>
+	<div class="vector-pinnable-header-label">Main menu</div>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-pin-button" data-event-name="pinnable-header.vector-main-menu.pin" aria-label="Move Main menu to sidebar">move to sidebar</button>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-unpin-button" data-event-name="pinnable-header.vector-main-menu.unpin" aria-label="Hide Main menu">hide</button>
+</div>
+
+	
+<div id="p-navigation" class="vector-menu mw-portlet mw-portlet-navigation"  >
+	<div class="vector-menu-heading">
+		Navigation
+	</div>
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			<li id="n-mainpage-description" class="mw-list-item"><a href="/wiki/Main_Page" title="Visit the main page [z]" accesskey="z"><span>Main page</span></a></li><li id="n-contents" class="mw-list-item"><a href="/wiki/Wikipedia:Contents" title="Guides to browsing Wikipedia"><span>Contents</span></a></li><li id="n-currentevents" class="mw-list-item"><a href="/wiki/Portal:Current_events" title="Articles related to current events"><span>Current events</span></a></li><li id="n-randompage" class="mw-list-item"><a href="/wiki/Special:Random" title="Visit a randomly selected article [x]" accesskey="x"><span>Random article</span></a></li><li id="n-aboutsite" class="mw-list-item"><a href="/wiki/Wikipedia:About" title="Learn about Wikipedia and how it works"><span>About Wikipedia</span></a></li><li id="n-contactpage" class="mw-list-item"><a href="//en.wikipedia.org/wiki/Wikipedia:Contact_us" title="How to contact Wikipedia"><span>Contact us</span></a></li>
+		</ul>
+		
+	</div>
+</div>
+
+	
+<div id="p-interaction" class="vector-menu mw-portlet mw-portlet-interaction"  >
+	<div class="vector-menu-heading">
+		Contribute
+	</div>
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			<li id="n-help" class="mw-list-item"><a href="/wiki/Help:Contents" title="Guidance on how to use and edit Wikipedia"><span>Help</span></a></li><li id="n-introduction" class="mw-list-item"><a href="/wiki/Help:Introduction" title="Learn how to edit Wikipedia"><span>Learn to edit</span></a></li><li id="n-portal" class="mw-list-item"><a href="/wiki/Wikipedia:Community_portal" title="The hub for editors"><span>Community portal</span></a></li><li id="n-recentchanges" class="mw-list-item"><a href="/wiki/Special:RecentChanges" title="A list of recent changes to Wikipedia [r]" accesskey="r"><span>Recent changes</span></a></li><li id="n-upload" class="mw-list-item"><a href="/wiki/Wikipedia:File_upload_wizard" title="Add images or other media for use on Wikipedia"><span>Upload file</span></a></li><li id="n-specialpages" class="mw-list-item"><a href="/wiki/Special:SpecialPages" title="A list of all special pages [q]" accesskey="q"><span>Special pages</span></a></li>
+		</ul>
+		
+	</div>
+</div>
+
+</div>
+
+				</div>
+
+	</div>
+</div>
+
+		</nav>
+			
+<a href="/wiki/Main_Page" class="mw-logo">
+	<img class="mw-logo-icon" src="/static/images/icons/enwiki-25.svg" alt="" aria-hidden="true" height="50" width="50">
+	<span class="mw-logo-container skin-invert">
+		<img class="mw-logo-wordmark" alt="Wikipedia" src="/static/images/mobile/copyright/wikipedia-wordmark-en-25.svg" style="width: 8.75em; height: 1.375em;">
+		<img class="mw-logo-tagline" alt="The Free Encyclopedia" src="/static/images/mobile/copyright/wikipedia-tagline-en-25.svg" width="140" height="11" style="width: 8.75em; height: 0.6875em;">
+	</span>
+</a>
+
+		</div>
+		<div class="vector-header-end">
+			
+<div id="p-search" role="search" class="vector-search-box-vue  vector-search-box-collapses vector-search-box-show-thumbnail vector-search-box-auto-expand-width vector-search-box">
+	<a href="/wiki/Special:Search" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only search-toggle" title="Search Wikipedia [f]" accesskey="f"><span class="vector-icon mw-ui-icon-search mw-ui-icon-wikimedia-search cdx-button__icon"></span>
+
+<span>Search</span>
+	</a>
+	<div class="vector-typeahead-search-container">
+		<div class="cdx-typeahead-search cdx-typeahead-search--show-thumbnail cdx-typeahead-search--auto-expand-width">
+			<form action="/w/index.php" id="searchform" class="cdx-search-input cdx-search-input--has-end-button">
+				<div id="simpleSearch" class="cdx-search-input__input-wrapper"  data-search-loc="header-moved">
+					<div class="cdx-text-input cdx-text-input--has-start-icon">
+						<input
+							class="cdx-text-input__input mw-searchInput" autocomplete="off"
+							 type="search" name="search" placeholder="Search Wikipedia" aria-label="Search Wikipedia" autocapitalize="none" spellcheck="false" title="Search Wikipedia [f]" accesskey="f" id="searchInput"
+							>
+						<span class="cdx-text-input__icon cdx-text-input__start-icon"></span>
+					</div>
+					<input type="hidden" name="title" value="Special:Search">
+				</div>
+				<button class="cdx-button cdx-search-input__end-button">Search</button>
+			</form>
+		</div>
+	</div>
+</div>
+
+			<nav class="vector-user-links vector-user-links-wide" aria-label="Personal tools">
+	<div class="vector-user-links-main">
+	
+<div id="p-vector-user-menu-preferences" class="vector-menu mw-portlet emptyPortlet"  >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			
+		</ul>
+		
+	</div>
+</div>
+
+	
+<div id="p-vector-user-menu-userpage" class="vector-menu mw-portlet emptyPortlet"  >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			
+		</ul>
+		
+	</div>
+</div>
+
+	<nav class="vector-appearance-landmark" aria-label="Appearance">
+		
+<div id="vector-appearance-dropdown" class="vector-dropdown "  title="Change the appearance of the page&#039;s font size, width, and color" >
+	<input type="checkbox" id="vector-appearance-dropdown-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-vector-appearance-dropdown" class="vector-dropdown-checkbox "  aria-label="Appearance"   >
+	<label id="vector-appearance-dropdown-label" for="vector-appearance-dropdown-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only " aria-hidden="true"  ><span class="vector-icon mw-ui-icon-appearance mw-ui-icon-wikimedia-appearance cdx-button__icon"></span>
+
+<span class="vector-dropdown-label-text">Appearance</span>
+	</label>
+	<div class="vector-dropdown-content">
+
+
+			<div id="vector-appearance-unpinned-container" class="vector-unpinned-container">
+				
+			</div>
+		
+	</div>
+</div>
+
+	</nav>
+	
+<div id="p-vector-user-menu-notifications" class="vector-menu mw-portlet emptyPortlet"  >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			
+		</ul>
+		
+	</div>
+</div>
+
+	
+<div id="p-vector-user-menu-overflow" class="vector-menu mw-portlet"  >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			<li id="pt-sitesupport-2" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="https://donate.wikimedia.org/?wmf_source=donate&amp;wmf_medium=sidebar&amp;wmf_campaign=en.wikipedia.org&amp;uselang=en" data-mw-donate-attempt="top_link" class=""><span>Donate</span></a>
+</li>
+<li id="pt-createaccount-2" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="/w/index.php?title=Special:CreateAccount&amp;returnto=Server-side+request+forgery" title="You are encouraged to create an account and log in; however, it is not mandatory" class=""><span>Create account</span></a>
+</li>
+<li id="pt-login-2" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="/w/index.php?title=Special:UserLogin&amp;returnto=Server-side+request+forgery" title="You&#039;re encouraged to log in; however, it&#039;s not mandatory. [o]" accesskey="o" class=""><span>Log in</span></a>
+</li>
+
+			
+		</ul>
+		
+	</div>
+</div>
+
+	</div>
+	
+<div id="vector-user-links-dropdown" class="vector-dropdown vector-user-menu vector-button-flush-right vector-user-menu-logged-out vector-user-links-dropdown--collapsible"  title="Log in and more options" >
+	<input type="checkbox" id="vector-user-links-dropdown-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-vector-user-links-dropdown" class="vector-dropdown-checkbox "  aria-label="Personal tools"   >
+	<label id="vector-user-links-dropdown-label" for="vector-user-links-dropdown-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only " aria-hidden="true"  ><span class="vector-icon mw-ui-icon-userAvatar mw-ui-icon-wikimedia-userAvatar cdx-button__icon"></span>
+
+<span class="vector-dropdown-label-text">Personal tools</span>
+	</label>
+	<div class="vector-dropdown-content">
+
+
+		
+<div id="p-personal" class="vector-menu mw-portlet mw-portlet-personal"  title="User menu" >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			<li id="pt-sitesupport" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="https://donate.wikimedia.org/?wmf_source=donate&amp;wmf_medium=sidebar&amp;wmf_campaign=en.wikipedia.org&amp;uselang=en" data-mw-donate-attempt="top_link" class=""><span class="vector-icon mw-ui-icon-heart mw-ui-icon-wikimedia-heart cdx-button__icon"></span>
+
+<span>Donate</span></a>
+</li>
+<li id="pt-createaccount" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="/w/index.php?title=Special:CreateAccount&amp;returnto=Server-side+request+forgery" title="You are encouraged to create an account and log in; however, it is not mandatory" class=""><span class="vector-icon mw-ui-icon-userAvatar mw-ui-icon-wikimedia-userAvatar cdx-button__icon"></span>
+
+<span>Create account</span></a>
+</li>
+<li id="pt-login" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="/w/index.php?title=Special:UserLogin&amp;returnto=Server-side+request+forgery" title="You&#039;re encouraged to log in; however, it&#039;s not mandatory. [o]" accesskey="o" class=""><span class="vector-icon mw-ui-icon-logIn mw-ui-icon-wikimedia-logIn cdx-button__icon"></span>
+
+<span>Log in</span></a>
+</li>
+
+			
+		</ul>
+		
+	</div>
+</div>
+
+	
+	</div>
+</div>
+
+</nav>
+
+		</div>
+	</header>
+</div>
+<div class="mw-page-container">
+	<div class="mw-page-container-inner">
+		<div class="vector-sitenotice-container">
+			<div id="siteNotice"><!-- CentralNotice --></div>
+		</div>
+		<div class="vector-column-start">
+			<div class="vector-main-menu-container">
+		<div id="mw-navigation">
+			<nav id="mw-panel" class="vector-main-menu-landmark" aria-label="Site">
+				<div id="vector-main-menu-pinned-container" class="vector-pinned-container">
+				
+				</div>
+		</nav>
+		</div>
+	</div>
+	<div class="vector-sticky-pinned-container">
+				<nav id="mw-panel-toc" aria-label="Contents" data-event-name="ui.sidebar-toc" class="mw-table-of-contents-container vector-toc-landmark">
+					<div id="vector-toc-pinned-container" class="vector-pinned-container">
+					<div id="vector-toc" class="vector-toc vector-pinnable-element">
+	<div
+	class="vector-pinnable-header vector-toc-pinnable-header vector-pinnable-header-pinned"
+	data-feature-name="toc-pinned"
+	data-pinnable-element-id="vector-toc"
+	data-pinned-container-id="vector-toc-pinned-container"
+	data-unpinned-container-id="vector-toc-unpinned-container"
+>
+	<h2 class="vector-pinnable-header-label">Contents</h2>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-pin-button" data-event-name="pinnable-header.vector-toc.pin" aria-label="Move Contents to sidebar">move to sidebar</button>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-unpin-button" data-event-name="pinnable-header.vector-toc.unpin" aria-label="Hide Contents">hide</button>
+</div>
+
+
+	<ul class="vector-toc-contents" id="mw-panel-toc-list">
+		<li id="toc-mw-content-text"
+			class="vector-toc-list-item vector-toc-level-1">
+			<a href="#" class="vector-toc-link">
+				<div class="vector-toc-text">(Top)</div>
+			</a>
+		</li>
+		<li id="toc-Overview"
+		class="vector-toc-list-item vector-toc-level-1 vector-toc-list-item-expanded">
+		<a class="vector-toc-link" href="#Overview">
+			<div class="vector-toc-text">
+				<span class="vector-toc-numb">1</span>
+				<span>Overview</span>
+			</div>
+		</a>
+		
+		<ul id="toc-Overview-sublist" class="vector-toc-list">
+		</ul>
+	</li>
+	<li id="toc-Types"
+		class="vector-toc-list-item vector-toc-level-1 vector-toc-list-item-expanded">
+		<a class="vector-toc-link" href="#Types">
+			<div class="vector-toc-text">
+				<span class="vector-toc-numb">2</span>
+				<span>Types</span>
+			</div>
+		</a>
+		
+			<button aria-controls="toc-Types-sublist" class="cdx-button cdx-button--weight-quiet cdx-button--icon-only vector-toc-toggle">
+				<span class="vector-icon mw-ui-icon-wikimedia-expand"></span>
+				<span>Toggle Types subsection</span>
+			</button>
+		
+		<ul id="toc-Types-sublist" class="vector-toc-list">
+			<li id="toc-Basic"
+			class="vector-toc-list-item vector-toc-level-2">
+			<a class="vector-toc-link" href="#Basic">
+				<div class="vector-toc-text">
+					<span class="vector-toc-numb">2.1</span>
+					<span>Basic</span>
+				</div>
+			</a>
+			
+			<ul id="toc-Basic-sublist" class="vector-toc-list">
+			</ul>
+		</li>
+		<li id="toc-Blind"
+			class="vector-toc-list-item vector-toc-level-2">
+			<a class="vector-toc-link" href="#Blind">
+				<div class="vector-toc-text">
+					<span class="vector-toc-numb">2.2</span>
+					<span>Blind</span>
+				</div>
+			</a>
+			
+			<ul id="toc-Blind-sublist" class="vector-toc-list">
+			</ul>
+		</li>
+	</ul>
+	</li>
+	<li id="toc-Causes_and_Prevention"
+		class="vector-toc-list-item vector-toc-level-1 vector-toc-list-item-expanded">
+		<a class="vector-toc-link" href="#Causes_and_Prevention">
+			<div class="vector-toc-text">
+				<span class="vector-toc-numb">3</span>
+				<span>Causes and Prevention</span>
+			</div>
+		</a>
+		
+		<ul id="toc-Causes_and_Prevention-sublist" class="vector-toc-list">
+		</ul>
+	</li>
+	<li id="toc-Notable_Exploits"
+		class="vector-toc-list-item vector-toc-level-1 vector-toc-list-item-expanded">
+		<a class="vector-toc-link" href="#Notable_Exploits">
+			<div class="vector-toc-text">
+				<span class="vector-toc-numb">4</span>
+				<span>Notable Exploits</span>
+			</div>
+		</a>
+		
+		<ul id="toc-Notable_Exploits-sublist" class="vector-toc-list">
+		</ul>
+	</li>
+	<li id="toc-References"
+		class="vector-toc-list-item vector-toc-level-1 vector-toc-list-item-expanded">
+		<a class="vector-toc-link" href="#References">
+			<div class="vector-toc-text">
+				<span class="vector-toc-numb">5</span>
+				<span>References</span>
+			</div>
+		</a>
+		
+		<ul id="toc-References-sublist" class="vector-toc-list">
+		</ul>
+	</li>
+</ul>
+</div>
+
+					</div>
+		</nav>
+			</div>
+		</div>
+		<div class="mw-content-container">
+			<main id="content" class="mw-body">
+				<header class="mw-body-header vector-page-titlebar no-font-mode-scale">
+					<nav aria-label="Contents" class="vector-toc-landmark">
+						
+<div id="vector-page-titlebar-toc" class="vector-dropdown vector-page-titlebar-toc vector-button-flush-left"  title="Table of Contents" >
+	<input type="checkbox" id="vector-page-titlebar-toc-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-vector-page-titlebar-toc" class="vector-dropdown-checkbox "  aria-label="Toggle the table of contents"   >
+	<label id="vector-page-titlebar-toc-label" for="vector-page-titlebar-toc-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only " aria-hidden="true"  ><span class="vector-icon mw-ui-icon-listBullet mw-ui-icon-wikimedia-listBullet cdx-button__icon"></span>
+
+<span class="vector-dropdown-label-text">Toggle the table of contents</span>
+	</label>
+	<div class="vector-dropdown-content">
+
+
+							<div id="vector-page-titlebar-toc-unpinned-container" class="vector-unpinned-container">
+			</div>
+		
+	</div>
+</div>
+
+					</nav>
+					<h1 id="firstHeading" class="firstHeading mw-first-heading"><span lang="en" dir="ltr"><span class="mw-page-title-main">Server-side request forgery</span></span></h1>
+			
+<div id="p-lang-btn" class="vector-dropdown mw-portlet mw-portlet-lang"  >
+	<input type="checkbox" id="p-lang-btn-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-p-lang-btn" class="vector-dropdown-checkbox mw-interlanguage-selector"  aria-label="12 languages" aria-description="Go to an article in another language. Available in 12 languages"  >
+	<label id="p-lang-btn-label" for="p-lang-btn-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--action-progressive mw-portlet-lang-heading-12" aria-hidden="true"  ><span class="vector-icon mw-ui-icon-language-progressive mw-ui-icon-wikimedia-language-progressive cdx-button__icon"></span>
+
+<span class="vector-dropdown-label-text">12 languages</span>
+	</label>
+	<div class="vector-dropdown-content">
+
+		<div class="vector-menu-content">
+			
+			<ul class="vector-menu-content-list">
+				
+				<li class="interlanguage-link interwiki-cs mw-list-item"><a href="https://cs.wikipedia.org/wiki/Server-side_request_forgery" title="Server-side request forgery – Czech" lang="cs" hreflang="cs" data-title="Server-side request forgery" data-language-autonym="Čeština" data-language-local-name="Czech" class="interlanguage-link-target"><span>Čeština</span></a></li><li class="interlanguage-link interwiki-fa mw-list-item"><a href="https://fa.wikipedia.org/wiki/%D8%AC%D8%B9%D9%84_%D8%AF%D8%B1%D8%AE%D9%88%D8%A7%D8%B3%D8%AA_%D8%B3%D9%85%D8%AA_%D8%B3%D8%B1%D9%88%D8%B1" title="جعل درخواست سمت سرور – Persian" lang="fa" hreflang="fa" data-title="جعل درخواست سمت سرور" data-language-autonym="فارسی" data-language-local-name="Persian" class="interlanguage-link-target"><span>فارسی</span></a></li><li class="interlanguage-link interwiki-hy mw-list-item"><a href="https://hy.wikipedia.org/wiki/Server-side_request_forgery_(SSRF)" title="Server-side request forgery (SSRF) – Armenian" lang="hy" hreflang="hy" data-title="Server-side request forgery (SSRF)" data-language-autonym="Հայերեն" data-language-local-name="Armenian" class="interlanguage-link-target"><span>Հայերեն</span></a></li><li class="interlanguage-link interwiki-ja mw-list-item"><a href="https://ja.wikipedia.org/wiki/%E3%82%B5%E3%83%BC%E3%83%90%E3%82%B5%E3%82%A4%E3%83%89%E3%83%BB%E3%83%AA%E3%82%AF%E3%82%A8%E3%82%B9%E3%83%88%E3%83%95%E3%82%A9%E3%83%BC%E3%82%B8%E3%82%A7%E3%83%AA" title="サーバサイド・リクエストフォージェリ – Japanese" lang="ja" hreflang="ja" data-title="サーバサイド・リクエストフォージェリ" data-language-autonym="日本語" data-language-local-name="Japanese" class="interlanguage-link-target"><span>日本語</span></a></li><li class="interlanguage-link interwiki-ko mw-list-item"><a href="https://ko.wikipedia.org/wiki/%EC%84%9C%EB%B2%84_%EC%82%AC%EC%9D%B4%EB%93%9C_%EC%9A%94%EC%B2%AD_%EC%9C%84%EC%A1%B0" title="서버 사이드 요청 위조 – Korean" lang="ko" hreflang="ko" data-title="서버 사이드 요청 위조" data-language-autonym="한국어" data-language-local-name="Korean" class="interlanguage-link-target"><span>한국어</span></a></li><li class="interlanguage-link interwiki-lmo mw-list-item"><a href="https://lmo.wikipedia.org/wiki/Server-side_request_forgery" title="Server-side request forgery – Lombard" lang="lmo" hreflang="lmo" data-title="Server-side request forgery" data-language-autonym="Lombard" data-language-local-name="Lombard" class="interlanguage-link-target"><span>Lombard</span></a></li><li class="interlanguage-link interwiki-no mw-list-item"><a href="https://no.wikipedia.org/wiki/Forfalskning_av_foresp%C3%B8rsler_p%C3%A5_serversiden" title="Forfalskning av forespørsler på serversiden – Norwegian Bokmål" lang="nb" hreflang="nb" data-title="Forfalskning av forespørsler på serversiden" data-language-autonym="Norsk bokmål" data-language-local-name="Norwegian Bokmål" class="interlanguage-link-target"><span>Norsk bokmål</span></a></li><li class="interlanguage-link interwiki-pl mw-list-item"><a href="https://pl.wikipedia.org/wiki/Server-side_request_forgery" title="Server-side request forgery – Polish" lang="pl" hreflang="pl" data-title="Server-side request forgery" data-language-autonym="Polski" data-language-local-name="Polish" class="interlanguage-link-target"><span>Polski</span></a></li><li class="interlanguage-link interwiki-pt mw-list-item"><a href="https://pt.wikipedia.org/wiki/Server-Side_Request_Forgery_(SSRF)" title="Server-Side Request Forgery (SSRF) – Portuguese" lang="pt" hreflang="pt" data-title="Server-Side Request Forgery (SSRF)" data-language-autonym="Português" data-language-local-name="Portuguese" class="interlanguage-link-target"><span>Português</span></a></li><li class="interlanguage-link interwiki-tr mw-list-item"><a href="https://tr.wikipedia.org/wiki/Sunucu_tarafl%C4%B1_istek_sahtecili%C4%9Fi" title="Sunucu taraflı istek sahteciliği – Turkish" lang="tr" hreflang="tr" data-title="Sunucu taraflı istek sahteciliği" data-language-autonym="Türkçe" data-language-local-name="Turkish" class="interlanguage-link-target"><span>Türkçe</span></a></li><li class="interlanguage-link interwiki-zh-min-nan mw-list-item"><a href="https://zh-min-nan.wikipedia.org/wiki/Kh%C3%B2a-b%C4%81ng-ch%C4%81m_kha-p%C3%BAn" title="Khòa-bāng-chām kha-pún – Minnan" lang="nan" hreflang="nan" data-title="Khòa-bāng-chām kha-pún" data-language-autonym="閩南語 / Bân-lâm-gí" data-language-local-name="Minnan" class="interlanguage-link-target"><span>閩南語 / Bân-lâm-gí</span></a></li><li class="interlanguage-link interwiki-zh mw-list-item"><a href="https://zh.wikipedia.org/wiki/%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%AB%AF%E8%AF%B7%E6%B1%82%E4%BC%AA%E9%80%A0" title="服务器端请求伪造 – Chinese" lang="zh" hreflang="zh" data-title="服务器端请求伪造" data-language-autonym="中文" data-language-local-name="Chinese" class="interlanguage-link-target"><span>中文</span></a></li>
+			</ul>
+			<div class="after-portlet after-portlet-lang"><span class="wb-langlinks-edit wb-langlinks-link"><a href="https://www.wikidata.org/wiki/Special:EntityPage/Q56064107#sitelinks-wikipedia" title="Edit interlanguage links" class="wbc-editpage">Edit links</a></span></div>
+		</div>
+
+	</div>
+</div>
+</header>
+				<div class="vector-page-toolbar">
+					<div class="vector-page-toolbar-container">
+						<div id="left-navigation">
+							<nav aria-label="Namespaces">
+								
+<div id="p-associated-pages" class="vector-menu vector-menu-tabs mw-portlet mw-portlet-associated-pages"  >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			<li id="ca-nstab-main" class="selected mw-list-item vector-tab-noicon"><a data-mw-interface  href="/wiki/Server-side_request_forgery" title="View the content page [c]" accesskey="c" class=""><span>Article</span></a>
+</li>
+<li id="ca-talk" class="mw-list-item vector-tab-noicon"><a data-mw-interface  href="/wiki/Talk:Server-side_request_forgery" rel="discussion" title="Discuss improvements to the content page [t]" accesskey="t" class=""><span>Talk</span></a>
+</li>
+
+			
+		</ul>
+		
+	</div>
+</div>
+
+								
+<div id="vector-variants-dropdown" class="vector-dropdown emptyPortlet"  >
+	<input type="checkbox" id="vector-variants-dropdown-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-vector-variants-dropdown" class="vector-dropdown-checkbox " aria-label="Change language variant"    >
+	<label id="vector-variants-dropdown-label" for="vector-variants-dropdown-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet" aria-hidden="true"  ><span class="vector-dropdown-label-text">English</span>
+	</label>
+	<div class="vector-dropdown-content">
+
+
+					
+<div id="p-variants" class="vector-menu mw-portlet mw-portlet-variants emptyPortlet"  >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			
+		</ul>
+		
+	</div>
+</div>
+
+				
+	</div>
+</div>
+
+							</nav>
+						</div>
+						<div id="right-navigation" class="vector-collapsible">
+							<nav aria-label="Views">
+			    
+<div id="p-views" class="vector-menu vector-menu-tabs mw-portlet mw-portlet-views"  >
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			<li id="ca-view" class="selected mw-list-item vector-menu-item--collapsible vector-tab-noicon"><a data-mw-interface  href="/wiki/Server-side_request_forgery" class=""><span>Read</span></a>
+</li>
+<li id="ca-edit" class="mw-list-item vector-menu-item--collapsible vector-tab-noicon"><a data-mw-interface  href="/w/index.php?title=Server-side_request_forgery&amp;action=edit" title="Edit this page [e]" accesskey="e" class=""><span>Edit</span></a>
+</li>
+<li id="ca-history" class="mw-list-item vector-menu-item--collapsible vector-tab-noicon"><a data-mw-interface  href="/w/index.php?title=Server-side_request_forgery&amp;action=history" title="Past revisions of this page [h]" accesskey="h" class=""><span>View history</span></a>
+</li>
+
+			
+		</ul>
+		
+	</div>
+</div>
+
+			</nav>
+
+							<nav class="vector-page-tools-landmark" aria-label="Page tools">
+								
+<div id="vector-page-tools-dropdown" class="vector-dropdown vector-page-tools-dropdown"  >
+	<input type="checkbox" id="vector-page-tools-dropdown-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-vector-page-tools-dropdown" class="vector-dropdown-checkbox "  aria-label="Tools"   >
+	<label id="vector-page-tools-dropdown-label" for="vector-page-tools-dropdown-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only " aria-hidden="true"  ><span class="vector-icon mw-ui-icon-verticalEllipsis mw-ui-icon-wikimedia-verticalEllipsis cdx-button__icon"></span>
+
+<span class="vector-dropdown-label-text">Tools</span>
+	</label>
+	<div class="vector-dropdown-content">
+
+
+									<div id="vector-page-tools-unpinned-container" class="vector-unpinned-container">
+						
+<div id="vector-page-tools" class="vector-page-tools vector-pinnable-element">
+	<div
+	class="vector-pinnable-header vector-page-tools-pinnable-header vector-pinnable-header-unpinned"
+	data-feature-name="page-tools-pinned"
+	data-pinnable-element-id="vector-page-tools"
+	data-pinned-container-id="vector-page-tools-pinned-container"
+	data-unpinned-container-id="vector-page-tools-unpinned-container"
+>
+	<div class="vector-pinnable-header-label">Tools</div>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-pin-button" data-event-name="pinnable-header.vector-page-tools.pin" aria-label="Move Tools to sidebar">move to sidebar</button>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-unpin-button" data-event-name="pinnable-header.vector-page-tools.unpin" aria-label="Hide Tools">hide</button>
+</div>
+
+	
+<div id="p-cactions" class="vector-menu mw-portlet mw-portlet-cactions emptyPortlet vector-has-collapsible-items"  >
+	<div class="vector-menu-heading">
+		Actions
+	</div>
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			<li id="ca-view-more" class="selected mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="/wiki/Server-side_request_forgery" class=""><span class="vector-icon mw-ui-icon-eye mw-ui-icon-wikimedia-eye cdx-button__icon"></span>
+
+<span>Read</span></a>
+</li>
+<li id="ca-edit-more" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="/w/index.php?title=Server-side_request_forgery&amp;action=edit" title="Edit this page [e]" accesskey="e" class=""><span class="vector-icon mw-ui-icon-edit mw-ui-icon-wikimedia-edit cdx-button__icon"></span>
+
+<span>Edit</span></a>
+</li>
+<li id="ca-history-more" class="mw-list-item vector-menu-item--collapsible"><a data-mw-interface  href="/w/index.php?title=Server-side_request_forgery&amp;action=history" title="Past revisions of this page [h]" accesskey="h" class=""><span class="vector-icon mw-ui-icon-history mw-ui-icon-wikimedia-history cdx-button__icon"></span>
+
+<span>View history</span></a>
+</li>
+
+			
+		</ul>
+		
+	</div>
+</div>
+
+<div id="p-tb" class="vector-menu mw-portlet mw-portlet-tb"  >
+	<div class="vector-menu-heading">
+		General
+	</div>
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			<li id="t-whatlinkshere" class="mw-list-item"><a href="/wiki/Special:WhatLinksHere/Server-side_request_forgery" title="List of all English Wikipedia pages containing links to this page [j]" accesskey="j"><span>What links here</span></a></li><li id="t-recentchangeslinked" class="mw-list-item"><a href="/wiki/Special:RecentChangesLinked/Server-side_request_forgery" rel="nofollow" title="Recent changes in pages linked from this page [k]" accesskey="k"><span>Related changes</span></a></li><li id="t-upload" class="mw-list-item"><a href="//en.wikipedia.org/wiki/Wikipedia:File_Upload_Wizard" title="Upload files [u]" accesskey="u"><span>Upload file</span></a></li><li id="t-permalink" class="mw-list-item"><a href="/w/index.php?title=Server-side_request_forgery&amp;oldid=1322851731" title="Permanent link to this revision of this page"><span>Permanent link</span></a></li><li id="t-info" class="mw-list-item"><a href="/w/index.php?title=Server-side_request_forgery&amp;action=info" title="More information about this page"><span>Page information</span></a></li><li id="t-cite" class="mw-list-item"><a href="/w/index.php?title=Special:CiteThisPage&amp;page=Server-side_request_forgery&amp;id=1322851731&amp;wpFormIdentifier=titleform" title="Information on how to cite this page"><span>Cite this page</span></a></li><li id="t-urlshortener" class="mw-list-item"><a href="/w/index.php?title=Special:UrlShortener&amp;url=https%3A%2F%2Fen.wikipedia.org%2Fwiki%2FServer-side_request_forgery"><span>Get shortened URL</span></a></li><li id="parsermigration-switch-to-legacy" class="mw-list-item"><a href="/w/index.php?title=Server-side_request_forgery&amp;useparsoid=0"><span>Switch to legacy parser</span></a></li>
+		</ul>
+		
+	</div>
+</div>
+
+<div id="p-coll-print_export" class="vector-menu mw-portlet mw-portlet-coll-print_export"  >
+	<div class="vector-menu-heading">
+		Print/export
+	</div>
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			<li id="coll-download-as-rl" class="mw-list-item"><a href="/w/index.php?title=Special:DownloadAsPdf&amp;page=Server-side_request_forgery&amp;action=show-download-screen" title="Download this page as a PDF file"><span>Download as PDF</span></a></li><li id="t-print" class="mw-list-item"><a href="/w/index.php?title=Server-side_request_forgery&amp;printable=yes" title="Printable version of this page [p]" accesskey="p"><span>Printable version</span></a></li>
+		</ul>
+		
+	</div>
+</div>
+
+<div id="p-wikibase-otherprojects" class="vector-menu mw-portlet mw-portlet-wikibase-otherprojects"  >
+	<div class="vector-menu-heading">
+		In other projects
+	</div>
+	<div class="vector-menu-content">
+		
+		<ul class="vector-menu-content-list">
+			
+			<li id="t-wikibase" class="wb-otherproject-link wb-otherproject-wikibase-dataitem mw-list-item"><a href="https://www.wikidata.org/wiki/Special:EntityPage/Q56064107" title="Structured data on this page hosted by Wikidata [g]" accesskey="g"><span>Wikidata item</span></a></li>
+		</ul>
+		
+	</div>
+</div>
+
+</div>
+
+									</div>
+				
+	</div>
+</div>
+
+							</nav>
+						</div>
+					</div>
+				</div>
+				<div class="vector-column-end no-font-mode-scale">
+					<div class="vector-sticky-pinned-container">
+						<nav class="vector-page-tools-landmark" aria-label="Page tools">
+							<div id="vector-page-tools-pinned-container" class="vector-pinned-container">
+				
+							</div>
+		</nav>
+						<nav class="vector-appearance-landmark" aria-label="Appearance">
+							<div id="vector-appearance-pinned-container" class="vector-pinned-container">
+				<div id="vector-appearance" class="vector-appearance vector-pinnable-element">
+	<div
+	class="vector-pinnable-header vector-appearance-pinnable-header vector-pinnable-header-pinned"
+	data-feature-name="appearance-pinned"
+	data-pinnable-element-id="vector-appearance"
+	data-pinned-container-id="vector-appearance-pinned-container"
+	data-unpinned-container-id="vector-appearance-unpinned-container"
+>
+	<div class="vector-pinnable-header-label">Appearance</div>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-pin-button" data-event-name="pinnable-header.vector-appearance.pin" aria-label="Move Appearance to sidebar">move to sidebar</button>
+	<button class="vector-pinnable-header-toggle-button vector-pinnable-header-unpin-button" data-event-name="pinnable-header.vector-appearance.unpin" aria-label="Hide Appearance">hide</button>
+</div>
+
+
+</div>
+
+							</div>
+		</nav>
+					</div>
+				</div>
+				<div id="bodyContent" class="vector-body" aria-labelledby="firstHeading" data-mw-ve-target-container>
+					<div class="vector-body-before-content">
+							<div class="mw-indicators">
+		</div>
+
+						<div id="siteSub" class="noprint">From Wikipedia, the free encyclopedia</div>
+						<div id="contentSub"><div id="mw-content-subtitle"></div></div>
+						
+					</div>
+					
+					<div id="mw-content-text" class="mw-body-content"><div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr" data-mw-parsoid-version="0.24.0.0-alpha24" data-mw-html-version="2.8.0"><section data-mw-section-id="0" id="mwAQ"><div class="shortdescription nomobile noexcerpt noprint searchaux" style="display:none" about="#mwt1" typeof="mw:Transclusion" id="mwAg" data-mw='{"parts":[{"template":{"target":{"wt":"Short description","href":"./Template:Short_description"},"params":{"1":{"wt":"Type of computer security exploit"}},"i":0}}]}'>Type of computer security exploit</div><span class="mw-empty-elt" about="#mwt1"><link rel="mw:PageProp/Category" href="./Category:Articles_with_short_description"/><link rel="mw:PageProp/Category" href="./Category:Short_description_is_different_from_Wikidata"/></span>
+<span class="mw-empty-elt" about="#mwt2" typeof="mw:Transclusion" id="mwAw" data-mw='{"parts":[{"template":{"target":{"wt":"More citations needed","href":"./Template:More_citations_needed"},"params":{"date":{"wt":"October 2022"}},"i":0}}]}'><style data-mw-deduplicate="TemplateStyles:r1364180890" typeof="mw:Extension/templatestyles" about="#mwt3" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Message box/ambox.css"},"body":{"extsrc":""}}'>.mw-parser-output .ambox{border:1px solid #a2a9b1;border-left:10px solid #36c;background-color:#fbfbfb;box-sizing:border-box}.mw-parser-output .ambox+.mw-empty-elt+.ambox,.mw-parser-output .ambox+.mw-empty-elt+.mw-empty-elt+.ambox,.mw-parser-output .ambox+.mw-empty-elt+.mw-empty-elt+.mw-empty-elt+.ambox{margin-top:-1px}html body.mediawiki .mw-parser-output .ambox.mbox-small-left{margin:4px 1em 4px 0;overflow:hidden;width:238px;border-collapse:collapse;font-size:88%;line-height:1.25em}.mw-parser-output .ambox-speedy{border-left:10px solid #b32424;background-color:#fee7e6}.mw-parser-output .ambox-delete{border-left:10px solid #b32424}.mw-parser-output .ambox-content{border-left:10px solid #f28500}.mw-parser-output .ambox-style{border-left:10px solid #fc3}.mw-parser-output .ambox-move{border-left:10px solid #9932cc}.mw-parser-output .ambox-protection{border-left:10px solid #a2a9b1}.mw-parser-output .ambox .mbox-text{border:none;padding:0.25em 0.5em;width:100%}.mw-parser-output .ambox .mbox-image{border:none;padding:2px 0 2px 0.5em;text-align:center}.mw-parser-output .ambox .mbox-imageright{border:none;padding:2px 0.5em 2px 0;text-align:center}.mw-parser-output .ambox .mbox-empty-cell{border:none;padding:0;width:1px}.mw-parser-output .ambox .mbox-image-div{width:52px}@media(min-width:720px){.mw-parser-output .ambox{margin:0 10%}}@media print{body.ns-0 .mw-parser-output .ambox{display:none!important}}</style></span><table class="box-More_citations_needed plainlinks metadata ambox ambox-content ambox-Refimprove" role="presentation" about="#mwt2"><tbody><tr><td class="mbox-image"><div class="mbox-image-div"><span typeof="mw:File"><a href="https://en.wikipedia.org/wiki/File:Question_book-new.svg" class="mw-file-description"><img resource="https://en.wikipedia.org/wiki/File:Question_book-new.svg" src="//thumb.wikimedia.org/wikipedia/en/thumb/9/99/Question_book-new.svg/60px-Question_book-new.svg.png?utm_source=en.wikipedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail" decoding="async" loading="lazy" srcset="//thumb.wikimedia.org/wikipedia/en/thumb/9/99/Question_book-new.svg/120px-Question_book-new.svg.png?utm_source=en.wikipedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail 2x" alt="icon" data-file-width="512" data-file-height="399" data-file-type="drawing" height="39" width="50" class="mw-file-element"/></a></span></div></td><td class="mbox-text"><div class="mbox-text-span">This article <b>needs <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Wikipedia:Verifiability" title="Wikipedia:Verifiability">more citations</a></b>.<span class="hide-when-compact"> Please help <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Special:EditPage/Server-side_request_forgery" title="Special:EditPage/Server-side request forgery">improve this article</a> by <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Help:Referencing_for_beginners" title="Help:Referencing for beginners">adding citations to reliable sources</a>. Unsourced material may be challenged and <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Wikipedia:Verifiability#Burden_of_evidence" title="Wikipedia:Verifiability">removed</a>.<br/><small><span class="plainlinks"><i>Find sources:</i><span typeof="mw:Entity"> </span><a rel="mw:ExtLink nofollow" href="https://www.google.com/search?as_eq=wikipedia&amp;q=%22Server-side+request+forgery%22" class="external text">"Server-side request forgery"</a><span typeof="mw:Entity"> </span>–<span typeof="mw:Entity"> </span><a rel="mw:ExtLink nofollow" href="https://www.google.com/search?tbm=nws&amp;q=%22Server-side+request+forgery%22+-wikipedia&amp;tbs=ar:1" class="external text">news</a> <b>·</b> <a rel="mw:ExtLink nofollow" href="https://www.google.com/search?&amp;q=%22Server-side+request+forgery%22&amp;tbs=bkt:s&amp;tbm=bks" class="external text">newspapers</a> <b>·</b> <a rel="mw:ExtLink nofollow" href="https://www.google.com/search?tbs=bks:1&amp;q=%22Server-side+request+forgery%22+-wikipedia" class="external text">books</a> <b>·</b> <a rel="mw:ExtLink nofollow" href="https://scholar.google.com/scholar?q=%22Server-side+request+forgery%22" class="external text">scholar</a> <b>·</b> <a rel="mw:ExtLink nofollow" href="https://www.jstor.org/action/doBasicSearch?Query=%22Server-side+request+forgery%22&amp;acc=on&amp;wc=on" class="external text">JSTOR</a></span></small></span>  <span class="date-container"><i>(<span class="date">October 2022</span>)</i></span><span class="hide-when-compact"><i> (<small><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Help:Maintenance_template_removal" title="Help:Maintenance template removal">Learn how and when to remove this message</a></small>)</i></span></div></td></tr></tbody></table><span class="mw-empty-elt" about="#mwt2"><link rel="mw:PageProp/Category" href="./Category:Articles_needing_additional_references_from_October_2022"/><link rel="mw:PageProp/Category" href="./Category:All_articles_needing_additional_references"/></span>
+<p id="mwBA"><b id="mwBQ">Server-side request forgery</b> (<b id="mwBg">SSRF</b>) is a computer security vulnerability that enables an attacker to send requests from a vulnerable server to internal or external systems<sup about="#mwt7" class="mw-ref reference" id="cite_ref-1" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-1"}}'><a href="#cite_note-1" id="mwBw"><span class="mw-reflink-text" id="mwCA"><span class="cite-bracket" id="mwCQ">[</span>1<span class="cite-bracket" id="mwCg">]</span></span></a></sup> or the server itself.<sup about="#mwt10" class="mw-ref reference" id="cite_ref-:0_2-0" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{"name":":0"},"body":{"id":"mw-reference-text-cite_note-:0-2"}}'><a href="#cite_note-:0-2" id="mwCw"><span class="mw-reflink-text" id="mwDA"><span class="cite-bracket" id="mwDQ">[</span>2<span class="cite-bracket" id="mwDg">]</span></span></a></sup> The vulnerability arises when server functionality can be manipulated to access or modify resources that are otherwise inaccessible.<sup about="#mwt13" class="mw-ref reference" id="cite_ref-3" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-3"}}'><a href="#cite_note-3" id="mwDw"><span class="mw-reflink-text" id="mwEA"><span class="cite-bracket" id="mwEQ">[</span>3<span class="cite-bracket" id="mwEg">]</span></span></a></sup> SSRF is listed among the most critical API security risks<sup about="#mwt16" class="mw-ref reference" id="cite_ref-4" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-4"}}'><a href="#cite_note-4" id="mwEw"><span class="mw-reflink-text" id="mwFA"><span class="cite-bracket" id="mwFQ">[</span>4<span class="cite-bracket" id="mwFg">]</span></span></a></sup> and is recognized as one of the most serious software weaknesses.<sup about="#mwt19" class="mw-ref reference" id="cite_ref-5" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-5"}}'><a href="#cite_note-5" id="mwFw"><span class="mw-reflink-text" id="mwGA"><span class="cite-bracket" id="mwGQ">[</span>5<span class="cite-bracket" id="mwGg">]</span></span></a></sup></p>
+<meta property="mw:PageProp/toc" id="mwGw" data-mw='{"autoGenerated":true}'/></section><section data-mw-section-id="1" id="mwHA" aria-labelledby="Overview"><div class="mw-heading mw-heading2"><h2 id="Overview">Overview</h2><span class="mw-editsection"><span class="mw-editsection-bracket">[</span><a href="/w/index.php?title=Server-side_request_forgery&amp;action=edit&amp;section=1" title="Edit section: Overview"><span>edit</span></a><span class="mw-editsection-bracket">]</span></span></div>
+<p id="mwHQ">In an SSRF incident, the vulnerable server issues a request to a URL supplied or altered by the attacker. While the supplied URL can target any endpoint, common destinations include internal networks, localhost services, and cloud metadata endpoints that are otherwise inaccessible to external users.</p>
+
+<p id="mwHg">SSRF is not limited to the HTTP protocol. In cases where the application itself performs the second request, it could use different protocols (<i id="mwHw">e.g.</i> FTP, SMB, SMTP, etc.) and schemes (<i id="mwIA">e.g.</i> <code id="mwIQ">file://</code>, <code id="mwIg">phar://</code>, <code id="mwIw">gopher://</code>, <code id="mwJA">data://</code>, <code id="mwJQ">dict://</code>, etc.)<sup about="#mwt20" class="mw-ref reference" id="cite_ref-:0_2-1" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{"name":":0"}}'><a href="#cite_note-:0-2" id="mwJg"><span class="mw-reflink-text" id="mwJw"><span class="cite-bracket" id="mwKA">[</span>2<span class="cite-bracket" id="mwKQ">]</span></span></a></sup></p> 
+<figure class="mw-default-size" typeof="mw:File/Thumb" id="mwKg"><a href="https://en.wikipedia.org/wiki/File:Server_Side_Request_Forgery_Prevention_Cheat_Sheet_-_SSRF_Common_Flow.png" class="mw-file-description" id="mwKw"><img resource="https://en.wikipedia.org/wiki/File:Server_Side_Request_Forgery_Prevention_Cheat_Sheet_-_SSRF_Common_Flow.png" src="//thumb.wikimedia.org/wikipedia/commons/thumb/1/17/Server_Side_Request_Forgery_Prevention_Cheat_Sheet_-_SSRF_Common_Flow.png/250px-Server_Side_Request_Forgery_Prevention_Cheat_Sheet_-_SSRF_Common_Flow.png?utm_source=en.wikipedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail" decoding="async" loading="lazy" srcset="//thumb.wikimedia.org/wikipedia/commons/thumb/1/17/Server_Side_Request_Forgery_Prevention_Cheat_Sheet_-_SSRF_Common_Flow.png/500px-Server_Side_Request_Forgery_Prevention_Cheat_Sheet_-_SSRF_Common_Flow.png?utm_source=en.wikipedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail 2x" data-file-width="575" data-file-height="471" data-file-type="bitmap" height="205" width="250" class="mw-file-element" id="mwLA"/></a><figcaption id="mwLQ">SSRF common flow diagram</figcaption></figure>
+<p id="mwLg">The severity of an SSRF attack depends on the assets that can be accessed and whether the server’s response is observable to the attacker. In severe cases, SSRF can compromise cloud environments, exploit internal hosts, obtain sensitive information, or use the server as a proxy to conceal other malicious activities.</p>
+
+<p id="mwLw">Similar to <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Cross-site_request_forgery" title="Cross-site request forgery" id="mwMA">cross-site request forgery</a> which utilizes a <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Web_client" title="Web client" class="mw-redirect" id="mwMQ">web client</a>, for example, a web browser, within the domain as a proxy for attacks; an SSRF attack utilizes a vulnerable server within the domain as a <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Proxy_server" title="Proxy server" id="mwMg">proxy</a>.</p>
+
+</section><section data-mw-section-id="2" id="mwMw" aria-labelledby="Types"><div class="mw-heading mw-heading2"><h2 id="Types">Types</h2><span class="mw-editsection"><span class="mw-editsection-bracket">[</span><a href="/w/index.php?title=Server-side_request_forgery&amp;action=edit&amp;section=2" title="Edit section: Types"><span>edit</span></a><span class="mw-editsection-bracket">]</span></span></div>
+
+<section data-mw-section-id="3" id="mwNA" aria-labelledby="Basic"><div class="mw-heading mw-heading3"><h3 id="Basic">Basic</h3><span class="mw-editsection"><span class="mw-editsection-bracket">[</span><a href="/w/index.php?title=Server-side_request_forgery&amp;action=edit&amp;section=3" title="Edit section: Basic"><span>edit</span></a><span class="mw-editsection-bracket">]</span></span></div>
+<p id="mwNQ">In this type of attack the response is displayed to the attacker. The server fetches the URL requested by the attacker and sends the response back to the attacker.</p>
+
+</section><section data-mw-section-id="4" id="mwNg" aria-labelledby="Blind"><div class="mw-heading mw-heading3"><h3 id="Blind">Blind</h3><span class="mw-editsection"><span class="mw-editsection-bracket">[</span><a href="/w/index.php?title=Server-side_request_forgery&amp;action=edit&amp;section=4" title="Edit section: Blind"><span>edit</span></a><span class="mw-editsection-bracket">]</span></span></div>
+<p id="mwNw">In this type of attack the response is not sent back to the attacker. Therefore, the attacker has to devise ways to confirm this vulnerability.</p>
+
+</section></section><section data-mw-section-id="5" id="mwOA" aria-labelledby="Causes_and_Prevention"><div class="mw-heading mw-heading2"><h2 id="Causes_and_Prevention">Causes and Prevention</h2><span class="mw-editsection"><span class="mw-editsection-bracket">[</span><a href="/w/index.php?title=Server-side_request_forgery&amp;action=edit&amp;section=5" title="Edit section: Causes and Prevention"><span>edit</span></a><span class="mw-editsection-bracket">]</span></span></div>
+<p id="mwOQ">SSRF occurs when an API endpoint accesses a URL supplied by the client without verifying that the request is directed to an intended destination.<sup about="#mwt23" class="mw-ref reference" id="cite_ref-6" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-6"}}'><a href="#cite_note-6" id="mwOg"><span class="mw-reflink-text" id="mwOw"><span class="cite-bracket" id="mwPA">[</span>6<span class="cite-bracket" id="mwPQ">]</span></span></a></sup></p>
+
+<p id="mwPg">Prevention measures include <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Input_validation" title="Input validation" class="mw-redirect" id="mwPw">input validation</a>,  which can be supported through <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Static_application_security_testing" title="Static application security testing" id="mwQA">Static Analysis Security Testing</a> (SAST) tooling. When feasible, restricting server requests to an <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Whitelist" title="Whitelist" id="mwQQ">allowlist</a> of trusted applications is recommended, although additional safeguards may still be necessary to address <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Name_resolution_(computer_systems)" title="Name resolution (computer systems)" id="mwQg">hostname resolution</a>, <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/URL_redirection" title="URL redirection" id="mwQw">redirects</a> and <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/DNS_rebinding" title="DNS rebinding" id="mwRA">DNS rebindings</a>. When servers must send requests to arbitrary external domains or IP addresses, <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Network_segmentation" title="Network segmentation" id="mwRQ">network segregation</a> is recommended to block unauthorized traffic at the network layer.<sup about="#mwt24" class="mw-ref reference" id="cite_ref-:0_2-2" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{"name":":0"}}'><a href="#cite_note-:0-2" id="mwRg"><span class="mw-reflink-text" id="mwRw"><span class="cite-bracket" id="mwSA">[</span>2<span class="cite-bracket" id="mwSQ">]</span></span></a></sup></p>
+
+</section><section data-mw-section-id="6" id="mwSg" aria-labelledby="Notable_Exploits"><div class="mw-heading mw-heading2"><h2 id="Notable_Exploits">Notable Exploits</h2><span class="mw-editsection"><span class="mw-editsection-bracket">[</span><a href="/w/index.php?title=Server-side_request_forgery&amp;action=edit&amp;section=6" title="Edit section: Notable Exploits"><span>edit</span></a><span class="mw-editsection-bracket">]</span></span></div>
+
+<ul id="mwSw"><li id="mwTA"><b id="mwTQ"><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Capital_One" title="Capital One" id="mwTg">Capital One</a> (2019)</b> A SSRF exploit that exposed an AWS credential key led to the breach of 1 million social insurance numbers, 140,000 Social Security Numbers, and 80,000 bank account numbers, affecting  approximately 100 million individuals in the United States and approximately 6 million in Canada.<sup about="#mwt27" class="mw-ref reference" id="cite_ref-7" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-7"}}'><a href="#cite_note-7" id="mwTw"><span class="mw-reflink-text" id="mwUA"><span class="cite-bracket" id="mwUQ">[</span>7<span class="cite-bracket" id="mwUg">]</span></span></a></sup> The company received an $80 million fine from the <a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Office_of_the_Comptroller_of_the_Currency" title="Office of the Comptroller of the Currency" id="mwUw">U.S. Office of the Comptroller of the Currency (OCC)</a>,<sup about="#mwt30" class="mw-ref reference" id="cite_ref-8" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-8"}}'><a href="#cite_note-8" id="mwVA"><span class="mw-reflink-text" id="mwVQ"><span class="cite-bracket" id="mwVg">[</span>8<span class="cite-bracket" id="mwVw">]</span></span></a></sup> and paid $190 million to settle a class-action lawsuit<sup about="#mwt33" class="mw-ref reference" id="cite_ref-9" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-9"}}'><a href="#cite_note-9" id="mwWA"><span class="mw-reflink-text" id="mwWQ"><span class="cite-bracket" id="mwWg">[</span>9<span class="cite-bracket" id="mwWw">]</span></span></a></sup> related to the breach.</li>
+<li id="mwXA"><b id="mwXQ"><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Microsoft_Exchange_hack" title="Microsoft Exchange hack" class="mw-redirect" id="mwXg">Microsoft Exchange Server</a> (2021)</b> An SSRF vulnerability was leveraged to send arbitrary HTTP requests and authenticate as the Exchange server.<sup about="#mwt37" class="mw-ref reference" id="cite_ref-10" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-10"}}'><a href="#cite_note-10" id="mwXw"><span class="mw-reflink-text" id="mwYA"><span class="cite-bracket" id="mwYQ">[</span>10<span class="cite-bracket" id="mwYg">]</span></span></a></sup> It became the most well-known and impactful Exchange exploit chain and affected an estimated 250,000 servers and 30,000 organizations in the US.<sup about="#mwt40" class="mw-ref reference" id="cite_ref-11" rel="dc:references" typeof="mw:Extension/ref" data-mw='{"name":"ref","attrs":{},"body":{"id":"mw-reference-text-cite_note-11"}}'><a href="#cite_note-11" id="mwYw"><span class="mw-reflink-text" id="mwZA"><span class="cite-bracket" id="mwZQ">[</span>11<span class="cite-bracket" id="mwZg">]</span></span></a></sup></li></ul>
+
+</section><section data-mw-section-id="7" id="mwZw" aria-labelledby="References"><div class="mw-heading mw-heading2"><h2 id="References">References</h2><span class="mw-editsection"><span class="mw-editsection-bracket">[</span><a href="/w/index.php?title=Server-side_request_forgery&amp;action=edit&amp;section=7" title="Edit section: References"><span>edit</span></a><span class="mw-editsection-bracket">]</span></span></div>
+<span class="mw-empty-elt" about="#mwt41" typeof="mw:Transclusion" id="mwaA" data-mw='{"parts":[{"template":{"target":{"wt":"reflist","href":"./Template:Reflist"},"params":{},"i":0}}]}'><style data-mw-deduplicate="TemplateStyles:r1327269900" typeof="mw:Extension/templatestyles" about="#mwt42" data-mw='{"name":"templatestyles","attrs":{"src":"Reflist/styles.css"}}'>.mw-parser-output .reflist-columns-2{column-width:30em}.mw-parser-output .reflist-columns-3{column-width:25em}body.skin-vector-2022 .mw-parser-output .reflist-columns-2{column-width:27em}body.skin-vector-2022 .mw-parser-output .reflist-columns-3{column-width:22.5em}.mw-parser-output .references[data-mw-group=upper-alpha]{list-style-type:upper-alpha}.mw-parser-output .references[data-mw-group=upper-roman]{list-style-type:upper-roman}.mw-parser-output .references[data-mw-group=lower-alpha]{list-style-type:lower-alpha}.mw-parser-output .references[data-mw-group=lower-greek]{list-style-type:lower-greek}.mw-parser-output .references[data-mw-group=lower-roman]{list-style-type:lower-roman}.mw-parser-output div.reflist-liststyle-upper-alpha .references{list-style-type:upper-alpha}.mw-parser-output div.reflist-liststyle-upper-roman .references{list-style-type:upper-roman}.mw-parser-output div.reflist-liststyle-lower-alpha .references{list-style-type:lower-alpha}.mw-parser-output div.reflist-liststyle-lower-greek .references{list-style-type:lower-greek}.mw-parser-output div.reflist-liststyle-lower-roman .references{list-style-type:lower-roman}</style></span><div about="#mwt41" id="mwaQ">
+<div class="mw-references-wrap mw-references-columns" typeof="mw:Extension/references" about="#mwt43" id="mwag" data-mw='{"name":"references","attrs":{"group":"","responsive":"1"},"body":{"extsrc":""}}'><ol class="mw-references references" id="mwaw"><li about="#cite_note-1" id="cite_note-1" data-mw-footnote-number="1"><span class="mw-cite-backlink" id="mwbA"><a href="#cite_ref-1" rel="mw:referencedBy" id="mwbQ"><span class="mw-linkback-text" id="mwbg">↑</span></a></span> <span id="mw-reference-text-cite_note-1" class="mw-reference-text reference-text"><style data-mw-deduplicate="TemplateStyles:r1333433106" typeof="mw:Extension/templatestyles mw:Transclusion" about="#mwt4" id="mwbw" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite web ","href":"./Template:Cite_web"},"params":{"last":{"wt":"Novikov"},"first":{"wt":"Ivan"},"date":{"wt":"26 January 2017"},"title":{"wt":"SSRF Bible"},"url":{"wt":"https://cheatsheetseries.owasp.org/assets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet_SSRF_Bible.pdf"},"url-status":{"wt":"live"},"archive-url":{"wt":""},"archive-date":{"wt":""},"access-date":{"wt":"11 September 2025"},"website":{"wt":"OWASP"}},"i":0}}]}'>.mw-parser-output cite.citation{font-style:inherit;word-wrap:break-word}.mw-parser-output .citation q{quotes:"\"""\"""'""'"}.mw-parser-output .citation:target{background-color:rgba(0,127,255,0.133)}.mw-parser-output .id-lock-free.id-lock-free a{background:url("//upload.wikimedia.org/wikipedia/commons/6/65/Lock-green.svg")right 0.1em center/9px no-repeat}.mw-parser-output .id-lock-limited.id-lock-limited a,.mw-parser-output .id-lock-registration.id-lock-registration a{background:url("//upload.wikimedia.org/wikipedia/commons/d/d6/Lock-gray-alt-2.svg")right 0.1em center/9px no-repeat}.mw-parser-output .id-lock-subscription.id-lock-subscription a{background:url("//upload.wikimedia.org/wikipedia/commons/a/aa/Lock-red-alt-2.svg")right 0.1em center/9px no-repeat}.mw-parser-output .cs1-ws-icon a{background:url("//upload.wikimedia.org/wikipedia/commons/4/4c/Wikisource-logo.svg")right 0.1em center/12px no-repeat}body:not(.skin-timeless):not(.skin-minerva) .mw-parser-output .id-lock-free a,body:not(.skin-timeless):not(.skin-minerva) .mw-parser-output .id-lock-limited a,body:not(.skin-timeless):not(.skin-minerva) .mw-parser-output .id-lock-registration a,body:not(.skin-timeless):not(.skin-minerva) .mw-parser-output .id-lock-subscription a,body:not(.skin-timeless):not(.skin-minerva) .mw-parser-output .cs1-ws-icon a{background-size:contain;padding:0 1em 0 0}.mw-parser-output .cs1-code{color:inherit;background:inherit;border:none;padding:inherit}.mw-parser-output .cs1-hidden-error{display:none;color:var(--color-error,#bf3c2c)}.mw-parser-output .cs1-visible-error{color:var(--color-error,#bf3c2c)}.mw-parser-output .cs1-maint{display:none;color:#085;margin-left:0.3em}.mw-parser-output .cs1-kern-left{padding-left:0.2em}.mw-parser-output .cs1-kern-right{padding-right:0.2em}.mw-parser-output .citation .mw-selflink{font-weight:inherit}@media screen{.mw-parser-output .cs1-format{font-size:95%}html.skin-theme-clientpref-night .mw-parser-output .cs1-maint{color:#18911f}}@media screen and (prefers-color-scheme:dark){html.skin-theme-clientpref-os .mw-parser-output .cs1-maint{color:#18911f}}</style><cite id="CITEREFNovikov2017" class="citation web cs1" about="#mwt4">Novikov, Ivan (26 January 2017). <a rel="mw:ExtLink nofollow" href="https://cheatsheetseries.owasp.org/assets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet_SSRF_Bible.pdf" class="external text" id="mwcA">"SSRF Bible"</a> <span class="cs1-format" id="mwcQ">(PDF)</span>. <i id="mwcg">OWASP</i><span class="reference-accessdate" id="mwcw">. Retrieved <span class="nowrap" id="mwdA">11 September</span> 2025</span>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&amp;rft.genre=unknown&amp;rft.jtitle=OWASP&amp;rft.atitle=SSRF+Bible&amp;rft.date=2017-01-26&amp;rft.aulast=Novikov&amp;rft.aufirst=Ivan&amp;rft_id=https%3A%2F%2Fcheatsheetseries.owasp.org%2Fassets%2FServer_Side_Request_Forgery_Prevention_Cheat_Sheet_SSRF_Bible.pdf&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AServer-side+request+forgery" class="Z3988" about="#mwt4" id="mwdQ"></span><span class="cs1-maint citation-comment" about="#mwt4" id="mwdg"><code class="cs1-code" id="mwdw">{{<a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Template:Cite_web" title="Template:Cite web" id="mweA">cite web</a>}}</code>:  CS1 maint: url-status (<a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Category:CS1_maint:_url-status" title="Category:CS1 maint: url-status" id="mweQ">link</a>)</span><link rel="mw:PageProp/Category" href="./Category:CS1_maint:_url-status" about="#mwt4" id="mweg"/></span></li>
+<li about="#cite_note-:0-2" id="cite_note-:0-2" data-mw-footnote-number="2"><span rel="mw:referencedBy" class="mw-cite-backlink" id="mwew"><a href="#cite_ref-:0_2-0" id="mwfA"><span class="mw-linkback-text" id="mwfQ">1</span></a> <a href="#cite_ref-:0_2-1" id="mwfg"><span class="mw-linkback-text" id="mwfw">2</span></a> <a href="#cite_ref-:0_2-2" id="mwgA"><span class="mw-linkback-text" id="mwgQ">3</span></a></span> <span id="mw-reference-text-cite_note-:0-2" class="mw-reference-text reference-text"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt8" typeof="mw:Extension/templatestyles mw:Transclusion" id="mwgg" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite web ","href":"./Template:Cite_web"},"params":{"title":{"wt":"Server Side Request Forgery Prevention - OWASP Cheat Sheet Series"},"url":{"wt":"https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html"},"access-date":{"wt":"2025-09-11"},"website":{"wt":"cheatsheetseries.owasp.org"}},"i":0}}]}'/><cite class="citation web cs1" about="#mwt8" id="mwgw"><a rel="mw:ExtLink nofollow" href="https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html" class="external text" id="mwhA">"Server Side Request Forgery Prevention - OWASP Cheat Sheet Series"</a>. <i id="mwhQ">cheatsheetseries.owasp.org</i><span class="reference-accessdate" id="mwhg">. Retrieved <span class="nowrap" id="mwhw">2025-09-11</span></span>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&amp;rft.genre=unknown&amp;rft.jtitle=cheatsheetseries.owasp.org&amp;rft.atitle=Server+Side+Request+Forgery+Prevention+-+OWASP+Cheat+Sheet+Series&amp;rft_id=https%3A%2F%2Fcheatsheetseries.owasp.org%2Fcheatsheets%2FServer_Side_Request_Forgery_Prevention_Cheat_Sheet.html&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AServer-side+request+forgery" class="Z3988" about="#mwt8" id="mwiA"></span></span></li>
+<li about="#cite_note-3" id="cite_note-3" data-mw-footnote-number="3"><span class="mw-cite-backlink" id="mwiQ"><a href="#cite_ref-3" rel="mw:referencedBy" id="mwig"><span class="mw-linkback-text" id="mwiw">↑</span></a></span> <span id="mw-reference-text-cite_note-3" class="mw-reference-text reference-text"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt11" typeof="mw:Extension/templatestyles mw:Transclusion" id="mwjA" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"cite web ","href":"./Template:Cite_web"},"params":{"title":{"wt":"The Open Web Application Security Project"},"url":{"wt":"https://www.owasp.org/index.php/Server_Side_Request_Forgery"},"accessdate":{"wt":"23 July 2018"},"website":{"wt":"OWASP.org"},"ref":{"wt":"OWASP"}},"i":0}}]}'/><cite id="OWASP" class="citation web cs1" about="#mwt11"><a rel="mw:ExtLink nofollow" href="https://www.owasp.org/index.php/Server_Side_Request_Forgery" class="external text" id="mwjQ">"The Open Web Application Security Project"</a>. <i id="mwjg">OWASP.org</i><span class="reference-accessdate" id="mwjw">. Retrieved <span class="nowrap" id="mwkA">23 July</span> 2018</span>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&amp;rft.genre=unknown&amp;rft.jtitle=OWASP.org&amp;rft.atitle=The+Open+Web+Application+Security+Project&amp;rft_id=https%3A%2F%2Fwww.owasp.org%2Findex.php%2FServer_Side_Request_Forgery&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AServer-side+request+forgery" class="Z3988" about="#mwt11" id="mwkQ"></span></span></li>
+<li about="#cite_note-4" id="cite_note-4" data-mw-footnote-number="4"><span class="mw-cite-backlink" id="mwkg"><a href="#cite_ref-4" rel="mw:referencedBy" id="mwkw"><span class="mw-linkback-text" id="mwlA">↑</span></a></span> <span id="mw-reference-text-cite_note-4" class="mw-reference-text reference-text"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt14" typeof="mw:Extension/templatestyles mw:Transclusion" id="mwlQ" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite web ","href":"./Template:Cite_web"},"params":{"title":{"wt":"OWASP API Security Top 10"},"url":{"wt":"https://owasp.org/API-Security/editions/2023/en/0x00-header/"},"access-date":{"wt":"2025-09-11"},"website":{"wt":"owasp.org"}},"i":0}}]}'/><cite class="citation web cs1" about="#mwt14" id="mwlg"><a rel="mw:ExtLink nofollow" href="https://owasp.org/API-Security/editions/2023/en/0x00-header/" class="external text" id="mwlw">"OWASP API Security Top 10"</a>. <i id="mwmA">owasp.org</i><span class="reference-accessdate" id="mwmQ">. Retrieved <span class="nowrap" id="mwmg">2025-09-11</span></span>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&amp;rft.genre=unknown&amp;rft.jtitle=owasp.org&amp;rft.atitle=OWASP+API+Security+Top+10&amp;rft_id=https%3A%2F%2Fowasp.org%2FAPI-Security%2Feditions%2F2023%2Fen%2F0x00-header%2F&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AServer-side+request+forgery" class="Z3988" about="#mwt14" id="mwmw"></span></span></li>
+<li about="#cite_note-5" id="cite_note-5" data-mw-footnote-number="5"><span class="mw-cite-backlink" id="mwnA"><a href="#cite_ref-5" rel="mw:referencedBy" id="mwnQ"><span class="mw-linkback-text" id="mwng">↑</span></a></span> <span id="mw-reference-text-cite_note-5" class="mw-reference-text reference-text"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt17" typeof="mw:Extension/templatestyles mw:Transclusion" id="mwnw" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite web ","href":"./Template:Cite_web"},"params":{"title":{"wt":"CWE - 2024 CWE Top 25 Most Dangerous Software Weaknesses"},"url":{"wt":"https://cwe.mitre.org/top25/archive/2024/2024_cwe_top25.html"},"access-date":{"wt":"2025-09-11"},"website":{"wt":"cwe.mitre.org"}},"i":0}}]}'/><cite class="citation web cs1" about="#mwt17" id="mwoA"><a rel="mw:ExtLink nofollow" href="https://cwe.mitre.org/top25/archive/2024/2024_cwe_top25.html" class="external text" id="mwoQ">"CWE - 2024 CWE Top 25 Most Dangerous Software Weaknesses"</a>. <i id="mwog">cwe.mitre.org</i><span class="reference-accessdate" id="mwow">. Retrieved <span class="nowrap" id="mwpA">2025-09-11</span></span>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&amp;rft.genre=unknown&amp;rft.jtitle=cwe.mitre.org&amp;rft.atitle=CWE+-+2024+CWE+Top+25+Most+Dangerous+Software+Weaknesses&amp;rft_id=https%3A%2F%2Fcwe.mitre.org%2Ftop25%2Farchive%2F2024%2F2024_cwe_top25.html&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AServer-side+request+forgery" class="Z3988" about="#mwt17" id="mwpQ"></span></span></li>
+<li about="#cite_note-6" id="cite_note-6" data-mw-footnote-number="6"><span class="mw-cite-backlink" id="mwpg"><a href="#cite_ref-6" rel="mw:referencedBy" id="mwpw"><span class="mw-linkback-text" id="mwqA">↑</span></a></span> <span id="mw-reference-text-cite_note-6" class="mw-reference-text reference-text"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt21" typeof="mw:Extension/templatestyles mw:Transclusion" id="mwqQ" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"cite web ","href":"./Template:Cite_web"},"params":{"title":{"wt":"CWE-918: Server-Side Request Forgery (SSRF)"},"url":{"wt":"https://cwe.mitre.org/data/definitions/918.html"},"accessdate":{"wt":"4 Oct 2022"},"website":{"wt":"CWE.Mitre.org"},"ref":{"wt":"CWE"}},"i":0}}]}'/><cite id="CWE" class="citation web cs1" about="#mwt21"><a rel="mw:ExtLink nofollow" href="https://cwe.mitre.org/data/definitions/918.html" class="external text" id="mwqg">"CWE-918: Server-Side Request Forgery (SSRF)"</a>. <i id="mwqw">CWE.Mitre.org</i><span class="reference-accessdate" id="mwrA">. Retrieved <span class="nowrap" id="mwrQ">4 Oct</span> 2022</span>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&amp;rft.genre=unknown&amp;rft.jtitle=CWE.Mitre.org&amp;rft.atitle=CWE-918%3A+Server-Side+Request+Forgery+%28SSRF%29&amp;rft_id=https%3A%2F%2Fcwe.mitre.org%2Fdata%2Fdefinitions%2F918.html&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AServer-side+request+forgery" class="Z3988" about="#mwt21" id="mwrg"></span></span></li>
+<li about="#cite_note-7" id="cite_note-7" data-mw-footnote-number="7"><span class="mw-cite-backlink" id="mwrw"><a href="#cite_ref-7" rel="mw:referencedBy" id="mwsA"><span class="mw-linkback-text" id="mwsQ">↑</span></a></span> <span id="mw-reference-text-cite_note-7" class="mw-reference-text reference-text"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt25" typeof="mw:Extension/templatestyles mw:Transclusion" id="mwsg" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite web ","href":"./Template:Cite_web"},"params":{"title":{"wt":"2019 Capital One Cyber Incident {{!}} What Happened"},"url":{"wt":"https://www.capitalone.com/digital/facts2019/"},"access-date":{"wt":"2025-09-17"},"website":{"wt":"Capital One"},"language":{"wt":"en"}},"i":0}}]}'/><cite class="citation web cs1" about="#mwt25" id="mwsw"><a rel="mw:ExtLink nofollow" href="https://www.capitalone.com/digital/facts2019/" class="external text" id="mwtA">"2019 Capital One Cyber Incident | What Happened"</a>. <i id="mwtQ">Capital One</i><span class="reference-accessdate" id="mwtg">. Retrieved <span class="nowrap" id="mwtw">2025-09-17</span></span>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&amp;rft.genre=unknown&amp;rft.jtitle=Capital+One&amp;rft.atitle=2019+Capital+One+Cyber+Incident+%7C+What+Happened&amp;rft_id=https%3A%2F%2Fwww.capitalone.com%2Fdigital%2Ffacts2019%2F&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AServer-side+request+forgery" class="Z3988" about="#mwt25" id="mwuA"></span></span></li>
+<li about="#cite_note-8" id="cite_note-8" data-mw-footnote-number="8"><span class="mw-cite-backlink" id="mwuQ"><a href="#cite_ref-8" rel="mw:referencedBy" id="mwug"><span class="mw-linkback-text" id="mwuw">↑</span></a></span> <span id="mw-reference-text-cite_note-8" class="mw-reference-text reference-text"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt28" typeof="mw:Extension/templatestyles mw:Transclusion" id="mwvA" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite web ","href":"./Template:Cite_web"},"params":{"date":{"wt":"2020-08-06"},"title":{"wt":"OCC Assesses $80 Million Civil Money Penalty Against Capital One"},"url":{"wt":"https://www.occ.gov/news-issuances/news-releases/2020/nr-occ-2020-101.html"},"access-date":{"wt":"2025-09-17"},"website":{"wt":"OCC.gov"},"language":{"wt":"en-US"}},"i":0}}]}'/><cite class="citation web cs1" about="#mwt28" id="mwvQ"><a rel="mw:ExtLink nofollow" href="https://www.occ.gov/news-issuances/news-releases/2020/nr-occ-2020-101.html" class="external text" id="mwvg">"OCC Assesses $80 Million Civil Money Penalty Against Capital One"</a>. <i id="mwvw">OCC.gov</i>. 2020-08-06<span class="reference-accessdate" id="mwwA">. Retrieved <span class="nowrap" id="mwwQ">2025-09-17</span></span>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&amp;rft.genre=unknown&amp;rft.jtitle=OCC.gov&amp;rft.atitle=OCC+Assesses+%2480+Million+Civil+Money+Penalty+Against+Capital+One&amp;rft.date=2020-08-06&amp;rft_id=https%3A%2F%2Fwww.occ.gov%2Fnews-issuances%2Fnews-releases%2F2020%2Fnr-occ-2020-101.html&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AServer-side+request+forgery" class="Z3988" about="#mwt28" id="mwwg"></span></span></li>
+<li about="#cite_note-9" id="cite_note-9" data-mw-footnote-number="9"><span class="mw-cite-backlink" id="mwww"><a href="#cite_ref-9" rel="mw:referencedBy" id="mwxA"><span class="mw-linkback-text" id="mwxQ">↑</span></a></span> <span id="mw-reference-text-cite_note-9" class="mw-reference-text reference-text"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt31" typeof="mw:Extension/templatestyles mw:Transclusion" id="mwxg" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite news ","href":"./Template:Cite_news"},"params":{"date":{"wt":"2021-12-23"},"title":{"wt":"Capital One settles a class-action lawsuit for $190 million in a 2019 hacking. (Published 2021)"},"url":{"wt":"https://www.nytimes.com/2021/12/23/business/capital-one-hacking-settlement.html"},"access-date":{"wt":"2025-09-17"},"language":{"wt":"en"}},"i":0}}]}'/><cite class="citation news cs1" about="#mwt31" id="mwxw"><a rel="mw:ExtLink nofollow" href="https://www.nytimes.com/2021/12/23/business/capital-one-hacking-settlement.html" class="external text" id="mwyA">"Capital One settles a class-action lawsuit for $190 million in a 2019 hacking. (Published 2021)"</a>. 2021-12-23<span class="reference-accessdate" id="mwyQ">. Retrieved <span class="nowrap" id="mwyg">2025-09-17</span></span>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&amp;rft.genre=article&amp;rft.atitle=Capital+One+settles+a+class-action+lawsuit+for+%24190+million+in+a+2019+hacking.+%28Published+2021%29&amp;rft.date=2021-12-23&amp;rft_id=https%3A%2F%2Fwww.nytimes.com%2F2021%2F12%2F23%2Fbusiness%2Fcapital-one-hacking-settlement.html&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AServer-side+request+forgery" class="Z3988" about="#mwt31" id="mwyw"></span></span></li>
+<li about="#cite_note-10" id="cite_note-10" data-mw-footnote-number="10"><span class="mw-cite-backlink" id="mwzA"><a href="#cite_ref-10" rel="mw:referencedBy" id="mwzQ"><span class="mw-linkback-text" id="mwzg">↑</span></a></span> <span id="mw-reference-text-cite_note-10" class="mw-reference-text reference-text"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt34" typeof="mw:Extension/templatestyles mw:Transclusion" id="mwzw" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite web ","href":"./Template:Cite_web"},"params":{"last":{"wt":"Intelligence"},"first":{"wt":"Microsoft 365 Security, Microsoft Threat"},"date":{"wt":"2021-03-02"},"title":{"wt":"HAFNIUM targeting Exchange Servers with 0-day exploits"},"url":{"wt":"https://www.microsoft.com/en-us/security/blog/2021/03/02/hafnium-targeting-exchange-servers/"},"access-date":{"wt":"2025-09-17"},"website":{"wt":"Microsoft Security Blog"},"language":{"wt":"en-US"}},"i":0}}]}'/><cite id="CITEREFIntelligence2021" class="citation web cs1" about="#mwt34">Intelligence, Microsoft 365 Security, Microsoft Threat (2021-03-02). <a rel="mw:ExtLink nofollow" href="https://www.microsoft.com/en-us/security/blog/2021/03/02/hafnium-targeting-exchange-servers/" class="external text" id="mw0A">"HAFNIUM targeting Exchange Servers with 0-day exploits"</a>. <i id="mw0Q">Microsoft Security Blog</i><span class="reference-accessdate" id="mw0g">. Retrieved <span class="nowrap" id="mw0w">2025-09-17</span></span>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&amp;rft.genre=unknown&amp;rft.jtitle=Microsoft+Security+Blog&amp;rft.atitle=HAFNIUM+targeting+Exchange+Servers+with+0-day+exploits&amp;rft.date=2021-03-02&amp;rft.aulast=Intelligence&amp;rft.aufirst=Microsoft+365+Security%2C+Microsoft+Threat&amp;rft_id=https%3A%2F%2Fwww.microsoft.com%2Fen-us%2Fsecurity%2Fblog%2F2021%2F03%2F02%2Fhafnium-targeting-exchange-servers%2F&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AServer-side+request+forgery" class="Z3988" about="#mwt34" id="mw1A"></span><span class="cs1-maint citation-comment" about="#mwt34" id="mw1Q"><code class="cs1-code" id="mw1g">{{<a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Template:Cite_web" title="Template:Cite web" id="mw1w">cite web</a>}}</code>:  CS1 maint: multiple names: authors list (<a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Category:CS1_maint:_multiple_names:_authors_list" title="Category:CS1 maint: multiple names: authors list" id="mw2A">link</a>) CS1 maint: numeric names: authors list (<a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Category:CS1_maint:_numeric_names:_authors_list" title="Category:CS1 maint: numeric names: authors list" id="mw2Q">link</a>)</span><link rel="mw:PageProp/Category" href="./Category:CS1_maint:_multiple_names:_authors_list" about="#mwt34" id="mw2g"/><link rel="mw:PageProp/Category" href="./Category:CS1_maint:_numeric_names:_authors_list" about="#mwt34" id="mw2w"/></span></li>
+<li about="#cite_note-11" id="cite_note-11" data-mw-footnote-number="11"><span class="mw-cite-backlink" id="mw3A"><a href="#cite_ref-11" rel="mw:referencedBy" id="mw3Q"><span class="mw-linkback-text" id="mw3g">↑</span></a></span> <span id="mw-reference-text-cite_note-11" class="mw-reference-text reference-text"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1333433106" about="#mwt38" typeof="mw:Extension/templatestyles mw:Transclusion" id="mw3w" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Citation/CS1/styles.css"},"body":{"extsrc":""},"parts":[{"template":{"target":{"wt":"Cite web ","href":"./Template:Cite_web"},"params":{"date":{"wt":"2021-03-29"},"title":{"wt":"At Least 30,000 U.S. Organizations Newly Hacked Via Holes in Microsoft&apos;s Email Software – Krebs on Security"},"url":{"wt":"https://krebsonsecurity.com/2021/03/at-least-30000-u-s-organizations-newly-hacked-via-holes-in-microsofts-email-software/"},"access-date":{"wt":"2025-09-17"},"language":{"wt":"en-US"}},"i":0}}]}'/><cite class="citation web cs1" about="#mwt38" id="mw4A"><a rel="mw:ExtLink nofollow" href="https://krebsonsecurity.com/2021/03/at-least-30000-u-s-organizations-newly-hacked-via-holes-in-microsofts-email-software/" class="external text" id="mw4Q">"At Least 30,000 U.S. Organizations Newly Hacked Via Holes in Microsoft's Email Software – Krebs on Security"</a>. 2021-03-29<span class="reference-accessdate" id="mw4g">. Retrieved <span class="nowrap" id="mw4w">2025-09-17</span></span>.</cite><span title="ctx_ver=Z39.88-2004&amp;rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Abook&amp;rft.genre=unknown&amp;rft.btitle=At+Least+30%2C000+U.S.+Organizations+Newly+Hacked+Via+Holes+in+Microsoft%27s+Email+Software+%E2%80%93+Krebs+on+Security&amp;rft.date=2021-03-29&amp;rft_id=https%3A%2F%2Fkrebsonsecurity.com%2F2021%2F03%2Fat-least-30000-u-s-organizations-newly-hacked-via-holes-in-microsofts-email-software%2F&amp;rfr_id=info%3Asid%2Fen.wikipedia.org%3AServer-side+request+forgery" class="Z3988" about="#mwt38" id="mw5A"></span></span></li>
+</ol></div></div>
+
+<div class="navbox-styles" about="#mwt44" typeof="mw:Transclusion" id="mw5Q" data-mw='{"parts":[{"template":{"target":{"wt":"Information security","href":"./Template:Information_security"},"params":{},"i":0}}]}'><span class="mw-empty-elt"><style data-mw-deduplicate="TemplateStyles:r1374427404" typeof="mw:Extension/templatestyles" about="#mwt45" data-mw='{"name":"templatestyles","attrs":{"src":"Hlist/styles.css"},"body":{"extsrc":""}}'>.mw-parser-output .hlist dl,.mw-parser-output .hlist ol,.mw-parser-output .hlist ul{margin:0;padding:0}.mw-parser-output .hlist dd,.mw-parser-output .hlist dt,.mw-parser-output .hlist li{margin:0;display:inline}.mw-parser-output .hlist.inline,.mw-parser-output .hlist.inline dl,.mw-parser-output .hlist.inline ol,.mw-parser-output .hlist.inline ul,.mw-parser-output .hlist dl dl,.mw-parser-output .hlist dl ol,.mw-parser-output .hlist dl ul,.mw-parser-output .hlist ol dl,.mw-parser-output .hlist ol ol,.mw-parser-output .hlist ol ul,.mw-parser-output .hlist ul dl,.mw-parser-output .hlist ul ol,.mw-parser-output .hlist ul ul{display:inline}.mw-parser-output .hlist .mw-empty-li{display:none}.mw-parser-output .hlist dt::after{content:": "}.mw-parser-output .hlist dd::after,.mw-parser-output .hlist li::after{content:"\a0 · ";font-weight:bold}.mw-parser-output .hlist dd:last-child::after,.mw-parser-output .hlist dt:last-child::after,.mw-parser-output .hlist li:last-child::after{content:none}.mw-parser-output .hlist dd dd:first-child::before,.mw-parser-output .hlist dd dt:first-child::before,.mw-parser-output .hlist dd li:first-child::before,.mw-parser-output .hlist dt dd:first-child::before,.mw-parser-output .hlist dt dt:first-child::before,.mw-parser-output .hlist dt li:first-child::before,.mw-parser-output .hlist li dd:first-child::before,.mw-parser-output .hlist li dt:first-child::before,.mw-parser-output .hlist li li:first-child::before{content:" (";font-weight:normal}.mw-parser-output .hlist dd dd:last-child::after,.mw-parser-output .hlist dd dt:last-child::after,.mw-parser-output .hlist dd li:last-child::after,.mw-parser-output .hlist dt dd:last-child::after,.mw-parser-output .hlist dt dt:last-child::after,.mw-parser-output .hlist dt li:last-child::after,.mw-parser-output .hlist li dd:last-child::after,.mw-parser-output .hlist li dt:last-child::after,.mw-parser-output .hlist li li:last-child::after{content:")";font-weight:normal}.mw-parser-output .hlist ol{counter-reset:listitem}.mw-parser-output .hlist ol>li{counter-increment:listitem}.mw-parser-output .hlist ol>li::before{content:" "counter(listitem)"\a0 "}.mw-parser-output .hlist dd ol>li:first-child::before,.mw-parser-output .hlist dt ol>li:first-child::before,.mw-parser-output .hlist li ol>li:first-child::before{content:" ("counter(listitem)"\a0 "}</style><style data-mw-deduplicate="TemplateStyles:r1377086236" typeof="mw:Extension/templatestyles" about="#mwt46" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Navbox/styles.css"},"body":{"extsrc":""}}'>.mw-parser-output .navbox{box-sizing:border-box;border:1px solid #a2a9b1;width:100%;clear:both;font-size:88%;text-align:center;padding:1px;margin:1em auto 0}.mw-parser-output .navbox .navbox{margin-top:0}.mw-parser-output .navbox+.navbox-styles+.navbox,.mw-parser-output .navbox+span.mw-empty-elt+.navbox-styles+.navbox{margin-top:-1px}.mw-parser-output .navbox-inner,.mw-parser-output .navbox-subgroup{width:100%}.mw-parser-output .navbox-group,.mw-parser-output .navbox-title,.mw-parser-output .navbox-abovebelow{padding:0.25em 1em;line-height:1.5em;text-align:center}.mw-parser-output .navbox-group{white-space:nowrap;text-align:right}.mw-parser-output .navbox,.mw-parser-output .navbox-subgroup{background-color:#fdfdfd;color:inherit}.mw-parser-output .navbox-list{line-height:1.5em;border-color:#fdfdfd}.mw-parser-output .navbox-list-with-group{text-align:left;border-left-width:2px;border-left-style:solid}.mw-parser-output tr+tr>.navbox-abovebelow,.mw-parser-output tr+tr>.navbox-group,.mw-parser-output tr+tr>.navbox-image,.mw-parser-output tr+tr>.navbox-list{border-top:2px solid #fdfdfd}.mw-parser-output .navbox-title{background-color:#ccf;color:inherit}.mw-parser-output .navbox-abovebelow,.mw-parser-output .navbox-group,.mw-parser-output .navbox-subgroup .navbox-title{background-color:#ddf;color:inherit}.mw-parser-output .navbox-subgroup .navbox-group,.mw-parser-output .navbox-subgroup .navbox-abovebelow{background-color:#e6e6ff;color:inherit}.mw-parser-output .navbox-even{background-color:#f7f7f7;color:inherit}.mw-parser-output .navbox-odd{background-color:transparent;color:inherit}.mw-parser-output .navbox .hlist td dl,.mw-parser-output .navbox .hlist td ol,.mw-parser-output .navbox .hlist td ul,.mw-parser-output .navbox td.hlist dl,.mw-parser-output .navbox td.hlist ol,.mw-parser-output .navbox td.hlist ul{padding:0.125em 0}.mw-parser-output .navbox .navbar{display:block;font-size:100%}.mw-parser-output .navbox-title .navbar{float:left;text-align:left;margin-right:0.5em}body.skin--responsive .mw-parser-output .navbox-image img{max-width:none!important}@media print{body.ns-0 .mw-parser-output .navbox{display:none!important}}</style></span></div><div role="navigation" class="navbox" aria-labelledby="Information_security3368" style="padding:3px" about="#mwt44" id="mw5g"><table class="nowraplinks mw-collapsible autocollapse navbox-inner" style="border-spacing:0;background:transparent;color:inherit"><tbody><tr><th scope="col" class="navbox-title" colspan="3"><span class="mw-empty-elt"><link rel="mw-deduplicated-inline-style" href="mw-data:TemplateStyles:r1374427404" about="#mwt47" typeof="mw:Extension/templatestyles" data-mw='{"name":"templatestyles","attrs":{"src":"Hlist/styles.css"},"body":{"extsrc":""}}'/><style data-mw-deduplicate="TemplateStyles:r1239400231" typeof="mw:Extension/templatestyles" about="#mwt48" data-mw='{"name":"templatestyles","attrs":{"src":"Module:Navbar/styles.css"},"body":{"extsrc":""}}'>.mw-parser-output .navbar{display:inline;font-size:88%;font-weight:normal}.mw-parser-output .navbar-collapse{float:left;text-align:left}.mw-parser-output .navbar-boxtext{word-spacing:0}.mw-parser-output .navbar ul{display:inline-block;white-space:nowrap;line-height:inherit}.mw-parser-output .navbar-brackets::before{margin-right:-0.125em;content:"[ "}.mw-parser-output .navbar-brackets::after{margin-left:-0.125em;content:" ]"}.mw-parser-output .navbar li{word-spacing:-0.125em}.mw-parser-output .navbar a>span,.mw-parser-output .navbar a>abbr{text-decoration:inherit}.mw-parser-output .navbar-mini abbr{font-variant:small-caps;border-bottom:none;text-decoration:none;cursor:inherit}.mw-parser-output .navbar-ct-full{font-size:114%;margin:0 7em}.mw-parser-output .navbar-ct-mini{font-size:114%;margin:0 4em}html.skin-theme-clientpref-night .mw-parser-output .navbar li a abbr{color:var(--color-base)!important}@media(prefers-color-scheme:dark){html.skin-theme-clientpref-os .mw-parser-output .navbar li a abbr{color:var(--color-base)!important}}@media print{.mw-parser-output .navbar{display:none!important}}</style></span><div class="navbar plainlinks hlist navbar-mini"><ul><li class="nv-view"><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Template:Information_security" title="Template:Information security"><abbr title="View this template">v</abbr></a></li><li class="nv-talk"><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Template_talk:Information_security" title="Template talk:Information security"><abbr title="Discuss this template">t</abbr></a></li><li class="nv-edit"><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Special:EditPage/Template:Information_security" title="Special:EditPage/Template:Information security"><abbr title="Edit this template">e</abbr></a></li></ul></div><div id="Information_security3368" style="font-size:114%;margin:0 4em"><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Information_security" title="Information security">Information security</a></div></th></tr><tr><th scope="row" class="navbox-group" style="width:1%"><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Threat_(computer)" title="Threat (computer)" class="mw-redirect">Threats</a></th><td class="navbox-list-with-group navbox-list navbox-odd hlist" style="width:100%;padding:0"><div style="padding:0 0.25em">
+<ul><li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Adware" title="Adware">Adware</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Advanced_persistent_threat" title="Advanced persistent threat">Advanced persistent threat</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Arbitrary_code_execution" title="Arbitrary code execution">Arbitrary code execution</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Backdoor_(computing)" title="Backdoor (computing)">Backdoors</a></li>
+<li>Bombs
+<ul><li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Fork_bomb" title="Fork bomb">Fork</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Logic_bomb" title="Logic bomb">Logic</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Time_bomb_(software)" title="Time bomb (software)">Time</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Zip_bomb" title="Zip bomb">Zip</a></li></ul></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Hardware_backdoor" title="Hardware backdoor">Hardware backdoors</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Code_injection" title="Code injection">Code injection</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Crimeware" title="Crimeware">Crimeware</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Cross-site_scripting" title="Cross-site scripting">Cross-site scripting</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Cross-site_leaks" title="Cross-site leaks">Cross-site leaks</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/DOM_clobbering" title="DOM clobbering">DOM clobbering</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/History_sniffing" title="History sniffing">History sniffing</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Cryptojacking" title="Cryptojacking">Cryptojacking</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Botnet" title="Botnet">Botnets</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Data_breach" title="Data breach">Data breach</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Drive-by_download" title="Drive-by download">Drive-by download</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Browser_Helper_Object" title="Browser Helper Object">Browser Helper Objects</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Computer_virus" title="Computer virus">Viruses</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Data_scraping" title="Data scraping">Data scraping</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Denial-of-service_attack" title="Denial-of-service attack">Denial-of-service attack</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Eavesdropping" title="Eavesdropping">Eavesdropping</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Email_fraud" title="Email fraud">Email fraud</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Email_spoofing" title="Email spoofing">Email spoofing</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Exploit_(computer_security)" title="Exploit (computer security)">Exploits</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Dialer#Fraudulent_dialer" title="Dialer">Fraudulent dialers</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Hacktivism" title="Hacktivism">Hacktivism</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Infostealer" title="Infostealer">Infostealer</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Insecure_direct_object_reference" title="Insecure direct object reference">Insecure direct object reference</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Keystroke_logging" title="Keystroke logging">Keystroke loggers</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Malware" title="Malware">Malware</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Payload_(computing)" title="Payload (computing)">Payload</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Phishing" title="Phishing">Phishing</a> 
+<ul><li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Voice_phishing" title="Voice phishing">Voice</a></li></ul></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Polymorphic_engine" title="Polymorphic engine">Polymorphic engine</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Privilege_escalation" title="Privilege escalation">Privilege escalation</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Ransomware" title="Ransomware">Ransomware</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Rootkit" title="Rootkit">Rootkits</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Scareware" title="Scareware">Scareware</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Shellcode" title="Shellcode">Shellcode</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Spamming" title="Spamming">Spamming</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Social_engineering_(security)" title="Social engineering (security)">Social engineering</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Spyware" title="Spyware">Spyware</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Software_bug" title="Software bug">Software bugs</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Trojan_horse_(computing)" title="Trojan horse (computing)">Trojan horses</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Hardware_Trojan" title="Hardware Trojan" class="mw-redirect">Hardware Trojans</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Remote_access_trojan" title="Remote access trojan" class="mw-redirect">Remote access trojans</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Vulnerability_(computer_security)" title="Vulnerability (computer security)">Vulnerability</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Web_shell" title="Web shell">Web shells</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Wiper_(malware)" title="Wiper (malware)">Wiper</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Computer_worm" title="Computer worm">Worms</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/SQL_injection" title="SQL injection">SQL injection</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Rogue_security_software" title="Rogue security software">Rogue security software</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Zombie_(computing)" title="Zombie (computing)" class="mw-redirect">Zombie</a></li></ul>
+</div></td><td class="noviewer navbox-image" rowspan="4" style="width:1px;padding:0 0 0 2px"><div><figure class="mw-halign-center" typeof="mw:File"><a href="https://en.wikipedia.org/wiki/File:CIAJMK1209-en.svg" class="mw-file-description" title="vectorial version"><img resource="https://en.wikipedia.org/wiki/File:CIAJMK1209-en.svg" src="//thumb.wikimedia.org/wikipedia/commons/thumb/c/c5/CIAJMK1209-en.svg/250px-CIAJMK1209-en.svg.png?utm_source=en.wikipedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail" decoding="async" loading="lazy" srcset="//thumb.wikimedia.org/wikipedia/commons/thumb/c/c5/CIAJMK1209-en.svg/330px-CIAJMK1209-en.svg.png?utm_source=en.wikipedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail 2x" alt="vectorial version" data-file-width="496" data-file-height="496" data-file-type="drawing" height="150" width="150" class="mw-file-element"/></a><figcaption>vectorial version</figcaption></figure></div></td></tr><tr><th scope="row" class="navbox-group" style="width:1%">Defenses</th><td class="navbox-list-with-group navbox-list navbox-even hlist" style="width:100%;padding:0"><div style="padding:0 0.25em">
+<ul><li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Application_security" title="Application security">Application security</a>
+<ul><li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Secure_coding" title="Secure coding">Secure coding</a></li>
+<li>Secure by default</li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Secure_by_design" title="Secure by design">Secure by design</a>
+<ul><li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Misuse_case" title="Misuse case">Misuse case</a></li></ul></li></ul></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Computer_access_control" title="Computer access control">Computer access control</a>
+<ul><li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Authentication" title="Authentication">Authentication</a>
+<ul><li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Multi-factor_authentication" title="Multi-factor authentication">Multi-factor authentication</a></li></ul></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Authorization" title="Authorization">Authorization</a></li></ul></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Computer_security_software" title="Computer security software">Computer security software</a>
+<ul><li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Antivirus_software" title="Antivirus software">Antivirus software</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Security-focused_operating_system" title="Security-focused operating system" class="mw-redirect">Security-focused operating system</a></li></ul></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Data-centric_security" title="Data-centric security">Data-centric security</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Obfuscation_(software)" title="Obfuscation (software)">Software obfuscation</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Data_masking" title="Data masking">Data masking</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Encryption" title="Encryption">Encryption</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Firewall_(computing)" title="Firewall (computing)">Firewall</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Intrusion_detection_system" title="Intrusion detection system">Intrusion detection system</a>
+<ul><li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Host-based_intrusion_detection_system" title="Host-based intrusion detection system">Host-based intrusion detection system</a> (HIDS)</li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Anomaly_detection" title="Anomaly detection">Anomaly detection</a></li></ul></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Information_security_management" title="Information security management">Information security management</a>
+<ul><li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Information_risk_management" title="Information risk management" class="mw-redirect">Information risk management</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Security_information_and_event_management" title="Security information and event management">Security information and event management</a> (SIEM)</li></ul></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Runtime_application_self-protection" title="Runtime application self-protection">Runtime application self-protection</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Site_isolation" title="Site isolation">Site isolation</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Scrubber_Center" title="Scrubber Center" class="mw-redirect">Scrubber Center</a></li></ul>
+</div></td></tr><tr><th scope="row" class="navbox-group" style="width:1%"><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Computer_security" title="Computer security">Cybersecurity</a> domains</th><td class="navbox-list-with-group navbox-list navbox-odd hlist" style="width:100%;padding:0"><div style="padding:0 0.25em">
+<ul><li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Application_security" title="Application security">Application security</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Cloud_computing_security" title="Cloud computing security">Cloud computing security</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Cryptography" title="Cryptography">Cryptography</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Data_security" title="Data security">Data security</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Digital_forensics" title="Digital forensics">Digital forensics</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Governance,_risk,_and_compliance" title="Governance, risk, and compliance">Governance, risk, and compliance</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Identity_and_access_management" title="Identity and access management">Identity and access management</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Malware_analysis" title="Malware analysis">Malware analysis and reverse engineering</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Network_security" title="Network security">Network security</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Control_system_security" title="Control system security">OT/ICS security</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Penetration_test" title="Penetration test">Penetration testing</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Security_engineering" title="Security engineering">Security architecture and engineering</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Information_security_operations_center" title="Information security operations center">Security operations</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Cyber_threat_intelligence" title="Cyber threat intelligence">Threat intelligence</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Vulnerability_management" title="Vulnerability management">Vulnerability management</a></li></ul>
+</div></td></tr><tr><th scope="row" class="navbox-group" style="width:1%">Related<br/>security<br/>topics</th><td class="navbox-list-with-group navbox-list navbox-even hlist" style="width:100%;padding:0"><div style="padding:0 0.25em">
+<ul><li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Computer_security" title="Computer security">Computer security</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Automotive_security" title="Automotive security">Automotive security</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Cybercrime" title="Cybercrime">Cybercrime</a>
+<ul><li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Cybersex_trafficking" title="Cybersex trafficking">Cybersex trafficking</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Computer_fraud" title="Computer fraud">Computer fraud</a></li></ul></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Cybergeddon" title="Cybergeddon">Cybergeddon</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Cyberterrorism" title="Cyberterrorism">Cyberterrorism</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Cyberwarfare" title="Cyberwarfare">Cyberwarfare</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Electronic_warfare" title="Electronic warfare">Electronic warfare</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Information_warfare" title="Information warfare">Information warfare</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Internet_security" title="Internet security">Internet security</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Mobile_security" title="Mobile security">Mobile security</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Copy_protection" title="Copy protection">Copy protection</a></li>
+<li><a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/Digital_rights_management" title="Digital rights management">Digital rights management</a></li></ul>
+</div></td></tr></tbody></table></div>
+
+<link rel="mw:PageProp/Category" href="./Category:Computer_security_exploits" id="mw5w"/>
+<link rel="mw:PageProp/Category" href="./Category:Internet_security" id="mw6A"/>
+<link rel="mw:PageProp/Category" href="./Category:Deception" id="mw6Q"/>
+<link rel="mw:PageProp/Category" href="./Category:Security_breaches" id="mw6g"/></section>
+<!-- 
+NewPP limit report
+Parsed by mw‐web.codfw.main‐59d47b85c9‐sshpl
+Cached time: 20260930165144
+Cache expiry: 2592000
+Cache expiry source: Module:Citation/CS1 (os.date(%Y))
+Reduced expiry: false
+Complications: [vary‐revision‐sha1, show‐toc, use‐parsoid]
+CPU time usage: 0.385 seconds
+Real time usage: 0.446 seconds
+Preprocessor visited node count: 630/1000000
+Revision size: 6828/2097152 bytes
+Post‐expand include size: 44897/2097152 bytes
+Template argument size: 526/2097152 bytes
+Highest expansion depth: 9/100
+Expensive parser function count: 2/500
+Unstrip recursion depth: 0/20
+Unstrip post‐expand size: 36591/5000000 bytes
+Lua time usage: 0.086/10.000 seconds
+Lua memory usage: 6455101/52428800 bytes
+Number of Wikibase entities loaded: 0/500
+-->
+<!--
+Transclusion expansion time report (%,ms,calls,template)
+100.00%  261.796      1 -total
+ 22.72%   59.473     10 Template:Cite_web
+ 17.53%   45.903      1 Template:Short_description
+ 10.86%   28.429      1 Template:More_citations_needed
+  9.54%   24.967      1 Template:Ambox
+  9.38%   24.556      2 Template:Pagetype
+  5.73%   15.001      1 Template:Information_security
+  5.62%   14.720      3 Template:Main_other
+  5.26%   13.773      1 Template:Navbox
+  5.17%   13.526      1 Template:SDcat
+-->
+
+<!-- Render ID 378719ff-bcef-11f1-ab45-d119088735f0 -->
+
+<!-- Saved in parser cache with key enwiki:parsoid-pcache:57971303:|#|:idhash:useParsoid=1 and timestamp 20260930165144 and revision id 1322851731. Rendering was triggered because: page_view
+ -->
+
+<!-- Parsoid 0.24.0.0-alpha24 -->
+</div><!--
+Post‐processing cache key enwiki:postproc‐parsoid‐pcache:57971303:|#|:idhash:injectTOC=0!postproc=1!skin=vector‐2022!useParsoid=1!visibleLinks=single, generated at 20260930165144
+--><noscript><img src="https://en.wikipedia.org/wiki/Special:CentralAutoLogin/start?useformat=desktop&amp;type=1x1&amp;usesul3=1" alt="" width="1" height="1" style="border: none; position: absolute;"></noscript>
+<div class="printfooter" data-nosnippet="">Retrieved from "<a dir="ltr" href="https://en.wikipedia.org/w/index.php?title=Server-side_request_forgery&amp;oldid=1322851731">https://en.wikipedia.org/w/index.php?title=Server-side_request_forgery&amp;oldid=1322851731</a>"</div></div>
+					<div id="catlinks" class="catlinks" data-mw-interface=""><div id="mw-normal-catlinks" class="mw-normal-catlinks"><a href="/wiki/Help:Category" title="Help:Category">Categories</a>: <ul><li><a href="/wiki/Category:Computer_security_exploits" title="Category:Computer security exploits">Computer security exploits</a></li><li><a href="/wiki/Category:Internet_security" title="Category:Internet security">Internet security</a></li><li><a href="/wiki/Category:Deception" title="Category:Deception">Deception</a></li><li><a href="/wiki/Category:Security_breaches" title="Category:Security breaches">Security breaches</a></li></ul></div><div id="mw-hidden-catlinks" class="mw-hidden-catlinks mw-hidden-cats-hidden">Hidden categories: <ul><li><a href="/wiki/Category:Articles_with_short_description" title="Category:Articles with short description">Articles with short description</a></li><li><a href="/wiki/Category:Short_description_is_different_from_Wikidata" title="Category:Short description is different from Wikidata">Short description is different from Wikidata</a></li><li><a href="/wiki/Category:Articles_needing_additional_references_from_October_2022" title="Category:Articles needing additional references from October 2022">Articles needing additional references from October 2022</a></li><li><a href="/wiki/Category:All_articles_needing_additional_references" title="Category:All articles needing additional references">All articles needing additional references</a></li><li><a href="/wiki/Category:CS1_maint:_url-status" title="Category:CS1 maint: url-status">CS1 maint: url-status</a></li><li><a href="/wiki/Category:CS1_maint:_multiple_names:_authors_list" title="Category:CS1 maint: multiple names: authors list">CS1 maint: multiple names: authors list</a></li><li><a href="/wiki/Category:CS1_maint:_numeric_names:_authors_list" title="Category:CS1 maint: numeric names: authors list">CS1 maint: numeric names: authors list</a></li></ul></div></div>
+				</div>
+			</main>
+			
+		</div>
+		<div class="mw-footer-container">
+			<footer id="footer" class="mw-footer" >
+				<ul id="footer-info" class="mw-portlet mw-portlet-footer-info">
+	<li id="footer-info-lastmod"> This page was last edited on 18 November 2025, at 06:18<span class="anonymous-show">&#160;(UTC)</span>.</li>
+	<li id="footer-info-renderedwith">Page was rendered with <a href="https://www.mediawiki.org/wiki/Special:MyLanguage/Parsoid" class="extiw" title="mw:Special:MyLanguage/Parsoid">Parsoid</a>.</li>
+	<li id="footer-info-copyright">Text is available under the <a href="/wiki/Wikipedia:Text_of_the_Creative_Commons_Attribution-ShareAlike_4.0_International_License" title="Wikipedia:Text of the Creative Commons Attribution-ShareAlike 4.0 International License">Creative Commons Attribution-ShareAlike 4.0 License</a>;
+additional terms may apply. By using this site, you agree to the <a href="https://foundation.wikimedia.org/wiki/Special:MyLanguage/Policy:Terms_of_Use" class="extiw" title="foundation:Special:MyLanguage/Policy:Terms of Use">Terms of Use</a> and <a href="https://foundation.wikimedia.org/wiki/Special:MyLanguage/Policy:Privacy_policy" class="extiw" title="foundation:Special:MyLanguage/Policy:Privacy policy">Privacy Policy</a>. Wikipedia® is a registered trademark of the <a rel="nofollow" class="external text" href="https://wikimediafoundation.org/">Wikimedia Foundation, Inc.</a>, a non-profit organization.</li>
+</ul>
+
+				<ul id="footer-places" class="mw-portlet mw-portlet-footer-places">
+	<li id="footer-places-privacy"><a href="https://foundation.wikimedia.org/wiki/Special:MyLanguage/Policy:Privacy_policy">Privacy policy</a></li>
+	<li id="footer-places-about"><a href="/wiki/Wikipedia:About">About Wikipedia</a></li>
+	<li id="footer-places-disclaimers"><a href="/wiki/Wikipedia:General_disclaimer">Disclaimers</a></li>
+	<li id="footer-places-contact"><a href="//en.wikipedia.org/wiki/Wikipedia:Contact_us">Contact Wikipedia</a></li>
+	<li id="footer-places-legal-safety-contacts"><a href="https://foundation.wikimedia.org/wiki/Special:MyLanguage/Legal:Wikimedia_Foundation_Legal_and_Safety_Contact_Information">Legal &amp; safety contacts</a></li>
+	<li id="footer-places-wm-codeofconduct"><a href="https://foundation.wikimedia.org/wiki/Special:MyLanguage/Policy:Universal_Code_of_Conduct">Code of Conduct</a></li>
+	<li id="footer-places-developers"><a href="https://developer.wikimedia.org">Developers</a></li>
+	<li id="footer-places-statslink"><a href="https://stats.wikimedia.org/#/en.wikipedia.org">Statistics</a></li>
+	<li id="footer-places-cookiestatement"><a href="https://foundation.wikimedia.org/wiki/Special:MyLanguage/Policy:Cookie_statement">Cookie statement</a></li>
+	<li id="footer-places-mobileview"><a href="//en.wikipedia.org/w/index.php?title=Server-side_request_forgery&amp;mobileaction=toggle_view_mobile" class="noprint stopMobileRedirectToggle">Mobile view</a></li>
+</ul>
+
+				<ul id="footer-icons" class="mw-portlet mw-portlet-footer-icons noprint">
+	<li id="footer-copyrightico"><a href="https://www.wikimedia.org/" class="cdx-button cdx-button--fake-button cdx-button--size-large cdx-button--fake-button--enabled"><picture><source media="(min-width: 500px)" srcset="/static/images/footer/wikimedia-button.svg" width="84" height="29"><img src="/static/images/footer/wikimedia.svg" width="25" height="25" alt="Wikimedia Foundation" lang="en" loading="lazy"></picture></a></li>
+	<li id="footer-poweredbyico"><a href="https://www.mediawiki.org/" class="cdx-button cdx-button--fake-button cdx-button--size-large cdx-button--fake-button--enabled"><picture><source media="(min-width: 500px)" srcset="/w/resources/assets/poweredby_mediawiki.svg" width="88" height="31"><img src="/w/resources/assets/mediawiki_compact.svg" alt="Powered by MediaWiki" lang="en" width="25" height="25" loading="lazy"></picture></a></li>
+</ul>
+
+			</footer>
+		</div>
+	</div> 
+</div> 
+<div class="vector-header-container vector-sticky-header-container no-font-mode-scale">
+	<div id="vector-sticky-header" class="vector-sticky-header">
+		<div class="vector-sticky-header-start">
+			<div class="vector-sticky-header-icon-start vector-button-flush-left" aria-hidden="true">
+				<button class="cdx-button cdx-button--weight-quiet cdx-button--icon-only vector-sticky-header-search-toggle" tabindex="-1" data-event-name="ui.vector-sticky-search-form.icon"><span class="vector-icon mw-ui-icon-search mw-ui-icon-wikimedia-search cdx-button__icon"></span>
+
+<span>Search</span>
+			</button>
+		</div>
+			
+		<div role="search" class="vector-search-box-vue  vector-search-box-show-thumbnail vector-search-box">
+			<div class="vector-typeahead-search-container">
+				<div class="cdx-typeahead-search cdx-typeahead-search--show-thumbnail">
+					<form action="/w/index.php" id="vector-sticky-search-form" class="cdx-search-input cdx-search-input--has-end-button">
+						<div  class="cdx-search-input__input-wrapper"  data-search-loc="header-moved">
+							<div class="cdx-text-input cdx-text-input--has-start-icon">
+								<input
+									class="cdx-text-input__input mw-searchInput" autocomplete="off"
+									
+									type="search" name="search" placeholder="Search Wikipedia">
+								<span class="cdx-text-input__icon cdx-text-input__start-icon"></span>
+							</div>
+							<input type="hidden" name="title" value="Special:Search">
+						</div>
+						<button class="cdx-button cdx-search-input__end-button">Search</button>
+					</form>
+				</div>
+			</div>
+		</div>
+		<div class="vector-sticky-header-context-bar">
+				<nav aria-label="Contents" class="vector-toc-landmark">
+						
+					<div id="vector-sticky-header-toc" class="vector-dropdown mw-portlet mw-portlet-sticky-header-toc vector-sticky-header-toc vector-button-flush-left"  >
+						<input type="checkbox" id="vector-sticky-header-toc-checkbox" role="button" aria-haspopup="true" data-event-name="ui.dropdown-vector-sticky-header-toc" class="vector-dropdown-checkbox "  aria-label="Toggle the table of contents"   >
+						<label id="vector-sticky-header-toc-label" for="vector-sticky-header-toc-checkbox" class="vector-dropdown-label cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only " aria-hidden="true"  ><span class="vector-icon mw-ui-icon-listBullet mw-ui-icon-wikimedia-listBullet cdx-button__icon"></span>
+
+<span class="vector-dropdown-label-text">Toggle the table of contents</span>
+						</label>
+						<div class="vector-dropdown-content">
+					
+						<div id="vector-sticky-header-toc-unpinned-container" class="vector-unpinned-container">
+						</div>
+					
+						</div>
+					</div>
+			</nav>
+				<div class="vector-sticky-header-context-bar-primary" aria-hidden="true" ><span lang="en" dir="ltr"><span class="mw-page-title-main">Server-side request forgery</span></span></div>
+			</div>
+		</div>
+		<div class="vector-sticky-header-end" aria-hidden="true">
+			<div class="vector-sticky-header-icons">
+				<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only" id="ca-talk-sticky-header" tabindex="-1" data-event-name="talk-sticky-header"><span class="vector-icon mw-ui-icon-speechBubbles mw-ui-icon-wikimedia-speechBubbles cdx-button__icon"></span>
+
+<span></span>
+			</a>
+			<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only" id="ca-subject-sticky-header" tabindex="-1" data-event-name="subject-sticky-header"><span class="vector-icon mw-ui-icon-article mw-ui-icon-wikimedia-article cdx-button__icon"></span>
+
+<span></span>
+			</a>
+			<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only" id="ca-history-sticky-header" tabindex="-1" data-event-name="history-sticky-header"><span class="vector-icon mw-ui-icon-wikimedia-history mw-ui-icon-wikimedia-wikimedia-history cdx-button__icon"></span>
+
+<span></span>
+			</a>
+			<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only mw-watchlink" id="ca-watchstar-sticky-header" tabindex="-1" data-event-name="watch-sticky-header"><span class="vector-icon mw-ui-icon-wikimedia-star mw-ui-icon-wikimedia-wikimedia-star cdx-button__icon"></span>
+
+<span></span>
+			</a>
+			<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only" id="ca-edit-sticky-header" tabindex="-1" data-event-name="wikitext-edit-sticky-header"><span class="vector-icon mw-ui-icon-wikimedia-wikiText mw-ui-icon-wikimedia-wikimedia-wikiText cdx-button__icon"></span>
+
+<span></span>
+			</a>
+			<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only" id="ca-ve-edit-sticky-header" tabindex="-1" data-event-name="ve-edit-sticky-header"><span class="vector-icon mw-ui-icon-wikimedia-edit mw-ui-icon-wikimedia-wikimedia-edit cdx-button__icon"></span>
+
+<span></span>
+			</a>
+			<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--icon-only" id="ca-viewsource-sticky-header" tabindex="-1" data-event-name="ve-edit-protected-sticky-header"><span class="vector-icon mw-ui-icon-wikimedia-editLock mw-ui-icon-wikimedia-wikimedia-editLock cdx-button__icon"></span>
+
+<span></span>
+			</a>
+		</div>
+			<div class="vector-sticky-header-buttons">
+				<button class="cdx-button cdx-button--weight-quiet mw-interlanguage-selector" id="p-lang-btn-sticky-header" tabindex="-1" data-event-name="ui.dropdown-p-lang-btn-sticky-header"><span class="vector-icon mw-ui-icon-wikimedia-language mw-ui-icon-wikimedia-wikimedia-language cdx-button__icon"></span>
+
+<span>12 languages</span>
+			</button>
+			<a href="#" class="cdx-button cdx-button--fake-button cdx-button--fake-button--enabled cdx-button--weight-quiet cdx-button--action-progressive" id="ca-addsection-sticky-header" tabindex="-1" data-event-name="addsection-sticky-header"><span class="vector-icon mw-ui-icon-speechBubbleAdd-progressive mw-ui-icon-wikimedia-speechBubbleAdd-progressive cdx-button__icon"></span>
+
+<span>Add topic</span>
+			</a>
+		</div>
+			<div class="vector-sticky-header-icon-end">
+				<div class="vector-user-links">
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="mw-portlet mw-portlet-dock-bottom emptyPortlet" id="p-dock-bottom">
+	<ul>
+		
+	</ul>
+</div>
+<script>(RLQ=window.RLQ||[]).push(function(){mw.config.set({"wgHostname":"mw-web.codfw.main-785c7f87db-6h2kq","wgBackendResponseTime":85,"wgPageParseReport":{"limitreport":{"cputime":"0.385","walltime":"0.446","ppvisitednodes":{"value":630,"limit":1000000},"revisionsize":{"value":6828,"limit":2097152},"postexpandincludesize":{"value":44897,"limit":2097152},"templateargumentsize":{"value":526,"limit":2097152},"expansiondepth":{"value":9,"limit":100},"expensivefunctioncount":{"value":2,"limit":500},"unstrip-depth":{"value":0,"limit":20},"unstrip-size":{"value":36591,"limit":5000000},"entityaccesscount":{"value":0,"limit":500},"timingprofile":["100.00%  261.796      1 -total"," 22.72%   59.473     10 Template:Cite_web"," 17.53%   45.903      1 Template:Short_description"," 10.86%   28.429      1 Template:More_citations_needed","  9.54%   24.967      1 Template:Ambox","  9.38%   24.556      2 Template:Pagetype","  5.73%   15.001      1 Template:Information_security","  5.62%   14.720      3 Template:Main_other","  5.26%   13.773      1 Template:Navbox","  5.17%   13.526      1 Template:SDcat"]},"scribunto":{"limitreport-timeusage":{"value":"0.086","limit":"10.000"},"limitreport-memusage":{"value":6455101,"limit":52428800}},"cachereport":{"origin":"mw-web.codfw.main-59d47b85c9-sshpl","timestamp":"20260930165144","ttl":2592000,"transientcontent":false,"expiry-source":"Module:Citation/CS1 (os.date(%Y))"}}});});</script>
+<script type="application/ld+json">{"@context":"https:\/\/schema.org","@type":"Article","name":"Server-side request forgery","url":"https:\/\/en.wikipedia.org\/wiki\/Server-side_request_forgery","sameAs":"http:\/\/www.wikidata.org\/entity\/Q56064107","mainEntity":"http:\/\/www.wikidata.org\/entity\/Q56064107","author":{"@type":"Organization","name":"Contributors to Wikimedia projects"},"publisher":{"@type":"Organization","name":"Wikimedia Foundation, Inc.","logo":{"@type":"ImageObject","url":"https:\/\/www.wikimedia.org\/static\/images\/wmf-hor-googpub.png"}},"datePublished":"2018-07-23T10:36:07Z","dateModified":"2025-11-18T06:18:23Z","headline":"type of computer exploit where an attacker abuses the functionality of a server causing it to access or manipulate information in the realm of that server that would otherwise not be directly accessible to the attacker"}</script>
+</body>
+</html>
