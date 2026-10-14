@@ -1,3 +1,4 @@
+import { t as tr } from '../../lib/i18n';
 /**
  * Crawler-forge canvas renderer (v3): the approved mockup's visual language driven only by the
  * story built from real Kernel data (lib/forge/forge-story.ts).
@@ -1291,7 +1292,7 @@ export class ForgeCrawlerRenderer {
       const on = v === '·' ? 'false' : 'true';
       if (cell && cell.dataset.on !== on) cell.dataset.on = on;
     }
-    const panelCount = `${visible} de ${story.counts.candidates}`;
+    const panelCount = `${visible} ${tr('f.of')} ${story.counts.candidates}`;
     if (this.el.panelCount && this.el.panelCount.textContent !== panelCount) this.el.panelCount.textContent = panelCount;
     const ticker = this.el.ticker;
     if (ticker) {

@@ -1,9 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
+
+// Copy lives in the i18n catalog: resolve t('key') calls to the pinned Spanish strings so these
+// source-level contracts keep asserting the exact user-facing copy.
+const screensSource = readFileSync(new URL('../apps/dashboard/lib/i18n/screens.ts', import.meta.url), 'utf8');
+const esBlock = screensSource.slice(screensSource.indexOf('export const SCREENS_ES'));
+const ES = Object.fromEntries([...esBlock.slice(0, esBlock.indexOf('\n};')).matchAll(/'([^']+)': '((?:[^'\\]|\\.)*)',/g)].map(([, k, v]) => [k, v.replace(/\\'/g, "'")]));
+const resolveCopy = (src) => src.replace(/\bt\('([^']+)'(?:, \{[^}]*\})?\)/g, (m, k) => (k in ES ? `'${ES[k]}'` : m));
 const pageSource = readFileSync(new URL('../apps/dashboard/app/page.tsx', import.meta.url), 'utf8');
 const shellSource = readFileSync(new URL('../apps/dashboard/components/efesto-product-shell.tsx', import.meta.url), 'utf8');
-const panelSource = readFileSync(new URL('../apps/dashboard/components/overview/product-value-scorecard.tsx', import.meta.url), 'utf8');
+const panelSource = resolveCopy(readFileSync(new URL('../apps/dashboard/components/overview/product-value-scorecard.tsx', import.meta.url), 'utf8'));
 const overviewSource = readFileSync(new URL('../apps/dashboard/lib/kernel/overview.ts', import.meta.url), 'utf8');
 const parserSource = readFileSync(new URL('../apps/dashboard/lib/kernel/product-scorecard.ts', import.meta.url), 'utf8');
 

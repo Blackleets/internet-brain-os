@@ -1,3 +1,4 @@
+import { t } from '../../lib/i18n';
 import { Clock3, Gauge, LockKeyhole, Repeat2, ShieldCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { ProductMetric, ProductValueScorecard } from '../../lib/kernel/product-scorecard';
@@ -13,8 +14,8 @@ export function ProductValueScorecardPanel({
     <style>{scorecardStyles}</style>
     <section className="product-scorecard-view" aria-labelledby="product-scorecard-title">
       <header className="product-scorecard-header">
-        <div><small>SCORECARD LOCAL</small><h2 id="product-scorecard-title">Valor del producto</h2></div>
-        <span className="scorecard-privacy"><LockKeyhole size={14} aria-hidden="true" /> Solo local · sin telemetría externa</span>
+        <div><small>{t('sc.eyebrow')}</small><h2 id="product-scorecard-title">{t('sc.title')}</h2></div>
+        <span className="scorecard-privacy"><LockKeyhole size={14} aria-hidden="true" /> {t('sc.localOnly')}</span>
       </header>
       {unavailable || !scorecard ? <Unavailable /> : <ScorecardBody scorecard={scorecard} />}
     </section>
@@ -22,7 +23,7 @@ export function ProductValueScorecardPanel({
 }
 
 function Unavailable() {
-  return <div className="product-value-unavailable" role="status"><ShieldCheck size={18} aria-hidden="true" /><div><strong>Métricas temporalmente no disponibles</strong><p>Efesto conserva el resto de datos verificados. No mostramos ceros inventados.</p></div></div>;
+  return <div className="product-value-unavailable" role="status"><ShieldCheck size={18} aria-hidden="true" /><div><strong>{t('sc.unavailable')}</strong><p>{t('sc.unavailableCopy')}</p></div></div>;
 }
 
 function ScorecardBody({ scorecard }: { scorecard: ProductValueScorecard }) {
@@ -32,20 +33,20 @@ function ScorecardBody({ scorecard }: { scorecard: ProductValueScorecard }) {
         SUPPORT-only (product-value-scorecard.mjs). Bare "Find útil" / "Goal verificado" /
         "Descartados" must name SUPPORT like Hallazgos empty and Misiones forjadas honesty. */}
     <dl className="scorecard-primary">
-      <ScoreMetric icon={<Gauge size={17} aria-hidden="true" />} label="Goals con Find SUPPORT útil" metric={scorecard.primary.goalUsefulFindRate} />
-      <ScoreMetric icon={<Clock3 size={17} aria-hidden="true" />} label="Tiempo al primer Find SUPPORT útil" metric={scorecard.primary.timeToFirstUsefulFind} />
-      <ScoreMetric icon={<Repeat2 size={17} aria-hidden="true" />} label="Repetición de Goals" metric={scorecard.primary.repeatGoalUsage} />
+      <ScoreMetric icon={<Gauge size={17} aria-hidden="true" />} label={t('sc.goalsUseful')} metric={scorecard.primary.goalUsefulFindRate} />
+      <ScoreMetric icon={<Clock3 size={17} aria-hidden="true" />} label={t('sc.timeFirst')} metric={scorecard.primary.timeToFirstUsefulFind} />
+      <ScoreMetric icon={<Repeat2 size={17} aria-hidden="true" />} label={t('sc.repeat')} metric={scorecard.primary.repeatGoalUsage} />
     </dl>
-    <div className="scorecard-secondary" aria-label="Cobertura y guardas del scorecard">
-      <span>Activación local <strong>{formatMetric(scorecard.drivers.installationToFirstGoalActivationRate)}</strong></span>
-      <span>Misiones forjadas <strong>{formatMetric(scorecard.drivers.missionCompletionRate)}</strong></span>
-      <span>Finds SUPPORT útiles <strong>{formatMetric(scorecard.drivers.usefulSavedFindShare)}</strong></span>
-      <span>Goals medidos <strong>{scorecard.coverage.executedGoals}</strong></span>
-      <span>Finds SUPPORT con Goal <strong>{scorecard.coverage.goalLinkedFinds}</strong></span>
-      <span>Fallos de misión <strong>{formatMetric(scorecard.guardrails.missionFailureRate)}</strong></span>
-      <span>Finds SUPPORT descartados <strong>{formatMetric(scorecard.guardrails.findDismissalNotInterestedRate)}</strong></span>
+    <div className="scorecard-secondary" aria-label={t('sc.coverage')}>
+      <span>{t('sc.activation')} <strong>{formatMetric(scorecard.drivers.installationToFirstGoalActivationRate)}</strong></span>
+      <span>{t('sc.forgedMissions')} <strong>{formatMetric(scorecard.drivers.missionCompletionRate)}</strong></span>
+      <span>{t('sc.usefulFinds')} <strong>{formatMetric(scorecard.drivers.usefulSavedFindShare)}</strong></span>
+      <span>{t('sc.measuredGoals')} <strong>{scorecard.coverage.executedGoals}</strong></span>
+      <span>{t('sc.findsWithGoal')} <strong>{scorecard.coverage.goalLinkedFinds}</strong></span>
+      <span>{t('sc.missionFailures')} <strong>{formatMetric(scorecard.guardrails.missionFailureRate)}</strong></span>
+      <span>{t('sc.dismissedFinds')} <strong>{formatMetric(scorecard.guardrails.findDismissalNotInterestedRate)}</strong></span>
     </div>
-    {unavailableCount > 0 ? <p className="scorecard-caveat">{unavailableCount} métricas aún no tienen un ledger o cohorte fiable. Efesto muestra “Sin datos” en lugar de estimarlas.</p> : null}
+    {unavailableCount > 0 ? <p className="scorecard-caveat">{t('sc.caveat', { n: unavailableCount })}</p> : null}
   </>;
 }
 
@@ -55,7 +56,7 @@ function ScoreMetric({ icon, label, metric }: { icon: ReactNode; label: string; 
 }
 
 function formatMetric(metric: ProductMetric): string {
-  if (metric.status !== 'measured' || metric.value === null) return 'Sin datos';
+  if (metric.status !== 'measured' || metric.value === null) return t('sc.noData');
   if (metric.unit === 'ratio') return `${Math.round(metric.value * 100)}%`;
   if (metric.unit === 'milliseconds') return formatDuration(metric.value);
   if (metric.unit === 'count_per_goal') return `${trimNumber(metric.value)} / Goal`;
@@ -75,21 +76,21 @@ function trimNumber(value: number): string { return Number.isInteger(value) ? St
 function metricContext(metric: ProductMetric): string {
   const denominator = typeof metric.denominator === 'number' ? metric.denominator : undefined;
   const sampleCount = typeof metric.sampleCount === 'number' ? metric.sampleCount : undefined;
-  if (denominator !== undefined) return `Base local: ${denominator}`;
-  if (sampleCount !== undefined) return `Muestras locales: ${sampleCount}`;
-  return 'Medido desde la instancia local.';
+  if (denominator !== undefined) return t('sc.base', { n: denominator });
+  if (sampleCount !== undefined) return t('sc.samples', { n: sampleCount });
+  return t('sc.measuredLocal');
 }
 function reasonCopy(reason: string | null): string {
   return ({
-    no_executed_goals: 'Aún no hay Goals autorizados ejecutados.',
-    no_useful_or_saved_find_feedback: 'Aún no hay Finds con Kernel SUPPORT marcados como útiles o guardados.',
-    installation_cohort_not_recorded: 'La medición local aún no se ha iniciado en esta instalación.',
-    local_installation_cohort_invalid: 'El registro local de medición no es válido.',
-    no_local_goal_activation: 'Esta instalación aún no ha autorizado su primer Goal.',
-    no_missions: 'Aún no hay misiones medibles.',
-    no_completed_goals: 'Aún no hay Goals con misión forjada por el Kernel.',
-    no_goal_linked_finds: 'Aún no hay Finds con Kernel SUPPORT ligados a un Goal.',
-  } as Record<string, string>)[reason ?? ''] ?? 'El Kernel todavía no dispone del ledger necesario.';
+    no_executed_goals: t('sc.u1'),
+    no_useful_or_saved_find_feedback: t('sc.u2'),
+    installation_cohort_not_recorded: t('sc.u3'),
+    local_installation_cohort_invalid: t('sc.u4'),
+    no_local_goal_activation: t('sc.u5'),
+    no_missions: t('sc.u6'),
+    no_completed_goals: t('sc.u7'),
+    no_goal_linked_finds: t('sc.u8'),
+  } as Record<string, string>)[reason ?? ''] ?? t('sc.noLedger');
 }
 function countUnavailable(scorecard: ProductValueScorecard): number {
   return [...Object.values(scorecard.primary), ...Object.values(scorecard.drivers), ...Object.values(scorecard.guardrails)].filter((metric) => metric.status === 'not_measurable').length;
