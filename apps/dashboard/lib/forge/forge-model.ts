@@ -339,10 +339,10 @@ function buildPriorAttempts(
 }
 
 const NEXT_STEPS: Partial<Record<ForgePhase, string>> = {
-  waiting_agent: t('f.next1'),
-  queued: t('f.next2'),
-  searching: t('f.next3'),
-  verifying: t('f.next4'),
+  get waiting_agent() { return t('f.next1'); },
+  get queued() { return t('f.next2'); },
+  get searching() { return t('f.next3'); },
+  get verifying() { return t('f.next4'); },
 };
 
 function missionKeywords(row?: MissionSummary): string[] {

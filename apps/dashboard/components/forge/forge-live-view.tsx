@@ -200,7 +200,7 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onSearchMore, se
           {exact && queries.length > 1 ? <span className="forge-sr-only">{queries.map((item) => `«${item}»`).join(', ')}</span> : null}
           <i ref={caretRef} className="forge-caret" aria-hidden="true" />
           <span className="fn" aria-hidden="true">)</span>
-          {waiting ? null : exact ? (queries.length > 1 ? <em className="forge-chip-tag">{queries.length} consultas</em> : null) : <em className="forge-chip-tag">{t('f.fromGoal')}</em>}
+          {waiting ? null : exact ? (queries.length > 1 ? <em className="forge-chip-tag">{t('f.nQueries', { n: queries.length })}</em> : null) : <em className="forge-chip-tag">{t('f.fromGoal')}</em>}
         </p>
         {waiting ? <div className="forge-bench-wait">
           <p className="forge-bench-title"><span className="forge-bench-embers" aria-hidden="true"><i /><i /><i /></span>{model.phase === 'queued' ? t('f.waitingTurn') : t('f.waitingConnect')}</p>
@@ -218,7 +218,7 @@ function ForgeBody({ model, narrow, reducedMotion, onOpenFinds, onSearchMore, se
     <aside className="forge-live-panel" aria-label={t('f.candToEvidence')}>
       {/* forge.log lives beside the stage (below it on phones) so it never covers the anvil or the web. */}
       <div className="forge-ticker" aria-hidden="true"><div className="forge-ticker-ttl"><i /><i /><i />&nbsp;forge.log</div><div ref={tickerRef} className="forge-ticker-lines" /></div>
-      <header className="forge-panel-head"><h3>{t('f.candToEvidence')}</h3><span ref={countRef} className="forge-panel-count">{model.counts.sources} de {model.counts.sources}</span></header>
+      <header className="forge-panel-head"><h3>{t('f.candToEvidence')}</h3><span ref={countRef} className="forge-panel-count">{model.counts.sources} {t('f.of')} {model.counts.sources}</span></header>
       {model.findingsFunnel ? <p className="forge-panel-funnel" title={funnelTitle(model.findingsFunnel)}>{funnelLine(model.findingsFunnel)}</p> : null}
       <ResultWebs runs={model.search.runs} />
       {visibleSources.length ? <ul className="forge-live-sources" aria-label={t('f.missionSources', { n: sources.length })}>
@@ -334,7 +334,7 @@ function ForgeHeader({ model, headingId, onConnect, onRelaunch, relaunchPending,
             <span className="forge-sr-only">: {step.label}, {stepStateLabel(step.state)}</span>
           </li>)}
         </ol>
-        <p className="forge-live-stepnow" aria-hidden="true"><span className="forge-stepnow-word">{t('f.step')} </span>{activeIndex + 1} de 5<span className="forge-stepnow-label"> · {model.steps[activeIndex]?.label}</span></p>
+        <p className="forge-live-stepnow" aria-hidden="true"><span className="forge-stepnow-word">{t('f.step')} </span>{activeIndex + 1} {t('f.of')} 5<span className="forge-stepnow-label"> · {model.steps[activeIndex]?.label}</span></p>
       </div>
     </div>
   </header>;
@@ -352,7 +352,7 @@ function metaPill(model: ForgeMissionModel, replaying: boolean): [string, string
   return undefined;
 }
 
-const FUNNEL_REASON_LABELS: Record<string, string> = { malformed_url: t('f.badUrl'), per_domain_cap: t('f.domainCap'), duplicate: 'duplicado', other: 'otros' };
+const FUNNEL_REASON_LABELS: Record<string, string> = { get malformed_url() { return t('f.badUrl'); }, get per_domain_cap() { return t('f.domainCap'); }, get duplicate() { return t('f.duplicate'); }, get other() { return t('f.others'); } };
 
 /** "N candidatos devueltos · M descartados": adapter funnel before Kernel SUPPORT — never Hallazgos. */
 export function funnelLine(funnel: { returned: number; discarded: number }): string {
@@ -470,10 +470,10 @@ function Highlighted({ text, terms }: { text: string; terms: string[] }) {
 }
 
 const OFFLINE_COPY = {
-  not_connected: { eyebrow: t('f.offlineCap'), title: t('f.forgeOff'), detail: t('f.forgeOffCopy') },
-  connecting: { eyebrow: 'CONECTANDO', title: t('f.forgeStarting'), detail: t('f.forgeStartingCopy') },
-  kernel_unreachable: { eyebrow: t('f.kernelNoRespCap'), title: t('f.forgePaused'), detail: t('f.forgePausedCopy') },
-} as const;
+  get not_connected() { return { eyebrow: t('f.offlineCap'), title: t('f.forgeOff'), detail: t('f.forgeOffCopy') }; },
+  get connecting() { return { eyebrow: t('f.connectingCap'), title: t('f.forgeStarting'), detail: t('f.forgeStartingCopy') }; },
+  get kernel_unreachable() { return { eyebrow: t('f.kernelNoRespCap'), title: t('f.forgePaused'), detail: t('f.forgePausedCopy') }; },
+};
 
 const BADGES: Record<ForgeSource['state'], string> = {
   get candidate() { return t('f.candidateCap'); },

@@ -593,6 +593,11 @@ export const SCREENS_EN = {
   'sc.noLedger': 'The Kernel doesn\'t have the required ledger yet.',
   'sc.base': 'Local base: {n}',
   'sc.samples': 'Local samples: {n}',
+  'f.nQueries': '{n} queries',
+  'f.of': 'of',
+  'f.duplicate': 'duplicate',
+  'f.others': 'other',
+  'f.connectingCap': 'CONNECTING',
 } as const;
 
 export const SCREENS_ES: Partial<Record<keyof typeof SCREENS_EN, string>> = {
@@ -1187,6 +1192,11 @@ export const SCREENS_ES: Partial<Record<keyof typeof SCREENS_EN, string>> = {
   'sc.noLedger': 'El Kernel todavía no dispone del ledger necesario.',
   'sc.base': 'Base local: {n}',
   'sc.samples': 'Muestras locales: {n}',
+  'f.nQueries': '{n} consultas',
+  'f.of': 'de',
+  'f.duplicate': 'duplicado',
+  'f.others': 'otros',
+  'f.connectingCap': 'CONECTANDO',
 };
 
 type ScreensCatalog = Partial<Record<keyof typeof SCREENS_EN, string>>;
