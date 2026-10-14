@@ -297,3 +297,8 @@ Goal from Lewis: install like the ChatGPT/Grok desktop apps. No browser extensio
 - Sidebar agrupado: Crear / Espacio de trabajo / Sistema, estado del Kernel abajo.
 - Móvil: halo oscuro tras el texto para que la araña no tape la lectura.
 - Tests: `components/home-v2.test.tsx`; legibilidad e2e (contraste AA) pasa.
+
+### 10.3 Estado tras merge de #271 (2026-10-14)
+- #271 squash-merged en main como `1c24f6d6758ca28d6d5faabe0114cf16447d1420`; CI verde (incl. l1-l7 sin reintentos).
+- EfestoSetup.exe desde main: workflow `windows-installer.yml` (workflow_dispatch en main, run 38491759352), artefacto `EfestoSetup`. Distribución interna, NO lanzamiento público; `publicLaunchApproved` sigue en `false`.
+- Pendiente: firma de código (SmartScreen avisará hasta firmar el .exe).
