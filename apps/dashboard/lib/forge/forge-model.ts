@@ -586,7 +586,12 @@ function derivePhase(workState: string, blocked: boolean, counts: ForgeCounts, s
     case 'running':
     case 'investigating': return 'searching';
     case 'verifying':
-      if (counts.read > 0 && counts.supported === 0) return 'verified_unsupported';
+      // Fail-close: a partial zero-SUPPORT batch must not paint settled "Leídas sin SUPPORT"
+      // (support:failed / find:skipped / motion:settled) while candidates remain unread.
+      // Mirror goalEditBlock settleable — every source needs a Kernel verdict first.
+      if (counts.read > 0 && counts.supported === 0 && sources.every((item) => item.state !== 'candidate')) {
+        return 'verified_unsupported';
+      }
       if (counts.read === 0 && failedReads > 0 && failedReads === counts.sources) return 'read_failed_all';
       return 'verifying';
     case 'forged': return counts.supported > 0 ? 'forged' : 'research_completed';

@@ -120,6 +120,23 @@ describe('missionVerifiedWithoutSupport (honest-blocked verifying)', () => {
       { candidateId: 'c1', status: 'verified', evidenceId: 'ev-1', supported: false },
       { candidateId: 'c2', status: 'verification_failed', reason: 'fetch_failed' },
     ] })).toBe(true);
+    // With searchCandidates, every candidate must have a verdict (partial batch stays false).
+    expect(missionVerifiedWithoutSupport({
+      ...verifying,
+      searchCandidates: [{ id: 'c1', url: 'https://a.example/' }, { id: 'c2', url: 'https://b.example/' }, { id: 'c3', url: 'https://c.example/' }],
+      verificationResults: [
+        { candidateId: 'c1', status: 'verified', evidenceId: 'ev-1', supported: false },
+        { candidateId: 'c2', status: 'verification_failed', reason: 'fetch_failed' },
+      ],
+    })).toBe(false);
+    expect(missionVerifiedWithoutSupport({
+      ...verifying,
+      searchCandidates: [{ id: 'c1', url: 'https://a.example/' }, { id: 'c2', url: 'https://b.example/' }],
+      verificationResults: [
+        { candidateId: 'c1', status: 'verified', evidenceId: 'ev-1', supported: false },
+        { candidateId: 'c2', status: 'verification_failed', reason: 'fetch_failed' },
+      ],
+    })).toBe(true);
     // GoalSurface strips rows; findCount 0 is only projected after verification.
     expect(missionVerifiedWithoutSupport({ workState: 'verifying', findCount: 0 })).toBe(true);
   });
