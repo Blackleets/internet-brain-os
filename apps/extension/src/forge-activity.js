@@ -1,3 +1,4 @@
+import { VERIFIED_WITHOUT_SUPPORT, WEB_READ_FAILED, kernelSettlementCode, countVerifiedReads } from './mission-presentation.js';
 import { kernelSupportedFindsForMission } from './find-presentation.js';
 
 const ACTIVITIES = Object.freeze({
@@ -44,6 +45,27 @@ export function forgeActivityForMission(mission, opportunities = []) {
     return {
       label: 'Research ended without Evidence',
       detail: 'The bounded attempt finished. No Kernel-sealed Evidence was forged.',
+      tone: 'idle',
+    };
+  }
+  // Fail-close Living Forge (#forge-activity-label via popup loadAgentHub): Kernel settlement
+  // verified_without_support is an honest research outcome (pages read → Evidence, none passed
+  // SUPPORT) — same copy as mission card / orb / watchtower. Must not keep "Inspecting a broken
+  // piece" / ATENTA error chrome while those surfaces say Read without Kernel SUPPORT.
+  const settlement = kernelSettlementCode(mission);
+  if (settlement === VERIFIED_WITHOUT_SUPPORT) {
+    const read = countVerifiedReads(mission?.verificationResults);
+    const pages = read > 0 ? `${read} ${read === 1 ? 'page' : 'pages'}` : 'the candidate pages';
+    return {
+      label: 'Read without Kernel SUPPORT',
+      detail: `The Kernel read ${pages} as Evidence; none passed Kernel SUPPORT, so no Find was forged.`,
+      tone: 'idle',
+    };
+  }
+  if (settlement === WEB_READ_FAILED) {
+    return {
+      label: 'Candidate pages could not be read',
+      detail: 'The Kernel could not read any candidate page, so no page became Evidence and no Find was forged.',
       tone: 'idle',
     };
   }

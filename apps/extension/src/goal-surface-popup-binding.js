@@ -1,5 +1,5 @@
 import { applyLivingForgeActivity } from './forge-activity.js';
-import { presentGoalSurfaces } from './goal-surface-presentation.js';
+import { presentGoalSurfaces, goalSurfaceSettlement } from './goal-surface-presentation.js';
 import { listGoalSurfaces } from './goal-surface-transport.js';
 import { DEFAULT_KERNEL_BASE_URL } from './local-transport.js';
 
@@ -34,12 +34,15 @@ export async function syncGoalSurfacePopup(options = {}) {
  * green Completado — mission-card uses research_completed; Living Forge names
  * Research ended without Evidence (not forge-is-ready Forja lista).
  */
-function chromeStatusForGoalSurfaceWork(workState, findCount) {
+function chromeStatusForGoalSurfaceWork(workState, findCount, mission) {
   if (workState === 'forged') {
     const found = Number.isSafeInteger(findCount) ? findCount : undefined;
     return found !== undefined && found > 0 ? 'completed' : 'research_completed';
   }
   if (workState === 'completed') return 'research_completed';
+  // Fail-close Shared Goal Truth chrome: Kernel settlement without SUPPORT must not keep
+  // data-status=failed (red Completado-lookalike attention) while copy says Read without SUPPORT.
+  if (workState === 'failed' && goalSurfaceSettlement(mission)) return 'research_completed';
   return workState ?? 'idle';
 }
 
@@ -48,7 +51,7 @@ export function applyGoalTruthPresentation(doc, presentation) {
   const activity = presentation?.forgeActivity ?? {
     label: 'The forge is ready', detail: 'Create a Goal or analyze a public page.', tone: 'idle',
   };
-  const status = chromeStatusForGoalSurfaceWork(focused?.workState, focused?.findCount);
+  const status = chromeStatusForGoalSurfaceWork(focused?.workState, focused?.findCount, focused);
   const text = focused?.workLabel ?? 'No research mission yet';
   setText(doc.querySelector?.('#mission-state'), text);
   setDataset(doc.querySelector?.('#mission-state'), 'status', status);
