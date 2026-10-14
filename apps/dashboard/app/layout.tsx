@@ -12,6 +12,7 @@ import './efesto-v3.css';
 import './efesto-legibility.css';
 import './efesto-agent-connector.css';
 import './efesto-premium-chrome.css';
+import './efesto-home-v2.css';
 
 const geist = localFont({ src: './fonts/Geist-Variable.ttf', variable: '--font-geist', weight: '100 900', display: 'swap' });
 const geistMono = localFont({ src: './fonts/GeistMono-Variable.ttf', variable: '--font-geist-mono', weight: '100 900', display: 'swap' });

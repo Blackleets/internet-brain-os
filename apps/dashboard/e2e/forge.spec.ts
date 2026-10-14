@@ -71,6 +71,7 @@ for (const width of [390, 1280]) {
 
 async function connect(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Conectar Kernel' }).first().click();
+  await page.locator('details.connection-advanced > summary').click();
   await page.getByRole('textbox', { name: 'URL del Kernel', exact: true }).fill('http://127.0.0.1:4100');
   await page.getByLabel('Token privado', { exact: true }).fill(token);
   await page.getByRole('button', { name: 'Autorizar dispositivo', exact: true }).click();

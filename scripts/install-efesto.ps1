@@ -1,7 +1,11 @@
-param(
+﻿param(
   [switch]$SkipNodeInstall,
   [switch]$SkipShortcut,
-  [switch]$EnableAutoStart
+  [switch]$EnableAutoStart,
+  # Windows one-click installer (EfestoSetup.exe): the browser extension is optional and the
+  # local dashboard starts the Kernel itself, so neither is part of the default flow.
+  [switch]$SkipExtension,
+  [switch]$SkipLauncherRepair
 )
 
 $ErrorActionPreference = 'Stop'
@@ -154,14 +158,20 @@ try {
   Write-Step 'Verifying that the trusted Kernel runtime can be imported...'
   Invoke-Pnpm @('exec', 'node', 'scripts/trusted-kernel-runtime-doctor.mjs') 'Trusted Kernel runtime verification failed'
 
-  Write-Step 'Building the browser extension bundle...'
-  Invoke-Pnpm @('build:extension') 'Extension build failed'
+  if ($SkipExtension) {
+    Write-Step 'Optional browser extension not built (the local dashboard does not need it).'
+  } else {
+    Write-Step 'Building the browser extension bundle...'
+    Invoke-Pnpm @('build:extension') 'Extension build failed'
+  }
 
   Write-Step 'Verifying the Hermes safe-search runtime...'
   Ensure-HermesSafeSearchRuntime
 
-  Write-Step 'Running Efesto launcher repair/start...'
-  Invoke-Pnpm @('efesto:launcher', 'repair') 'Efesto launcher repair failed'
+  if (-not $SkipLauncherRepair) {
+    Write-Step 'Running Efesto launcher repair/start...'
+    Invoke-Pnpm @('efesto:launcher', 'repair') 'Efesto launcher repair failed'
+  }
 
   Install-DesktopShortcut
   if ($EnableAutoStart) {
@@ -171,7 +181,7 @@ try {
 
   Write-Host ''
   Write-Host 'Efesto is installed and ready.' -ForegroundColor Green
-  Write-Host 'Open the extension, pair it if requested, and press the central Efesto orb.'
+  if ($SkipExtension) { Write-Host 'Open Efesto from its desktop shortcut.' } else { Write-Host 'Open the extension, pair it if requested, and press the central Efesto orb.' }
   exit 0
 } catch {
   Write-Host ''

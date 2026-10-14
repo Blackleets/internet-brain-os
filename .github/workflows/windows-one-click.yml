@@ -1,0 +1,51 @@
+name: Windows One-Click Install
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/windows/**'
+      - 'scripts/live-box/queue-worker.mjs'
+      - 'Instalar Efesto.cmd'
+      - 'Iniciar Efesto.cmd'
+      - 'Detener Efesto.cmd'
+      - '.github/workflows/windows-one-click.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  one-click-dry-run:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Parse PowerShell scripts (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          $failed = $false
+          foreach ($f in @('scripts/windows/install-efesto-windows.ps1', 'scripts/install-efesto.ps1')) {
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $f), [ref]$null, [ref]$errors)
+            if ($errors.Count) { $failed = $true; $errors | ForEach-Object { Write-Host "${f}: $($_.Message)" } }
+          }
+          if ($failed) { exit 1 }
+      - name: Installer dry run (Windows PowerShell 5.1, changes nothing)
+        shell: powershell
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/windows/install-efesto-windows.ps1 -DryRun -NoStart -SkipShortcuts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Stack plan, config and status on Windows paths
+        shell: pwsh
+        run: |
+          node scripts/windows/efesto-windows-stack.mjs plan
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          node scripts/windows/efesto-windows-stack.mjs write-config
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          if (-not (Test-Path (Join-Path $env:LOCALAPPDATA 'Efesto\hermes-worker.env'))) { throw 'worker env not written' }
+          node scripts/windows/efesto-windows-stack.mjs status
+          Write-Host "status exit $LASTEXITCODE (1 expected: nothing is running on the runner)"
+          exit 0

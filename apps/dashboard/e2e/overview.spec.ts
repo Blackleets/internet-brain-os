@@ -22,6 +22,7 @@ test.afterEach(async ({ page }) => { expect(browserProblems.get(page) ?? []).toE
 async function connect(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Conectar Kernel' }).first().click();
   await expect(page.getByRole('heading', { name: 'Ajustes', exact: true })).toBeVisible();
+  await page.locator('details.connection-advanced > summary').click();
   await page.getByRole('textbox', { name: 'URL del Kernel', exact: true }).fill('http://127.0.0.1:4100');
   await page.getByLabel('Token privado', { exact: true }).fill(token);
   await page.getByRole('button', { name: 'Autorizar dispositivo', exact: true }).click();
@@ -117,7 +118,9 @@ test('disconnect removes the session credential and returns truthful offline sta
   await page.getByRole('dialog', { name: 'Kernel y agentes' }).getByRole('button', { name: /Gestionar Kernel/ }).click();
   await page.getByRole('button', { name: 'Desconectar', exact: true }).click();
   // Back in Settings after disconnect: the connection card flips to its
-  // offline form (URL/token inputs visible again).
+  // offline form: one auto-connect button, manual URL/token behind Avanzado.
+  await expect(page.getByRole('button', { name: 'Conectar automáticamente' })).toBeVisible();
+  await page.locator('details.connection-advanced > summary').click();
   await expect(page.getByRole('textbox', { name: 'URL del Kernel' })).toBeVisible();
   // The scorecard's truthful unavailable copy appears once no snapshot exists.
   await page.locator('.efesto-sidebar nav').getByRole('button', { name: /^Objetivos/ }).click();

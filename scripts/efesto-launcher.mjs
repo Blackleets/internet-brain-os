@@ -49,7 +49,9 @@ async function main(argv = process.argv.slice(2)) {
     if (result.reason === 'stop_failed') console.error('Repair blocked: the owned Kernel could not be stopped. Its launcher record was retained.');
     if (result.reason === 'stop_not_confirmed') console.error('Repair blocked: the Kernel is still responding after the shutdown wait. No replacement process was started.');
     if (result.status.overall === 'ready') {
-      console.log('Ready for daily use: open the extension and press the central Efesto orb.');
+      console.log(process.env.EFESTO_PAIRING_OPTIONAL === '1'
+        ? 'Ready for daily use: open the Efesto dashboard.'
+        : 'Ready for daily use: open the extension and press the central Efesto orb.');
     } else if (result.status.hermes === 'invalid') {
       console.log('Hermes is installed but its bounded search-only runtime is not certified. Update Hermes, then run Repair again.');
     } else if (result.status.hermes === 'missing') {

@@ -5,3 +5,5 @@
 *.zip binary
 *.cmd text eol=crlf
 BUILD_COMMIT.txt export-subst
+*.vbs text eol=crlf
+*.iss text eol=crlf

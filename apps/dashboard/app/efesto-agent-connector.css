@@ -108,3 +108,33 @@
   .agent-code pre { padding: 2px 8px 8px; overflow-x: visible; white-space: pre-wrap; word-break: break-all; font-size: 11.5px; line-height: 1.55; }
   .agent-code pre code { overflow-wrap: anywhere; }
 }
+
+/* ---------- simple agent cards: one Connect button per agent; details behind "Avanzado" ---------- */
+.agent-logo { display: grid; place-items: center; flex: none; width: 40px; height: 40px; overflow: hidden; border-radius: 10px; background: #fff; color: #1a120c; font: 700 14px/1 var(--v3-sans); }
+.agent-logo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.agent-status-mark .agent-logo { width: 32px; height: 32px; border-radius: 8px; }
+.agent-cards { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
+.agent-card { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--v3-r2); background: rgba(255, 205, 165, .025); box-shadow: inset 0 0 0 1px var(--v3-line); }
+.agent-card[data-ready='true'] { box-shadow: inset 0 0 0 1px rgba(143, 209, 158, .35); }
+.agent-card-text { min-width: 0; }
+.agent-card-text strong { display: block; font-size: 14.5px; font-weight: 650; }
+.agent-card-text small { display: block; margin-top: 2px; color: var(--v3-muted); font: 500 11.5px/1.3 var(--v3-mono); }
+.agent-card-text p { margin: 6px 0 0; color: var(--v3-text2); font-size: 12.5px; line-height: 18px; }
+.agent-connect { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 0; border-radius: var(--v3-r2); background: linear-gradient(#2a1a10, #1e130c); box-shadow: inset 0 0 0 1px rgba(238, 135, 72, .5); color: #ffe6d2; font: 600 13.5px/1 var(--v3-sans); cursor: pointer; white-space: nowrap; }
+.agent-connect svg { width: 15px; height: 15px; }
+.agent-connect .is-spinning { animation: agent-spin 1s linear infinite; }
+.agent-connect:disabled { opacity: .6; cursor: progress; }
+.agent-card > .agent-test-result, .agent-card-howto { grid-column: 1 / -1; margin: 0; }
+.agent-card-howto p { margin: 0 0 8px; color: var(--v3-muted); font-size: 12.5px; line-height: 19px; }
+.agent-advanced-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 12px; padding: 0 6px; border: 0; background: transparent; color: var(--v3-muted); font: 600 13px/1 var(--v3-sans); cursor: pointer; }
+.agent-advanced-toggle svg { width: 15px; height: 15px; transition: transform .15s; }
+.agent-advanced-toggle[aria-expanded='true'] svg { transform: rotate(90deg); }
+.agent-advanced .agent-other { margin: 12px 0 0; color: var(--v3-muted); font-size: 12.5px; line-height: 19px; }
+@media (max-width: 520px) { .agent-card { grid-template-columns: auto 1fr; } .agent-connect { grid-column: 1 / -1; width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .agent-connect .is-spinning { animation: none; } .agent-advanced-toggle svg { transition: none; } }
+
+/* Ajustes: manual Kernel fields live behind "Avanzado" (auto-connect is the default). */
+.connection-advanced { margin-top: 14px; padding: 10px 12px; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(255, 205, 165, .1); }
+.connection-advanced > summary { min-height: 32px; display: flex; align-items: center; cursor: pointer; font-weight: 600; font-size: 13.5px; }
+.connection-advanced[open] > summary { margin-bottom: 8px; }
+.connection-advanced > label, .connection-advanced > button, .connection-advanced > .connection-actions { margin-top: 10px; }

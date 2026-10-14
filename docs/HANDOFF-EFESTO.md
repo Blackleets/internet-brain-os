@@ -34,7 +34,7 @@
 
 **Roadmap to 100%**
 1. Phase 1, search/selection speed and robustness: **done** (#268, #270).
-2. Phase 2, Windows installer: #271, waiting for a real-PC test.
+2. Phase 2, Windows installer: #271 (§10), waiting for a real-PC test.
 3. Phase 3, polish: **done** (#273, #274).
 4. Phase 4: full test on Lewis's Windows PC, with video.
 5. Phase 5: launch only with Lewis's approval. `publicLaunchApproved` stays **false**.
@@ -231,3 +231,69 @@ Report: `/workspace/ref/forge-v3-polish/queue-report.json`.
 - **Local-model selection (#268, on `main`):** set `HEPHAESTUS_SELECTION_BACKEND=ollama-structured` in the worker env to have the adapter pick candidates through Ollama `/api/chat`. It runs with `think:false` and `num_ctx 8192`, and its `format` is a JSON schema whose `url` is an enum of the listed search hits, so the model cannot invent a URL. The default stays `hermes`. Attempts now default to 4 min (`HEPHAESTUS_HERMES_ONESHOT_TIMEOUT_MS`); the live-box example uses 240000 / 300000. Uppercase Goal acronyms (IA, AI) are kept in queries, and ad redirects are dropped. With qwen3.5:2b, the first attempt yields 5–6 real candidates in about 50–150 s.
 - **Box DNS limitation:** the box now resolves every public host to `198.18.0.1` (egress tunnel, benchmark range 198.18.0.0/15). The Kernel correctly refuses it as a private network, so on the box every candidate ends "Sin lectura · red privada" and no Finds are forged. Do not weaken the guard in the repo. On 2026-10-13 Lewis approved a one-off, uncommitted, env-gated box exception: it forged 7 Finds and was removed right after. Real Finds need a machine with real DNS, such as Lewis's PC.
 - **Box toolchain:** see §0 "Box/dev notes" for the current, verified paths. Note: `setsid nohup … & echo $!` records the wrapper pid, so read the real pids from `ss -ltnp`.
+
+## 10. Windows one-click install (Phase 2, PR #271 draft — not on `main` until merged)
+
+For Lewis's PC (Windows, `C:\Users\Usuario`). Everything a user touches is in Spanish.
+
+- **`Instalar Efesto.cmd`** runs `scripts/windows/install-efesto-windows.ps1`. It is safe to re-run.
+  1. Checks Git, Node 22+, Python and Ollama, and installs any that are missing with winget. Hermes needs **Python 3.14 exactly**: `ae3f9f9c` declares `requires-python >=3.11,<3.15`, but every core dependency is gated `; python_version >= '3.14'`, so on 3.13 the venv lacks `ruamel.yaml`/`python-dotenv` and `hermes.exe` crashes (seen on Lewis's PC). The installer finds 3.14 via `py -3.14`, PATH or `Python314` folders, otherwise runs `winget install Python.Python.3.14 --scope user`; other Pythons are left alone. Hermes: the user's `%LOCALAPPDATA%\hermes\hermes-agent` is used only if it is at `ae3f9f9c` and `hermes chat --help` passes; otherwise Efesto installs its own pinned copy in `%LOCALAPPDATA%\Efesto\hermes-agent` (`pip install -e .[ddgs]` in a 3.14 venv; a venv on another Python or with a failing `chat --help` is recreated) and smoke-checks the safe-search flags (`--query --quiet --max-turns --toolsets --ignore-rules`), failing with a Spanish message. The chosen exe is exported as `HEPHAESTUS_HERMES_EXECUTABLE`/`EFESTO_HERMES_ROOT` and persisted as `hermesExecutable` (+ port 4310) in `kernel-data\efesto-launcher-config.json`; launcher repair restarts an owned Kernel whose start-time Hermes certification is stale and never touches a foreign one. The `.ps1` files are UTF-8 with BOM so Windows PowerShell 5.1 shows Spanish accents correctly.
+  2. Installs Hermes Agent, pinned to `ae3f9f9c`, with `[ddgs]`, into `%LOCALAPPDATA%\hermes\hermes-agent\venv`. That is the path the launcher already detects.
+  3. Runs `ollama pull qwen3.5:2b`.
+  4. Runs the existing `scripts/install-efesto.ps1` with `HEPHAESTUS_PORT=4310` and the data dir in `%LOCALAPPDATA%\Efesto\kernel-data`.
+  5. Runs `pnpm dashboard:build` and writes `%LOCALAPPDATA%\Efesto\hermes-worker.env`, the Windows equivalent of `hermes-worker-env.example`.
+  6. Creates the desktop shortcuts **Iniciar Efesto** and **Detener Efesto**, then starts everything.
+  - `-DryRun` prints every step and changes nothing.
+- **`Iniciar Efesto.cmd`** runs `node scripts/windows/efesto-windows-stack.mjs start`, in this order: config → Ollama and model → Kernel :4310 (through `efesto-launcher.mjs repair`) → dashboard :3311 (`next start`) → Hermes worker.
+  - Anything already healthy is reused. The worker is supervised and restarts after 15 s.
+  - It then copies the Kernel token to the clipboard with `clip.exe` (the token is never printed) and opens `http://127.0.0.1:3311`, so the user can paste it into Conectar Kernel.
+  - If prerequisites are missing, it falls back to the installer.
+- **`Detener Efesto.cmd`** stops the worker and the dashboard (pids in `%LOCALAPPDATA%\Efesto\stack-processes.json`) and asks the launcher to shut down the Kernel. Ollama is left running.
+- Logs are in `%LOCALAPPDATA%\Efesto\logs\`.
+- Worker pause file: `%LOCALAPPDATA%\Efesto\hermes-worker.pause`.
+- `queue-worker.mjs` now reads `EFESTO_REPO_ROOT`, `EFESTO_KERNEL_URL`, `EFESTO_KERNEL_TOKEN_FILE`, `EFESTO_WORKER_PAUSE_FILE` and `EFESTO_WORKER_RUNS_FILE`. The box defaults are unchanged.
+### 10.1 EfestoSetup.exe — one download, double-click, done (2026-10-14)
+
+Goal from Lewis: install like the ChatGPT/Grok desktop apps. No browser extension in the default flow, no consoles, no pairing codes.
+
+- **Installer:** `installer/windows/efesto.iss` (Inno Setup 6). It is built by `.github/workflows/windows-installer.yml` on `windows-latest` and uploaded as the **`EfestoSetup`** artifact of that workflow run.
+  - Per-user install, no admin (`PrivilegesRequired=lowest`). The program goes to `%LOCALAPPDATA%\Efesto\app`; data stays in `%LOCALAPPDATA%\Efesto` (kernel-data, hermes-agent, node, logs).
+  - It copies the tracked sources (`git archive`) and runs `scripts/windows/install-efesto-windows.ps1 -SkipShortcuts -NoStart -ProgressFile … -LogFile …` in a hidden window.
+  - The wizard shows a Spanish progress page ("Paso N de 9"). The full log goes to `%LOCALAPPDATA%\Efesto\logs\instalacion.log`.
+  - If something fails, the user gets a Spanish message with the log path. Re-running the setup is safe.
+- **Prerequisites, all per user:**
+  - Node 22 is a portable `v22.23.3` zip in `%LOCALAPPDATA%\Efesto\node`, checked against the official SHA-256. The MSI from `OpenJS.NodeJS.LTS` is no longer used.
+  - Python 3.14 via `winget --scope user`.
+  - Git and Ollama via winget `--scope user`. If no user-scope installer exists, it falls back to the standard winget installer, which may ask for UAC.
+  - Hermes pinned to `ae3f9f9c` and `qwen3.5:2b`, as before.
+  - Kernel and dashboard as a production build (`next build` / `next start -H 127.0.0.1`).
+- **Shortcuts:** "Efesto" on the desktop and in the Start menu, plus "Detener Efesto" and "Desinstalar Efesto" in the Start menu.
+  - They run `wscript scripts/windows/efesto-launch.vbs open|stop` (window style 0, so no console). That calls `efesto-windows-stack.mjs open`: it starts Ollama → Kernel → dashboard → worker hidden, then opens `http://127.0.0.1:3311/` (the spider home) with `rundll32 url.dll,FileProtocolHandler`.
+  - Errors show a Spanish MsgBox. The log is in `logs\launcher.log`.
+- **No extension, no pairing:** the dashboard has a same-origin loopback bridge, `app/efesto-local/{status,kernel/[...path]}` → `lib/server/local-kernel-proxy.ts`.
+  - It is enabled only when the stack starts `next start` with `EFESTO_LOCAL_KERNEL_TOKEN_FILE`, so it is off on Vercel.
+  - The server reads the token file the Kernel writes and adds `x-hephaestus-token`. The token never reaches the browser, URLs, logs or responses.
+  - Requests are refused unless all of these hold: a loopback `Host` (anti DNS-rebinding), `Origin` equal to its own origin, `Sec-Fetch-Site` same-origin, the `x-efesto-local: 1` header (which forces a CORS preflight, so other sites cannot call it), and a path of only `/health|/status|/bootstrap/status|/api/*`. The Kernel URL must be loopback.
+  - The browser side (`lib/session/local-kernel.ts`, sentinel `efesto-local-transport-v1`, never stored in sessionStorage) auto-connects on load before trying the optional extension.
+  - The Kernel starts with `HEPHAESTUS_PAIRING=0` and `EFESTO_PAIRING_OPTIONAL=1`. Launcher repair then reuses an unpaired Kernel instead of restarting it to show a pairing code.
+- **The extension is optional:** `install-efesto.ps1 -SkipExtension -SkipLauncherRepair` is used by the one-click flow. `Iniciar Efesto.cmd` no longer copies the token. `copy-token` stays only for manual or extension pairing.
+- **Uninstall:** "Efesto" appears in Apps & features (HKCU). The uninstaller stops Efesto, removes `%LOCALAPPDATA%\Efesto\app` and the shortcuts, and asks (default No) whether to also delete the data in `%LOCALAPPDATA%\Efesto`.
+- **Agentes screen (Agent Hub / Conexiones), simplified at Lewis's request:**
+  - One card per agent: Hermes Agent, Claude and Cursor. Each card has its real logo, bundled in `public/brand/agents/` (source and date in `provenance.json`; never hotlinked; initials if a logo fails to load) and a single **Conectar** button.
+  - Hermes: Conectar connects the Kernel if needed, otherwise re-checks the contact the Kernel recorded. It never fakes a connection.
+  - Claude and Cursor: Conectar shows a short Spanish how-to with a read-only MCP config (no token).
+  - The worker commands (shell picker, doctor, loop) and the agent contract are behind **Avanzado**.
+- **Ajustes → Conectar Kernel:** the default action is one **Conectar automáticamente** button, which uses the local bridge. The URL (default now `http://127.0.0.1:4310`, the installer's Kernel), token, pairing code and extension button are behind **Avanzado**. Once connected, the card shows just **Conectado**. The Extensión readiness row reads "opcional". Auto-connect works only when the dashboard was started by the stack (`EFESTO_LOCAL_KERNEL_TOKEN_FILE`), not with a plain `pnpm dashboard:dev` on :3000.
+- **Pending and limits:**
+  - **No code signing yet**, so SmartScreen shows "Windows protegió su PC" (Más información → Ejecutar de todas formas).
+  - CI only smoke-tests a silent `/DRYRUN=1` install and uninstall. The real downloads (winget, Hermes pip, the 2-3 GB model, `pnpm install`/`next build`) have not been exercised on a real PC.
+  - The installer needs internet and winget (App Installer). x64 only.
+  - `publicLaunchApproved` stays false.
+
+- **Not yet verified on a real Windows PC.** CI (`windows-one-click.yml`) only parses the scripts and runs the dry run and config generation on windows-2022. No winget installs, Hermes pip install, model pull or real start have been exercised.
+
+### 10.2 Home v2 (aprobada por Lewis, 2026-10-14)
+- `apps/dashboard/app/efesto-home-v2.css`: home negro profundo, araña con glow (solo estilo del canvas; comportamiento de araña y yunque sin cambios), caja Goal más baja, wordmark EFESTO forjado en CSS puro (F ardiente + chispas, respeta `prefers-reduced-motion`), franja inferior sin borde.
+- Sidebar agrupado: Crear / Espacio de trabajo / Sistema, estado del Kernel abajo.
+- Móvil: halo oscuro tras el texto para que la araña no tape la lectura.
+- Tests: `components/home-v2.test.tsx`; legibilidad e2e (contraste AA) pasa.

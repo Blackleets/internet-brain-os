@@ -18,6 +18,7 @@ import { keywordsFromGoal } from '../lib/kernel/goal-keywords';
 import { focusGoalSurface } from '../lib/forge/forge-focus';
 import { discoverExtensionConnection, revokeExtensionConnection, EXTENSION_TRANSPORT } from '../lib/session/extension-bridge';
 import { connectionStore } from '../lib/session/connection-store';
+import { discoverLocalKernelConnection, LOCAL_TRANSPORT } from '../lib/session/local-kernel';
 import { startVisiblePoller } from '../lib/ui/visible-poller';
 import { subscribeToKernelEvents } from '../lib/kernel/events';
 import { refreshOnKernelEvents } from '../lib/kernel/live-refresh';
@@ -166,6 +167,13 @@ export default function EfestoProductShell() {
     const restore = async () => {
       if (controller.signal.aborted || automaticPaused.current || connectionStore.get()) return;
       try {
+        // Installed mode first: same-origin bridge to the local Kernel, no extension or pairing.
+        const local = await discoverLocalKernelConnection(controller.signal);
+        if (!controller.signal.aborted && !automaticPaused.current && !connectionStore.get()) {
+          if (await connectWith(local, false)) return;
+        }
+      } catch { /* Not the installed dashboard; try the optional extension below. */ }
+      try {
         const candidate = await discoverExtensionConnection(controller.signal);
         if (!controller.signal.aborted && !automaticPaused.current && !connectionStore.get()) {
           if (await connectWith(candidate, false)) return;
@@ -176,7 +184,7 @@ export default function EfestoProductShell() {
     try {
       const saved = window.sessionStorage.getItem(SESSION_CONNECTION_KEY);
       const parsed = saved ? JSON.parse(saved) as Partial<Connection> : undefined;
-      if (parsed && typeof parsed.baseUrl === 'string' && typeof parsed.token === 'string' && parsed.token !== EXTENSION_TRANSPORT) {
+      if (parsed && typeof parsed.baseUrl === 'string' && typeof parsed.token === 'string' && parsed.token !== EXTENSION_TRANSPORT && parsed.token !== LOCAL_TRANSPORT) {
         setRememberSession(true);
         void connectWith({ baseUrl: parsed.baseUrl, token: parsed.token }, true);
       } else void restore();
@@ -394,7 +402,7 @@ export default function EfestoProductShell() {
       setProviders(nextProviders);
       setGoalSurfaces(nextGoalSurfaces);
       connectionStore.set(verified);
-      if (remember && verified.token !== EXTENSION_TRANSPORT) window.sessionStorage.setItem(SESSION_CONNECTION_KEY, JSON.stringify(verified));
+      if (remember && verified.token !== EXTENSION_TRANSPORT && verified.token !== LOCAL_TRANSPORT) window.sessionStorage.setItem(SESSION_CONNECTION_KEY, JSON.stringify(verified));
       else window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
       setToast('Kernel conectado. La interfaz muestra estado persistido real.');
       return true;
@@ -405,6 +413,18 @@ export default function EfestoProductShell() {
       setToast(connectionMessage(error));
       return false;
     } finally { if (attempt === connectionAttempt.current) setConnecting(false); }
+  }
+
+  async function connectLocal() {
+    automaticPaused.current = true;
+    const attempt = ++connectionAttempt.current;
+    setConnecting(true);
+    try {
+      const candidate = await discoverLocalKernelConnection();
+      if (attempt === connectionAttempt.current) await connectWith(candidate, false);
+    }
+    catch { setToast('No se encontró el Kernel local. Abre Efesto desde su icono del escritorio y vuelve a intentarlo.'); }
+    finally { setConnecting(false); }
   }
 
   async function connectExtension() {
@@ -654,6 +674,7 @@ export default function EfestoProductShell() {
       </div>
 
       <div className="sidebar-actions" aria-label="Crear">
+        <span className="nav-label">Crear</span>
         <button type="button" className="new-goal" onClick={newGoal} title="Nuevo Goal">
           <Plus /><span>Nuevo Goal</span>
         </button>
@@ -691,6 +712,7 @@ export default function EfestoProductShell() {
 
       <div className="sidebar-spacer" />
       <nav className="sidebar-system sidebar-menu-card" aria-label="Sistema">
+        <span className="nav-label">Sistema</span>
         {[...systemNav, settingsNav].map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} title={label}>
           <Icon /><span>{label}</span><ChevronRight className="menu-chevron" aria-hidden="true" />
         </button>)}
@@ -714,7 +736,7 @@ export default function EfestoProductShell() {
         {view === 'activity' ? <ActivityView snapshot={snapshot} connected={Boolean(connection)} /> : null}
         {view === 'models' ? <ModelsView providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} modelForge={snapshot?.readiness.modelForge} connected={Boolean(connection)} onSelect={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); setChatMode(true); navigate('home'); }} onAdd={addProvider} /> : null}
         {view === 'agents' ? <AgentsView snapshot={snapshot} connected={Boolean(connection)} kernelUrl={connection?.baseUrl} onTestAgents={testAgents} onSettings={() => navigate('settings')} onNewGoal={newGoal} /> : null}
-        {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} kernelBaseUrl={connection?.baseUrl} onConnect={connect} onExtensionConnect={() => void connectExtension()} onDisconnect={disconnect} onRefresh={() => void refresh()} /> : null}
+        {view === 'settings' ? <SettingsView connected={Boolean(connection)} connecting={connecting} rememberSession={rememberSession} snapshot={snapshot} kernelBaseUrl={connection?.baseUrl} onConnect={connect} onLocalConnect={() => void connectLocal()} onExtensionConnect={() => void connectExtension()} onDisconnect={disconnect} onRefresh={() => void refresh()} /> : null}
       </main>
 
       {connectionsOpen && connection ? <ConnectionsSheet missions={snapshot?.missions} kernelOnline={snapshot?.readiness.kernel === 'online'} connected kernelUrl={connection.baseUrl} agents={snapshot?.agents} onTest={testAgents} onConnectKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onManageKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onClose={() => setConnectionsOpen(false)} /> : null}

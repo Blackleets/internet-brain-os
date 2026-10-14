@@ -43,6 +43,23 @@ describe('Efesto Windows launcher core', () => {
     expect(calls).toContainEqual(['startKernel', { showPairing: true }]);
   });
 
+  it('installed dashboard mode: an unpaired ready Kernel is reused, never restarted for a pairing code', async () => {
+    const { calls, ops } = harness({ status: pairingRequired });
+    const result = await repairEfestoLauncher({ ops, pairingOptional: true });
+    expect(result.started).toBe(false);
+    expect(calls.map((call) => call[0])).not.toContain('stopOwnedProcess');
+    expect(calls.map((call) => call[0])).not.toContain('startKernel');
+  });
+
+  it('installed dashboard mode: first start is hidden (no visible pairing output)', async () => {
+    const { calls, ops } = harness({
+      status: { kernel: 'offline', hermes: 'ready', obsidian: 'ready', pairing: 'required', overall: 'needs_setup', diagnostics: { kernel: {} } },
+      afterStartStatus: pairingRequired,
+    });
+    await repairEfestoLauncher({ ops, env: { EFESTO_PAIRING_OPTIONAL: '1' } });
+    expect(calls).toContainEqual(['startKernel', { showPairing: false }]);
+  });
+
   it('does not duplicate processes when the Kernel is already paired and ready', async () => {
     const { calls, ops } = harness({ status: ready });
     const result = await repairEfestoLauncher({ ops });
@@ -50,18 +67,52 @@ describe('Efesto Windows launcher core', () => {
     expect(calls.map((call) => call[0])).not.toContain('startKernel');
   });
 
-  it('does not duplicate a healthy paired Kernel when Hermes needs attention', async () => {
+  it('leaves a foreign (not launcher-owned) Kernel untouched when Hermes needs attention', async () => {
     const invalidHermes = {
+      ...ready,
+      hermes: 'invalid',
+      overall: 'needs_setup',
+      diagnostics: { kernel: { pid: 10784, owned: false, verified: false, reason: 'pid_file_missing', port: 4310 }, hermes: { reason: 'runtime_read_only_unverified' } },
+    };
+    const { calls, ops } = harness({ status: invalidHermes });
+    const result = await repairEfestoLauncher({ ops });
+    expect(result).toMatchObject({ started: false, reason: 'foreign_kernel_uncertified', status: { kernel: 'ready', hermes: 'invalid' } });
+    expect(calls.map((call) => call[0])).not.toContain('startKernel');
+    expect(calls.map((call) => call[0])).not.toContain('stopOwnedProcess');
+    expect(calls.some((call) => call[0] === 'log' && /Hermes needs attention/.test(call[1]))).toBe(true);
+  });
+
+  it('restarts an owned Kernel whose Hermes certification is stale so it re-certifies', async () => {
+    const stale = {
       ...ready,
       hermes: 'invalid',
       overall: 'needs_setup',
       diagnostics: { ...ready.diagnostics, hermes: { reason: 'runtime_read_only_unverified' } },
     };
-    const { calls, ops } = harness({ status: invalidHermes });
+    const offline = { ...stale, kernel: 'offline', diagnostics: { kernel: {} } };
+    const { calls, ops } = harness({
+      inspect: (n) => (n === 1 ? stale : offline),
+      afterStopStatus: offline,
+      afterStartStatus: ready,
+    });
     const result = await repairEfestoLauncher({ ops });
-    expect(result).toMatchObject({ started: false, status: { kernel: 'ready', hermes: 'invalid' } });
+    const names = calls.map((call) => call[0]);
+    expect(names).toContain('stopOwnedProcess');
+    expect(names.indexOf('stopOwnedProcess')).toBeLessThan(names.indexOf('startKernel'));
+    expect(result).toMatchObject({ started: true, status: { hermes: 'ready' } });
+  });
+
+  it('does not start a second Kernel when the stale owned Kernel does not stop', async () => {
+    const stale = { ...ready, hermes: 'invalid', diagnostics: { ...ready.diagnostics, hermes: { reason: 'runtime_read_only_unverified' } } };
+    const { calls, ops } = harness({ status: stale, afterStopStatus: stale });
+    const result = await repairEfestoLauncher({ ops });
+    expect(result).toMatchObject({ started: false, reason: 'stop_not_confirmed' });
     expect(calls.map((call) => call[0])).not.toContain('startKernel');
-    expect(calls.some((call) => call[0] === 'log' && /Hermes needs attention/.test(call[1]))).toBe(true);
+  });
+
+  it('passes the persisted Hermes executable to the Kernel unless the environment overrides it', () => {
+    expect(buildKernelChildEnv({}, { hermesExecutable: 'C:\\E\\hermes.exe' }).HEPHAESTUS_HERMES_EXECUTABLE).toBe('C:\\E\\hermes.exe');
+    expect(buildKernelChildEnv({ HEPHAESTUS_HERMES_EXECUTABLE: 'X' }, { hermesExecutable: 'Y' }).HEPHAESTUS_HERMES_EXECUTABLE).toBe('X');
   });
 
   it('reads authoritative bootstrap readiness through the running one-click Kernel', async () => {

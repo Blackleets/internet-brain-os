@@ -7,19 +7,33 @@ import { defaultEfestoPaths, inspectEfestoBootstrap, readLauncherConfig } from '
 
 export async function repairEfestoLauncher(options = {}) {
   const ops = launcherOps(options);
+  // Installed Windows mode: the local dashboard reaches the Kernel through its own loopback bridge,
+  // so extension pairing is optional and never triggers a restart or a visible pairing code.
+  const pairingOptional = options.pairingOptional ?? (options.env ?? process.env).EFESTO_PAIRING_OPTIONAL === '1';
   let before = await ops.inspect();
   await ops.ensureDirectories();
 
-  if (before.kernel === 'ready' && before.pairing === 'paired') {
+  if (before.kernel === 'ready' && (before.pairing === 'paired' || pairingOptional)) {
     if (before.hermes !== 'ready') {
-      await ops.writeLog(`Efesto Kernel is healthy, but Hermes needs attention (${before.diagnostics?.hermes?.reason ?? before.hermes}); no duplicate Kernel process started.`);
+      // Hermes certification is computed once, when the Kernel starts. A Kernel that was
+      // started before Hermes was installed/fixed (or by an older clone) keeps reporting
+      // runtime_read_only_unverified forever, so an owned Kernel is restarted to re-certify.
+      const kernel = before.diagnostics?.kernel ?? {};
+      if (!(kernel.pid && kernel.owned === true && kernel.verified === true)) {
+        await ops.writeLog(`Efesto Kernel is healthy, but Hermes needs attention (${before.diagnostics?.hermes?.reason ?? before.hermes}); the running Kernel is not launcher-owned (${kernel.reason ?? 'not_verified'}), so it is left untouched.`);
+        return { started: false, status: before, reason: 'foreign_kernel_uncertified' };
+      }
+      await ops.writeLog('Hermes certification is stale in the running owned Kernel; restarting it to re-certify.');
+      const restarted = await stopOwnedKernel(ops, kernel.pid);
+      if (restarted) return { started: false, status: restarted.status ?? before, reason: restarted.reason };
+      before = await ops.inspect();
+    } else {
+      await ops.writeLog('Efesto already ready; no duplicate Kernel process started.');
       return { started: false, status: before };
     }
-    await ops.writeLog('Efesto already ready; no duplicate Kernel process started.');
-    return { started: false, status: before };
   }
 
-  if (before.kernel === 'ready' && before.pairing === 'required') {
+  if (!pairingOptional && before.kernel === 'ready' && before.pairing === 'required') {
     const kernel = before.diagnostics?.kernel ?? {};
     if (!(kernel.pid && kernel.owned === true && kernel.verified === true)) {
       await ops.writeLog(`Pairing recovery blocked because the existing Kernel process is not safely verified (${kernel.reason ?? 'not_verified'}).`);
@@ -46,7 +60,7 @@ export async function repairEfestoLauncher(options = {}) {
     return { started: false, status: before };
   }
   if (before.kernel === 'stale') await ops.removeStalePidFile(before.diagnostics?.kernel?.pid);
-  const started = await ops.startKernel({ showPairing: before.pairing === 'required' });
+  const started = await ops.startKernel({ showPairing: !pairingOptional && before.pairing === 'required' });
   const status = await ops.waitForReady(started);
   await ops.writeLog(`Repair finished with ${status.overall}.`);
   return { started: true, pid: started?.pid, status };
@@ -125,6 +139,7 @@ export function buildKernelChildEnv(env = process.env, config = {}) {
     ...env,
     HEPHAESTUS_PAIRING: env.HEPHAESTUS_PAIRING ?? '1',
     ...(config.obsidianDir && !env.HEPHAESTUS_OBSIDIAN_DIR ? { HEPHAESTUS_OBSIDIAN_DIR: config.obsidianDir } : {}),
+    ...(config.hermesExecutable && !env.HEPHAESTUS_HERMES_EXECUTABLE?.trim() ? { HEPHAESTUS_HERMES_EXECUTABLE: config.hermesExecutable } : {}),
   };
 }
 
@@ -265,4 +280,22 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       : await repairEfestoLauncher();
   process.stdout.write(`${JSON.stringify(result.status ?? result, null, 2)}\n`);
   if ((result.status?.overall ?? 'ready') === 'failed') process.exitCode = 1;
+}
+
+// Stops an owned, verified Kernel and waits for the port to free. Returns undefined on success
+// or { status, reason } when the stop failed / was not confirmed.
+async function stopOwnedKernel(ops, pid) {
+  const stop = await ops.stopOwnedProcess(pid);
+  if (stop?.stopped === false) {
+    await ops.writeLog('Restart stopped: the owned Kernel stop request failed.');
+    return { reason: 'stop_failed' };
+  }
+  if (ops.waitForStopped) {
+    const afterStop = await ops.waitForStopped();
+    if (afterStop?.kernel === 'ready') {
+      await ops.writeLog('Restart stopped: Kernel shutdown was not confirmed before the deadline.');
+      return { status: afterStop, reason: 'stop_not_confirmed' };
+    }
+  }
+  return undefined;
 }

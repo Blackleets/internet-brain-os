@@ -1,0 +1,79 @@
+name: Windows Installer (EfestoSetup.exe)
+
+# Builds the per-user EfestoSetup.exe (Inno Setup 6) on windows-latest, smoke-tests a silent
+# dry-run install + uninstall (no downloads, no admin) and uploads the .exe as an artifact.
+# Not code-signed yet (SmartScreen will warn): signing is pending.
+on:
+  pull_request:
+    paths:
+      - 'installer/windows/**'
+      - 'scripts/windows/**'
+      - 'scripts/install-efesto.ps1'
+      - 'scripts/efesto-launcher*.mjs'
+      - 'apps/dashboard/**'
+      - '.github/workflows/windows-installer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stage the Efesto sources (tracked files only, no node_modules)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          git archive --format=zip -o build/efesto-src.zip HEAD
+          Expand-Archive build/efesto-src.zip -DestinationPath build/efesto-src -Force
+          git rev-parse HEAD | Out-File -Encoding ascii build/efesto-src/BUILD_COMMIT.txt
+      - name: Ensure Inno Setup 6
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress | Out-Host }
+          if (-not (Test-Path $iscc)) { throw 'ISCC.exe not found' }
+          "ISCC=$iscc" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+      - name: Compile EfestoSetup.exe
+        shell: pwsh
+        run: |
+          $sha = (git rev-parse --short HEAD).Trim()
+          & $env:ISCC "/DAppVersion=0.1.0-$sha" installer/windows/efesto.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-Item build/installer/EfestoSetup.exe | Format-List Name, Length
+      - name: Smoke test - silent dry-run install, shortcuts, uninstall entry, uninstall
+        shell: pwsh
+        run: |
+          $app = Join-Path $env:LOCALAPPDATA 'Efesto\app'
+          $p = Start-Process build/installer/EfestoSetup.exe -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/DRYRUN=1','/LOG=build\setup.log' -Wait -PassThru
+          Get-Content build/setup.log -Tail 40
+          if ($p.ExitCode -ne 0) { throw "setup exit $($p.ExitCode)" }
+          foreach ($f in @('scripts\windows\install-efesto-windows.ps1', 'scripts\windows\efesto-launch.vbs', 'scripts\windows\efesto-windows-stack.mjs', 'apps\dashboard\package.json', 'unins000.exe')) {
+            if (-not (Test-Path (Join-Path $app $f))) { throw "missing $f" }
+          }
+          $progress = Get-Content (Join-Path $env:LOCALAPPDATA 'Efesto\install-progress.txt') -Raw
+          Write-Host "progress: $progress"
+          if (-not $progress.StartsWith('DONE|0')) { throw 'dry-run install did not finish OK' }
+          $desktop = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Efesto.lnk'
+          $start = Join-Path ([Environment]::GetFolderPath('Programs')) 'Efesto\Efesto.lnk'
+          foreach ($l in @($desktop, $start)) { if (-not (Test-Path $l)) { throw "missing shortcut $l" } }
+          $lnk = (New-Object -ComObject WScript.Shell).CreateShortcut($desktop)
+          Write-Host "shortcut: $($lnk.TargetPath) $($lnk.Arguments)"
+          if ($lnk.TargetPath -notmatch 'wscript\.exe$' -or $lnk.Arguments -notmatch 'efesto-launch\.vbs" open') { throw 'shortcut does not open Efesto hidden' }
+          $key = Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -eq 'Efesto' }
+          if (-not $key) { throw 'uninstall entry missing' }
+          $u = Start-Process (Join-Path $app 'unins000.exe') -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait -PassThru
+          if ($u.ExitCode -ne 0) { throw "uninstall exit $($u.ExitCode)" }
+          Start-Sleep -Seconds 5
+          if (Test-Path $desktop) { throw 'desktop shortcut left behind' }
+          if (Test-Path (Join-Path $app 'scripts')) { throw 'program files left behind' }
+          Write-Host 'install + uninstall OK'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EfestoSetup
+          path: build/installer/EfestoSetup.exe
+          if-no-files-found: error
+          retention-days: 30

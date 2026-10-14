@@ -2,7 +2,8 @@ import { spawn } from 'node:child_process';
 import { access, constants, stat } from 'node:fs/promises';
 import { delimiter, isAbsolute, join, resolve } from 'node:path';
 
-const DEFAULT_PROBE_TIMEOUT_MS = 5_000;
+// Windows cold start of a Python venv (first .pyc compile, Defender scan) can exceed 5 s.
+const DEFAULT_PROBE_TIMEOUT_MS = 30_000;
 const MAX_PROBE_OUTPUT_BYTES = 128 * 1024;
 
 export async function detectHermesRuntime(options = {}) {

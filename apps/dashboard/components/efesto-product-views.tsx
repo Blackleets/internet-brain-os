@@ -8,7 +8,7 @@ import {
   Activity, Bot, BrainCircuit, Check, ChevronDown, ChevronRight, CircleOff, Database, ExternalLink, FileSearch,
   History, Lightbulb, Menu, MessageSquare, Pause, Plug, RefreshCw, Search, ArrowUp, Send, Settings, ShieldCheck, Sparkles, Target, Workflow, X,
 } from 'lucide-react';
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import type { CaseSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
 import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportProof, kernelSupportedFinds, missionVerifiedWithoutSupport } from '../lib/kernel/supported-find';
@@ -203,7 +203,8 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
           ? <div className="find-grid">{supportedFinds.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFindFeedback ?? (() => undefined)} onOpenCase={onOpenCase} />)}</div>
           : <p className="truth-card"><ShieldCheck /> Find SUPPORT forjado en la misión; sin tarjetas de inbox que mostrar.</p>}
       </section> : showForge ? null : <section className="forge-empty forge-goal-empty" aria-label="Crear un Goal">
-        <h1 className="forge-wordmark"><EfestoMark size={46} /><b aria-hidden="true">EFESTO</b><span className="forge-sr-only">¿Qué estás buscando?</span></h1>
+        <h1 className="forge-wordmark"><EfestoMark size={46} /><ForgedWordmark /><span className="forge-sr-only">¿Qué estás buscando?</span></h1>
+        <p className="forge-goal-lede">Describe lo que quieres lograr. Efesto investiga, verifica las fuentes y te trae hallazgos con evidencia.</p>
       </section>}
       {showForge ? composer : null}
       </>}
@@ -211,6 +212,20 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
 
     {showForge ? null : composer}
   </section>;
+}
+
+/**
+ * EFESTO forged from red-hot metal: each letter cools from molten to steel once on load; the F stays
+ * lit like an ember with a few sparks. Pure CSS (opacity/transform/filter on 6 letters + 4 dots),
+ * disabled under prefers-reduced-motion (efesto-home-v2.css). Decorative only.
+ */
+export function ForgedWordmark() {
+  return <b className="forge-forged" aria-hidden="true">
+    {'EFESTO'.split('').map((letter, index) => <span key={index} className={index === 1 ? 'fx-l fx-ember' : 'fx-l'} style={{ '--i': index } as CSSProperties}>
+      {letter}
+      {index === 1 ? <span className="fx-sparks">{[0, 1, 2, 3].map((n) => <i key={n} style={{ '--n': n } as CSSProperties} />)}</span> : null}
+    </span>)}
+  </b>;
 }
 
 export type HomeChipView = 'goals' | 'evidence' | 'memory' | 'activity' | 'agents';
@@ -525,10 +540,13 @@ export function AutomationsView({ missions, connected, onNewGoal }: { missions: 
   </Workspace>;
 }
 
-export function SettingsView({ connected, connecting, rememberSession, snapshot, kernelBaseUrl, onConnect, onExtensionConnect, onDisconnect, onRefresh }: { connected: boolean; connecting: boolean; rememberSession: boolean; snapshot?: OverviewSnapshot; kernelBaseUrl?: string; onConnect: (event: FormEvent<HTMLFormElement>) => void; onExtensionConnect?: () => void; onDisconnect: () => void; onRefresh: () => void }) {
+/** The Kernel the Windows installer starts (efesto-windows-stack.mjs KERNEL_PORT). */
+const DEFAULT_KERNEL_URL = 'http://127.0.0.1:4310';
+
+export function SettingsView({ connected, connecting, rememberSession, snapshot, kernelBaseUrl, onConnect, onLocalConnect, onExtensionConnect, onDisconnect, onRefresh }: { connected: boolean; onLocalConnect?: () => void; connecting: boolean; rememberSession: boolean; snapshot?: OverviewSnapshot; kernelBaseUrl?: string; onConnect: (event: FormEvent<HTMLFormElement>) => void; onExtensionConnect?: () => void; onDisconnect: () => void; onRefresh: () => void }) {
   const bootstrap = snapshot?.readiness.bootstrap;
   return <Workspace icon={Settings} eyebrow="Control del propietario" title="Ajustes" copy="Conexión local, readiness y recuperación. Los secretos no se imprimen.">
-    <div className="settings-layout"><form className="connection-card" onSubmit={onConnect}><header><span className={`kernel-dot ${connected ? 'online' : 'offline'}`} /><div><small>DISPOSITIVO ACTUAL</small><strong>{connected ? 'Autorizado' : 'Conectar Kernel'}</strong></div></header>{!connected ? <><button type="button" className="primary-action" onClick={onExtensionConnect} disabled={connecting || !onExtensionConnect}>Conectar con extensión</button><p>Empareja la extensión una vez y activa su reconexión automática. Después bastará con abrir Efesto.</p><label>URL del Kernel<input name="baseUrl" aria-label="URL del Kernel" type="url" defaultValue="http://127.0.0.1:4000" required /></label><label>Token privado<input name="token" aria-label="Token privado" type="password" autoComplete="off" placeholder="Opcional si usas pairing" /></label><label>Código de emparejamiento<input name="pairingCode" aria-label="Código de emparejamiento" inputMode="text" autoComplete="off" placeholder="ABCD-1234" /></label><label className="remember-row"><input name="rememberSession" type="checkbox" defaultChecked={rememberSession} /><span><strong>Recordar durante esta sesión</strong><small>sessionStorage; no persistencia indefinida.</small></span></label><div className="connection-actions"><button type="submit" name="action" value="pair" className="primary-action" disabled={connecting}>{connecting ? 'Emparejando…' : 'Emparejar con código'}</button><button type="submit" name="action" value="token" className="secondary-action" disabled={connecting}>Autorizar dispositivo</button></div></> : <div className="connection-actions"><button type="button" className="primary-action" onClick={onRefresh}><RefreshCw /> Comprobar ahora</button><button type="button" className="danger-action" onClick={onDisconnect}>Desconectar</button></div>}</form><section className="readiness-card"><header><ShieldCheck /><div><small>READINESS REAL</small><strong>{bootstrap?.overall ?? (connected ? 'connected' : 'offline')}</strong></div></header><ReadinessRow label="Kernel" value={snapshot?.readiness.kernel === 'offline' ? 'offline' : bootstrap?.kernel ?? (connected ? 'ready' : 'offline')} ready={connected && snapshot?.readiness.kernel !== 'offline'} />{(() => { const hermes = hermesReadiness(bootstrap?.hermes, snapshot?.agents?.agents.find((agent) => agent.id === 'hermes')); return <ReadinessRow label="Hermes" value={hermes.value} ready={hermes.ready} />; })()}<ReadinessRow label="Obsidian" value={bootstrap?.obsidian ?? 'sin configurar'} ready={bootstrap?.obsidian === 'ready'} /><ReadinessRow label="Extensión" value={bootstrap?.pairing ?? 'sin emparejar'} ready={bootstrap?.pairing === 'paired'} /><a href={replayLabHref(kernelBaseUrl)} target="_blank" rel="noreferrer">Abrir Replay Lab <ExternalLink /></a></section></div>
+    <div className="settings-layout"><form className="connection-card" onSubmit={onConnect}><header><span className={`kernel-dot ${connected ? 'online' : 'offline'}`} /><div><small>DISPOSITIVO ACTUAL</small><strong>{connected ? 'Conectado' : 'Conectar Kernel'}</strong></div></header>{!connected ? <><button type="button" className="primary-action" onClick={onLocalConnect} disabled={connecting || !onLocalConnect}>{connecting ? 'Conectando…' : 'Conectar automáticamente'}</button><p>Efesto se conecta solo a tu Kernel local (en este equipo). No hace falta copiar ningún código.</p><details className="connection-advanced"><summary>Avanzado</summary><p>Solo si tu Kernel está en otro puerto o usas la extensión del navegador (opcional).</p><button type="button" className="secondary-action" onClick={onExtensionConnect} disabled={connecting || !onExtensionConnect}>Conectar con extensión</button><label>URL del Kernel<input name="baseUrl" aria-label="URL del Kernel" type="url" defaultValue={DEFAULT_KERNEL_URL} required /></label><label>Token privado<input name="token" aria-label="Token privado" type="password" autoComplete="off" placeholder="Opcional si usas pairing" /></label><label>Código de emparejamiento<input name="pairingCode" aria-label="Código de emparejamiento" inputMode="text" autoComplete="off" placeholder="ABCD-1234" /></label><label className="remember-row"><input name="rememberSession" type="checkbox" defaultChecked={rememberSession} /><span><strong>Recordar durante esta sesión</strong><small>sessionStorage; no persistencia indefinida.</small></span></label><div className="connection-actions"><button type="submit" name="action" value="pair" className="primary-action" disabled={connecting}>{connecting ? 'Emparejando…' : 'Emparejar con código'}</button><button type="submit" name="action" value="token" className="secondary-action" disabled={connecting}>Autorizar dispositivo</button></div></details></> : <div className="connection-actions"><button type="button" className="primary-action" onClick={onRefresh}><RefreshCw /> Comprobar ahora</button><button type="button" className="danger-action" onClick={onDisconnect}>Desconectar</button></div>}</form><section className="readiness-card"><header><ShieldCheck /><div><small>READINESS REAL</small><strong>{bootstrap?.overall ?? (connected ? 'connected' : 'offline')}</strong></div></header><ReadinessRow label="Kernel" value={snapshot?.readiness.kernel === 'offline' ? 'offline' : bootstrap?.kernel ?? (connected ? 'ready' : 'offline')} ready={connected && snapshot?.readiness.kernel !== 'offline'} />{(() => { const hermes = hermesReadiness(bootstrap?.hermes, snapshot?.agents?.agents.find((agent) => agent.id === 'hermes')); return <ReadinessRow label="Hermes" value={hermes.value} ready={hermes.ready} />; })()}<ReadinessRow label="Obsidian" value={bootstrap?.obsidian ?? 'sin configurar'} ready={bootstrap?.obsidian === 'ready'} /><ReadinessRow label="Extensión (opcional)" value={bootstrap?.pairing ?? 'no usada'} ready={bootstrap?.pairing === 'paired'} /><a href={replayLabHref(kernelBaseUrl)} target="_blank" rel="noreferrer">Abrir Replay Lab <ExternalLink /></a></section></div>
   </Workspace>;
 }
 

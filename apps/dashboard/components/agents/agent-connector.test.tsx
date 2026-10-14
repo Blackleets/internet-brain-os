@@ -23,16 +23,15 @@ describe('workerSetupCommands', () => {
 describe('AgentConnector', () => {
   it('shows the bundled Hermes identity while retaining the Kernel disconnected state', () => {
     const { container } = render(<AgentConnector connected={true} agents={snapshot('never')} onConnectKernel={() => {}} onTest={async () => undefined} now={() => NOW} />);
-    expect(container.querySelector('.agent-status-mark img')?.getAttribute('src')).toBe('/brand/sources/hermes.ico');
+    expect(container.querySelector('.agent-status-mark img')?.getAttribute('src')).toBe('/brand/agents/hermes.png');
     expect(container.querySelector('.agent-status')?.getAttribute('data-tone')).not.toBe('ok');
   });
   it('without a Kernel: asks to connect it first and cannot test', () => {
     const onConnectKernel = vi.fn();
     render(<AgentConnector connected={false} onConnectKernel={onConnectKernel} onTest={async () => undefined} now={() => NOW} />);
     expect(screen.getByRole('heading', { name: 'Conecta primero el Kernel' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Conectar Kernel/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Conectar Hermes Agent' }));
     expect(onConnectKernel).toHaveBeenCalled();
-    expect((screen.getByRole('button', { name: /Probar conexión/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('"Probar conexión" re-reads the Kernel and fails honestly until the Kernel saw the agent', async () => {
@@ -41,9 +40,9 @@ describe('AgentConnector', () => {
       .mockResolvedValueOnce(snapshot('online', { lastSeenAt: '2026-10-04T11:59:55.000Z', lastSeenVia: 'ping' }));
     render(<AgentConnector connected kernelUrl="http://127.0.0.1:4310" agents={snapshot('never')} onConnectKernel={() => undefined} onTest={onTest} now={() => NOW} />);
     expect(screen.getByRole('heading', { name: 'Ningún agente conectado' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Probar conexión/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Conectar Hermes Agent' }));
     await waitFor(() => expect(screen.getByText(/Aún no: el Kernel no ha recibido a Hermes Agent/)).toBeTruthy());
-    fireEvent.click(screen.getByRole('button', { name: /Probar conexión/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Conectar Hermes Agent' }));
     await waitFor(() => expect(screen.getByText('Funciona: el Kernel recibió a Hermes Agent hace 5 s (comprobación del doctor).')).toBeTruthy());
     expect(onTest).toHaveBeenCalledTimes(2);
   });
@@ -51,7 +50,7 @@ describe('AgentConnector', () => {
   it('an older Kernel without /api/agents is reported, not faked', async () => {
     render(<AgentConnector connected kernelUrl="http://127.0.0.1:4000" onConnectKernel={() => undefined} onTest={async () => undefined} now={() => NOW} />);
     expect(screen.getByRole('heading', { name: 'Estado de agentes no disponible' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Probar conexión/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Conectar Hermes Agent' }));
     await waitFor(() => expect(screen.getByText('No se pudo comprobar: este Kernel no publica el estado de agentes.')).toBeTruthy());
   });
 
@@ -59,12 +58,61 @@ describe('AgentConnector', () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     render(<AgentConnector connected kernelUrl="http://127.0.0.1:4310" agents={snapshot('history')} onConnectKernel={() => undefined} onTest={async () => undefined} now={() => NOW} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Avanzado' }));
     expect(screen.getByLabelText('Configuración del worker').textContent).toContain('export HEPHAESTUS_KERNEL_URL="http://127.0.0.1:4310"');
     fireEvent.click(screen.getByRole('radio', { name: 'Windows PowerShell' }));
     expect(screen.getByLabelText('Configuración del worker').textContent).toContain('$env:HEPHAESTUS_KERNEL_URL = "http://127.0.0.1:4310"');
     fireEvent.click(screen.getByRole('button', { name: 'Copiar: Configuración del worker' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(expect.stringContaining('$env:HEPHAESTUS_API_TOKEN = (Get-Content')));
     await waitFor(() => expect(screen.getByText('Copiado')).toBeTruthy());
+  });
+});
+
+describe('AgentConnector simple flow', () => {
+  const props = { connected: true, kernelUrl: 'http://127.0.0.1:4310', onConnectKernel: () => undefined, onTest: async () => undefined, now: () => NOW };
+  it('shows every agent with its bundled local logo (never hotlinked) and one Connect button each', () => {
+    const { container } = render(<AgentConnector {...props} agents={snapshot('never')} />);
+    const logos = [...container.querySelectorAll('.agent-card .agent-logo img')].map((img) => img.getAttribute('src'));
+    expect(logos).toEqual(['/brand/agents/hermes.png', '/brand/agents/claude.png', '/brand/agents/cursor.png']);
+    expect(logos.every((src) => src?.startsWith('/brand/agents/'))).toBe(true);
+    for (const name of ['Hermes Agent', 'Claude', 'Cursor']) expect(screen.getAllByRole('button', { name: `Conectar ${name}` })).toHaveLength(1);
+  });
+  it('the logo files exist in public/ and have recorded provenance', async () => {
+    const { existsSync, readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    // Runs from apps/dashboard (pnpm --filter) or from the repo root (pnpm test).
+    const dir = [join(process.cwd(), 'public/brand/agents'), join(process.cwd(), 'apps/dashboard/public/brand/agents')].find((d) => existsSync(d)) ?? '';
+    const prov = JSON.parse(readFileSync(join(dir, 'provenance.json'), 'utf8'));
+    for (const file of ['hermes.png', 'claude.png', 'cursor.png']) {
+      expect(existsSync(join(dir, file))).toBe(true);
+      expect(prov.assets.some((a: { file: string; source: string }) => a.file === file && a.source.startsWith('https://'))).toBe(true);
+    }
+  });
+  it('falls back to initials when a logo cannot load', () => {
+    const { container } = render(<AgentConnector {...props} agents={snapshot('never')} />);
+    fireEvent.error(container.querySelector('.agent-card .agent-logo img')!);
+    expect(container.querySelector('.agent-card .agent-logo')?.textContent).toBe('H');
+  });
+  it('hides the advanced worker commands until "Avanzado" is opened', () => {
+    render(<AgentConnector {...props} agents={snapshot('never')} />);
+    expect(screen.queryByLabelText('Configuración del worker')).toBeNull();
+    const toggle = screen.getByRole('button', { name: 'Avanzado' });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByLabelText('Configuración del worker')).toBeTruthy();
+  });
+  it('Connect on an MCP agent shows its Spanish how-to with a read-only config and no token', () => {
+    render(<AgentConnector {...props} agents={snapshot('never')} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Conectar Claude' }));
+    const config = screen.getByLabelText('Configuración MCP para Claude').textContent ?? '';
+    expect(config).toContain('mcp-server.mjs');
+    expect(config).not.toMatch(/HEPHAESTUS_API_TOKEN/);
+    expect(screen.getByText(/Claude Desktop/)).toBeTruthy();
+  });
+  it('a ready Hermes shows as connected and the button re-checks', () => {
+    render(<AgentConnector {...props} agents={snapshot('online', { lastSeenAt: '2026-10-04T11:59:55.000Z', lastSeenVia: 'ping' })} />);
+    expect(screen.getByRole('button', { name: 'Comprobar Hermes Agent' }).textContent).toContain('Conectado');
   });
 });
 
