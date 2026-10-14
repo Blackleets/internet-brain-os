@@ -302,3 +302,11 @@ Goal from Lewis: install like the ChatGPT/Grok desktop apps. No browser extensio
 - #271 squash-merged en main como `1c24f6d6758ca28d6d5faabe0114cf16447d1420`; CI verde (incl. l1-l7 sin reintentos).
 - EfestoSetup.exe desde main: workflow `windows-installer.yml` (workflow_dispatch en main, run 38491759352), artefacto `EfestoSetup`. Distribución interna, NO lanzamiento público; `publicLaunchApproved` sigue en `false`.
 - Pendiente: firma de código (SmartScreen avisará hasta firmar el .exe).
+
+### 10.4 Pasada de pulido de primer uso (2026-10-14)
+- #277 (`e7cc033`): copy de primer uso en español; jerga (Replay Lab) detrás de Avanzado; la extensión opcional ya no sale como "required".
+- #278 (`33dd4f9`): un 500 en `/api/goal-surfaces` ya no rompe la auto-conexión con un falso "revisa el token".
+- #275 (`6b2088c`) y #272 (`0f56dea`): fixes de extensión (Auto Radar fail-closed; Living Forge distingue "leída sin SUPPORT").
+- #276: rebasado y verde, pendiente de aprobación visual (cambia estilo).
+- Verificado: Goal end-to-end por auto-conexión con Hermes (falla cerrado y explica por qué si el Kernel no puede leer las páginas); sin Hermes muestra "Hermes no disponible / Esperando a Hermes". Home a 60 fps sin frames largos en 360/390/430/1440; sin overflow horizontal.
+- Pendiente: el chip de Kernel muestra `127.0.0.1:4310` fijo aunque el proxy apunte a otro puerto; la tarjeta de Hermes en Agentes usa icono genérico en el hero y repite Hermes 3 veces (cambio visual, requiere mockup).
