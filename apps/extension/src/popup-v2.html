@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=380">
+  <title>Efesto</title>
+  <link rel="stylesheet" href="popup-v2.css">
+</head>
+<body>
+  <header class="top">
+    <h1 class="wm" aria-label="Efesto"><img src="../icons/efesto-mark.png" alt=""><span aria-hidden="true">E</span><b aria-hidden="true">F</b><span aria-hidden="true">ESTO</span></h1>
+    <span id="status-pill" class="pill wait" role="status"><i aria-hidden="true"></i><span id="status-text" data-i18n="connecting">Connecting…</span></span>
+  </header>
+
+  <section id="first-run" class="card center" hidden aria-live="polite">
+    <div class="spin" aria-hidden="true"></div>
+    <h2 id="first-title" data-i18n="first">Connecting to Efesto on this computer</h2>
+    <p id="first-sub" class="sub" data-i18n="firstSub">No codes to copy.</p>
+    <button id="retry" class="cta" type="button" hidden data-i18n="retry">Try again</button>
+  </section>
+
+  <section id="main" class="card" hidden>
+    <div class="host"><span id="host-mark" class="favicon" aria-hidden="true"></span><span id="host"></span></div>
+    <h2 id="page-title"></h2>
+    <p class="sub" data-i18n="pageHelp"></p>
+    <button id="analyze" class="cta" type="button" data-i18n="analyze">Analyze this page</button>
+    <form id="goal-form" class="goal">
+      <input id="goal" type="text" maxlength="300" autocomplete="off" data-i18n-placeholder="goal" aria-label="Goal">
+      <button id="goal-send" type="submit" data-i18n-aria="sendGoal" aria-label="Save Goal">↑</button>
+    </form>
+    <p id="message" class="message" role="status" hidden></p>
+  </section>
+
+  <footer class="row">
+    <a id="open-dashboard" class="link" href="http://127.0.0.1:3311/" target="_blank" rel="noreferrer"><span data-i18n="open">Open Efesto</span> ↗</a>
+    <label class="lang"><span data-i18n="language">Language</span> <select id="language"></select></label>
+  </footer>
+
+  <details class="adv" id="advanced">
+    <summary data-i18n="advanced">Advanced</summary>
+    <p data-i18n="manual">Pair manually with a code</p>
+    <input id="pairing-code" type="text" inputmode="text" maxlength="12" autocomplete="one-time-code" data-i18n-placeholder="code" data-i18n-aria="code">
+    <button id="pair" class="sec" type="button" data-i18n="pair">Pair</button>
+    <button id="disconnect" class="sec" type="button" hidden data-i18n="disconnect">Disconnect</button>
+  </details>
+  <script type="module" src="popup-v2.js"></script>
+</body>
+</html>

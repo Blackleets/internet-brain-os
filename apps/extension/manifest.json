@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Efesto Opportunity Radar",
+  "name": "Efesto",
   "version": "0.1.0",
-  "description": "Private, local-first opportunity intelligence while you browse.",
+  "description": "Efesto for your browser: save pages as private evidence and send Goals to the Efesto running on your computer.",
   "permissions": [
     "activeTab",
     "storage",
@@ -20,8 +20,8 @@
     "type": "module"
   },
   "action": {
-    "default_title": "Send page to Hephaestus",
-    "default_popup": "src/popup.html"
+    "default_title": "Efesto",
+    "default_popup": "src/popup-v2.html"
   },
   "content_scripts": [
     {
@@ -43,6 +43,17 @@
         "src/dashboard-discovery.js"
       ],
       "run_at": "document_start",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "http://127.0.0.1:3311/*",
+        "http://localhost:3311/*"
+      ],
+      "js": [
+        "src/dashboard-pair-bridge.js"
+      ],
+      "run_at": "document_idle",
       "all_frames": false
     }
   ],

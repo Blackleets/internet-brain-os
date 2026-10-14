@@ -1,0 +1,41 @@
+@font-face { font-family: Geist; src: url(fonts/Geist-Variable.ttf); font-weight: 100 900; }
+* { box-sizing: border-box; margin: 0; }
+body { width: 380px; background: #000; color: #ece4dc; font: 13px/1.45 Geist, system-ui, sans-serif; padding: 16px; }
+[hidden] { display: none !important; }
+.top { display: flex; align-items: center; justify-content: space-between; }
+.wm { display: flex; align-items: center; font-weight: 800; letter-spacing: .22em; font-size: 17px; }
+.wm span { background: linear-gradient(180deg, #f4efe9, #9d958e); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.wm b { background: linear-gradient(180deg, #ffd27a, #ff7a2a 60%, #b8400f); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 6px #ff7a2a88); }
+.wm img { width: 22px; height: 22px; border-radius: 6px; margin-right: 9px; }
+.pill { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: #0f0f10; box-shadow: inset 0 0 0 1px #2a2420; font-size: 11.5px; color: #cfe9c0; }
+.pill i { width: 7px; height: 7px; border-radius: 50%; background: #7bd389; box-shadow: 0 0 8px #7bd389; }
+.pill.wait { color: #e8c48a; } .pill.wait i { background: #ffb347; box-shadow: 0 0 8px #ffb347; }
+.pill.off { color: #e6a3a3; } .pill.off i { background: #ff777b; box-shadow: none; }
+.card { margin-top: 14px; padding: 16px; border-radius: 16px; background: radial-gradient(120% 90% at 50% 0%, #1d120b, #0b0b0c 70%); box-shadow: inset 0 0 0 1px #3a2618, 0 0 30px #ff6a1a14; }
+.center { text-align: center; }
+.host { display: flex; gap: 10px; align-items: center; color: #a99a8e; font-size: 12px; min-width: 0; }
+.host #host { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.favicon { flex: none; width: 18px; height: 18px; border-radius: 4px; background: #2a2420 center / cover no-repeat; }
+h2 { font-size: 16px; margin: 8px 0 2px; color: #f4ece4; overflow-wrap: anywhere; }
+.sub { color: #9c8f84; font-size: 12px; }
+.cta { margin-top: 14px; width: 100%; padding: 12px; border: 0; border-radius: 12px; font: 600 14px Geist, system-ui; color: #1a0d05; background: linear-gradient(180deg, #ffb15c, #ff7a2a); box-shadow: 0 0 22px #ff7a2a55, inset 0 1px #ffe2b8; cursor: pointer; }
+.cta:disabled { opacity: .6; cursor: progress; }
+.cta:focus-visible, .sec:focus-visible, .goal button:focus-visible, .link:focus-visible, select:focus-visible { outline: 2px solid #ffb15c; outline-offset: 2px; }
+.goal { margin-top: 12px; border-radius: 12px; padding: 6px 6px 6px 12px; background: #0d0d0e; box-shadow: inset 0 0 0 1px #2a2420; display: flex; gap: 8px; align-items: center; }
+.goal input { flex: 1; min-width: 0; border: 0; background: transparent; color: #ece4dc; font: 13px Geist, system-ui; outline: none; }
+.goal input::placeholder { color: #8a7d73; }
+.goal button { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 0; background: #2a2420; color: #e6d9cc; cursor: pointer; }
+.message { margin-top: 10px; font-size: 12px; color: #cfe9c0; } .message.bad { color: #ffb3b3; }
+.row { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; color: #a99a8e; font-size: 12px; }
+.link { color: #ffb15c; text-decoration: none; font-weight: 600; }
+.lang { display: flex; align-items: center; gap: 6px; }
+.lang select { background: #0d0d0e; color: #ddd; border: 0; box-shadow: inset 0 0 0 1px #2a2420; border-radius: 8px; padding: 4px 6px; font: 12px Geist, system-ui; }
+.adv { margin-top: 12px; border-top: 1px solid #1e1915; padding-top: 10px; color: #8c8076; font-size: 12px; }
+.adv summary { cursor: pointer; color: #bfb2a7; }
+.adv p { margin-top: 6px; }
+.adv input { margin-top: 8px; width: 100%; padding: 9px 10px; border-radius: 10px; border: 0; background: #0d0d0e; box-shadow: inset 0 0 0 1px #2a2420; color: #ddd; font: 13px Geist, system-ui; }
+.sec { margin-top: 8px; width: 100%; padding: 9px; border-radius: 10px; border: 0; background: #17120e; box-shadow: inset 0 0 0 1px #3a2618; color: #f0d9c4; font: 600 12.5px Geist, system-ui; cursor: pointer; }
+.spin { width: 34px; height: 34px; margin: 6px auto 10px; border-radius: 50%; border: 3px solid #2a2420; border-top-color: #ff7a2a; box-shadow: 0 0 14px #ff7a2a55; animation: spin 1s linear infinite; }
+.failed .spin { animation: none; border-top-color: #ff777b; box-shadow: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
