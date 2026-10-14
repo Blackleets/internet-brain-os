@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import type { MissionSummary, OpportunitySummary } from '../kernel/contracts';
 import type { GoalSurface } from '../kernel/goal-surfaces';
 import type { MissionEvidenceRecord } from '../kernel/mission-evidence';
@@ -159,33 +160,33 @@ export type ForgeModel =
 
 export const FORGE_STEP_LABELS: Record<ForgeStepId, string> = {
   goal: 'Goal',
-  search: 'Búsqueda web · candidatos',
-  read: 'Páginas leídas → Evidence',
-  support: 'SUPPORT del Kernel',
-  find: 'Find forjado',
+  get search() { return t('f.stepSearch'); },
+  get read() { return t('f.stepRead'); },
+  get support() { return t('f.stepSupport'); },
+  get find() { return t('f.stepFind'); },
 };
 
 const SUPPORT_REASONS: Record<string, string> = {
-  insufficient_term_coverage: 'La página no cubre suficientes términos del Goal',
-  homepage_insufficient_coverage: 'Portada sin cobertura suficiente de los términos del Goal',
-  unique_id_missing: 'Falta el identificador exacto que pide el Goal',
-  no_evidence: 'La página no tenía texto legible',
-  empty_goal: 'El Goal no tiene términos verificables',
+  get insufficient_term_coverage() { return t('f.rNotEnough'); },
+  get homepage_insufficient_coverage() { return t('f.rHome'); },
+  get unique_id_missing() { return t('f.rId'); },
+  get no_evidence() { return t('f.rNoText'); },
+  get empty_goal() { return t('f.rNoTerms'); },
 };
 
 export function buildForgeModel(input: ForgeInput): ForgeModel {
   if (!input.connected) {
-    return { kind: 'offline', reason: 'not_connected', summary: 'Forja apagada: Kernel sin conexión. No se muestran datos de ejemplo.' };
+    return { kind: 'offline', reason: 'not_connected', summary: t('f.sumOff') };
   }
   if (input.connecting) {
-    return { kind: 'offline', reason: 'connecting', summary: 'Forja conectando: esperando la primera lectura del Kernel.' };
+    return { kind: 'offline', reason: 'connecting', summary: t('f.sumConnecting') };
   }
   if (!input.kernelOnline) {
-    return { kind: 'offline', reason: 'kernel_unreachable', summary: 'Forja en pausa: el Kernel no responde. No se muestran datos de ejemplo.' };
+    return { kind: 'offline', reason: 'kernel_unreachable', summary: t('f.sumPaused') };
   }
   const surfaceMission = input.surface?.mission;
   if (!input.surface || !surfaceMission) {
-    return { kind: 'empty', summary: 'Forja lista: no hay misión activa.' };
+    return { kind: 'empty', summary: t('f.sumReady') };
   }
   const row = input.mission && input.mission.id === surfaceMission.id ? input.mission : undefined;
   const evidence = input.evidence ?? { status: 'idle' as const };
@@ -241,7 +242,7 @@ export function buildForgeModel(input: ForgeInput): ForgeModel {
     ...(searchMore ? { searchMore } : {}),
     ...(prior ? { prior } : {}),
     ...(editGoal ? { editGoal } : {}),
-    summary: `${label}. ${counts.sources} ${plural(counts.sources, 'fuente', 'fuentes')}, ${counts.read} ${plural(counts.read, 'leída', 'leídas')}, ${counts.evidence} Evidence, ${counts.supported} con Kernel SUPPORT.${prior ? ` Intentos anteriores: ${prior.evidence} Evidence y ${prior.supported} con SUPPORT, conservados.` : ''}`,
+    summary: t('f.summary', { label, src: counts.sources, srcW: plural(counts.sources, t('f.sourceW'), t('f.sourcesW')), read: counts.read, readW: plural(counts.read, t('f.readLower'), t('f.readPlural')), ev: counts.evidence, sup: counts.supported, prior: prior ? t('f.summaryPrior', { ev: prior.evidence, sup: prior.supported }) : '' }),
   };
 }
 
@@ -249,10 +250,10 @@ const ACTIVE_PHASES = new Set<ForgePhase>(['waiting_agent', 'queued', 'searching
 
 /** Presentation only: the Kernel repeats these checks atomically when saving a revision. */
 function goalEditBlock(row: MissionSummary | undefined, surface: NonNullable<GoalSurface['mission']>, now: number): string | undefined {
-  if (hasLiveLease(row, now)) return 'Hermes está trabajando en este Goal. Podrás editarlo cuando termine el intento.';
+  if (hasLiveLease(row, now)) return t('f.editBusyHermes');
   if (!row) {
     return surface.status === 'running' && surface.workState === 'verifying' && !surface.blockedReason
-      ? 'El Kernel está verificando las fuentes de este Goal. Podrás guardarlo cuando termine la verificación.'
+      ? t('f.editBusyKernel')
       : undefined;
   }
   if (row.status !== 'running' || row.executionPhase !== 'verifying' || row.verificationBlock) return undefined;
@@ -264,7 +265,7 @@ function goalEditBlock(row: MissionSummary | undefined, surface: NonNullable<Goa
   const settleable = candidates.length > 0 && results.length > 0
     && !results.some((result) => result.supported === true)
     && candidates.every((candidate) => settledIds.has(candidate.id));
-  return settleable ? undefined : 'El Kernel está verificando las fuentes de este Goal. Podrás guardarlo cuando termine la verificación.';
+  return settleable ? undefined : t('f.editBusyKernel');
 }
 
 function hasLiveLease(row: MissionSummary | undefined, now: number): boolean {
@@ -338,10 +339,10 @@ function buildPriorAttempts(
 }
 
 const NEXT_STEPS: Partial<Record<ForgePhase, string>> = {
-  waiting_agent: 'Siguiente: arranca Hermes; tomará la misión y buscará en la web pública.',
-  queued: 'Siguiente: Hermes toma la misión y busca en la web pública. Cada candidato real saldrá como una chispa.',
-  searching: 'Siguiente: el Kernel lee cada candidato con web.read y guarda la Evidence.',
-  verifying: 'Siguiente: el Kernel decide SUPPORT; lo que respalda el Goal se forja como Find.',
+  waiting_agent: t('f.next1'),
+  queued: t('f.next2'),
+  searching: t('f.next3'),
+  verifying: t('f.next4'),
 };
 
 function missionKeywords(row?: MissionSummary): string[] {
@@ -545,7 +546,7 @@ function sourceFrom(
     } : {}),
     quoteState,
     ...(state === 'unsupported' ? { reasonCode: reasonCode ?? 'unknown', reason: supportReason(reasonCode) } : {}),
-    ...(state === 'supported' ? { reason: 'La página leída por el Kernel cubre los términos clave del Goal' } : {}),
+    ...(state === 'supported' ? { reason: t('f.supportReason') } : {}),
     ...(find ? { findTitle: displayText(find.title) } : {}),
   };
 }
@@ -602,40 +603,40 @@ function derivePhase(workState: string, blocked: boolean, counts: ForgeCounts, s
 
 function phaseCopy(phase: ForgePhase, counts: ForgeCounts, row?: MissionSummary): { label: string; detail: string } {
   switch (phase) {
-    case 'waiting_agent': return { label: 'Esperando a Hermes', detail: 'La misión está confirmada; el agente aún no está conectado.' };
-    case 'queued': return { label: 'Misión en cola', detail: 'Confirmada por ti; el Kernel la guarda en cola para Hermes.' };
+    case 'waiting_agent': return { label: t('f.waitingHermes'), detail: t('f.waitingHermesCopy') };
+    case 'queued': return { label: t('f.queued'), detail: t('f.queuedCopy') };
     case 'searching': {
       // Kernel retry of a failed attempt (bounded): say so instead of one long "Buscando" clock.
       const attempt = Number(row?.attempt);
       const failure = str(asRow(row?.lastFailure)?.reason);
       if (Number.isInteger(attempt) && attempt > 1 && failure) {
-        return { label: `Buscando candidatos · intento ${attempt} de ${MAX_MISSION_ATTEMPTS}`, detail: `El intento anterior falló (${attemptFailureCopy(failure)}). Hermes lo vuelve a intentar.` };
+        return { label: t('f.searchingAttempt', { n: attempt, max: MAX_MISSION_ATTEMPTS }), detail: t('f.priorFailedRetry', { why: attemptFailureCopy(failure) }) };
       }
-      return { label: 'Buscando candidatos', detail: 'Hermes explora la web pública. Un candidato no es Evidence.' };
+      return { label: t('f.searching'), detail: t('f.searchingCopy') };
     }
     case 'verifying': return {
-      label: 'Verificando fuentes',
+      label: t('f.verifying'),
       detail: counts.sources > 0
-        ? `El Kernel lee ${counts.sources} ${plural(counts.sources, 'candidato', 'candidatos')} con web.read y guarda Evidence al terminar.`
-        : 'El Kernel aplica web.read y SUPPORT a los candidatos.',
+        ? t(counts.sources === 1 ? 'f.verifyingOne' : 'f.verifyingN', { n: counts.sources })
+        : t('f.verifyingCopy'),
     };
-    case 'read_failed_all': return { label: 'Sin lectura', detail: `El Kernel no pudo leer ${counts.sources === 1 ? 'la página candidata' : `ninguna de las ${counts.sources} páginas candidatas`}; cada tarjeta dice por qué. Buscar más pide a Hermes otras fuentes y conserva lo guardado.` };
+    case 'read_failed_all': return { label: t('f.noRead'), detail: t(counts.sources === 1 ? 'f.noReadOne' : 'f.noReadN', { n: counts.sources }) };
     case 'verified_unsupported':
     case 'research_completed': return {
-      label: 'Leídas sin SUPPORT',
-      detail: `${counts.read} ${plural(counts.read, 'página leída', 'páginas leídas')}; ninguna respalda el Goal. No se forja ningún Find.`,
+      label: t('f.readNoSupport'),
+      detail: t(counts.read === 1 ? 'f.readNoSupportOne' : 'f.readNoSupportN', { n: counts.read }),
     };
     case 'forged': return {
-      label: counts.supported === 1 ? 'Find forjado' : 'Finds forjados',
-      detail: `${counts.supported} ${plural(counts.supported, 'página pasó', 'páginas pasaron')} Kernel SUPPORT y ${plural(counts.supported, 'quedó forjada como Find', 'quedaron forjadas como Finds')}.`,
+      label: counts.supported === 1 ? t('f.stepFind') : t('f.findsForged'),
+      detail: t(counts.supported === 1 ? 'f.forgedOne' : 'f.forgedN', { n: counts.supported }),
     };
-    case 'completed_empty': return { label: 'Sin candidatos', detail: 'La búsqueda terminó sin fuentes públicas que verificar.' };
-    case 'completed_without_evidence': return { label: 'Terminada sin Evidence', detail: 'El intento terminó sin Evidence forjada.' };
+    case 'completed_empty': return { label: t('f.noCandidates'), detail: t('f.noCandidatesCopy') };
+    case 'completed_without_evidence': return { label: t('s.endedNoEvidence'), detail: t('f.endedNoEvidenceCopy') };
     case 'failed': {
       const reason = str(asRow(row?.lastFailure)?.reason);
-      return { label: 'Atención requerida', detail: missionFailureCopy(reason) };
+      return { label: t('s.attention'), detail: missionFailureCopy(reason) };
     }
-    case 'blocked': return { label: 'Bloqueada', detail: 'La política del Kernel denegó la ejecución automática.' };
+    case 'blocked': return { label: t('f.blocked'), detail: t('f.policyDenied') };
   }
 }
 
@@ -679,49 +680,49 @@ export function displayText(value: string): string {
 }
 
 export function supportReason(code?: string): string {
-  if (!code) return 'Sin Kernel SUPPORT (el Kernel no publicó motivo)';
-  return SUPPORT_REASONS[code] ?? `Sin Kernel SUPPORT (motivo del Kernel: ${code})`;
+  if (!code) return t('f.noSupportNoReason');
+  return SUPPORT_REASONS[code] ?? t('f.noSupportCode', { code });
 }
 
 /** The Kernel's bounded attempts per Mission (agent-missions MAX_ATTEMPTS). */
 const MAX_MISSION_ATTEMPTS = 3;
 
 export function attemptFailureCopy(reason: string): string {
-  if (/timed out|timeout/i.test(reason)) return 'Hermes tardó demasiado';
-  if (/lease expired/i.test(reason)) return 'Hermes no terminó a tiempo';
-  if (/findings|valid JSON/i.test(reason)) return 'Hermes devolvió una respuesta inválida';
-  if (/reach Ollama|HTTP \d{3}/i.test(reason)) return 'no se pudo usar el modelo local';
+  if (/timed out|timeout/i.test(reason)) return t('f.fTimeout');
+  if (/lease expired/i.test(reason)) return t('f.fNotFinished');
+  if (/findings|valid JSON/i.test(reason)) return t('f.fInvalid');
+  if (/reach Ollama|HTTP \d{3}/i.test(reason)) return t('f.fModel');
   // Raw process diagnostics (exit codes, session ids, stack traces) are not user copy.
-  if (/exited with code|session_id|Traceback/i.test(reason)) return 'Hermes no devolvió candidatos utilizables';
+  if (/exited with code|session_id|Traceback/i.test(reason)) return t('f.fNoCand');
   return reason.length > 90 ? `${reason.slice(0, 89)}…` : reason;
 }
 
 /** Readable Spanish for a Mission that ended failed; never echoes raw process diagnostics. */
 export function missionFailureCopy(reason?: string): string {
-  if (!reason) return 'La misión falló.';
-  return `La misión falló: ${attemptFailureCopy(reason)}. Ningún Find se inventa: solo cuentan páginas con Kernel SUPPORT. Puedes relanzarla.`;
+  if (!reason) return t('f.missionFailed');
+  return t('f.missionFailedWhy', { why: attemptFailureCopy(reason) });
 }
 
 const HTTP_READ_COPY: Record<string, string> = {
-  '401': 'el sitio pide iniciar sesión',
-  '403': 'el sitio denegó el acceso al lector del Kernel',
-  '404': 'la página ya no existe',
-  '410': 'la página ya no existe',
-  '429': 'el sitio limitó las lecturas (demasiadas peticiones)',
-  '500': 'el sitio falló al responder',
-  '502': 'el sitio no respondió bien',
-  '503': 'el sitio no estaba disponible',
+  get '401'() { return t('f.hLogin'); },
+  get '403'() { return t('f.hDenied'); },
+  get '404'() { return t('f.hGone'); },
+  get '410'() { return t('f.hGone'); },
+  get '429'() { return t('f.hRate'); },
+  get '500'() { return t('f.hServer'); },
+  get '502'() { return t('f.hBad'); },
+  get '503'() { return t('f.hUnavailable'); },
 };
 
 export function readFailureReason(code?: string): string {
-  if (!code) return 'El Kernel no pudo leer la página';
+  if (!code) return t('f.cantRead');
   const http = code.match(/HTTP\s+(\d{3})/i);
-  if (http) return `No se pudo leer: ${HTTP_READ_COPY[http[1]] ?? 'el sitio respondió con error'} (HTTP ${http[1]})`;
-  if (/empty content/i.test(code)) return 'No se pudo leer: contenido vacío';
-  if (/timeout|timed out|abort/i.test(code)) return 'No se pudo leer: tiempo de espera agotado';
-  if (/bot-protection/i.test(code)) return 'No se pudo leer: el sitio mostró una comprobación anti-bots, no su contenido';
-  if (/private network/i.test(code)) return 'No se pudo leer: la dirección resolvió a una red privada y el Kernel no la lee';
-  return `No se pudo leer: ${code}`;
+  if (http) return t('f.rHttp', { why: HTTP_READ_COPY[http[1]] ?? t('f.hError'), code: http[1] });
+  if (/empty content/i.test(code)) return t('f.rEmpty');
+  if (/timeout|timed out|abort/i.test(code)) return t('f.rTimeout');
+  if (/bot-protection/i.test(code)) return t('f.rBot');
+  if (/private network/i.test(code)) return t('f.rPrivate');
+  return t('f.rCode', { code });
 }
 
 function blockedOnRow(row?: MissionSummary): boolean {

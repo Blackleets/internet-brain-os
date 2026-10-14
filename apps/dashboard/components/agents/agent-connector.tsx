@@ -1,5 +1,6 @@
 'use client';
 
+import { t } from '../../lib/i18n';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronRight, Copy, PlugZap, RefreshCw, X } from 'lucide-react';
@@ -54,7 +55,7 @@ function CopyBlock({ label, text }: { label: string; text: string }) {
     <pre aria-label={label}><code>{text}</code></pre>
     <button type="button" onClick={() => void copy()} aria-label={`Copiar: ${label}`}>
       {copied === 'ok' ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-      <span aria-live="polite">{copied === 'ok' ? 'Copiado' : copied === 'failed' ? 'Selecciona y copia' : 'Copiar'}</span>
+      <span aria-live="polite">{copied === 'ok' ? t('ag.copied') : copied === 'failed' ? t('ag.selectCopy') : t('ag.copy')}</span>
     </button>
   </div>;
 }
@@ -80,8 +81,8 @@ function AgentLogo({ agent }: { agent: AgentLogoId }) {
 }
 
 const MCP_AGENTS: readonly { id: 'claude' | 'cursor'; name: string; howto: string }[] = [
-  { id: 'claude', name: 'Claude', howto: 'En Claude Desktop: Ajustes → Desarrollador → Editar configuración (claude_desktop_config.json).' },
-  { id: 'cursor', name: 'Cursor', howto: 'En Cursor: Settings → MCP → Add new MCP server (archivo mcp.json).' },
+  { id: 'claude', name: 'Claude', get howto() { return t('ag.claudeHelp'); } },
+  { id: 'cursor', name: 'Cursor', get howto() { return t('ag.cursorHelp'); } },
 ];
 
 const MCP_CONFIG = JSON.stringify({
@@ -123,7 +124,7 @@ export function AgentConnector({ connected, kernelUrl, agents, missions, onConne
   useEffect(() => { const id = setInterval(() => setTick((value) => value + 1), 15_000); return () => clearInterval(id); }, []);
   const hermes: AgentStatus | undefined = agents?.agents.find((agent) => agent.id === 'hermes') ?? agents?.agents[0];
   const available = connected && Boolean(agents);
-  const copy = connected ? agentConnectionCopy(hermes, available, now(), missions) : { tone: 'off' as const, short: 'Sin Kernel', title: 'Conecta primero el Kernel', detail: 'El estado de los agentes lo publica el Kernel; sin él no hay nada que comprobar.' };
+  const copy = connected ? agentConnectionCopy(hermes, available, now(), missions) : { tone: 'off' as const, short: t('ag.noKernel'), title: t('ag.connectKernelFirst'), detail: t('ag.noKernelCopy') };
   const commands = workerSetupCommands(kernelUrl ?? 'http://127.0.0.1:4000', shell);
   const agentReady = hermes?.state === 'working' || hermes?.state === 'online';
 
@@ -135,17 +136,17 @@ export function AgentConnector({ connected, kernelUrl, agents, missions, onConne
       const agent = next?.agents.find((item) => item.id === 'hermes') ?? next?.agents[0];
       setResult(connectionTestResult(agent, Boolean(next), now()));
     } catch {
-      setResult({ ok: false, message: 'No se pudo comprobar: el Kernel no respondió.' });
+      setResult({ ok: false, message: t('ag.kernelNoReply') });
     } finally {
       setTesting(false);
     }
   }
 
   const hermesButton = !connected
-    ? { label: 'Conectar', aria: 'Conectar Hermes Agent', action: onConnectKernel }
+    ? { label: t('s.connect'), aria: t('ag.connectHermes'), action: onConnectKernel }
     : agentReady
-      ? { label: 'Conectado · comprobar', aria: 'Comprobar Hermes Agent', action: () => void test() }
-      : { label: 'Conectar', aria: 'Conectar Hermes Agent', action: () => void test() };
+      ? { label: t('ag.connectedCheck'), aria: t('ag.checkHermes'), action: () => void test() }
+      : { label: t('s.connect'), aria: t('ag.connectHermes'), action: () => void test() };
 
   const hermesAction = <>
         <button type="button" className="agent-connect" aria-label={hermesButton.aria} onClick={hermesButton.action} disabled={testing}>
@@ -161,26 +162,26 @@ export function AgentConnector({ connected, kernelUrl, agents, missions, onConne
       <div className="agent-hero-text">
         <small>NOUS RESEARCH</small>
         <h2>Hermes Agent</h2>
-        <p>Busca e investiga por ti con límites claros. Solo se muestra como hallazgo lo que el Kernel verifica con una fuente real.</p>
+        <p>{t('ag.hermesCopy')}</p>
         <p className="agent-hero-status" role="status"><i aria-hidden="true" /><strong id={statusId}>{copy.title}</strong> · {copy.detail}</p>
         <div className="agent-hero-action">{hermesAction}</div>
       </div>
     </section> : <section className="agent-status" data-tone={copy.tone} aria-labelledby={statusId}>
       <span className="agent-status-mark" aria-hidden="true"><AgentLogo agent="hermes" /><i /></span>
       <div>
-        <small>HERMES AGENT · ESTADO DEL KERNEL</small>
+        <small>{t('ag.stateCap')}</small>
         <h3 id={statusId}>{copy.title}</h3>
         <p role="status">{copy.detail}</p>
       </div>
     </section>}
 
-    <ul className="agent-cards" aria-label="Agentes">
+    <ul className="agent-cards" aria-label={t('nav.agents')}>
       {variant === 'hero' ? null : <li className="agent-card" data-ready={agentReady ? 'true' : undefined}>
         <AgentLogo agent="hermes" />
         <div className="agent-card-text">
           <strong>Hermes Agent</strong>
-          <small>{connected ? copy.short : 'Sin Kernel'}</small>
-          <p>Investiga en la web para tus objetivos. Con el instalador de Windows, Efesto lo arranca solo.</p>
+          <small>{connected ? copy.short : t('ag.noKernel')}</small>
+          <p>{t('ag.hermesWindows')}</p>
         </div>
         {hermesAction}
       </li>}
@@ -195,8 +196,8 @@ export function AgentConnector({ connected, kernelUrl, agents, missions, onConne
           <PlugZap aria-hidden="true" />Conectar
         </button>
         {mcpOpen === agent.id ? <div className="agent-card-howto">
-          <p>{agent.howto} Añade este bloque y reinicia {agent.name}. Cambia las rutas por las de tu instalación (en Windows: <code>%LOCALAPPDATA%\\Efesto</code>).</p>
-          <CopyBlock label={`Configuración MCP para ${agent.name}`} text={MCP_CONFIG} />
+          <p>{agent.howto} {t('ag.mcpAdd', { name: agent.name })} <code>%LOCALAPPDATA%\\Efesto</code>).</p>
+          <CopyBlock label={t('ag.mcpConfig', { name: agent.name })} text={MCP_CONFIG} />
         </div> : null}
       </li>)}
     </ul>
@@ -209,32 +210,32 @@ export function AgentConnector({ connected, kernelUrl, agents, missions, onConne
       <li>
         <span className="agent-step-n" aria-hidden="true">1</span>
         <div>
-          <strong>Configura el worker donde está Hermes</strong>
-          <p>Solo si Hermes está en otro equipo o no usas el instalador. En una terminal, en la carpeta de Efesto. El token no aparece aquí: el comando lo lee del archivo privado del Kernel.</p>
+          <strong>{t('ag.setupWorker')}</strong>
+          <p>{t('ag.setupWorkerCopy')}</p>
           <div className="agent-shells" role="radiogroup" aria-label="Terminal">
             {(['bash', 'powershell'] as const).map((kind) => <button key={kind} type="button" role="radio" aria-checked={shell === kind} onClick={() => setShell(kind)}>{kind === 'bash' ? 'macOS / Linux' : 'Windows PowerShell'}</button>)}
           </div>
-          <CopyBlock label="Configuración del worker" text={commands.configure} />
+          <CopyBlock label={t('ag.workerConfig')} text={commands.configure} />
         </div>
       </li>
       <li>
         <span className="agent-step-n" aria-hidden="true">2</span>
         <div>
-          <strong>Comprueba la conexión</strong>
-          <p>El doctor verifica el token contra el Kernel y deja constancia del contacto. Después, pulsa «Conectar» en Hermes Agent.</p>
-          <CopyBlock label="Doctor del worker" text={commands.doctor} />
+          <strong>{t('ag.checkConn')}</strong>
+          <p>{t('ag.doctorCopy')}</p>
+          <CopyBlock label={t('ag.doctor')} text={commands.doctor} />
         </div>
       </li>
       <li>
         <span className="agent-step-n" aria-hidden="true">3</span>
         <div>
-          <strong>Déjalo recogiendo misiones</strong>
-          <p>Cada ciclo reclama una misión confirmada, investiga y termina; el bucle recoge las siguientes.</p>
-          <CopyBlock label="Worker en bucle" text={commands.run} />
+          <strong>{t('ag.loop')}</strong>
+          <p>{t('ag.loopCopy')}</p>
+          <CopyBlock label={t('ag.loopTitle')} text={commands.run} />
         </div>
       </li>
     </ol>
-    <p className="agent-other">Cualquier agente puede trabajar para Efesto con el mismo contrato: reclama con <code>POST /api/agent-missions/claim</code> y devuelve candidatos a <code>/api/agent-missions/:id/results</code>. El Kernel lee y verifica cada fuente; el agente nunca escribe Evidence ni Finds. Hoy el Kernel registra todo worker de misiones como «Hermes».</p>
+    <p className="agent-other">{t('ag.anyAgent')} <code>POST /api/agent-missions/claim</code> {t('ag.returnsTo')} <code>/api/agent-missions/:id/results</code>{t('ag.kernelReads')}</p>
     </div> : null}
   </div>;
 }
@@ -264,14 +265,14 @@ export function ConnectionsSheet({ kernelOnline, onManageKernel, onClose, ...con
     <div className="connections-sheet" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <span className="connections-grip" aria-hidden="true" />
       <header className="connections-head">
-        <div><small>CONEXIONES</small><h2 id={titleId}>Kernel y agentes</h2></div>
-        <button ref={closeRef} type="button" className="connections-close" onClick={onClose} aria-label="Cerrar conexiones"><X aria-hidden="true" /></button>
+        <div><small>{t('ag.connectionsCap')}</small><h2 id={titleId}>{t('ag.kernelAgents')}</h2></div>
+        <button ref={closeRef} type="button" className="connections-close" onClick={onClose} aria-label={t('ag.closeConn')}><X aria-hidden="true" /></button>
       </header>
       <div className="connections-body">
         <section className="connections-kernel" data-online={kernelOnline ? 'true' : 'false'}>
           <span aria-hidden="true" />
-          <div><strong>{kernelOnline ? 'Kernel listo' : 'Kernel sin respuesta'}</strong><small>{connector.kernelUrl}</small></div>
-          <button type="button" onClick={onManageKernel}>Gestionar Kernel <ChevronRight aria-hidden="true" /></button>
+          <div><strong>{kernelOnline ? t('s.kernelReady') : t('s.kernelNoResponse')}</strong><small>{connector.kernelUrl}</small></div>
+          <button type="button" onClick={onManageKernel}>{t('ag.manageKernel')} <ChevronRight aria-hidden="true" /></button>
         </section>
         <AgentConnector {...connector} />
       </div>

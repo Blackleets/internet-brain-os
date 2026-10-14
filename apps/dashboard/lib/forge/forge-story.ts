@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import type { ForgeMissionModel, ForgeSource } from './forge-model';
 
 /**
@@ -85,15 +86,15 @@ export function buildForgeStory(model: ForgeMissionModel): ForgeStory {
       log.push({ id: `query:${index}`, cue: { kind: 'query', index }, segs: [{ tone: 'k', text: '$ hermes.search ' }, { tone: 'txt', text: `«${clip(text, 30)}»` }] });
       const count = runs[index]?.resultCount;
       if (count !== undefined) {
-        log.push({ id: `results:${index}`, cue: { kind: 'results', index }, segs: [{ tone: 'k', text: '← buscador ' }, { tone: 'txt', text: `${count} ${count === 1 ? 'resultado' : 'resultados'}` }] });
+        log.push({ id: `results:${index}`, cue: { kind: 'results', index }, segs: [{ tone: 'k', text: `← ${t('f.engine')} ` }, { tone: 'txt', text: `${count} ${count === 1 ? t('f.resultW') : t('f.resultsW')}` }] });
       }
     });
   } else {
-    log.push({ id: 'query', cue: { kind: 'query', index: 0 }, segs: [{ tone: 'k', text: '$ hermes.search ' }, { tone: 'txt', text: '← Goal' }, { tone: 'c', text: '  # consulta no publicada' }] });
+    log.push({ id: 'query', cue: { kind: 'query', index: 0 }, segs: [{ tone: 'k', text: '$ hermes.search ' }, { tone: 'txt', text: '← Goal' }, { tone: 'c', text: `  # ${t('f.queryUnpublished')}` }] });
   }
-  nodes.forEach((node, index) => log.push({ id: `pick:${node.id}`, cue: { kind: 'pick', node: index }, segs: [{ tone: 'k', text: '+ candidato ' }, { tone: 'txt', text: clip(node.host, 30) }] }));
+  nodes.forEach((node, index) => log.push({ id: `pick:${node.id}`, cue: { kind: 'pick', node: index }, segs: [{ tone: 'k', text: `+ ${t('f.candidate')} ` }, { tone: 'txt', text: clip(node.host, 30) }] }));
   if (reach === 'candidates') {
-    log.push({ id: 'reading', cue: { kind: 'reading' }, segs: [{ tone: 'k', text: 'kernel.read ' }, { tone: 'txt', text: `${all.length} ${all.length === 1 ? 'candidato' : 'candidatos'} ` }, { tone: 'c', text: '· en curso' }] });
+    log.push({ id: 'reading', cue: { kind: 'reading' }, segs: [{ tone: 'k', text: 'kernel.read ' }, { tone: 'txt', text: `${all.length} ${all.length === 1 ? t('f.candidate') : t('f.candidates')} ` }, { tone: 'c', text: `· ${t('f.inProgress')}` }] });
   }
   nodes.forEach((node, index) => {
     if (node.outcome === 'pending') return;
@@ -105,7 +106,7 @@ export function buildForgeStory(model: ForgeMissionModel): ForgeStory {
     if (node.outcome !== 'support' && node.outcome !== 'unsupported') return;
     log.push({ id: `support:${node.id}`, cue: { kind: 'support', node: index }, segs: [{ tone: 'k', text: 'kernel.support ' }, { tone: 'txt', text: `${clip(node.host, 22)} ` }, node.outcome === 'support'
       ? { tone: 'au', text: '✓ SUPPORT' }
-      : { tone: 'bad', text: '× sin SUPPORT' }] });
+      : { tone: 'bad', text: t('f.noSupportTag') }] });
   });
   nodes.forEach((node, index) => {
     if (node.outcome !== 'support' || !node.findTitle) return;
@@ -136,9 +137,9 @@ function storyReach(model: ForgeMissionModel): StoryReach {
 function storyNode(source: ForgeSource): StoryNode {
   const base = { id: source.id, host: source.host, path: source.path };
   switch (source.state) {
-    case 'supported': return { ...base, outcome: 'support', code: 'leída', codeTone: 'ok', ...(source.findTitle ? { findTitle: source.findTitle } : {}) };
-    case 'unsupported': return { ...base, outcome: 'unsupported', code: 'leída', codeTone: 'ok' };
-    case 'evidence': return { ...base, outcome: 'evidence', code: 'leída', codeTone: 'ok' };
+    case 'supported': return { ...base, outcome: 'support', code: t('f.readLower'), codeTone: 'ok', ...(source.findTitle ? { findTitle: source.findTitle } : {}) };
+    case 'unsupported': return { ...base, outcome: 'unsupported', code: t('f.readLower'), codeTone: 'ok' };
+    case 'evidence': return { ...base, outcome: 'evidence', code: t('f.readLower'), codeTone: 'ok' };
     case 'read_failed': return { ...base, outcome: 'unread', code: readFailureCode(source.reasonCode), codeTone: 'bad' };
     default: return { ...base, outcome: 'pending', codeTone: 'none' };
   }
@@ -154,7 +155,7 @@ export function readFailureCode(reason?: string): string {
   if (/timeout|timed out|abort/i.test(reason)) return 'TIMEOUT';
   if (/empty content/i.test(reason)) return 'VACÍA';
   if (/bot-protection/i.test(reason)) return 'ANTI-BOT';
-  if (/private network/i.test(reason)) return 'RED PRIVADA';
+  if (/private network/i.test(reason)) return t('f.privateNetCap');
   return 'ERROR';
 }
 

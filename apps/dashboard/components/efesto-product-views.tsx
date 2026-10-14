@@ -14,6 +14,7 @@ import type { CaseSummary, MissionSummary, ModelForgeSummary, OpportunitySummary
 import type { OverviewSnapshot } from '../lib/kernel/overview';
 import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportProof, kernelSupportedFinds, missionVerifiedWithoutSupport } from '../lib/kernel/supported-find';
 import { statePillLabel, statePillTone } from '../lib/ui/state-pill-label.mjs';
+import { SCREENS_EN } from '../lib/i18n/screens';
 import { normalizeKernelBaseUrl } from '../lib/kernel/url';
 import { displayText, type ForgeModel } from '../lib/forge/forge-model';
 import { ForgeLiveView } from './forge/forge-live-view';
@@ -571,10 +572,11 @@ function newGoalAction(onNewGoal?: () => void) { return onNewGoal ? { label: t('
 // "forged" / "research completed" must not stand in for Home forge-state-action honesty
 // (Find SUPPORT forjado / Investigación terminada / Terminada sin Evidence).
 function StatePill({ state }: { state: string }) {
-  return <span className={`state-pill ${statePillTone(state)}`}><i />{statePillLabel(state)}</span>;
+  return <span className={`state-pill ${statePillTone(state)}`}><i />{pillText(state)}</span>;
 }
 const STATUS_KEYS: Record<string, MessageKey> = { ready: 'status.ready', online: 'status.online', offline: 'status.offline', connected: 'status.connected', needs_setup: 'status.needs_setup', 'needs-setup': 'status.needs_setup', partial: 'status.partial', degraded: 'status.degraded', missing: 'status.missing', unavailable: 'status.unavailable', paired: 'status.paired', unpaired: 'status.unused', required: 'status.unused', blocked: 'status.blocked', unconfigured: 'status.unconfigured', 'not-configured': 'status.unconfigured', error: 'status.error' };
 /** Kernel readiness words in the active language (unknown values pass through). */
+function pillText(state: string): string { const key = `pill.${state}`; return key in SCREENS_EN ? t(key as MessageKey) : statePillLabel(state); }
 export function statusEs(value: string): string { const key = STATUS_KEYS[value]; return key ? t(key) : value; }
 /** Language picker (approved mockup): detected from the browser, explicit choice saved on this device. */
 export function LanguageCard() {

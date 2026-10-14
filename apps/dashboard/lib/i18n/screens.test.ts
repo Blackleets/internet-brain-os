@@ -16,7 +16,8 @@ describe('screen catalog', () => {
   it('English is the default text and other locales fall back to it', () => {
     expect(translate('en', 's.emptyTitle')).toBe('What are we working on?');
     expect(translate('es', 's.emptyTitle')).toBe('¿En qué trabajamos?');
-    expect(translate('de', 's.goalsCopy')).toBe(SCREENS_EN['s.goalsCopy']);
+    expect(translate('de', 's.memoryCopy')).toBe(SCREENS_EN['s.memoryCopy']);
+    expect(translate('de', 'f.goalMissionCap')).toBe('GOAL · KERNEL-MISSION');
     expect(translate('en', 's.nFindsPassed', { count: 3 })).toBe('3 Finds passed Kernel SUPPORT');
     expect(translate('es', 's.attempt', { n: 2 })).toBe('intento 2');
   });

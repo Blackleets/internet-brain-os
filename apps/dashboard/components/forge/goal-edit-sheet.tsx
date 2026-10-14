@@ -1,5 +1,6 @@
 'use client';
 
+import { t } from '../../lib/i18n';
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, Pencil, X } from 'lucide-react';
@@ -56,9 +57,9 @@ export function GoalEditSheet({ goal, onSave, onClose }: Props) {
     try {
       const ok = await onSave({ goalId: goal.goalId, title: normalized, expectedRevision: goal.revision });
       if (ok) onClose();
-      else setSaveError('No se ha confirmado el guardado. Tu texto sigue aquí; revisa la conexión o la revisión del Goal antes de reintentar.');
+      else setSaveError(t('f.saveFailedRev'));
     } catch {
-      setSaveError('No se ha confirmado el guardado. Tu texto sigue aquí; revisa la conexión antes de reintentar.');
+      setSaveError(t('f.saveFailed'));
     } finally {
       savingRef.current = false;
       setPending(false);
@@ -86,29 +87,29 @@ export function GoalEditSheet({ goal, onSave, onClose }: Props) {
       <header className="goal-edit-head">
         <div>
           <small className="goal-edit-eyebrow">EDITAR GOAL · REVISIÓN {goal.revision} → {goal.revision + 1}</small>
-          <h2 id={titleId}>Ajusta lo que buscas</h2>
+          <h2 id={titleId}>{t('f.editTitle')}</h2>
         </div>
-        <button type="button" className="goal-edit-close" aria-label="Cerrar edición" disabled={pending} onClick={onClose}><X aria-hidden="true" /></button>
+        <button type="button" className="goal-edit-close" aria-label={t('f.closeEdit')} disabled={pending} onClick={onClose}><X aria-hidden="true" /></button>
       </header>
       <form onSubmit={submit}>
-        <label className="goal-edit-label" htmlFor={fieldId}>Texto del Goal</label>
+        <label className="goal-edit-label" htmlFor={fieldId}>{t('f.goalText')}</label>
         <textarea id={fieldId} ref={field} className="goal-edit-field" readOnly={pending} rows={3} maxLength={MAX_TITLE} value={text}
           onChange={(event) => setText(event.target.value)} aria-invalid={tooShort ? 'true' : undefined} />
         <p className="goal-edit-count" aria-live="polite">{normalized.length}/{MAX_TITLE}</p>
-        <div className="goal-edit-keywords" aria-label="Palabras clave de la próxima búsqueda">
-          <small>Próxima búsqueda</small>
-          <ul>{keywords.length ? keywords.map((word) => <li key={word} data-new={before.has(word) ? undefined : 'true'}>{word}</li>) : <li data-empty="true">sin palabras clave</li>}</ul>
+        <div className="goal-edit-keywords" aria-label={t('f.nextKeywords')}>
+          <small>{t('f.nextSearch')}</small>
+          <ul>{keywords.length ? keywords.map((word) => <li key={word} data-new={before.has(word) ? undefined : 'true'}>{word}</li>) : <li data-empty="true">{t('f.noKeywords')}</li>}</ul>
           {removed.length ? <p className="goal-edit-removed">Deja de buscar: {removed.map((word) => <s key={word}>{word}</s>)}</p> : null}
         </div>
         <ul className="goal-edit-keeps" id={noteId}>
-          <li><Check aria-hidden="true" />Se conservan el Goal, su misión, los intentos anteriores, la Evidence y los Finds.</li>
-          <li><Check aria-hidden="true" />No ejecuta nada: para buscar con el texto nuevo, confirma «Buscar más» después.</li>
+          <li><Check aria-hidden="true" />{t('f.editKeeps')}</li>
+          <li><Check aria-hidden="true" />{t('f.editNoRun')}</li>
         </ul>
         {saveError ? <p id={errorId} className="goal-edit-blocked" role="alert">{saveError}</p> : null}
         {goal.blocked ? <p className="goal-edit-blocked" role="status">{goal.blocked}</p> : null}
         <div className="goal-edit-actions">
-          <button type="button" className="goal-edit-cancel" disabled={pending} onClick={onClose}>Cancelar</button>
-          <button type="submit" className="goal-edit-save" disabled={disabled}><Pencil aria-hidden="true" />{pending ? 'Guardando…' : 'Guardar revisión'}</button>
+          <button type="button" className="goal-edit-cancel" disabled={pending} onClick={onClose}>{t('f.cancel')}</button>
+          <button type="submit" className="goal-edit-save" disabled={disabled}><Pencil aria-hidden="true" />{pending ? 'Guardando…' : t('f.saveRevision')}</button>
         </div>
       </form>
     </div>
