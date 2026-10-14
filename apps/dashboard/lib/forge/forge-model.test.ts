@@ -116,6 +116,18 @@ describe('buildForgeModel', () => {
     expect(loading.sources[0]).toMatchObject({ quoteState: 'loading' });
   });
 
+  it('keeps partial zero-SUPPORT batches Verificando — never settled Leídas sin SUPPORT', () => {
+    // One page read without SUPPORT while siblings stay candidates: Kernel is still reading.
+    const partial = [{ candidateId: 'c1', status: 'verified', evidenceId: 'e1', sourceUrl: candidates[0].url, supported: false, supportReason: 'homepage_insufficient_coverage' }];
+    const model = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying', { findCount: 0 }), mission: row({ verificationResults: partial }), evidence: { status: 'available', records } }));
+    expect(model.phase).toBe('verifying');
+    expect(model.phaseLabel).toBe('Verificando fuentes');
+    expect(model.motion).toBe('active');
+    expect(model.steps.map((step) => step.state)).toEqual(['done', 'done', 'active', 'pending', 'pending']);
+    expect(model.relaunch).toBeUndefined();
+    expect(model.sources.some((item) => item.state === 'candidate')).toBe(true);
+  });
+
   it('keeps zero-SUPPORT verification honest: Sin SUPPORT, no Find step, no gold', () => {
     const results = forgedResults.map((item) => (item.candidateId === 'c1' ? { ...item, supported: false, supportReason: 'homepage_insufficient_coverage' } : item));
     const model = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying', { findCount: 0 }), mission: row({ verificationResults: results }), evidence: { status: 'available', records }, opportunities: [find] }));
@@ -283,9 +295,15 @@ describe('displayText', () => {
 
   describe('relaunch (mission left in running/verifying by the Kernel)', () => {
     const now = Date.parse('2026-10-03T10:00:00.000Z');
-    const unsupported = [
-      { candidateId: 'c1', status: 'verified', evidenceId: 'e1', sourceUrl: candidates[0].url, supported: false, supportReason: 'homepage_insufficient_coverage' },
-    ];
+    // Every search candidate needs a Kernel verdict before settled "Leídas sin SUPPORT" chrome.
+    const unsupported = candidates.map((item, index) => ({
+      candidateId: item.id,
+      status: 'verified',
+      evidenceId: `e-unsup-${index}`,
+      sourceUrl: item.url,
+      supported: false,
+      supportReason: 'homepage_insufficient_coverage',
+    }));
     const failedAll = candidates.map((item) => ({ candidateId: item.id, status: 'verification_failed', reason: 'web.read returned HTTP 403' }));
 
     it('offers relaunch for a read-without-SUPPORT mission with no lease', () => {
@@ -323,10 +341,20 @@ describe('displayText', () => {
     it('is offered once an attempt finished and nobody works the Mission, never while queued, searching or leased', () => {
       const forged = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('forged', { status: 'completed' }), mission: forgedRow, now }));
       expect(forged.searchMore).toEqual({ goalId: 'goal:1' });
-      const unsupported = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ verificationResults: [forgedResults[1]] }), now }));
+      // Full batch read without SUPPORT (legacy verifying) may offer Buscar más.
+      const unsupportedBatch = candidates.map((item, index) => ({
+        candidateId: item.id, status: 'verified', evidenceId: `e-batch-${index}`, sourceUrl: item.url, supported: false, supportReason: 'insufficient_term_coverage',
+      }));
+      const unsupported = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ verificationResults: unsupportedBatch }), now }));
       expect(unsupported.phase).toBe('verified_unsupported');
       expect(unsupported.searchMore).toEqual({ goalId: 'goal:1' });
-      const leased = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ verificationResults: [forgedResults[1]], leaseExpiresAt: '2026-10-03T10:05:00.000Z' }), now }));
+      // Partial batch: still Verificando — must not settle chrome or offer Buscar más mid-read.
+      const partial = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ verificationResults: [forgedResults[1]] }), now }));
+      expect(partial.phase).toBe('verifying');
+      expect(partial.searchMore).toBeUndefined();
+      expect(partial.motion).toBe('active');
+      expect(partial.steps.find((step) => step.id === 'support')?.state).not.toBe('failed');
+      const leased = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('verifying'), mission: row({ verificationResults: unsupportedBatch, leaseExpiresAt: '2026-10-03T10:05:00.000Z' }), now }));
       expect(leased.searchMore).toBeUndefined();
       const queued = mission(buildForgeModel({ connected: true, kernelOnline: true, surface: surface('queued', { status: 'queued' }), mission: row({ status: 'queued', executionPhase: 'queued', searchCandidates: undefined }), now }));
       expect(queued.searchMore).toBeUndefined();

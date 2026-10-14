@@ -123,7 +123,11 @@ export default function EfestoProductShell() {
       // an all-fetch-failed batch (retry still possible) keeps Verificando.
       const fullMission = snapshot?.missions.find((item) => item.id === mission.id);
       const proof = fullMission && Array.isArray(fullMission.verificationResults)
-        ? { workState: mission.workState, verificationResults: fullMission.verificationResults }
+        ? {
+          workState: mission.workState,
+          verificationResults: fullMission.verificationResults,
+          ...(Array.isArray(fullMission.searchCandidates) ? { searchCandidates: fullMission.searchCandidates } : {}),
+        }
         : mission;
       if (missionVerifiedWithoutSupport(proof)) return 'verified_unsupported';
     }
@@ -780,7 +784,11 @@ function goalStatusLabel(surface: GoalSurface, missions?: readonly MissionSummar
   // the scorecard already treat it as Sin SUPPORT / not a technical failure.
   if (!mission.blockedReason && (mission.workState === 'failed' || mission.workState === 'verifying')) {
     const proof = raw && Array.isArray(raw.verificationResults)
-      ? { workState: mission.workState, verificationResults: raw.verificationResults }
+      ? {
+        workState: mission.workState,
+        verificationResults: raw.verificationResults,
+        ...(Array.isArray(raw.searchCandidates) ? { searchCandidates: raw.searchCandidates } : {}),
+      }
       : mission;
     if (missionVerifiedWithoutSupport(proof)) return { label: 'sin SUPPORT', tone: 'idle' };
   }

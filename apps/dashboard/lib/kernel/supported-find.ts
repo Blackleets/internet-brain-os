@@ -103,7 +103,25 @@ export function missionVerifiedWithoutSupport(mission?: unknown): boolean {
       if (row.supported === true) return false;
       if (row.status === 'verified') verified += 1;
     }
-    return verified > 0;
+    if (verified === 0) return false;
+    // Fail-close: when searchCandidates are present, every candidate needs a Kernel verdict
+    // before "Sin SUPPORT" chrome. A partial batch still verifying must stay Verificando
+    // (same settleable gate as forge-model / goalEditBlock).
+    const candidates = record.searchCandidates;
+    if (Array.isArray(candidates) && candidates.length > 0) {
+      const settled = new Set<string>();
+      for (const entry of results) {
+        if (!entry || typeof entry !== 'object') continue;
+        const id = (entry as Record<string, unknown>).candidateId;
+        if (typeof id === 'string' && id) settled.add(id);
+      }
+      for (const candidate of candidates) {
+        if (!candidate || typeof candidate !== 'object') continue;
+        const id = (candidate as Record<string, unknown>).id;
+        if (typeof id === 'string' && id && !settled.has(id)) return false;
+      }
+    }
+    return true;
   }
   // A failed GoalSurface without its rows cannot tell "read, no SUPPORT" from "nothing readable".
   return phase === 'verifying' && record.findCount === 0;
