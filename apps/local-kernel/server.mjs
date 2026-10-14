@@ -124,7 +124,11 @@ function environmentModelProviders(env) {
 export function createLocalKernelServer(captureInbox, captureProjector, obsidianProjector, evidenceSummarizer, options = {}) {
   const requiredToken = options.apiToken === undefined ? undefined : validateApiToken(options.apiToken);
   const kernelEvents = options.kernelEvents ?? new KernelEventBus();
-  const activePairing = options.pairingSession;
+  let activePairing = options.pairingSession;
+  // Owner-issued pairing (auto-pair): a caller that already holds the Kernel token (the local dashboard's
+  // server-side bridge) may mint a fresh one-use, short-lived code for the browser extension.
+  const createPairing = options.createPairingSession ?? ((apiToken) => new PairingSession(apiToken, { expiresAt: Date.now() + 120_000 }));
+  const pairingMints = [];
   const identities = options.extensionRegistry;
   const hermesRoute = options.hermesRoute;
   const replayLabQuery = options.replayLabQuery;
@@ -233,6 +237,17 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
       } catch {
         return send(response, 500, { ok: false, code: 'IDENTITY_REGISTRY_UNAVAILABLE' });
       }
+    }
+    if (request.method === 'POST' && request.url === '/api/pairing/extension-code') {
+      // Never from an extension (it would only be minting its own access) and only with a configured token.
+      if (isExtensionOrigin(origin)) return send(response, 403, { ok: false, code: 'PAIRING_MINT_FORBIDDEN' });
+      if (!requiredToken) return send(response, 404, { ok: false, code: 'PAIRING_UNAVAILABLE' });
+      const now = Date.now();
+      while (pairingMints.length && now - pairingMints[0] > 60 * 60_000) pairingMints.shift();
+      if (pairingMints.length >= 20) return send(response, 429, { ok: false, code: 'PAIRING_RATE_LIMITED' });
+      pairingMints.push(now);
+      activePairing = createPairing(requiredToken);
+      return send(response, 200, { ok: true, ...activePairing.details() });
     }
     if (request.method === 'GET' && request.url === '/api/cases' && captureProjector) {
       try {
