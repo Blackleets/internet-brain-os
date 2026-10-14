@@ -1,5 +1,6 @@
 'use client';
 
+import { t, type MessageKey } from '../lib/i18n';
 import type { GoalEditRequest } from './forge/goal-edit-sheet';
 import { hermesReadiness } from '../lib/kernel/agent-connection-copy';
 import { EfestoMark } from './brand/efesto-mark';
@@ -127,8 +128,8 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
     onOpenSettings={onOpenSettings}
     chips={showForge ? null : <>
       <div className="forge-composer-tray" aria-label="Acciones del Kernel">
-        {onOpenFinds ? <button type="button" onClick={onOpenFinds}><Sparkles aria-hidden="true" />Hallazgos</button> : null}
-        <button type="button" onClick={onOpenModels}><BrainCircuit aria-hidden="true" />Modelos locales</button>
+        {onOpenFinds ? <button type="button" onClick={onOpenFinds}><Sparkles aria-hidden="true" />{t('home.chipFinds')}</button> : null}
+        <button type="button" onClick={onOpenModels}><BrainCircuit aria-hidden="true" />{t('home.chipModels')}</button>
       </div>
       {onOpenView ? <PageChips onOpenView={onOpenView} /> : null}
     </>}
@@ -204,7 +205,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
           : <p className="truth-card"><ShieldCheck /> Find SUPPORT forjado en la misión; sin tarjetas de inbox que mostrar.</p>}
       </section> : showForge ? null : <section className="forge-empty forge-goal-empty" aria-label="Crear un Goal">
         <h1 className="forge-wordmark"><EfestoMark size={46} /><ForgedWordmark /><span className="forge-sr-only">¿Qué estás buscando?</span></h1>
-        <p className="forge-goal-lede">Describe lo que quieres lograr. Efesto investiga, verifica las fuentes y te trae hallazgos con evidencia.</p>
+        <p className="forge-goal-lede">{t('home.lede')}</p>
       </section>}
       {showForge ? composer : null}
       </>}
@@ -277,7 +278,7 @@ function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisab
         value={input}
         onChange={(event) => onInputChange(event.target.value)}
         rows={1}
-        placeholder={chatMode ? (chatAvailable ? 'Pregunta lo que quieras…' : 'Elige un modelo en «Modelos locales» para chatear…') : 'Describe tu Goal…'}
+        placeholder={chatMode ? (chatAvailable ? t('home.placeholderChat') : t('home.placeholderNoModel')) : t('home.placeholderGoal')}
         onKeyDown={(event) => {
           if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
             event.preventDefault();
@@ -299,7 +300,7 @@ function ComposerForm({ input, chatMode, chatAvailable, chatPending, submitDisab
             onOpenSettings={onOpenSettings}
           /> : null}
         </div>
-        {chatMode ? null : <span className="forge-mode-label">Goal <span>con verificación</span></span>}
+        {chatMode ? null : <span className="forge-mode-label">Goal <span>{t('home.modeVerified')}</span></span>}
         {chatPending ? <button type="button" className="forge-send stop" onClick={onStopChat} aria-label="Detener generación"><Pause /></button> : <button type="submit" className="forge-send" disabled={submitDisabled} aria-label={chatMode ? 'Enviar mensaje' : 'Preparar Goal'}><ArrowUp /></button>}
       </footer>
     </form>
@@ -544,8 +545,8 @@ const DEFAULT_KERNEL_URL = 'http://127.0.0.1:4310';
 
 export function SettingsView({ connected, connecting, rememberSession, snapshot, kernelBaseUrl, onConnect, onLocalConnect, onExtensionConnect, onDisconnect, onRefresh }: { connected: boolean; onLocalConnect?: () => void; connecting: boolean; rememberSession: boolean; snapshot?: OverviewSnapshot; kernelBaseUrl?: string; onConnect: (event: FormEvent<HTMLFormElement>) => void; onExtensionConnect?: () => void; onDisconnect: () => void; onRefresh: () => void }) {
   const bootstrap = snapshot?.readiness.bootstrap;
-  return <Workspace icon={Settings} eyebrow="Control del propietario" title="Ajustes" copy="Conexión local, estado y recuperación. Los secretos nunca se muestran.">
-    <div className="settings-layout"><form className="connection-card" onSubmit={onConnect}><header><span className={`kernel-dot ${connected ? 'online' : 'offline'}`} /><div><small>DISPOSITIVO ACTUAL</small><strong>{connected ? 'Conectado' : 'Conectar Kernel'}</strong></div></header>{!connected ? <><button type="button" className="primary-action" onClick={onLocalConnect} disabled={connecting || !onLocalConnect}>{connecting ? 'Conectando…' : 'Conectar automáticamente'}</button><p>Efesto se conecta solo a tu Kernel local (en este equipo). No hace falta copiar ningún código.</p><details className="connection-advanced"><summary>Avanzado</summary><p>Solo si tu Kernel está en otro puerto o usas la extensión del navegador (opcional).</p><button type="button" className="secondary-action" onClick={onExtensionConnect} disabled={connecting || !onExtensionConnect}>Conectar con extensión</button><label>URL del Kernel<input name="baseUrl" aria-label="URL del Kernel" type="url" defaultValue={DEFAULT_KERNEL_URL} required /></label><label>Token privado<input name="token" aria-label="Token privado" type="password" autoComplete="off" placeholder="Opcional si usas pairing" /></label><label>Código de emparejamiento<input name="pairingCode" aria-label="Código de emparejamiento" inputMode="text" autoComplete="off" placeholder="ABCD-1234" /></label><label className="remember-row"><input name="rememberSession" type="checkbox" defaultChecked={rememberSession} /><span><strong>Recordar durante esta sesión</strong><small>sessionStorage; no persistencia indefinida.</small></span></label><div className="connection-actions"><button type="submit" name="action" value="pair" className="primary-action" disabled={connecting}>{connecting ? 'Emparejando…' : 'Emparejar con código'}</button><button type="submit" name="action" value="token" className="secondary-action" disabled={connecting}>Autorizar dispositivo</button></div></details></> : <div className="connection-actions"><button type="button" className="primary-action" onClick={onRefresh}><RefreshCw /> Comprobar ahora</button><button type="button" className="danger-action" onClick={onDisconnect}>Desconectar</button></div>}</form><section className="readiness-card"><header><ShieldCheck /><div><small>ESTADO REAL</small><strong>{statusEs(bootstrap?.overall ?? (connected ? 'connected' : 'offline'))}</strong></div></header><ReadinessRow label="Kernel" value={statusEs(snapshot?.readiness.kernel === 'offline' ? 'offline' : bootstrap?.kernel ?? (connected ? 'ready' : 'offline'))} ready={connected && snapshot?.readiness.kernel !== 'offline'} />{(() => { const hermes = hermesReadiness(bootstrap?.hermes, snapshot?.agents?.agents.find((agent) => agent.id === 'hermes')); return <ReadinessRow label="Hermes" value={statusEs(hermes.value)} ready={hermes.ready} />; })()}<ReadinessRow label="Obsidian" value={statusEs(bootstrap?.obsidian ?? 'sin configurar')} ready={bootstrap?.obsidian === 'ready'} /><ReadinessRow label="Extensión (opcional)" value={bootstrap?.pairing === 'paired' ? 'emparejada' : 'no usada'} ready={bootstrap?.pairing === 'paired'} /><details className="readiness-advanced"><summary>Avanzado</summary><a href={replayLabHref(kernelBaseUrl)} target="_blank" rel="noreferrer">Abrir Replay Lab <ExternalLink /></a></details></section></div>
+  return <Workspace icon={Settings} eyebrow={t('settings.eyebrow')} title={t('settings.title')} copy={t('settings.copy')}>
+    <div className="settings-layout"><form className="connection-card" onSubmit={onConnect}><header><span className={`kernel-dot ${connected ? 'online' : 'offline'}`} /><div><small>{t('settings.device').toUpperCase()}</small><strong>{connected ? t('settings.connected') : t('settings.connectKernel')}</strong></div></header>{!connected ? <><button type="button" className="primary-action" onClick={onLocalConnect} disabled={connecting || !onLocalConnect}>{connecting ? t('settings.connecting') : t('settings.autoConnect')}</button><p>{t('settings.autoHelp')}</p><details className="connection-advanced"><summary>{t('settings.advanced')}</summary><p>Solo si tu Kernel está en otro puerto o usas la extensión del navegador (opcional).</p><button type="button" className="secondary-action" onClick={onExtensionConnect} disabled={connecting || !onExtensionConnect}>Conectar con extensión</button><label>URL del Kernel<input name="baseUrl" aria-label="URL del Kernel" type="url" defaultValue={DEFAULT_KERNEL_URL} required /></label><label>Token privado<input name="token" aria-label="Token privado" type="password" autoComplete="off" placeholder="Opcional si usas pairing" /></label><label>Código de emparejamiento<input name="pairingCode" aria-label="Código de emparejamiento" inputMode="text" autoComplete="off" placeholder="ABCD-1234" /></label><label className="remember-row"><input name="rememberSession" type="checkbox" defaultChecked={rememberSession} /><span><strong>Recordar durante esta sesión</strong><small>sessionStorage; no persistencia indefinida.</small></span></label><div className="connection-actions"><button type="submit" name="action" value="pair" className="primary-action" disabled={connecting}>{connecting ? 'Emparejando…' : 'Emparejar con código'}</button><button type="submit" name="action" value="token" className="secondary-action" disabled={connecting}>Autorizar dispositivo</button></div></details></> : <div className="connection-actions"><button type="button" className="primary-action" onClick={onRefresh}><RefreshCw /> {t('settings.checkNow')}</button><button type="button" className="danger-action" onClick={onDisconnect}>{t('settings.disconnect')}</button></div>}</form><section className="readiness-card"><header><ShieldCheck /><div><small>{t('settings.realStatus').toUpperCase()}</small><strong>{statusEs(bootstrap?.overall ?? (connected ? 'connected' : 'offline'))}</strong></div></header><ReadinessRow label="Kernel" value={statusEs(snapshot?.readiness.kernel === 'offline' ? 'offline' : bootstrap?.kernel ?? (connected ? 'ready' : 'offline'))} ready={connected && snapshot?.readiness.kernel !== 'offline'} />{(() => { const hermes = hermesReadiness(bootstrap?.hermes, snapshot?.agents?.agents.find((agent) => agent.id === 'hermes')); return <ReadinessRow label="Hermes" value={statusEs(hermes.value)} ready={hermes.ready} />; })()}<ReadinessRow label="Obsidian" value={statusEs(bootstrap?.obsidian ?? 'unconfigured')} ready={bootstrap?.obsidian === 'ready'} /><ReadinessRow label={t('settings.extensionOptional')} value={bootstrap?.pairing === 'paired' ? t('status.paired') : t('status.unused')} ready={bootstrap?.pairing === 'paired'} /><details className="readiness-advanced"><summary>{t('settings.advanced')}</summary><a href={replayLabHref(kernelBaseUrl)} target="_blank" rel="noreferrer">Abrir Replay Lab <ExternalLink /></a></details></section></div>
   </Workspace>;
 }
 
@@ -572,8 +573,9 @@ function newGoalAction(onNewGoal?: () => void) { return onNewGoal ? { label: 'Cr
 function StatePill({ state }: { state: string }) {
   return <span className={`state-pill ${statePillTone(state)}`}><i />{statePillLabel(state)}</span>;
 }
-const STATUS_ES: Record<string, string> = { ready: 'listo', online: 'en línea', offline: 'sin conexión', connected: 'conectado', needs_setup: 'falta configurar algo', 'needs-setup': 'falta configurar algo', partial: 'parcial', required: 'no usada', degraded: 'parcial', missing: 'no instalado', unavailable: 'no disponible', paired: 'emparejada', unpaired: 'no usada', blocked: 'bloqueado', unconfigured: 'sin configurar', 'not-configured': 'sin configurar', error: 'error' };
-export function statusEs(value: string): string { return STATUS_ES[value] ?? value; }
+const STATUS_KEYS: Record<string, MessageKey> = { ready: 'status.ready', online: 'status.online', offline: 'status.offline', connected: 'status.connected', needs_setup: 'status.needs_setup', 'needs-setup': 'status.needs_setup', partial: 'status.partial', degraded: 'status.degraded', missing: 'status.missing', unavailable: 'status.unavailable', paired: 'status.paired', unpaired: 'status.unused', required: 'status.unused', blocked: 'status.blocked', unconfigured: 'status.unconfigured', 'not-configured': 'status.unconfigured', error: 'status.error' };
+/** Kernel readiness words in the active language (unknown values pass through). */
+export function statusEs(value: string): string { const key = STATUS_KEYS[value]; return key ? t(key) : value; }
 function ReadinessRow({ label, value, ready }: { label: string; value: string; ready: boolean }) { return <div className="readiness-row"><span>{label}</span><strong className={ready ? 'ready' : ''}><i />{value}</strong></div>; }
 export function brainState(phase: BrainPhase, supportedFindCount = 0) {
   if (phase === 'thinking') return { label: 'Conversando', detail: 'Modelo transmitiendo' };

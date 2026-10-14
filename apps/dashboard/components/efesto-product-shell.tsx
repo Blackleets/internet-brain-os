@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { KernelClient, KernelClientError } from '../lib/kernel/client';
+import { bootLocale, t, useLocale, type MessageKey } from '../lib/i18n';
 import type { CaseSummary, MissionSummary } from '../lib/kernel/contracts';
 import { loadGoalSurfaces, type GoalSurface, type GoalSurfaceWorkState } from '../lib/kernel/goal-surfaces';
 import { loadOverview, type OverviewSnapshot } from '../lib/kernel/overview';
@@ -42,26 +43,31 @@ const SESSION_CONNECTION_KEY = 'hephaestus.owner.connection.session.v1';
 const DEFAULT_BASE_URL = 'http://127.0.0.1:4000';
 // Must match the drawer breakpoint in efesto-forge-redesign.css.
 const MOBILE_NAV_QUERY = '(max-width: 720px)';
-type NavItem = { id: View; label: string; icon: typeof Home };
+type NavItem = { id: View; labelKey: MessageKey; readonly label: string; icon: typeof Home };
+// Labels resolve through the active locale on every render (the shell subscribes with useLocale()).
+function navItem(id: View, labelKey: MessageKey, icon: typeof Home): NavItem { return { id, labelKey, icon, get label() { return t(labelKey); } }; }
 const workspaceNav: NavItem[] = [
-  { id: 'home', label: 'Inicio', icon: Home },
-  { id: 'goals', label: 'Objetivos', icon: Target },
-  { id: 'finds', label: 'Hallazgos', icon: Sparkles },
-  { id: 'evidence', label: 'Evidencia', icon: ShieldCheck },
-  { id: 'memory', label: 'Memoria', icon: Database },
-  { id: 'activity', label: 'Actividad', icon: Activity },
+  navItem('home', 'nav.home', Home),
+  navItem('goals', 'nav.goals', Target),
+  navItem('finds', 'nav.finds', Sparkles),
+  navItem('evidence', 'nav.evidence', ShieldCheck),
+  navItem('memory', 'nav.memory', Database),
+  navItem('activity', 'nav.activity', Activity),
 ];
 const systemNav: NavItem[] = [
-  { id: 'models', label: 'Modelos', icon: BrainCircuit },
-  { id: 'agents', label: 'Agentes', icon: Bot },
+  navItem('models', 'nav.models', BrainCircuit),
+  navItem('agents', 'nav.agents', Bot),
 ];
-const settingsNav: NavItem = { id: 'settings', label: 'Ajustes', icon: Settings };
+const settingsNav: NavItem = navItem('settings', 'nav.settings', Settings);
 const nav = [...workspaceNav, ...systemNav, settingsNav];
 // Phone bottom tabs (v3): the four main areas + "Más", which opens the full navigation drawer.
 const tabNav = workspaceNav.filter((item) => item.id === 'home' || item.id === 'goals' || item.id === 'finds' || item.id === 'evidence');
 const ACTIVE_GOALS_MAX = 5;
 
 export default function EfestoProductShell() {
+  const locale = useLocale(); // re-render on language change
+  useEffect(() => { bootLocale(); }, []);
+  useEffect(() => { document.documentElement.lang = locale; }, [locale]);
   const [view, setView] = useState<View>('home');
   const [navOpen, setNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -670,22 +676,22 @@ export default function EfestoProductShell() {
         <button type="button" onClick={() => navigate('home')} aria-label="Efesto, inicio">
           <EfestoLockup size={38} />
         </button>
-        <button type="button" ref={drawerCloseRef} className="mobile-close" onClick={closeNavigation} aria-label="Cerrar menú"><PanelLeftClose /></button>
+        <button type="button" ref={drawerCloseRef} className="mobile-close" onClick={closeNavigation} aria-label={t('sidebar.closeMenu')}><PanelLeftClose /></button>
       </div>
 
-      <div className="sidebar-actions" aria-label="Crear">
-        <span className="nav-label">Crear</span>
-        <button type="button" className="new-goal" onClick={newGoal} title="Nuevo Goal">
-          <Plus /><span>Nuevo Goal</span>
+      <div className="sidebar-actions" aria-label={t('sidebar.create')}>
+        <span className="nav-label">{t('sidebar.create')}</span>
+        <button type="button" className="new-goal" onClick={newGoal} title={t('sidebar.newGoal')}>
+          <Plus /><span>{t('sidebar.newGoal')}</span>
         </button>
-        <button type="button" className="new-chat" onClick={newChat} title="Nueva conversación">
-          <SquarePen /><span>Nuevo chat</span>
+        <button type="button" className="new-chat" onClick={newChat} title={t('sidebar.newChatTitle')}>
+          <SquarePen /><span>{t('sidebar.newChat')}</span>
         </button>
       </div>
 
-      <nav aria-label="Áreas de Efesto">
+      <nav aria-label={t('sidebar.areas')}>
         <div className="nav-group">
-          <span className="nav-label">Espacio de trabajo</span>
+          <span className="nav-label">{t('sidebar.workspace')}</span>
           {workspaceNav.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} title={label}>
             <Icon /><span>{label}</span>
             {id === 'goals' && snapshot ? <b>{snapshot.goals.length}</b> : null}
@@ -694,8 +700,8 @@ export default function EfestoProductShell() {
         </div>
       </nav>
 
-      {activeGoals.length ? <section className="sidebar-goals" aria-label="Objetivos activos">
-        <span className="nav-label">Objetivos activos</span>
+      {activeGoals.length ? <section className="sidebar-goals" aria-label={t('sidebar.activeGoals')}>
+        <span className="nav-label">{t('sidebar.activeGoals')}</span>
         <ul>
           {activeGoals.map((surface) => {
             const focused = surface.goal.id === focusedGoalSurface?.goal.id;
@@ -711,21 +717,21 @@ export default function EfestoProductShell() {
       </section> : null}
 
       <div className="sidebar-spacer" />
-      <nav className="sidebar-system sidebar-menu-card" aria-label="Sistema">
-        <span className="nav-label">Sistema</span>
+      <nav className="sidebar-system sidebar-menu-card" aria-label={t('sidebar.system')}>
+        <span className="nav-label">{t('sidebar.system')}</span>
         {[...systemNav, settingsNav].map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} title={label}>
           <Icon /><span>{label}</span><ChevronRight className="menu-chevron" aria-hidden="true" />
         </button>)}
       </nav>
-      <button type="button" className="kernel-summary" onClick={() => navigate('settings')}><span className={`kernel-dot ${snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} /><span><strong>Kernel local</strong><small>{kernelChipDetail(connection?.baseUrl, snapshot)}</small></span><ChevronRight /></button>
+      <button type="button" className="kernel-summary" onClick={() => navigate('settings')}><span className={`kernel-dot ${snapshot?.readiness.kernel === 'online' ? 'online' : 'offline'}`} /><span><strong>{t('sidebar.kernel')}</strong><small>{kernelChipDetail(connection?.baseUrl, snapshot)}</small></span><ChevronRight /></button>
     </aside>
-    {navOpen ? <button type="button" className="nav-scrim" onClick={closeNavigation} aria-label="Cerrar menú" tabIndex={-1} /> : null}
+    {navOpen ? <button type="button" className="nav-scrim" onClick={closeNavigation} aria-label={t('sidebar.closeMenu')} tabIndex={-1} /> : null}
 
     <section className="efesto-stage">
       <header className="efesto-topbar">
-        <div><button type="button" ref={menuButtonRef} className="menu-button" onClick={(event) => toggleNavigation(event.currentTarget)} aria-label="Alternar navegación" aria-controls="efesto-sidebar" aria-expanded={navExpanded}><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view)}</button></div>
-        <div className="top-context"><span className="local-first-status"><ShieldCheck /> Primero local</span><span className="private-status">Privado por diseño</span></div>
-        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label="Actualizar estado"><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection && snapshot?.readiness.kernel === 'online' ? 'online' : 'offline')} onClick={() => (connection ? setConnectionsOpen(true) : navigate('settings'))} aria-haspopup={connection ? 'dialog' : undefined}><span />{!connection ? 'Conectar' : snapshot?.readiness.kernel === 'online' ? 'Kernel listo' : 'Kernel sin respuesta'}{connection ? <i className="connection-agent" data-tone={agentTone} aria-hidden="true" /> : null}{connection ? <span className="forge-sr-only"> · {agentShort}</span> : null}</button></div>
+        <div><button type="button" ref={menuButtonRef} className="menu-button" onClick={(event) => toggleNavigation(event.currentTarget)} aria-label={t('top.toggleNav')} aria-controls="efesto-sidebar" aria-expanded={navExpanded}><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view)}</button></div>
+        <div className="top-context"><span className="local-first-status"><ShieldCheck /> {t('top.localFirst')}</span><span className="private-status">{t('top.private')}</span></div>
+        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label={t('top.refresh')}><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection && snapshot?.readiness.kernel === 'online' ? 'online' : 'offline')} onClick={() => (connection ? setConnectionsOpen(true) : navigate('settings'))} aria-haspopup={connection ? 'dialog' : undefined}><span />{!connection ? 'Conectar' : snapshot?.readiness.kernel === 'online' ? 'Kernel listo' : 'Kernel sin respuesta'}{connection ? <i className="connection-agent" data-tone={agentTone} aria-hidden="true" /> : null}{connection ? <span className="forge-sr-only"> · {agentShort}</span> : null}</button></div>
       </header>
       <main id="efesto-main" ref={mainRef} tabIndex={-1} className="efesto-main">
         {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenConnections={() => setConnectionsOpen(true)} onOpenView={(next) => navigate(next)} onOpenNav={toggleNavigation} navExpanded={navExpanded} supportedFinds={supportedFinds} forgeSupportedFindCount={forgeSupportedFindCount} missions={snapshot?.missions} forgeModel={forgeModel} onOpenFinds={() => navigate('finds')} onRelaunchMission={(goalId) => void relaunchMission(goalId)} relaunchPending={relaunchPending} onSearchMore={(goalId) => void relaunchMission(goalId, 'search_more')} onReviseGoal={reviseGoal} onFindFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
@@ -792,18 +798,18 @@ function goalStatusLabel(surface: GoalSurface, missions?: readonly MissionSummar
 }
 /** Kernel chip: the local Kernel address it talks to and whether it answers. */
 function kernelChipDetail(baseUrl: string | undefined, snapshot: OverviewSnapshot | undefined): string {
-  if (!baseUrl) return 'Sin conexión';
+  if (!baseUrl) return t('chip.disconnected');
   let where = baseUrl;
   try {
     const url = new URL(baseUrl);
     // A loopback Kernel is "this computer": show its real port, not a raw IP.
-    where = ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) ? `puerto ${url.port || '80'}` : url.host;
+    where = ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) ? t('chip.port', { port: url.port || '80' }) : url.host;
   } catch { /* keep the raw value */ }
-  if (!snapshot) return `Conectando · ${where}`;
-  return `${snapshot.readiness.kernel === 'online' ? 'Conectado' : 'Sin respuesta'} · ${where}`;
+  if (!snapshot) return `${t('chip.connecting')} · ${where}`;
+  return `${snapshot.readiness.kernel === 'online' ? t('chip.connected') : t('chip.noResponse')} · ${where}`;
 }
 function slug(value: string) { return value.toLocaleLowerCase('en').replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || `provider-${Date.now()}`; }
-function viewLabel(view: View) { return nav.find((item) => item.id === view)?.label ?? 'Inicio'; }
+function viewLabel(view: View) { return nav.find((item) => item.id === view)?.label ?? t('nav.home'); }
 // Goal surfaces are an enrichment of the overview: a Kernel whose surface projection is unavailable
 // (e.g. a stale build) must not make the whole connection look like a bad token. Keep the last
 // known surfaces instead of inventing an empty list.

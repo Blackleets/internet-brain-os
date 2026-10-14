@@ -35,7 +35,7 @@ describe('home v2 (approved design)', () => {
   it('sidebar groups are labelled and the strip under the box has no border', () => {
     expect(css).toContain('.forge-composer-tray { background: transparent; border: 0; box-shadow: none; }');
     const shell = readFileSync(join(root, 'components/efesto-product-shell.tsx'), 'utf8');
-    for (const label of ['Crear', 'Espacio de trabajo', 'Sistema']) expect(shell).toContain(`<span className="nav-label">${label}</span>`);
+    for (const key of ['sidebar.create', 'sidebar.workspace', 'sidebar.system']) expect(shell).toContain(`<span className="nav-label">{t('${key}')}</span>`);
     expect(readFileSync(join(root, 'app/layout.tsx'), 'utf8')).toContain("import './efesto-home-v2.css';");
   });
 });

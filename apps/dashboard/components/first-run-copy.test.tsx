@@ -17,13 +17,13 @@ describe('first-run copy is Spanish and jargon-free by default', () => {
     for (const s of ['Kernel-gated', 'Configura un modelo', 'READINESS REAL', 'KERNEL-OWNED', 'Mission Watchtower', 'bridge autenticado']) expect(src).not.toContain(s);
   });
   it('keeps Replay Lab behind Avanzado', () => {
-    expect(src).toMatch(/<summary>Avanzado<\/summary><a href=\{replayLabHref/);
+    expect(src).toMatch(/<summary>\{t\('settings.advanced'\)\}<\/summary><a href=\{replayLabHref/);
   });
 });
 
 describe('settings readiness never asks for the optional extension', () => {
   it('maps needs_setup and required to Spanish', () => {
     expect(statusEs('needs_setup')).toBe('falta configurar algo');
-    expect(src).toContain("bootstrap?.pairing === 'paired' ? 'emparejada' : 'no usada'");
+    expect(src).toContain("bootstrap?.pairing === 'paired' ? t('status.paired') : t('status.unused')");
   });
 });
