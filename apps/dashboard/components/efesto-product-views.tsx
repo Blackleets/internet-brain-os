@@ -8,7 +8,7 @@ import {
   Activity, Bot, BrainCircuit, Check, ChevronDown, ChevronRight, CircleOff, Database, ExternalLink, FileSearch,
   History, Lightbulb, Menu, MessageSquare, Pause, Plug, RefreshCw, Search, ArrowUp, Send, Settings, ShieldCheck, Sparkles, Target, Workflow, X,
 } from 'lucide-react';
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import type { CaseSummary, MissionSummary, ModelForgeSummary, OpportunitySummary } from '../lib/kernel/contracts';
 import type { OverviewSnapshot } from '../lib/kernel/overview';
 import { countMissionKernelSupportedFinds, isKernelSupportedFind, kernelSupportProof, kernelSupportedFinds, missionVerifiedWithoutSupport } from '../lib/kernel/supported-find';
@@ -203,7 +203,8 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
           ? <div className="find-grid">{supportedFinds.map((item) => <FindCard key={item.id} item={item} missions={missions} onFeedback={onFindFeedback ?? (() => undefined)} onOpenCase={onOpenCase} />)}</div>
           : <p className="truth-card"><ShieldCheck /> Find SUPPORT forjado en la misión; sin tarjetas de inbox que mostrar.</p>}
       </section> : showForge ? null : <section className="forge-empty forge-goal-empty" aria-label="Crear un Goal">
-        <h1 className="forge-wordmark"><EfestoMark size={46} /><b aria-hidden="true">EFESTO</b><span className="forge-sr-only">¿Qué estás buscando?</span></h1>
+        <h1 className="forge-wordmark"><EfestoMark size={46} /><ForgedWordmark /><span className="forge-sr-only">¿Qué estás buscando?</span></h1>
+        <p className="forge-goal-lede">Describe lo que quieres lograr. Efesto investiga, verifica las fuentes y te trae hallazgos con evidencia.</p>
       </section>}
       {showForge ? composer : null}
       </>}
@@ -211,6 +212,20 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
 
     {showForge ? null : composer}
   </section>;
+}
+
+/**
+ * EFESTO forged from red-hot metal: each letter cools from molten to steel once on load; the F stays
+ * lit like an ember with a few sparks. Pure CSS (opacity/transform/filter on 6 letters + 4 dots),
+ * disabled under prefers-reduced-motion (efesto-home-v2.css). Decorative only.
+ */
+export function ForgedWordmark() {
+  return <b className="forge-forged" aria-hidden="true">
+    {'EFESTO'.split('').map((letter, index) => <span key={index} className={index === 1 ? 'fx-l fx-ember' : 'fx-l'} style={{ '--i': index } as CSSProperties}>
+      {letter}
+      {index === 1 ? <span className="fx-sparks">{[0, 1, 2, 3].map((n) => <i key={n} style={{ '--n': n } as CSSProperties} />)}</span> : null}
+    </span>)}
+  </b>;
 }
 
 export type HomeChipView = 'goals' | 'evidence' | 'memory' | 'activity' | 'agents';

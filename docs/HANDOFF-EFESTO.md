@@ -291,3 +291,9 @@ Goal from Lewis: install like the ChatGPT/Grok desktop apps. No browser extensio
   - `publicLaunchApproved` stays false.
 
 - **Not yet verified on a real Windows PC.** CI (`windows-one-click.yml`) only parses the scripts and runs the dry run and config generation on windows-2022. No winget installs, Hermes pip install, model pull or real start have been exercised.
+
+### 10.2 Home v2 (aprobada por Lewis, 2026-10-14)
+- `apps/dashboard/app/efesto-home-v2.css`: home negro profundo, araña con glow (solo estilo del canvas; comportamiento de araña y yunque sin cambios), caja Goal más baja, wordmark EFESTO forjado en CSS puro (F ardiente + chispas, respeta `prefers-reduced-motion`), franja inferior sin borde.
+- Sidebar agrupado: Crear / Espacio de trabajo / Sistema, estado del Kernel abajo.
+- Móvil: halo oscuro tras el texto para que la araña no tape la lectura.
+- Tests: `components/home-v2.test.tsx`; legibilidad e2e (contraste AA) pasa.

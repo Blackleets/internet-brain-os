@@ -674,6 +674,7 @@ export default function EfestoProductShell() {
       </div>
 
       <div className="sidebar-actions" aria-label="Crear">
+        <span className="nav-label">Crear</span>
         <button type="button" className="new-goal" onClick={newGoal} title="Nuevo Goal">
           <Plus /><span>Nuevo Goal</span>
         </button>
@@ -711,6 +712,7 @@ export default function EfestoProductShell() {
 
       <div className="sidebar-spacer" />
       <nav className="sidebar-system sidebar-menu-card" aria-label="Sistema">
+        <span className="nav-label">Sistema</span>
         {[...systemNav, settingsNav].map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => navigate(id)} aria-current={view === id ? 'page' : undefined} title={label}>
           <Icon /><span>{label}</span><ChevronRight className="menu-chevron" aria-hidden="true" />
         </button>)}
