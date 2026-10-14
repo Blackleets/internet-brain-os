@@ -221,12 +221,12 @@ export default function EfestoProductShell() {
         const client = new KernelClient(connection);
         const [nextSnapshot, nextGoalSurfaces] = await Promise.all([
           loadOverview(client),
-          loadGoalSurfaces(client),
+          loadGoalSurfacesOptional(client),
         ]);
         if (cancelled) return;
         failures = 0;
         setSnapshot(nextSnapshot);
-        setGoalSurfaces(nextGoalSurfaces);
+        if (nextGoalSurfaces) setGoalSurfaces(nextGoalSurfaces);
       } catch {
         // Keep the last verified records, but after repeated failures (Kernel stopped,
         // restarting or token rotated) stop claiming the Kernel is online.
@@ -393,14 +393,14 @@ export default function EfestoProductShell() {
       const [nextSnapshot, nextProviders, nextGoalSurfaces] = await Promise.all([
         loadOverview(client),
         client.get('/api/chat/providers', parseProviders),
-        loadGoalSurfaces(client),
+        loadGoalSurfacesOptional(client),
       ]);
       if (attempt !== connectionAttempt.current) return false;
       if (nextSnapshot.readiness.kernel !== 'online') throw new KernelClientError('OFFLINE');
       setConnection(verified);
       setSnapshot(nextSnapshot);
       setProviders(nextProviders);
-      setGoalSurfaces(nextGoalSurfaces);
+      if (nextGoalSurfaces) setGoalSurfaces(nextGoalSurfaces);
       connectionStore.set(verified);
       if (remember && verified.token !== EXTENSION_TRANSPORT && verified.token !== LOCAL_TRANSPORT) window.sessionStorage.setItem(SESSION_CONNECTION_KEY, JSON.stringify(verified));
       else window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
@@ -472,9 +472,9 @@ export default function EfestoProductShell() {
       const [nextSnapshot, nextProviders, nextGoalSurfaces] = await Promise.all([
         loadOverview(client),
         client.get('/api/chat/providers', parseProviders),
-        loadGoalSurfaces(client),
+        loadGoalSurfacesOptional(client),
       ]);
-      setSnapshot(nextSnapshot); setProviders(nextProviders); setGoalSurfaces(nextGoalSurfaces); setToast('Estado actualizado desde el Kernel.');
+      setSnapshot(nextSnapshot); setProviders(nextProviders); if (nextGoalSurfaces) setGoalSurfaces(nextGoalSurfaces); setToast('Estado actualizado desde el Kernel.');
     } catch (error) { setToast(connectionMessage(error)); }
   }
 
@@ -800,6 +800,12 @@ function kernelChipDetail(baseUrl: string | undefined, snapshot: OverviewSnapsho
 }
 function slug(value: string) { return value.toLocaleLowerCase('en').replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || `provider-${Date.now()}`; }
 function viewLabel(view: View) { return nav.find((item) => item.id === view)?.label ?? 'Inicio'; }
+// Goal surfaces are an enrichment of the overview: a Kernel whose surface projection is unavailable
+// (e.g. a stale build) must not make the whole connection look like a bad token. Keep the last
+// known surfaces instead of inventing an empty list.
+async function loadGoalSurfacesOptional(client: KernelClient): Promise<GoalSurface[] | null> {
+  try { return await loadGoalSurfaces(client); } catch { return null; }
+}
 function connectionMessage(error: unknown) { if (error instanceof KernelClientError && error.code === 'UNAUTHORIZED') return 'El Kernel rechazó el token. No se guardó la credencial.'; if (error instanceof KernelClientError && error.code === 'TIMEOUT') return 'El Kernel tardó demasiado en responder.'; if (error instanceof KernelClientError && error.code === 'OFFLINE') return 'No se alcanzó el Kernel local. Comprueba que el Launcher esté activo.'; return 'No se pudo conectar. Revisa la URL local y el token.'; }
 function parseObject(value: unknown): Record<string, unknown> { if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid response'); return value as Record<string, unknown>; }
 function parseOk(value: unknown) { const body = parseObject(value); if (body.ok !== true) throw new Error('Invalid response'); return body; }
