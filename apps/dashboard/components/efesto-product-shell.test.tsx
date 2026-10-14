@@ -77,7 +77,7 @@ describe('Efesto goal-first product shell', () => {
     expect(stateAction.className).toContain('phase-offline');
     expect(screen.getAllByText('Privado por diseño').length).toBeGreaterThan(0);
     // Kimi-style minimal home: the Kernel boundary is stated by the composer mode label and its description.
-    expect(screen.getByText('Kernel-gated')).toBeTruthy();
+    expect(screen.getByText('con verificación')).toBeTruthy();
     expect(screen.getByText('Preparar no ejecuta ninguna acción externa.')).toBeTruthy();
     expect(screen.getByLabelText('Goal')).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Modo de trabajo' })).toBeTruthy();
@@ -222,14 +222,14 @@ describe('Efesto goal-first product shell', () => {
       await act(async () => { await vi.advanceTimersByTimeAsync(7_000); });
       expect(screen.queryByRole('button', { name: /Kernel listo/ })).toBeNull();
       expect(screen.getByRole('button', { name: /Kernel sin respuesta/ })).toBeTruthy();
-      expect(screen.queryByRole('button', { name: /Kernel local.*· online/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: /Kernel local.*· en línea/ })).toBeNull();
       const kernelRow = screen.getAllByText('Kernel').map((label) => label.closest('.readiness-row')).find(Boolean);
-      expect(kernelRow?.textContent).toContain('offline');
+      expect(kernelRow?.textContent).toContain('sin conexión');
       expect(kernelRow?.querySelector('strong')?.className).not.toContain('ready');
       vi.stubGlobal('fetch', healthy);
       await act(async () => { await vi.advanceTimersByTimeAsync(3_500); });
       expect(screen.getByRole('button', { name: /Kernel listo/ })).toBeTruthy();
-      expect(screen.getByRole('button', { name: /Kernel local.*· online/ })).toBeTruthy();
+      expect(screen.getByRole('button', { name: /Kernel local.*· en línea/ })).toBeTruthy();
     } finally {
       vi.useRealTimers();
     }

@@ -49,7 +49,7 @@ test('runs the Goal-first journey only after explicit confirmation', async ({ pa
   await expect(page.getByRole('heading', { name: '¿Qué estás buscando?', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Goal', exact: true })).toHaveAttribute('aria-pressed', 'true');
   // Minimal home: the Kernel boundary is the composer mode label (hero guarantee copy was removed in the Kimi-style layout).
-  await expect(page.getByText('Kernel-gated', { exact: true })).toBeVisible();
+  await expect(page.getByText('con verificación', { exact: true })).toBeVisible();
 
   await connect(page);
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();

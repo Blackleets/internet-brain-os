@@ -796,7 +796,7 @@ function kernelChipDetail(baseUrl: string | undefined, snapshot: OverviewSnapsho
   let host = baseUrl;
   try { host = new URL(baseUrl).host; } catch { /* keep the raw value */ }
   if (!snapshot) return `${host} · conectando`;
-  return `${host} · ${snapshot.readiness.kernel === 'online' ? 'online' : 'sin respuesta'}`;
+  return `${host} · ${snapshot.readiness.kernel === 'online' ? 'en línea' : 'sin respuesta'}`;
 }
 function slug(value: string) { return value.toLocaleLowerCase('en').replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || `provider-${Date.now()}`; }
 function viewLabel(view: View) { return nav.find((item) => item.id === view)?.label ?? 'Inicio'; }

@@ -43,7 +43,7 @@ describe('AgentConnector', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Conectar Hermes Agent' }));
     await waitFor(() => expect(screen.getByText(/Aún no: el Kernel no ha recibido a Hermes Agent/)).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: 'Conectar Hermes Agent' }));
-    await waitFor(() => expect(screen.getByText('Funciona: el Kernel recibió a Hermes Agent hace 5 s (comprobación del doctor).')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Funciona: el Kernel recibió a Hermes Agent hace 5 s (comprobación automática).')).toBeTruthy());
     expect(onTest).toHaveBeenCalledTimes(2);
   });
 
