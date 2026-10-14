@@ -1,0 +1,50 @@
+name: macOS Installer (Efesto.dmg)
+
+# Builds an unsigned Efesto.dmg (Efesto.app launcher + embedded sources) on macos-latest, then runs a
+# REAL per-user install into a temp EFESTO_HOME (Node 22, Python 3.14, Ollama, Hermes ae3f9f9c,
+# Kernel + dashboard production build) without starting the stack or pulling the model.
+# CI artifact only, no public release. Unsigned: Gatekeeper will warn (right-click > Open).
+on:
+  pull_request:
+    paths:
+      - 'installer/macos/**'
+      - 'scripts/macos/**'
+      - '.github/workflows/macos-installer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-dmg:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Efesto.dmg
+        run: bash installer/macos/build-dmg.sh
+      - name: Mount and verify bundle
+        run: |
+          hdiutil attach -nobrowse -mountpoint /tmp/efesto-dmg build/macos/Efesto.dmg
+          test -x /tmp/efesto-dmg/Efesto.app/Contents/MacOS/Efesto
+          test -f /tmp/efesto-dmg/Efesto.app/Contents/Resources/efesto-src/scripts/macos/install-efesto-macos.sh
+          plutil -lint /tmp/efesto-dmg/Efesto.app/Contents/Info.plist
+      - name: Dry-run install from the dmg
+        run: EFESTO_HOME="$RUNNER_TEMP/efesto-dry" bash /tmp/efesto-dmg/Efesto.app/Contents/Resources/efesto-src/scripts/macos/install-efesto-macos.sh --dry-run && grep -q '^DONE|0' "$RUNNER_TEMP/efesto-dry/install-progress.txt"
+      - name: Real per-user install (no start, no model pull)
+        run: |
+          H="$RUNNER_TEMP/Efesto"
+          EFESTO_HOME="$H" bash /tmp/efesto-dmg/Efesto.app/Contents/Resources/efesto-src/scripts/macos/install-efesto-macos.sh --no-start
+          grep -q '^DONE|0' "$H/install-progress.txt"
+          "$(cat "$H/node-path.txt")" --version | grep -q '^v22\.'
+          "$H/runtime/python/bin/python3.14" --version
+          test -x "$H/hermes-agent/venv/bin/hermes" && git -C "$H/hermes-agent" rev-parse --short=8 HEAD | grep -q ae3f9f9c
+          test -d "$H/runtime/Ollama.app"
+          test -f "$H/app/apps/dashboard/.next/BUILD_ID"
+          echo "install OK"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Efesto-macos-dmg
+          path: build/macos/Efesto.dmg
+          if-no-files-found: error
+          retention-days: 30
