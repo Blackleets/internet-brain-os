@@ -357,7 +357,7 @@ export default function EfestoProductShell() {
     const token = String(data.get('token') ?? '').trim();
     if (tokenInput instanceof HTMLInputElement) tokenInput.value = '';
     if (!token) {
-      setToast('Introduce el token privado o usa el código de emparejamiento.');
+      setToast(t('s.tokenOrCode'));
       return;
     }
     await connectWith({ baseUrl, token }, remember);
@@ -382,11 +382,11 @@ export default function EfestoProductShell() {
         throw new KernelClientError('HTTP_ERROR', response.status);
       }
       if (await connectWith({ baseUrl: verifiedBaseUrl, token: body.apiToken }, remember)) {
-        setToast('Kernel emparejado. La web ya puede controlar Missions y Evidence.');
+        setToast(t('s.paired'));
       }
     } catch (error) {
       if (error instanceof KernelClientError && error.code === 'HTTP_ERROR') {
-        setToast('Código rechazado, expirado o ya utilizado. Genera otro en el Kernel.');
+        setToast(t('s.codeRejected'));
       } else {
         setToast(connectionMessage(error));
       }
@@ -416,7 +416,7 @@ export default function EfestoProductShell() {
       connectionStore.set(verified);
       if (remember && verified.token !== EXTENSION_TRANSPORT && verified.token !== LOCAL_TRANSPORT) window.sessionStorage.setItem(SESSION_CONNECTION_KEY, JSON.stringify(verified));
       else window.sessionStorage.removeItem(SESSION_CONNECTION_KEY);
-      setToast('Kernel conectado. La interfaz muestra estado persistido real.');
+      setToast(t('s.connectedReal'));
       return true;
     } catch (error) {
       if (attempt !== connectionAttempt.current) return false;
@@ -435,7 +435,7 @@ export default function EfestoProductShell() {
       const candidate = await discoverLocalKernelConnection();
       if (attempt === connectionAttempt.current) await connectWith(candidate, false);
     }
-    catch { setToast('No se encontró el Kernel local. Abre Efesto desde su icono del escritorio y vuelve a intentarlo.'); }
+    catch { setToast(t('s.localNotFound')); }
     finally { setConnecting(false); }
   }
 
@@ -447,7 +447,7 @@ export default function EfestoProductShell() {
       const candidate = await discoverExtensionConnection();
       if (attempt === connectionAttempt.current) await connectWith(candidate, false);
     }
-    catch { setToast('Abre la extensión Efesto, empareja una vez y activa «Reconectar automáticamente la web de Efesto».'); }
+    catch { setToast(t('s.openExtension')); }
     finally { setConnecting(false); }
   }
 
@@ -455,11 +455,11 @@ export default function EfestoProductShell() {
     automaticPaused.current = true;
     connectionAttempt.current += 1;
     setConnecting(false);
-    if (connection?.token === EXTENSION_TRANSPORT) void revokeExtensionConnection().catch(() => setToast('Sesión cerrada. Para revocar la reconexión, desmarca la autorización en la extensión.'));
+    if (connection?.token === EXTENSION_TRANSPORT) void revokeExtensionConnection().catch(() => setToast(t('s.sessionClosed')));
     chatAbortRef.current?.abort();
     setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); setCaseDetails({}); setSelectedCaseId(''); setChatMessages([]);
     connectionStore.clear(); window.sessionStorage.removeItem(SESSION_CONNECTION_KEY); setRememberSession(false);
-    setToast('Dispositivo desconectado. El token ya no está en esta sesión.');
+    setToast(t('s.deviceDisconnected'));
   }
 
   /** "Probar conexión": a fresh GET /api/agents. undefined = this Kernel does not publish agent status. */
@@ -486,7 +486,7 @@ export default function EfestoProductShell() {
         client.get('/api/chat/providers', parseProviders),
         loadGoalSurfacesOptional(client),
       ]);
-      setSnapshot(nextSnapshot); setProviders(nextProviders); if (nextGoalSurfaces) setGoalSurfaces(nextGoalSurfaces); setToast('Estado actualizado desde el Kernel.');
+      setSnapshot(nextSnapshot); setProviders(nextProviders); if (nextGoalSurfaces) setGoalSurfaces(nextGoalSurfaces); setToast(t('s.statusUpdated'));
     } catch (error) { setToast(connectionMessage(error)); }
   }
 
@@ -495,7 +495,7 @@ export default function EfestoProductShell() {
     const value = input.trim();
     if (!value) return;
     setPreparedGoal(value);
-    setToast(connection ? 'Plan preparado. Nada se ejecutará hasta que confirmes.' : 'Borrador preparado localmente. Conecta el Kernel para ejecutarlo.');
+    setToast(connection ? t('s.planPrepared') : t('s.draftLocal'));
   }
 
   async function confirmGoal() {
@@ -512,8 +512,8 @@ export default function EfestoProductShell() {
         method: 'POST', body: JSON.stringify({ confirmed: true, agent: 'hermes', cadence: 'manual' }),
       }, parseOk);
       setInput(''); setPreparedGoal(''); setPinnedGoalId(''); await refresh(); navigate('home');
-      setToast('Goal persistido y misión confirmada para Hermes.');
-    } catch { setToast('El Kernel rechazó la misión. No se creó actividad falsa ni trabajo parcial.'); }
+      setToast(t('s.goalConfirmed'));
+    } catch { setToast(t('s.missionRejected')); }
     finally { setGoalPending(false); }
   }
 
@@ -533,11 +533,11 @@ export default function EfestoProductShell() {
       const revision = typeof response.revision === 'number' ? response.revision : undefined;
       await refresh();
       setToast(response.changed === false
-        ? 'El Goal ya decía eso: el Kernel no creó una revisión nueva.'
-        : `Goal revisado${revision ? ` (revisión ${revision})` : ''}. Se conservan su misión, la Evidence y los Finds. Pulsa «Buscar más» para buscar con el texto nuevo.`);
+        ? t('s.goalUnchanged')
+        : t('s.goalRevised', { rev: revision ? ` (${t('s.revision')} ${revision})` : '' }));
       return true;
     } catch {
-      setToast('El Kernel no aceptó la edición del Goal. El Goal y su misión siguen como estaban.');
+      setToast(t('s.editRejected'));
       return false;
     }
   }
@@ -558,12 +558,12 @@ export default function EfestoProductShell() {
       }, parseOk);
       await refresh();
       setToast(mode === 'search_more'
-        ? 'Buscar más: el Kernel puso un nuevo intento en cola para Hermes. Los Finds y la Evidence anteriores se conservan.'
-        : 'Misión relanzada: el Kernel la puso en cola para Hermes.');
+        ? t('s.searchMoreQueued')
+        : t('s.relaunched'));
     } catch {
       setToast(mode === 'search_more'
-        ? 'El Kernel no aceptó «Buscar más». La misión y sus Finds siguen como estaban.'
-        : 'El Kernel no relanzó la misión. Su estado anterior se conserva.');
+        ? t('s.searchMoreRejected')
+        : t('s.relaunchRejected'));
     }
     finally { setRelaunchPending(false); }
   }
@@ -575,8 +575,8 @@ export default function EfestoProductShell() {
       await client.request(`/api/opportunities/${encodeURIComponent(opportunityId)}/feedback`, { method: 'POST', body: JSON.stringify({ signal }) }, parseOk);
       // Fail-close: Home/Finds feedback is kernelSupportedFinds-only (shell supportedFinds).
       // Bare "Find descartado" must name SUPPORT like scorecard Finds SUPPORT descartados.
-      await refresh(); setToast(signal === 'dismissed' ? 'Find SUPPORT descartado; Evidence objetiva no fue reescrita.' : 'Preferencia guardada en el Kernel.');
-    } catch { setToast('No se pudo registrar el feedback. El estado anterior se conserva.'); }
+      await refresh(); setToast(signal === 'dismissed' ? t('s.findDismissed') : t('s.prefSaved'));
+    } catch { setToast(t('s.feedbackFailed')); }
   }
 
   async function openCase(record: CaseSummary) {
@@ -592,8 +592,8 @@ export default function EfestoProductShell() {
       setCaseDetails((current) => ({ ...current, [record.id]: detail }));
     } catch {
       setToast(cached
-        ? 'No se pudo actualizar el Case; se muestra la última Evidence leída del Kernel.'
-        : 'No se pudo abrir el Case o su Evidence. No se muestran datos de relleno.');
+        ? t('s.caseRefreshFailed')
+        : t('s.caseOpenFailed'));
     } finally {
       // Only clear the spinner this request owns (a later open may be loading another Case).
       setLoadingCaseId((current) => (current === record.id ? '' : current));
@@ -633,7 +633,7 @@ export default function EfestoProductShell() {
         ...(String(data.get('apiKey') ?? '').trim() ? { apiKey: String(data.get('apiKey')).trim() } : {}),
       }) }, parseOk);
       form.reset(); if (apiKeyInput instanceof HTMLInputElement) apiKeyInput.value = ''; await refresh();
-      setToast('Proveedor guardado de forma privada en el Kernel.');
+      setToast(t('s.providerSaved'));
     } catch { if (apiKeyInput instanceof HTMLInputElement) apiKeyInput.value = ''; setToast('El proveedor fue rechazado. Revisa URL, modelos y credencial.'); }
   }
 
@@ -654,8 +654,8 @@ export default function EfestoProductShell() {
         if (streamEvent.type === 'done' && streamEvent.response?.model) setChatMessages((current) => current.map((message, index) => index === current.length - 1 ? { ...message, model: streamEvent.response?.model } : message));
         if (streamEvent.type === 'error') throw new Error(streamEvent.error ?? 'provider error');
       }, controller.signal);
-      setToast('Conversación completada. La salida del modelo sigue separada de Evidence y memoria.');
-    } catch { setToast(controller.signal.aborted ? 'Generación detenida por el usuario.' : 'El modelo no respondió. No se guardó una respuesta falsa.'); }
+      setToast(t('s.chatDone'));
+    } catch { setToast(controller.signal.aborted ? t('s.genStopped') : t('s.modelNoReply')); }
     finally { setChatPending(false); if (chatAbortRef.current === controller) chatAbortRef.current = undefined; }
   }
 
@@ -677,9 +677,9 @@ export default function EfestoProductShell() {
   const agentShort = agentCopy.short;
 
   return <div className={`efesto-product ${navOpen ? 'nav-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${view === 'home' ? 'efesto-home-active' : ''} ${mobileViewport ? 'has-tabbar' : ''}`}>
-    <aside id="efesto-sidebar" className="efesto-sidebar" aria-label="Navegación principal" inert={mobileViewport && !navOpen ? true : undefined}>
+    <aside id="efesto-sidebar" className="efesto-sidebar" aria-label={t('s.mainNav')} inert={mobileViewport && !navOpen ? true : undefined}>
       <div className="efesto-brand">
-        <button type="button" onClick={() => navigate('home')} aria-label="Efesto, inicio">
+        <button type="button" onClick={() => navigate('home')} aria-label={t('s.homeAria')}>
           <EfestoLockup size={38} />
         </button>
         <button type="button" ref={drawerCloseRef} className="mobile-close" onClick={closeNavigation} aria-label={t('sidebar.closeMenu')}><PanelLeftClose /></button>
@@ -737,10 +737,10 @@ export default function EfestoProductShell() {
       <header className="efesto-topbar">
         <div><button type="button" ref={menuButtonRef} className="menu-button" onClick={(event) => toggleNavigation(event.currentTarget)} aria-label={t('top.toggleNav')} aria-controls="efesto-sidebar" aria-expanded={navExpanded}><Menu /></button><button type="button" className="top-title" onClick={() => navigate('home')}>Efesto <span>/</span> {viewLabel(view)}</button></div>
         <div className="top-context"><span className="local-first-status"><ShieldCheck /> {t('top.localFirst')}</span><span className="private-status">{t('top.private')}</span></div>
-        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label={t('top.refresh')}><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection && snapshot?.readiness.kernel === 'online' ? 'online' : 'offline')} onClick={() => (connection ? setConnectionsOpen(true) : navigate('settings'))} aria-haspopup={connection ? 'dialog' : undefined}><span />{!connection ? 'Conectar' : snapshot?.readiness.kernel === 'online' ? 'Kernel listo' : 'Kernel sin respuesta'}{connection ? <i className="connection-agent" data-tone={agentTone} aria-hidden="true" /> : null}{connection ? <span className="forge-sr-only"> · {agentShort}</span> : null}</button></div>
+        <div className="top-actions"><button type="button" className="refresh-button" onClick={() => void refresh()} disabled={!connection} aria-label={t('top.refresh')}><RefreshCw /></button><button type="button" className={'connection-pill ' + (connection && snapshot?.readiness.kernel === 'online' ? 'online' : 'offline')} onClick={() => (connection ? setConnectionsOpen(true) : navigate('settings'))} aria-haspopup={connection ? 'dialog' : undefined}><span />{!connection ? t('s.connect') : snapshot?.readiness.kernel === 'online' ? t('s.kernelReady') : t('s.kernelNoResponse')}{connection ? <i className="connection-agent" data-tone={agentTone} aria-hidden="true" /> : null}{connection ? <span className="forge-sr-only"> · {agentShort}</span> : null}</button></div>
       </header>
       <main id="efesto-main" ref={mainRef} tabIndex={-1} className="efesto-main">
-        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : 'Sin modelo'} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenConnections={() => setConnectionsOpen(true)} onOpenView={(next) => navigate(next)} onOpenNav={toggleNavigation} navExpanded={navExpanded} supportedFinds={supportedFinds} forgeSupportedFindCount={forgeSupportedFindCount} missions={snapshot?.missions} forgeModel={forgeModel} onOpenFinds={() => navigate('finds')} onRelaunchMission={(goalId) => void relaunchMission(goalId)} relaunchPending={relaunchPending} onSearchMore={(goalId) => void relaunchMission(goalId, 'search_more')} onReviseGoal={reviseGoal} onFindFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
+        {view === 'home' ? <HomeView phase={brainPhase} chatMode={chatMode} messages={chatMessages} preparedGoal={preparedGoal} connected={Boolean(connection)} goalPending={goalPending} input={input} onInputChange={setInput} onSubmit={(event) => { if (chatMode) void sendChat(event); else prepareGoal(event); }} onToggleChat={setChatMode} chatPending={chatPending} onStopChat={() => chatAbortRef.current?.abort()} chatAvailable={Boolean(connection && selectedProvider && selectedModel)} submitDisabled={!input.trim() || (chatMode && (!connection || !selectedProvider || !selectedModel))} onConfirmGoal={() => void confirmGoal()} onEditGoal={() => setPreparedGoal('')} onStarterGoal={(goal) => { setChatMode(false); setPreparedGoal(''); setInput(goal); }} onStarterChat={(prompt) => { setChatMode(true); setPreparedGoal(''); setInput(prompt); }} onOpenModels={() => navigate('models')} modelLabel={selectedProvider && selectedModel ? selectedProvider.label + ' · ' + selectedModel : t('s.noModel')} providers={providers} selectedProviderId={selectedProviderId} selectedModel={selectedModel} onSelectModel={(providerId, model) => { setSelectedProviderId(providerId); setSelectedModel(model); }} onOpenSettings={() => navigate('settings')} onOpenConnections={() => setConnectionsOpen(true)} onOpenView={(next) => navigate(next)} onOpenNav={toggleNavigation} navExpanded={navExpanded} supportedFinds={supportedFinds} forgeSupportedFindCount={forgeSupportedFindCount} missions={snapshot?.missions} forgeModel={forgeModel} onOpenFinds={() => navigate('finds')} onRelaunchMission={(goalId) => void relaunchMission(goalId)} relaunchPending={relaunchPending} onSearchMore={(goalId) => void relaunchMission(goalId, 'search_more')} onReviseGoal={reviseGoal} onFindFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
         {view === 'goals' ? <div className="missions-route"><GoalsView snapshot={snapshot} onNew={newGoal} onConnect={openSettings} forgeModel={forgeModel} onOpenFinds={() => navigate('finds')}  onRelaunchMission={(goalId) => void relaunchMission(goalId)} relaunchPending={relaunchPending} onSearchMore={(goalId) => void relaunchMission(goalId, 'search_more')} onReviseGoal={reviseGoal} /><ProductValueScorecardPanel scorecard={snapshot?.productScorecard} unavailable={!snapshot?.productScorecard} /></div> : null}
         {view === 'finds' ? <FindsView opportunities={supportedFinds} missions={snapshot?.missions} connected={Boolean(connection)} onNewGoal={newGoal} onConnect={openSettings} onFeedback={(id, signal) => void recordFeedback(id, signal)} onOpenCase={(caseId) => { const record = snapshot?.cases.find((item) => item.id === caseId); if (record) openEvidence(record); else navigate('evidence'); }} /> : null}
         {view === 'evidence' ? <EvidenceView cases={snapshot?.cases ?? []} selectedId={selectedCaseId} detail={selectedCaseId ? caseDetails[selectedCaseId] : undefined} loadingId={loadingCaseId} connected={Boolean(connection)} onOpen={(record) => void openCase(record)} onNewGoal={newGoal} onConnect={openSettings} /> : null}
@@ -752,13 +752,13 @@ export default function EfestoProductShell() {
       </main>
 
       {connectionsOpen && connection ? <ConnectionsSheet missions={snapshot?.missions} kernelOnline={snapshot?.readiness.kernel === 'online'} connected kernelUrl={connection.baseUrl} agents={snapshot?.agents} onTest={testAgents} onConnectKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onManageKernel={() => { setConnectionsOpen(false); navigate('settings'); }} onClose={() => setConnectionsOpen(false)} /> : null}
-      {toast ? <div className="efesto-toast" role="status"><ShieldCheck /><span title={toast}>{toast}</span><button type="button" onClick={() => setToast('')} aria-label="Cerrar aviso"><X /></button></div> : null}
+      {toast ? <div className="efesto-toast" role="status"><ShieldCheck /><span title={toast}>{toast}</span><button type="button" onClick={() => setToast('')} aria-label={t('s.closeNotice')}><X /></button></div> : null}
     </section>
-    {mobileViewport ? <nav className="efesto-tabbar" aria-label="Navegación rápida" aria-hidden={navOpen ? true : undefined} inert={navOpen ? true : undefined}>
+    {mobileViewport ? <nav className="efesto-tabbar" aria-label={t('s.quickNav')} aria-hidden={navOpen ? true : undefined} inert={navOpen ? true : undefined}>
       {tabNav.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={view === id ? 'active' : ''} aria-current={view === id ? 'page' : undefined} onClick={() => navigate(id)}>
         <Icon aria-hidden="true" /><span>{label}</span>
       </button>)}
-      <button type="button" onClick={(event) => toggleNavigation(event.currentTarget)} aria-controls="efesto-sidebar" aria-expanded={navOpen}><MoreHorizontal aria-hidden="true" /><span>Más</span></button>
+      <button type="button" onClick={(event) => toggleNavigation(event.currentTarget)} aria-controls="efesto-sidebar" aria-expanded={navOpen}><MoreHorizontal aria-hidden="true" /><span>{t('s.more')}</span></button>
     </nav> : null}
   </div>;
 }
@@ -776,7 +776,7 @@ function brainPhaseFromWorkState(workState: GoalSurfaceWorkState | undefined): B
 /** Sidebar "Objetivos activos" sub-label: the Kernel work state of the Goal's mission, in words. */
 function goalStatusLabel(surface: GoalSurface, missions?: readonly MissionSummary[]): { label: string; tone: 'gold' | 'hot' | 'idle' | 'alert' } {
   const mission = surface.mission;
-  if (!mission) return { label: 'sin misión', tone: 'idle' };
+  if (!mission) return { label: t('s.noMission'), tone: 'idle' };
   // GoalSurface may omit findCount; the raw Mission rows carry Kernel SUPPORT verdicts.
   const raw = missions?.find((item) => item.id === mission.id);
   const finds = mission.findCount ?? (raw ? countMissionKernelSupportedFinds(raw) : 0);
@@ -788,18 +788,18 @@ function goalStatusLabel(surface: GoalSurface, missions?: readonly MissionSummar
     const proof = raw && Array.isArray(raw.verificationResults)
       ? { workState: mission.workState, verificationResults: raw.verificationResults }
       : mission;
-    if (missionVerifiedWithoutSupport(proof)) return { label: 'sin SUPPORT', tone: 'idle' };
+    if (missionVerifiedWithoutSupport(proof)) return { label: t('s.noSupportLower'), tone: 'idle' };
   }
   switch (mission.workState) {
-    case 'forged': return finds > 0 ? { label: `${finds} ${finds === 1 ? 'Find' : 'Finds'} · forjado`, tone: 'gold' } : { label: 'investigación terminada', tone: 'idle' };
-    case 'verifying': return { label: 'Kernel leyendo', tone: 'hot' };
+    case 'forged': return finds > 0 ? { label: `${finds} ${finds === 1 ? 'Find' : 'Finds'} · ${t('s.forgedLower')}`, tone: 'gold' } : { label: t('s.researchEndedLower'), tone: 'idle' };
+    case 'verifying': return { label: t('s.kernelReading'), tone: 'hot' };
     case 'investigating':
-    case 'running': return { label: 'Hermes buscando', tone: 'hot' };
-    case 'queued': return { label: 'en cola', tone: 'idle' };
-    case 'waiting_for_agent': return { label: 'esperando a Hermes', tone: 'idle' };
-    case 'completed': return { label: 'terminada sin Evidence', tone: 'idle' };
-    case 'failed': return { label: 'falló', tone: 'alert' };
-    default: return { label: 'en espera', tone: 'idle' };
+    case 'running': return { label: t('s.hermesSearching'), tone: 'hot' };
+    case 'queued': return { label: t('s.queued'), tone: 'idle' };
+    case 'waiting_for_agent': return { label: t('s.waitingHermes'), tone: 'idle' };
+    case 'completed': return { label: t('s.endedNoEvidenceLower'), tone: 'idle' };
+    case 'failed': return { label: t('s.failedLower'), tone: 'alert' };
+    default: return { label: t('s.waiting'), tone: 'idle' };
   }
 }
 /** Kernel chip: the local Kernel address it talks to and whether it answers. */
@@ -822,7 +822,7 @@ function viewLabel(view: View) { return nav.find((item) => item.id === view)?.la
 async function loadGoalSurfacesOptional(client: KernelClient): Promise<GoalSurface[] | null> {
   try { return await loadGoalSurfaces(client); } catch { return null; }
 }
-function connectionMessage(error: unknown) { if (error instanceof KernelClientError && error.code === 'UNAUTHORIZED') return 'El Kernel rechazó el token. No se guardó la credencial.'; if (error instanceof KernelClientError && error.code === 'TIMEOUT') return 'El Kernel tardó demasiado en responder.'; if (error instanceof KernelClientError && error.code === 'OFFLINE') return 'No se alcanzó el Kernel local. Comprueba que el Launcher esté activo.'; return 'No se pudo conectar. Revisa la URL local y el token.'; }
+function connectionMessage(error: unknown) { if (error instanceof KernelClientError && error.code === 'UNAUTHORIZED') return t('s.tokenRejected'); if (error instanceof KernelClientError && error.code === 'TIMEOUT') return t('s.kernelSlow'); if (error instanceof KernelClientError && error.code === 'OFFLINE') return t('s.kernelUnreachable'); return t('s.connectFailed'); }
 function parseObject(value: unknown): Record<string, unknown> { if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid response'); return value as Record<string, unknown>; }
 function parseOk(value: unknown) { const body = parseObject(value); if (body.ok !== true) throw new Error('Invalid response'); return body; }
 function parseProviders(value: unknown): Provider[] { const body = parseOk(value); if (!Array.isArray(body.providers)) throw new Error('Invalid providers'); return body.providers.map((value) => { const item = parseObject(value); if (typeof item.id !== 'string' || typeof item.label !== 'string' || !Array.isArray(item.models) || !item.models.every((model) => typeof model === 'string')) throw new Error('Invalid provider'); return item as unknown as Provider; }); }

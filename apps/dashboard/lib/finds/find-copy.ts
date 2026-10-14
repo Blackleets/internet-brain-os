@@ -4,6 +4,8 @@
  * them in English; the dashboard UI is Spanish, so known strings are shown translated and anything
  * unknown is shown exactly as the Kernel stored it. Display only: the stored record is unchanged.
  */
+import { getLocale } from '../i18n';
+
 const NEXT_ACTION_ES: Record<string, string> = {
   'Review fit and application requirements': 'Revisa si encaja y los requisitos para postularte',
   'Verify eligibility and deadline': 'Comprueba si cumples los requisitos y el plazo',
@@ -38,10 +40,10 @@ const CATEGORY_ES: Record<string, string> = {
 };
 
 export function findNextActionEs(text: string): string {
-  return NEXT_ACTION_ES[text.trim()] ?? text;
+  return getLocale() === 'es' ? NEXT_ACTION_ES[text.trim()] ?? text : text;
 }
 export function findCategoryEs(label: string): string {
-  return CATEGORY_ES[label.trim()] ?? label;
+  return getLocale() === 'es' ? CATEGORY_ES[label.trim()] ?? label : label;
 }
 
 /**
