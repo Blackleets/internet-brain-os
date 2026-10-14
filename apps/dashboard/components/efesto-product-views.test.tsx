@@ -419,7 +419,7 @@ describe('FindCard / FindsView mission-proof SUPPORT honesty', () => {
     expect(screen.queryByText('Lead no verificado')).toBeNull();
     expect(screen.queryByText('Aún no hay hallazgos')).toBeNull();
     // Workspace copy must not brand SUPPORT Finds as lead no verificado.
-    expect(screen.getByText(/Solo Finds con Kernel SUPPORT/i)).toBeTruthy();
+    expect(screen.getByText(/Solo lo que el Kernel verificó con una fuente real \(Kernel SUPPORT\)/i)).toBeTruthy();
     expect(screen.queryByText(/lead no verificado/i)).toBeNull();
   });
 
@@ -477,8 +477,7 @@ describe('AgentsView Hermes return honesty', () => {
         onNewGoal={() => undefined}
       />,
     );
-    expect(screen.getByText(/Sus candidatos deben regresar por el bridge autenticado/i)).toBeTruthy();
-    expect(screen.getByText(/Un Find exige Kernel SUPPORT/i)).toBeTruthy();
+    expect(screen.getByText(/Solo se muestra como hallazgo lo que el Kernel verifica/i)).toBeTruthy();
     expect(screen.queryByText(/Sus findings deben/i)).toBeNull();
     expect(screen.getByRole('heading', { name: 'Hermes Agent' })).toBeTruthy();
   });
@@ -496,7 +495,7 @@ describe('ActivityView Kernel SUPPORT honesty', () => {
     );
     expect(screen.getByText('Sin actividad publicada')).toBeTruthy();
     expect(screen.getByText(/hallazgo con Kernel SUPPORT/i)).toBeTruthy();
-    expect(screen.getByText(/hallazgos con Kernel SUPPORT/i)).toBeTruthy();
+    expect(screen.getByText(/hallazgos verificados \(Kernel SUPPORT\)/i)).toBeTruthy();
     expect(screen.queryByText(/una misión o un hallazgo, aparecerá/i)).toBeNull();
   });
 

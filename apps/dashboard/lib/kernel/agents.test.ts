@@ -24,7 +24,7 @@ describe('agentConnectionCopy', () => {
   });
   it('names each Kernel state honestly', () => {
     expect(agentConnectionCopy({ ...base, state: 'never' }, true, NOW)).toMatchObject({ tone: 'off', title: 'Ningún agente conectado' });
-    expect(agentConnectionCopy({ ...base, state: 'online', lastSeenAt: '2026-10-04T11:59:48.000Z', lastSeenVia: 'ping' }, true, NOW)).toMatchObject({ tone: 'ok', title: 'Hermes conectado', detail: expect.stringContaining('hace 12 s (comprobación del doctor)') });
+    expect(agentConnectionCopy({ ...base, state: 'online', lastSeenAt: '2026-10-04T11:59:48.000Z', lastSeenVia: 'ping' }, true, NOW)).toMatchObject({ tone: 'ok', title: 'Hermes conectado', detail: expect.stringContaining('hace 12 s (comprobación automática)') });
     expect(agentConnectionCopy({ ...base, state: 'seen', lastSeenAt: '2026-10-04T11:52:00.000Z', lastSeenVia: 'result' }, true, NOW)).toMatchObject({ tone: 'idle', title: 'Hermes visto hace 8 min' });
     const history = agentConnectionCopy({ ...base, state: 'history', kernelStartedAt: '2026-10-04T10:00:00.000Z', lastMission: { id: 'm', phase: 'forged', at: '2026-10-04T10:39:47.000Z' }, queuedMissions: 2 }, true, NOW);
     expect(history.title).toMatch(/^Sin contacto desde que arrancó el Kernel/);

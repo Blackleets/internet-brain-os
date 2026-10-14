@@ -51,7 +51,7 @@ for (const view of [{ name: '390', width: 390, height: 844, mobile: true }, { na
     const ping = await request.post('http://127.0.0.1:4100/api/agents/hermes/ping', { headers: { 'x-hephaestus-token': token } });
     expect(ping.status()).toBe(200);
     await sheet.getByRole('button', { name: /^(Conectar|Comprobar) Hermes Agent$/ }).click();
-    await expect(sheet.getByText(/^Funciona: el Kernel recibió a Hermes Agent hace \d+ s \(comprobación del doctor\)\./)).toBeVisible();
+    await expect(sheet.getByText(/^Funciona: el Kernel recibió a Hermes Agent hace \d+ s \(comprobación automática\)\./)).toBeVisible();
     await expect(sheet.getByRole('heading', { name: 'Hermes conectado' })).toBeVisible();
     if (shotsDir) await page.screenshot({ path: `${shotsDir}/agent-connector-${view.name}-tested.png` });
     // The dashboard itself never posts a ping (it cannot fake a connection).

@@ -4,7 +4,7 @@ export type AgentTone = 'live' | 'ok' | 'idle' | 'off';
 export type AgentCopy = { tone: AgentTone; title: string; detail: string; short: string };
 
 const VIA: Record<AgentContactKind, string> = {
-  ping: 'comprobación del doctor',
+  ping: 'comprobación automática',
   poll: 'buscó misiones',
   claim: 'reclamó una misión',
   result: 'entregó resultados',
