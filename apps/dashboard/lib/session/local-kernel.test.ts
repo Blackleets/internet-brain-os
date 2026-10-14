@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { discoverLocalKernelConnection, localFetch, LOCAL_TRANSPORT } from './local-kernel';
+import { discoverLocalKernelConnection, localFetch, loopbackKernelUrl, LOCAL_TRANSPORT } from './local-kernel';
 import { kernelFetch } from './extension-bridge';
 
 describe('installed-mode local Kernel transport', () => {
@@ -10,6 +10,14 @@ describe('installed-mode local Kernel transport', () => {
     await expect(discoverLocalKernelConnection(undefined, fetcher)).resolves.toEqual({ baseUrl: 'http://127.0.0.1:4310', token: LOCAL_TRANSPORT });
     expect(calls[0][0]).toBe('/efesto-local/status');
     expect(new Headers(calls[0][1]?.headers).get('x-efesto-local')).toBe('1');
+  });
+
+  it('uses the real port published by the bridge and ignores non-loopback values', async () => {
+    const make = (body: string) => (async () => new Response(body)) as unknown as typeof fetch;
+    await expect(discoverLocalKernelConnection(undefined, make('{"ok":true,"enabled":true,"kernelUrl":"http://127.0.0.1:4320"}'))).resolves.toEqual({ baseUrl: 'http://127.0.0.1:4320', token: LOCAL_TRANSPORT });
+    await expect(discoverLocalKernelConnection(undefined, make('{"ok":true,"enabled":true,"kernelUrl":"https://evil.example"}'))).resolves.toEqual({ baseUrl: 'http://127.0.0.1:4310', token: LOCAL_TRANSPORT });
+    expect(loopbackKernelUrl('http://localhost:5000/x')).toBe('http://localhost:5000');
+    expect(loopbackKernelUrl(42)).toBeUndefined();
   });
 
   it('reports unavailable when the bridge is disabled (hosted dashboard)', async () => {

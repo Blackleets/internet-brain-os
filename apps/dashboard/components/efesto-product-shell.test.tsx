@@ -222,14 +222,14 @@ describe('Efesto goal-first product shell', () => {
       await act(async () => { await vi.advanceTimersByTimeAsync(7_000); });
       expect(screen.queryByRole('button', { name: /Kernel listo/ })).toBeNull();
       expect(screen.getByRole('button', { name: /Kernel sin respuesta/ })).toBeTruthy();
-      expect(screen.queryByRole('button', { name: /Kernel local.*· en línea/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: /Kernel local.*Conectado ·/ })).toBeNull();
       const kernelRow = screen.getAllByText('Kernel').map((label) => label.closest('.readiness-row')).find(Boolean);
       expect(kernelRow?.textContent).toContain('sin conexión');
       expect(kernelRow?.querySelector('strong')?.className).not.toContain('ready');
       vi.stubGlobal('fetch', healthy);
       await act(async () => { await vi.advanceTimersByTimeAsync(3_500); });
       expect(screen.getByRole('button', { name: /Kernel listo/ })).toBeTruthy();
-      expect(screen.getByRole('button', { name: /Kernel local.*· en línea/ })).toBeTruthy();
+      expect(screen.getByRole('button', { name: /Kernel local.*Conectado ·/ })).toBeTruthy();
     } finally {
       vi.useRealTimers();
     }

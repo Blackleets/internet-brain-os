@@ -25,7 +25,12 @@ describe('local Kernel bridge (installed Windows dashboard)', () => {
   it('reports enabled for a same-origin loopback request', async () => {
     const res = await localStatus(req('/efesto-local/status'), { env });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, enabled: true });
+    expect(await res.json()).toEqual({ ok: true, enabled: true, kernelUrl: 'http://127.0.0.1:4310' });
+  });
+
+  it('publishes the configured loopback port but refuses a non-loopback Kernel URL', async () => {
+    expect(await (await localStatus(req('/efesto-local/status'), { env: { ...env, EFESTO_LOCAL_KERNEL_URL: 'http://127.0.0.1:4320' } })).json()).toEqual({ ok: true, enabled: true, kernelUrl: 'http://127.0.0.1:4320' });
+    expect(await (await localStatus(req('/efesto-local/status'), { env: { ...env, EFESTO_LOCAL_KERNEL_URL: 'http://evil.example:4310' } })).json()).toMatchObject({ ok: true, enabled: false });
   });
 
   it.each([
