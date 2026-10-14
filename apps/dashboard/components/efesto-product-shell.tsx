@@ -20,6 +20,7 @@ import { focusGoalSurface } from '../lib/forge/forge-focus';
 import { discoverExtensionConnection, revokeExtensionConnection, EXTENSION_TRANSPORT } from '../lib/session/extension-bridge';
 import { connectionStore } from '../lib/session/connection-store';
 import { discoverLocalKernelConnection, LOCAL_TRANSPORT } from '../lib/session/local-kernel';
+import { installExtensionPairHandoff } from '../lib/session/extension-pair-handoff';
 import { startVisiblePoller } from '../lib/ui/visible-poller';
 import { subscribeToKernelEvents } from '../lib/kernel/events';
 import { refreshOnKernelEvents } from '../lib/kernel/live-refresh';
@@ -72,6 +73,11 @@ export default function EfestoProductShell() {
   const [navOpen, setNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [connection, setConnection] = useState<Connection>();
+  // Installed mode: let the Efesto extension pair itself without a typed code (one-use codes via the Kernel).
+  useEffect(() => {
+    if (connection?.token !== LOCAL_TRANSPORT) return undefined;
+    return installExtensionPairHandoff({ kernelUrl: connection.baseUrl });
+  }, [connection?.token, connection?.baseUrl]);
   const [snapshot, setSnapshot] = useState<OverviewSnapshot>();
   const [goalSurfaces, setGoalSurfaces] = useState<GoalSurface[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
