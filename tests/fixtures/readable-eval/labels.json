@@ -1,0 +1,13 @@
+{
+  "note": "Real public pages recorded with curl on 2026-10-14 (box DNS resolves public hosts to 198.18.0.1, which the Kernel private-IP guard correctly blocks, so live fetch evals are not possible here). Evidence phrases are copied verbatim from each page. Negative claims are phrases that do NOT appear on the page.",
+  "items": [
+    {"file":"python-314.html","url":"https://www.python.org/downloads/release/python-3140/","evidence":"Free-threaded Python is officially supported","negative":"Python 3.14 removes the GIL by default"},
+    {"file":"node-releases.html","url":"https://nodejs.org/en/about/previous-releases","evidence":"Major Node.js versions enter Current release status for six months","negative":"Node.js 22 reaches end-of-life in 2025"},
+    {"file":"ollama-gh.html","url":"https://github.com/ollama/ollama","evidence":"ollama","negative":"Ollama requires a paid license"},
+    {"file":"mdn-fetch.html","url":"https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API","evidence":"It is a global method in both Window and Worker contexts","negative":"fetch() is only available in Service Workers"},
+    {"file":"wiki-ssrf.html","url":"https://en.wikipedia.org/wiki/Server-side_request_forgery","evidence":"is a computer security vulnerability that enables an attacker to send requests","negative":"SSRF only affects client-side JavaScript"},
+    {"file":"rfc9110.html","url":"https://www.rfc-editor.org/rfc/rfc9110.html","evidence":"The Hypertext Transfer Protocol (HTTP) is a stateless application-level protocol","negative":"HTTP is a stateful binary protocol"},
+    {"file":"azure-signing.html","url":"https://azure.microsoft.com/en-us/pricing/details/artifact-signing/","evidence":"Artifact Signing is a Microsoft fully managed end-to-end signing solution","negative":"Artifact Signing is free for unlimited signatures"},
+    {"file":"apple-dev.html","url":"https://developer.apple.com/help/account/basics/about-your-developer-account","evidence":"all you need to do is register for free with your Apple Account","negative":"Developer ID certificates are free"}
+  ]
+}

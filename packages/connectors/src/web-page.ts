@@ -13,13 +13,36 @@ export interface WebPageFetcherOptions {
   readonly fetchImpl?: typeof fetch;
   readonly lookupImpl?: typeof lookup;
   readonly requestImpl?: (url: URL, address: string, signal: AbortSignal, headers: Record<string, string>) => Promise<Response>;
+  /** Extra attempts for transient failures (network error, 429, 502, 503, 504). Default 1. */
+  readonly retries?: number;
+  readonly retryDelayMs?: number;
 }
+
+const TRANSIENT_STATUSES = new Set([429, 502, 503, 504]);
 
 /** Fetches public HTML pages and reduces them to clean, auditable text. */
 export class WebPageFetcher {
   constructor(private readonly options: WebPageFetcherOptions = {}) {}
 
   async fetch(url: string): Promise<WebPageDocument> {
+    const retries = Math.max(0, Math.min(3, this.options.retries ?? 1));
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, (this.options.retryDelayMs ?? 400) * attempt));
+      try {
+        const document = await this.fetchOnce(url);
+        if (TRANSIENT_STATUSES.has(document.status) && attempt < retries) { lastError = new Error(`HTTP ${document.status}`); continue; }
+        return document;
+      } catch (error) {
+        lastError = error;
+        // Never retry policy refusals (private network, credentials, protocol, redirects).
+        if (!isTransientError(error)) throw error;
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error('Unable to fetch public page');
+  }
+
+  private async fetchOnce(url: string): Promise<WebPageDocument> {
     let parsed = new URL(url);
 
     const controller = new AbortController();
@@ -255,14 +278,36 @@ function extractTitle(html: string): string {
   return match ? decodeEntities(stripTags(match[1])).replace(/\s+/g, ' ').trim() : '';
 }
 
-function htmlToText(html: string): string {
+function isTransientError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  if (/private network|credentials|only http|redirect|unsupported|too large|exceeds/i.test(error.message)) return false;
+  const code = (error as { code?: string }).code ?? (error as { cause?: { code?: string } }).cause?.code;
+  return error.name === 'AbortError' || /ECONNRESET|ETIMEDOUT|EAI_AGAIN|ECONNREFUSED|EPIPE|UND_ERR/i.test(String(code ?? ''))
+    || /socket hang up|fetch failed|network/i.test(error.message);
+}
+
+/**
+ * Readable-text extraction: drops page chrome (nav/header/footer/aside/forms/svg) and,
+ * when the page marks its content with <main> or <article>, keeps only that region
+ * (if it carries enough text). Block elements become line breaks so sentences don't fuse.
+ */
+export function htmlToText(html: string): string {
+  let cleaned = html
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<(script|style|noscript|template|svg|iframe)\b[\s\S]*?<\/\1>/gi, ' ');
+  const stripped = cleaned.replace(/<(nav|header|footer|aside|form)\b[\s\S]*?<\/\1>/gi, ' ');
+  const region = stripped.match(/<main\b[\s\S]*<\/main>/i)?.[0] ?? stripped.match(/<article\b[\s\S]*<\/article>/i)?.[0];
+  cleaned = region && toText(region).length >= 200 ? region : stripped;
+  const text = toText(cleaned);
+  return text.length >= 80 ? text : toText(html.replace(/<(script|style|noscript)\b[\s\S]*?<\/\1>/gi, ' '));
+}
+
+function toText(html: string): string {
   return decodeEntities(
     html
-      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-      .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+      .replace(/<(br|\/p|\/div|\/li|\/h[1-6]|\/tr|\/section|\/article|\/blockquote)\b[^>]*>/gi, '\n')
       .replace(/<[^>]+>/g, ' '),
-  ).replace(/\s+/g, ' ').trim();
+  ).replace(/[ \t\f\v\u00A0]+/g, ' ').replace(/\s*\n\s*/g, '\n').replace(/\n{2,}/g, '\n').trim();
 }
 
 function stripTags(value: string): string {
