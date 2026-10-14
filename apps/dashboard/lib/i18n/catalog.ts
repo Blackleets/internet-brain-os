@@ -19,7 +19,7 @@ const en = {
   'settings.device': 'This device', 'settings.connected': 'Connected', 'settings.connectKernel': 'Connect Kernel', 'settings.autoConnect': 'Connect automatically',
   'settings.connecting': 'Connecting…', 'settings.autoHelp': 'Efesto connects only to your local Kernel (on this computer). No code to copy.',
   'settings.advanced': 'Advanced', 'settings.checkNow': 'Check now', 'settings.disconnect': 'Disconnect', 'settings.realStatus': 'Real status',
-  'settings.extensionOptional': 'Extension (optional)', 'settings.language': 'Language',
+  'settings.extensionOptional': 'Extension (optional)', 'settings.language': 'Language', 'settings.languageHelp': 'Detected from your browser. Your choice is saved on this device.',
   'status.ready': 'ready', 'status.online': 'online', 'status.offline': 'offline', 'status.connected': 'connected', 'status.needs_setup': 'needs setup',
   'status.degraded': 'partial', 'status.partial': 'partial', 'status.missing': 'not installed', 'status.unavailable': 'unavailable', 'status.paired': 'paired',
   'status.unused': 'not used', 'status.blocked': 'blocked', 'status.unconfigured': 'not configured', 'status.error': 'error',
@@ -42,7 +42,7 @@ const es: Catalog = {
   'settings.device': 'Dispositivo actual', 'settings.connected': 'Conectado', 'settings.connectKernel': 'Conectar Kernel', 'settings.autoConnect': 'Conectar automáticamente',
   'settings.connecting': 'Conectando…', 'settings.autoHelp': 'Efesto se conecta solo a tu Kernel local (en este equipo). No hace falta copiar ningún código.',
   'settings.advanced': 'Avanzado', 'settings.checkNow': 'Comprobar ahora', 'settings.disconnect': 'Desconectar', 'settings.realStatus': 'Estado real',
-  'settings.extensionOptional': 'Extensión (opcional)', 'settings.language': 'Idioma',
+  'settings.extensionOptional': 'Extensión (opcional)', 'settings.language': 'Idioma', 'settings.languageHelp': 'Detectado de tu navegador. Tu elección se guarda en este dispositivo.',
   'status.ready': 'listo', 'status.online': 'en línea', 'status.offline': 'sin conexión', 'status.connected': 'conectado', 'status.needs_setup': 'falta configurar algo',
   'status.degraded': 'parcial', 'status.partial': 'parcial', 'status.missing': 'no instalado', 'status.unavailable': 'no disponible', 'status.paired': 'emparejada',
   'status.unused': 'no usada', 'status.blocked': 'bloqueado', 'status.unconfigured': 'sin configurar', 'status.error': 'error',
@@ -58,7 +58,7 @@ const pt: Catalog = {
   'home.lede': 'Descreva o que você quer alcançar. O Efesto pesquisa, verifica as fontes e traz descobertas com evidências.',
   'home.placeholderGoal': 'Descreva seu Goal…', 'home.modeVerified': 'verificado', 'home.chipFinds': 'Descobertas', 'home.chipModels': 'Modelos locais',
   'settings.title': 'Configurações', 'settings.connected': 'Conectado', 'settings.autoConnect': 'Conectar automaticamente', 'settings.advanced': 'Avançado',
-  'settings.checkNow': 'Verificar agora', 'settings.disconnect': 'Desconectar', 'settings.language': 'Idioma',
+  'settings.checkNow': 'Verificar agora', 'settings.disconnect': 'Desconectar', 'settings.language': 'Idioma', 'settings.languageHelp': 'Detectado pelo seu navegador. Sua escolha fica salva neste dispositivo.',
 };
 
 const fr: Catalog = {
@@ -71,7 +71,7 @@ const fr: Catalog = {
   'home.lede': 'Décrivez ce que vous voulez accomplir. Efesto recherche, vérifie les sources et vous apporte des trouvailles étayées.',
   'home.placeholderGoal': 'Décrivez votre Goal…', 'home.modeVerified': 'vérifié', 'home.chipFinds': 'Trouvailles', 'home.chipModels': 'Modèles locaux',
   'settings.title': 'Réglages', 'settings.connected': 'Connecté', 'settings.autoConnect': 'Connexion automatique', 'settings.advanced': 'Avancé',
-  'settings.checkNow': 'Vérifier', 'settings.disconnect': 'Déconnecter', 'settings.language': 'Langue',
+  'settings.checkNow': 'Vérifier', 'settings.disconnect': 'Déconnecter', 'settings.language': 'Langue', 'settings.languageHelp': 'Détectée depuis votre navigateur. Votre choix est enregistré sur cet appareil.',
 };
 
 const de: Catalog = {
@@ -84,7 +84,7 @@ const de: Catalog = {
   'home.lede': 'Beschreibe, was du erreichen willst. Efesto recherchiert, prüft die Quellen und liefert belegte Funde.',
   'home.placeholderGoal': 'Beschreibe dein Goal…', 'home.modeVerified': 'geprüft', 'home.chipFinds': 'Funde', 'home.chipModels': 'Lokale Modelle',
   'settings.title': 'Einstellungen', 'settings.connected': 'Verbunden', 'settings.autoConnect': 'Automatisch verbinden', 'settings.advanced': 'Erweitert',
-  'settings.checkNow': 'Jetzt prüfen', 'settings.disconnect': 'Trennen', 'settings.language': 'Sprache',
+  'settings.checkNow': 'Jetzt prüfen', 'settings.disconnect': 'Trennen', 'settings.language': 'Sprache', 'settings.languageHelp': 'Aus deinem Browser erkannt. Deine Wahl wird auf diesem Gerät gespeichert.',
 };
 
 export const CATALOGS: Record<Locale, Catalog> = { en, es, pt, fr, de };

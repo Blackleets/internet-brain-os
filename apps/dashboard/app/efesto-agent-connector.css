@@ -152,3 +152,10 @@
 .agent-hero-action { display: grid; justify-items: start; gap: 8px; margin-top: 12px; }
 @media (max-width: 720px) { .agent-hero-action .agent-connect { width: 100%; justify-content: center; } }
 .efesto-product .agent-connector .agent-hero .agent-hero-status strong { font-size: 13px; }
+
+/* Settings · language (approved mockup) */
+.language-card-help { margin: 6px 0 10px; color: #9c8f84; font-size: 13px; }
+.language-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.language-options button { min-height: 36px; padding: 8px 12px; border: 0; border-radius: 999px; background: #121212; color: #ddd; font: 600 13px/1 inherit; box-shadow: inset 0 0 0 1px #2a2420; cursor: pointer; }
+.language-options button.active { background: linear-gradient(180deg, #ffb15c, #ff7a2a); color: #1a0d05; box-shadow: none; }
+.language-options button:focus-visible { outline: 2px solid #ffb15c; outline-offset: 2px; }
