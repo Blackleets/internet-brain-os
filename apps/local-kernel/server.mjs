@@ -20,6 +20,10 @@ import { AgentMissionManager } from './agent-missions.mjs';
 import { MissionEvidenceReader } from './mission-evidence-reader.mjs';
 import { interactiveMissionConfirmationActor } from './mission-confirmation-boundary.mjs';
 import { GoalSurfaceReaderError, createGoalSurfaceReader } from './goal-surface-reader.mjs';
+
+function isKernelRuntimeUnavailable(error) {
+  return error instanceof GoalSurfaceReaderError && error.code === 'KERNEL_RUNTIME_UNAVAILABLE';
+}
 import { PreferenceLearner } from './preference-learner.mjs';
 import { AgentMissionExecutor } from './agent-mission-executor.mjs';
 import { FileNotificationReceiptStore } from './notification-receipt-store.mjs';
@@ -434,7 +438,10 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
     if (request.method === 'GET' && request.url === '/api/goal-surfaces') {
       if (!goalSurfaces) return send(response, 404, { ok: false, code: 'GOAL_SURFACES_UNAVAILABLE' });
       try { return send(response, 200, { ok: true, surfaces: await goalSurfaces.list() }); }
-      catch { return send(response, 500, { ok: false, code: 'GOAL_SURFACES_FAILED' }); }
+      catch (error) {
+        if (isKernelRuntimeUnavailable(error)) return send(response, 503, { ok: false, code: 'KERNEL_RUNTIME_UNAVAILABLE' });
+        return send(response, 500, { ok: false, code: 'GOAL_SURFACES_FAILED' });
+      }
     }
     if (request.method === 'GET' && request.url?.startsWith('/api/goal-surfaces/')) {
       if (!goalSurfaces) return send(response, 404, { ok: false, code: 'GOAL_SURFACES_UNAVAILABLE' });
@@ -446,6 +453,9 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
           ? send(response, 200, { ok: true, surface })
           : send(response, 404, { ok: false, code: 'GOAL_SURFACE_NOT_FOUND' });
       } catch (error) {
+        // A missing Kernel build is a server-side outage (503), not a bad request, and its message
+        // carries local filesystem paths, so it is never echoed to the client.
+        if (isKernelRuntimeUnavailable(error)) return send(response, 503, { ok: false, code: 'KERNEL_RUNTIME_UNAVAILABLE' });
         if (error instanceof GoalSurfaceReaderError) {
           return send(response, 400, { ok: false, code: error.code, error: error.message });
         }

@@ -156,3 +156,18 @@ describe('Shared Goal Truth HTTP boundary', () => {
     expect(reader.list).not.toHaveBeenCalled();
   });
 });
+
+describe('goal surfaces when the Kernel runtime build is missing', () => {
+  it('answers 503 KERNEL_RUNTIME_UNAVAILABLE without leaking filesystem paths', async () => {
+    const missing = new GoalSurfaceReaderError('KERNEL_RUNTIME_UNAVAILABLE', "Goal surface projection requires the Kernel package to be built first: Cannot find module '/home/user/secret/packages/kernel/dist/index.js'");
+    const reader = { list: vi.fn(async () => { throw missing; }), get: vi.fn(async () => { throw missing; }) };
+    const baseUrl = await start(reader);
+    for (const path of ['/api/goal-surfaces', '/api/goal-surfaces/goal%3A1']) {
+      const response = await request(baseUrl, path);
+      expect(response.status).toBe(503);
+      const body = await json(response);
+      expect(body).toEqual({ ok: false, code: 'KERNEL_RUNTIME_UNAVAILABLE' });
+      expect(JSON.stringify(body)).not.toContain('/home/user');
+    }
+  });
+});
