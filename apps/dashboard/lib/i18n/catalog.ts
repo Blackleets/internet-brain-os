@@ -1,5 +1,7 @@
 // Efesto message catalog. English is the source and the fallback; every other locale may be partial
 // and falls back key-by-key to English. Keys are stable ids, never sentences.
+import { SCREENS_DE, SCREENS_EN, SCREENS_ES, SCREENS_FR, SCREENS_PT } from './screens';
+
 export const LOCALES = ['en', 'es', 'pt', 'fr', 'de'] as const;
 export type Locale = (typeof LOCALES)[number];
 export const LOCALE_NAMES: Record<Locale, string> = { en: 'English', es: 'Español', pt: 'Português', fr: 'Français', de: 'Deutsch' };
@@ -23,11 +25,13 @@ const en = {
   'status.ready': 'ready', 'status.online': 'online', 'status.offline': 'offline', 'status.connected': 'connected', 'status.needs_setup': 'needs setup',
   'status.degraded': 'partial', 'status.partial': 'partial', 'status.missing': 'not installed', 'status.unavailable': 'unavailable', 'status.paired': 'paired',
   'status.unused': 'not used', 'status.blocked': 'blocked', 'status.unconfigured': 'not configured', 'status.error': 'error',
+  ...SCREENS_EN,
 } as const;
 export type MessageKey = keyof typeof en;
 type Catalog = Partial<Record<MessageKey, string>>;
 
 const es: Catalog = {
+  ...SCREENS_ES,
   'nav.home': 'Inicio', 'nav.goals': 'Objetivos', 'nav.finds': 'Hallazgos', 'nav.evidence': 'Evidencia', 'nav.memory': 'Memoria', 'nav.activity': 'Actividad',
   'nav.models': 'Modelos', 'nav.agents': 'Agentes', 'nav.settings': 'Ajustes',
   'sidebar.create': 'Crear', 'sidebar.workspace': 'Espacio de trabajo', 'sidebar.activeGoals': 'Objetivos activos', 'sidebar.system': 'Sistema',
@@ -49,6 +53,7 @@ const es: Catalog = {
 };
 
 const pt: Catalog = {
+  ...SCREENS_PT,
   'nav.home': 'Início', 'nav.goals': 'Objetivos', 'nav.finds': 'Descobertas', 'nav.evidence': 'Evidências', 'nav.memory': 'Memória', 'nav.activity': 'Atividade',
   'nav.models': 'Modelos', 'nav.agents': 'Agentes', 'nav.settings': 'Configurações',
   'sidebar.create': 'Criar', 'sidebar.workspace': 'Área de trabalho', 'sidebar.activeGoals': 'Objetivos ativos', 'sidebar.system': 'Sistema',
@@ -62,6 +67,7 @@ const pt: Catalog = {
 };
 
 const fr: Catalog = {
+  ...SCREENS_FR,
   'nav.home': 'Accueil', 'nav.goals': 'Objectifs', 'nav.finds': 'Trouvailles', 'nav.evidence': 'Preuves', 'nav.memory': 'Mémoire', 'nav.activity': 'Activité',
   'nav.models': 'Modèles', 'nav.agents': 'Agents', 'nav.settings': 'Réglages',
   'sidebar.create': 'Créer', 'sidebar.workspace': 'Espace de travail', 'sidebar.activeGoals': 'Objectifs actifs', 'sidebar.system': 'Système',
@@ -75,6 +81,7 @@ const fr: Catalog = {
 };
 
 const de: Catalog = {
+  ...SCREENS_DE,
   'nav.home': 'Start', 'nav.goals': 'Ziele', 'nav.finds': 'Funde', 'nav.evidence': 'Belege', 'nav.memory': 'Gedächtnis', 'nav.activity': 'Aktivität',
   'nav.models': 'Modelle', 'nav.agents': 'Agenten', 'nav.settings': 'Einstellungen',
   'sidebar.create': 'Erstellen', 'sidebar.workspace': 'Arbeitsbereich', 'sidebar.activeGoals': 'Aktive Ziele', 'sidebar.system': 'System',

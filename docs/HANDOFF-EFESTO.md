@@ -310,3 +310,11 @@ Goal from Lewis: install like the ChatGPT/Grok desktop apps. No browser extensio
 - #276: rebasado y verde, pendiente de aprobación visual (cambia estilo).
 - Verificado: Goal end-to-end por auto-conexión con Hermes (falla cerrado y explica por qué si el Kernel no puede leer las páginas); sin Hermes muestra "Hermes no disponible / Esperando a Hermes". Home a 60 fps sin frames largos en 360/390/430/1440; sin overflow horizontal.
 - Pendiente: el chip de Kernel muestra `127.0.0.1:4310` fijo aunque el proxy apunte a otro puerto; la tarjeta de Hermes en Agentes usa icono genérico en el hero y repite Hermes 3 veces (cambio visual, requiere mockup).
+
+### 10.5 Producto global: i18n, selector de idioma y extensión v2 (2026-10-14)
+- Efesto es un producto global: dashboard y extensión en inglés por defecto, con detección del idioma del navegador y fallback a inglés.
+- #284 (`8d17052`): base i18n (`apps/dashboard/lib/i18n`): catálogo con claves estables, `en` es la fuente y el fallback clave a clave; arranca en inglés y aplica el idioma tras hidratar (`bootLocale`); la elección se guarda en `localStorage['efesto.locale']`. Los suites de Vitest fijan `es`; Playwright usa `es-ES` salvo `e2e/i18n.spec.ts`.
+- #286 (`bc6680d`): selector de idioma en Ajustes (en/es/pt/fr/de), PC y móvil.
+- #287 (`bc68250`): popup v2 de la extensión (`src/popup-v2.*`, manifest `default_popup`): inglés por defecto + es completo, pt/fr/de parciales; estilo oscuro; enlace "Open Efesto"; código manual bajo Advanced. Auto-emparejado sin código sobre #285: popup → background abre el dashboard local (127.0.0.1:3311) en pestaña inactiva → content script `dashboard-pair-bridge.js` (solo ese origen, frame superior, nonce) pide código → el dashboard (solo en transporte local) emite un código de un uso/2 min vía `/api/pairing/extension-code` y lo devuelve al mismo origen (máx. 3 por página) → el background valida remitente, formato y Kernel loopback y empareja. El token nunca pasa por la página. El popup antiguo sigue en el repo (sus tests).
+- Pantallas restantes traducidas: `lib/i18n/screens.ts` (claves `s.*`; es completo y literal, pt/fr/de parciales). Categorías y siguientes pasos de Finds solo se traducen en `es`.
+- Sin cambios: `publicLaunchApproved` = false; #266 intacto; #282 en borrador, sin merge.
