@@ -111,7 +111,7 @@ type ConnectorProps = {
  * dashboard cannot mark an agent as connected, and "Probar conexión" passes only when the Kernel
  * itself recorded a recent contact from the agent (doctor ping, mission poll, claim or result).
  */
-export function AgentConnector({ connected, kernelUrl, agents, missions, onConnectKernel, onTest, now = Date.now }: ConnectorProps) {
+export function AgentConnector({ connected, kernelUrl, agents, missions, onConnectKernel, onTest, now = Date.now, variant = 'sheet' }: ConnectorProps & { variant?: 'sheet' | 'hero' }) {
   const [shell, setShell] = useState<ShellKind>('bash');
   const [advanced, setAdvanced] = useState(false);
   const [mcpOpen, setMcpOpen] = useState<string>();
@@ -147,30 +147,43 @@ export function AgentConnector({ connected, kernelUrl, agents, missions, onConne
       ? { label: 'Conectado · comprobar', aria: 'Comprobar Hermes Agent', action: () => void test() }
       : { label: 'Conectar', aria: 'Conectar Hermes Agent', action: () => void test() };
 
-  return <div className="agent-connector">
-    <section className="agent-status" data-tone={copy.tone} aria-labelledby={statusId}>
+  const hermesAction = <>
+        <button type="button" className="agent-connect" aria-label={hermesButton.aria} onClick={hermesButton.action} disabled={testing}>
+          {testing ? <RefreshCw className="is-spinning" aria-hidden="true" /> : agentReady ? <Check aria-hidden="true" /> : <PlugZap aria-hidden="true" />}
+          {testing ? 'Comprobando…' : hermesButton.label}
+        </button>
+        {result ? <p className="agent-test-result" data-ok={result.ok ? 'true' : 'false'} role="status">{result.ok ? <Check aria-hidden="true" /> : <X aria-hidden="true" />}{result.message}</p> : null}
+  </>;
+
+  return <div className="agent-connector" data-variant={variant}>
+    {variant === 'hero' ? <section className="agent-hero" data-tone={copy.tone} aria-labelledby={statusId}>
+      <span className="agent-mark agent-mark-logo" aria-hidden="true"><AgentLogo agent="hermes" /><i /></span>
+      <div className="agent-hero-text">
+        <small>NOUS RESEARCH</small>
+        <h2>Hermes Agent</h2>
+        <p>Busca e investiga por ti con límites claros. Solo se muestra como hallazgo lo que el Kernel verifica con una fuente real.</p>
+        <p className="agent-hero-status" role="status"><i aria-hidden="true" /><strong id={statusId}>{copy.title}</strong> · {copy.detail}</p>
+        <div className="agent-hero-action">{hermesAction}</div>
+      </div>
+    </section> : <section className="agent-status" data-tone={copy.tone} aria-labelledby={statusId}>
       <span className="agent-status-mark" aria-hidden="true"><AgentLogo agent="hermes" /><i /></span>
       <div>
         <small>HERMES AGENT · ESTADO DEL KERNEL</small>
         <h3 id={statusId}>{copy.title}</h3>
         <p role="status">{copy.detail}</p>
       </div>
-    </section>
+    </section>}
 
     <ul className="agent-cards" aria-label="Agentes">
-      <li className="agent-card" data-ready={agentReady ? 'true' : undefined}>
+      {variant === 'hero' ? null : <li className="agent-card" data-ready={agentReady ? 'true' : undefined}>
         <AgentLogo agent="hermes" />
         <div className="agent-card-text">
           <strong>Hermes Agent</strong>
           <small>{connected ? copy.short : 'Sin Kernel'}</small>
           <p>Investiga en la web para tus objetivos. Con el instalador de Windows, Efesto lo arranca solo.</p>
         </div>
-        <button type="button" className="agent-connect" aria-label={hermesButton.aria} onClick={hermesButton.action} disabled={testing}>
-          {testing ? <RefreshCw className="is-spinning" aria-hidden="true" /> : agentReady ? <Check aria-hidden="true" /> : <PlugZap aria-hidden="true" />}
-          {testing ? 'Comprobando…' : hermesButton.label}
-        </button>
-        {result ? <p className="agent-test-result" data-ok={result.ok ? 'true' : 'false'} role="status">{result.ok ? <Check aria-hidden="true" /> : <X aria-hidden="true" />}{result.message}</p> : null}
-      </li>
+        {hermesAction}
+      </li>}
       {MCP_AGENTS.map((agent) => <li key={agent.id} className="agent-card">
         <AgentLogo agent={agent.id} />
         <div className="agent-card-text">
