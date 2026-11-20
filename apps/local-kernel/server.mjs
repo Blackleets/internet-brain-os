@@ -6,6 +6,7 @@ import { CaptureCaseEvidenceProjector, LocalKnowledgeStore } from './capture-pro
 import { InboxError, MAX_BODY_BYTES, PageContextInbox } from './page-context-inbox.mjs';
 import { ObsidianKnowledgeProjector } from './obsidian-projector.mjs';
 import { OptionalEvidenceSummarizer } from './optional-evidence-summarizer.mjs';
+import { OptionalDecisionsTriage } from './optional-decisions-triage.mjs';
 import { loadOrCreateApiToken, validateApiToken } from './api-token-store.mjs';
 import { KernelEventBus } from './kernel-event-bus.mjs';
 import { PairingError, PairingSession } from './pairing-session.mjs';
@@ -68,6 +69,11 @@ const summarizer = new OptionalEvidenceSummarizer(knowledgeStore, {
   model: process.env.HEPHAESTUS_OLLAMA_MODEL,
   baseUrl: process.env.HEPHAESTUS_OLLAMA_URL,
   timeoutMs: Number(process.env.HEPHAESTUS_OLLAMA_TIMEOUT_MS ?? 20_000),
+});
+const decisionsTriage = new OptionalDecisionsTriage({
+  apiKey: process.env.HEPHAESTUS_GEMINI_API_KEY,
+  model: process.env.HEPHAESTUS_GEMINI_DECISIONS_MODEL,
+  timeoutMs: Number(process.env.HEPHAESTUS_GEMINI_TIMEOUT_MS ?? 60_000),
 });
 const hermes = isMain
   ? await createHermesLocalIngestionRoute({
@@ -147,6 +153,7 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   const conversations = options.chatConversationStore;
   const bootstrapStatus = options.bootstrapStatus;
   const notificationGateway = options.notificationGateway;
+  const decisionsTriage = options.decisionsTriage;
   const allowedDashboardOrigins = new Set(options.allowedDashboardOrigins ?? []);
   const hermesMaxBodyBytes = Number(options.hermesMaxBodyBytes ?? 256 * 1024);
   const server = createServer(async (request, response) => {
@@ -697,6 +704,10 @@ export function createLocalKernelServer(captureInbox, captureProjector, obsidian
   });
   // Composition-root handle for publishing domain events (missions, evidence).
   server.kernelEvents = kernelEvents;
+  // Optional advisory triage capability (Gemini Decisions). Registered as an
+  // available capability only: no route or flow consumes it yet, and without
+  // a configured API key it stays inert.
+  if (decisionsTriage) server.decisionsTriage = decisionsTriage;
   return server;
 }
 
@@ -719,6 +730,7 @@ export const server = createLocalKernelServer(inbox, projector, obsidian, summar
   chatService,
   chatConversationStore: chatConversations,
   notificationGateway,
+  decisionsTriage,
   allowedDashboardOrigins: dashboardOrigins,
 });
 
