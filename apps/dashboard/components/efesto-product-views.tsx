@@ -206,6 +206,7 @@ export function HomeView({ phase, chatMode, messages, preparedGoal, connected, g
           : <p className="truth-card"><ShieldCheck /> {t('s.findNoCards')}</p>}
       </section> : showForge ? null : <section className="forge-empty forge-goal-empty" aria-label={t('s.createGoal')}>
         <h1 className="forge-wordmark"><EfestoMark size={46} /><ForgedWordmark /><span className="forge-sr-only">{t('s.whatLooking')}</span></h1>
+        <span className="forge-wordmark-tag" aria-hidden="true">The Intelligence Forge</span>
         <p className="forge-goal-lede">{t('home.lede')}</p>
       </section>}
       {showForge ? composer : null}

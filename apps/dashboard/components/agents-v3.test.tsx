@@ -19,9 +19,13 @@ describe('Agentes v3: Hermes appears once with its real logo', () => {
   });
 });
 
-describe('mobile toast sits at the top', () => {
-  it('ships the phone rule that moves the toast under the header', () => {
-    const file = ['app/efesto-home-v2.css', 'apps/dashboard/app/efesto-home-v2.css'].find((p) => existsSync(p))!;
-    expect(readFileSync(file, 'utf8')).toMatch(/max-width: 720px[\s\S]*\.efesto-toast[^{]*\{ top: calc\(58px[^}]*bottom: auto/);
+describe('design v1: the notice is in flow, never floating', () => {
+  it('ships the in-flow toast contract and drops the old floating phone rule', () => {
+    const v1 = ['app/efesto-design-v1.css', 'apps/dashboard/app/efesto-design-v1.css'].find((p) => existsSync(p))!;
+    const css = readFileSync(v1, 'utf8');
+    expect(css).toMatch(/\.efesto-stage:has\(> \.efesto-toast\)/);
+    expect(css).toMatch(/\.efesto-toast,\s*\n\.efesto-product\.has-tabbar \.efesto-toast \{\s*\n\s*position: static;/);
+    const legacy = ['app/efesto-home-v2.css', 'apps/dashboard/app/efesto-home-v2.css'].find((p) => existsSync(p))!;
+    expect(readFileSync(legacy, 'utf8')).not.toMatch(/\.efesto-toast[^{]*\{ top: calc\(58px/);
   });
 });

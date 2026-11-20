@@ -1,0 +1,268 @@
+/* ============================================================================
+   EFESTO — DESIGN V1 · "La forja como escenario" (approved proposal v1)
+   Loaded LAST (app/layout.tsx). One identity: ember #ff7a2a and gold #f5c451
+   over warm black. This sheet carries the v1 deltas on top of the existing
+   layers:
+     1. Notices live IN FLOW (a real row of the stage grid), never floating
+        over the forge scene.
+     2. Home idle: the living scene is the framed protagonist; the forged
+        wordmark sits inside it, bottom-left; the composer stops competing.
+     3. The mission stepper reads gold = done, ember = current, joined by a
+        real connecting line (wide) and gold segments (narrow).
+     4. Typography floor: no label under 11px anywhere in the product.
+     5. Goals on a phone: the header stack compresses so the whole anvil is
+        inside the first screen at 360x780.
+   The anvil and the spider are untouchable; the framing fix in
+   efesto-forge-live.css (forgeFloorY) is not regressed here.
+   ============================================================================ */
+
+/* ---- 1 · Notices in flow ------------------------------------------------ */
+.efesto-product .efesto-stage:has(> .efesto-toast) {
+  grid-template-rows: 56px auto minmax(0, 1fr);
+}
+.efesto-product .efesto-stage:has(> .efesto-toast) > .efesto-main {
+  grid-row: 3;
+}
+.efesto-product .efesto-toast,
+.efesto-product.has-tabbar .efesto-toast {
+  position: static;
+  inset: auto;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  grid-row: 2;
+  justify-self: center;
+  width: min(680px, calc(100% - 28px));
+  max-width: 680px;
+  margin: 12px 14px 0;
+  transform: none;
+  border: 1px solid rgba(255, 170, 90, .35);
+  border-radius: 12px;
+  background: #2a1607;
+  color: #ffd9ae;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .35);
+  pointer-events: auto;
+}
+
+/* ---- 2 · Home idle: the scene is the stage ------------------------------ */
+.efesto-product .forge-surface.is-idle > .forge-scroll {
+  flex: 1.55 1 0;
+  justify-content: flex-start;
+  margin: 14px 16px 0;
+  border: 1px solid rgba(255, 205, 165, .18);
+  border-radius: 24px;
+  background: rgba(7, 5, 3, .22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 180, .05),
+    0 30px 80px rgba(0, 0, 0, .35);
+}
+.efesto-product .forge-surface.is-idle > .forge-composer-zone {
+  flex: 1 1 0;
+}
+.efesto-product .forge-surface.is-idle .forge-goal-empty {
+  justify-items: start;
+  padding: 0 24px 22px;
+  text-align: left;
+}
+/* The wordmark block seats bottom-left inside the scene: earlier layers
+   centre it with auto margins (premium-chrome / home-v2), so the v1 rules
+   carry one more element of specificity and pin every child to the start. */
+.efesto-product .forge-surface.is-idle .forge-empty.forge-goal-empty { align-items: flex-start; }
+.efesto-product .forge-surface.is-idle .forge-goal-empty > h1.forge-wordmark { margin: 0; }
+.efesto-product .forge-surface.is-idle .forge-goal-empty > .forge-goal-lede {
+  margin: 14px 0 0;
+  text-align: left;
+}
+.efesto-product .forge-surface.is-idle .forge-goal-empty > .forge-wordmark-tag { justify-self: start; }
+.efesto-product .forge-wordmark-tag {
+  display: block;
+  margin-top: 12px;
+  font: 600 11px/1 var(--v3-mono, ui-monospace, monospace);
+  letter-spacing: .32em;
+  text-transform: uppercase;
+  color: #9a8a70;
+}
+@media (min-width: 1024px) {
+  .efesto-product .forge-surface.is-idle > .forge-scroll { margin: 18px 22px 0; }
+}
+@media (max-width: 720px) {
+  .efesto-product .forge-surface.is-idle > .forge-scroll {
+    margin: 12px 12px 0;
+    border-radius: 19px;
+  }
+  .efesto-product .forge-surface.is-idle .forge-goal-empty { padding: 0 16px 16px; }
+}
+
+/* ---- Sidebar: the primary action carries the mockup's ember gradient ---- */
+.efesto-product .efesto-sidebar .sidebar-actions .new-goal {
+  border: 1px solid rgba(255, 170, 90, .45);
+  background: linear-gradient(180deg, #a34d12, #8a3d0c);
+  color: #fff3e2;
+  box-shadow:
+    0 12px 26px rgba(255, 110, 30, .22),
+    inset 0 1px 0 rgba(255, 220, 180, .25);
+}
+.efesto-product .efesto-sidebar .sidebar-actions .new-goal:hover { filter: brightness(1.07); }
+.efesto-product .efesto-sidebar nav[aria-label] button[aria-current='page'] {
+  border-color: rgba(255, 170, 90, .28);
+  background: rgba(255, 122, 42, .13);
+  color: #ffe9d2;
+  box-shadow: inset 2px 0 0 #ff7a2a;
+}
+.efesto-product .efesto-sidebar nav[aria-label] button[aria-current='page'] svg { color: #ff9a55; }
+.efesto-product .efesto-sidebar nav[aria-label] button[aria-current='page'] b {
+  background: #ff7a2a;
+  color: #1c0f04;
+}
+
+/* ---- 3 · Stepper: gold = done, ember = current, joined by a line -------- */
+.efesto-product .forge-live-steps { gap: 14px; padding: 8px 12px; }
+.efesto-product .forge-live-steps > li { position: relative; height: 38px; }
+.efesto-product .forge-live-steps > li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -15px;
+  width: 16px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(255, 205, 165, .14);
+  transform: translateY(-50%);
+}
+.efesto-product .forge-live-steps > li[data-state='done']:not(:last-child)::after,
+.efesto-product .forge-live-steps > li[data-state='gold']:not(:last-child)::after,
+.efesto-product .forge-live[data-playing='true'] .forge-live-steps > li[data-vis='done']:not(:last-child)::after,
+.efesto-product .forge-live[data-playing='true'] .forge-live-steps > li[data-vis='gold']:not(:last-child)::after {
+  background: linear-gradient(90deg, #d99a26, rgba(255, 122, 42, .55));
+}
+.efesto-product .forge-live-steps em {
+  width: 26px;
+  height: 26px;
+  flex-basis: 26px;
+  border-radius: 50%;
+  font-size: 11px;
+}
+.efesto-product .forge-live-steps > li[data-state='done'] em,
+.efesto-product .forge-live-steps > li[data-state='gold'] em,
+.efesto-product .forge-live[data-playing='true'] .forge-live-steps > li[data-vis='done'] em,
+.efesto-product .forge-live[data-playing='true'] .forge-live-steps > li[data-vis='gold'] em {
+  background: linear-gradient(180deg, #f7cd6b, #d99a26);
+  color: #241703;
+  box-shadow: 0 4px 14px rgba(245, 196, 81, .30);
+}
+.efesto-product .forge-live-steps > li[data-state='done'] .forge-step-label,
+.efesto-product .forge-live-steps > li[data-state='gold'] .forge-step-label,
+.efesto-product .forge-live[data-playing='true'] .forge-live-steps > li[data-vis='done'] .forge-step-label,
+.efesto-product .forge-live[data-playing='true'] .forge-live-steps > li[data-vis='gold'] .forge-step-label {
+  color: #f3d9a0;
+}
+.efesto-product .forge-live-steps > li[aria-current='step'] em,
+.efesto-product .forge-live[data-playing='true'] .forge-live-steps > li[data-vis='now'] em {
+  border: 1px solid rgba(255, 122, 42, .55);
+  color: #ffb066;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 122, 42, .35),
+    0 0 0 4px rgba(255, 122, 42, .14);
+}
+.efesto-product .forge-live-steps > li[aria-current='step'] .forge-step-label { color: #ffd9ae; }
+/* Narrow: the segmented bar turns gold as steps complete. */
+.efesto-product .forge-live[data-layout='narrow'] .forge-live-steps > li[data-state='done'],
+.efesto-product .forge-live[data-layout='narrow'] .forge-live-steps > li[data-state='gold'],
+.efesto-product .forge-live[data-layout='narrow'][data-playing='true'] .forge-live-steps > li[data-vis='done'],
+.efesto-product .forge-live[data-layout='narrow'][data-playing='true'] .forge-live-steps > li[data-vis='gold'] {
+  background: linear-gradient(90deg, #d99a26, #f5c451);
+}
+
+/* ---- 4 · Typography floor: no label under 11px --------------------------- */
+.efesto-product .efesto-brand small,
+.efesto-product .forge-product-title small,
+.efesto-product .forge-empty > small,
+.efesto-product .forge-empty-meta,
+.efesto-product .forge-home-finds > header small,
+.efesto-product .forge-message-body > header span,
+.efesto-product .forge-goal-plan small,
+.efesto-product .forge-goal-plan li small,
+.efesto-product .forge-goal-plan li > b,
+.efesto-product .forge-plan-boundary,
+.efesto-product .forge-model-provider > header span,
+.efesto-product .forge-model-option small,
+.efesto-product .forge-model-no-results small,
+.efesto-product .forge-model-popover-footer span,
+.efesto-product .forge-composer-hint,
+.efesto-product .forge-message-avatar,
+.efesto-product .lead-label,
+.efesto-product .find-provenance dt,
+.efesto-product .evidence-disclosure dt,
+.efesto-product .state-pill,
+.efesto-product .workspace-heading small,
+.efesto-product .efesto-sidebar .nav-label,
+.efesto-product .efesto-sidebar .sidebar-goals small,
+.efesto-product .kernel-summary small,
+.efesto-product .forge-shortcut,
+.efesto-product .forge-bench-meta,
+.efesto-product .forge-slabel,
+.efesto-product .forge-live-stepnow,
+.efesto-product .forge-source-prior-tag,
+.efesto-product .forge-source-badge > span,
+.efesto-product .efesto-source-mark,
+.efesto-product .forge-live-prior > summary,
+.efesto-product .forge-live-legend > summary,
+.efesto-product .goal-edit-eyebrow,
+.efesto-product .goal-edit-keywords small,
+.efesto-product .forge-ticker-ttl { font-size: 11px; }
+.efesto-product .efesto-lockup-words small { font-size: 11px; letter-spacing: .18em; }
+.efesto-product .forge-chip-tag { height: 20px; }
+@media (max-width: 720px) {
+  .efesto-product .forge-live-head .forge-live-eyebrow,
+  .efesto-product .forge-slabel,
+  .efesto-product .forge-chip-tag { font-size: 11px; }
+  .efesto-product .forge-chip-tag { height: 20px; }
+}
+
+/* ---- 5 · Goals on a phone: compress the header stack ----------------------
+   Topbar 54 + heading + forge head used to eat ~505px before the scene, so
+   the anvil started below the fold. The route heading goes single-row (icon,
+   copy clamped to one line, action inline) and the forge head tightens; the
+   scene keeps its framed height, so the whole anvil lands in view. */
+@media (max-width: 720px) {
+  .efesto-product .efesto-main:has(> .missions-route) { padding-top: 14px; }
+  .efesto-product .missions-route .workspace-heading {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    padding-bottom: 12px;
+  }
+  .efesto-product .missions-route .workspace-heading > span {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+  .efesto-product .missions-route .workspace-heading > span svg { width: 17px; height: 17px; }
+  .efesto-product .missions-route .workspace-heading p {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  /* The route kicker wraps to two lines beside the inline action; the forge
+     head directly below already carries the GOAL · MISIÓN eyebrow. */
+  .efesto-product .missions-route .workspace-heading small { display: none; }
+  .efesto-product .missions-route .workspace-heading-action {
+    grid-column: 3;
+    width: auto;
+  }
+  .efesto-product .missions-route .workspace-heading-action .primary-action {
+    min-height: 38px;
+    padding: 0 12px;
+    white-space: nowrap;
+  }
+  .efesto-product .missions-route .workspace-body { padding-top: 10px; }
+  .efesto-product .forge-live[data-layout='narrow'] .forge-live-head { padding: 8px 16px 6px; }
+  .efesto-product .forge-live[data-layout='narrow'] .forge-live-head h2 {
+    margin-top: 6px;
+    font-size: 20px;
+    line-height: 24px;
+  }
+  .efesto-product .forge-live[data-layout='narrow'] .forge-live-phase { margin-top: 5px; }
+  .efesto-product .forge-live[data-layout='narrow'] .forge-live-stepbar { margin-top: 8px; }
+}

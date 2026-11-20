@@ -60,8 +60,11 @@ The local Kernel remains the privacy boundary and projects accepted Evidence int
 loopback Kernel. It runs locally at `http://127.0.0.1:3000` and only connects to
 the local Kernel API with the operator-provided `x-hephaestus-token`; it has no
 cloud proxy, analytics transport, duplicate store, or authority to write around
-Kernel contracts. The token remains in the browser tab's memory by default and
-is never embedded in URLs or build output.
+Kernel contracts. By default the dashboard remembers the connection for the
+browser session: the token is stored only in `sessionStorage` and restored on
+reload within that session. The owner can opt out per connection in Settings,
+in which case the token remains only in the browser tab's memory. The token is
+never embedded in URLs or build output and never written to `localStorage`.
 
 The dashboard exposes the connection flow, truthful Overview, persisted Cases
 and Goals, Hermes mission state, Opportunity Inbox, existing bounded automation

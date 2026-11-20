@@ -56,8 +56,6 @@
   .efesto-product .forge-surface.is-idle .forge-composer.is-goal { margin-top: 28px; }
 }
 
-/* v3 (approved): on phones the status toast sits at the top, one line, so it never covers actions. */
-@media (max-width: 720px) {
-  .efesto-product .efesto-toast, .efesto-product.has-tabbar .efesto-toast { top: calc(58px + env(safe-area-inset-top)); bottom: auto; left: 12px; right: 12px; width: auto; max-width: none; transform: none; padding: 8px 10px; font-size: 12px; }
-  .efesto-product .efesto-toast span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-}
+/* Design v1: the status notice no longer floats — it is an in-flow row of the
+   stage grid (app/efesto-design-v1.css), so it can never cover the scene or
+   the actions on any viewport. */

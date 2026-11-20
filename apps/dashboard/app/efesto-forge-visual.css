@@ -1,14 +1,11 @@
 :root {
-  --ef-blue: #4fc3f7;
-  --ef-cyan: #68e5ff;
-  --ef-blue-soft: rgb(79 195 247 / .12);
   --ef-ember: #e87732;
   --ef-ember-hot: #ff9a55;
 }
 
 .efesto-product {
   background:
-    radial-gradient(circle at 77% 18%, rgb(79 195 247 / .035), transparent 28%),
+    radial-gradient(circle at 77% 18%, rgb(255 154 85 / .035), transparent 28%),
     radial-gradient(circle at 28% 8%, rgb(232 119 50 / .055), transparent 30%),
     var(--ef-bg);
 }
@@ -17,7 +14,7 @@
   isolation: isolate;
   background:
     radial-gradient(circle at 38% -6%, rgb(232 119 50 / .085), transparent 34%),
-    radial-gradient(circle at 83% 8%, rgb(79 195 247 / .055), transparent 31%),
+    radial-gradient(circle at 83% 8%, rgb(255 154 85 / .055), transparent 31%),
     var(--ef-bg);
 }
 
@@ -39,7 +36,7 @@
   background:
     linear-gradient(180deg, rgb(232 119 50 / .03), transparent 25%),
     #0f0f11;
-  box-shadow: inset -1px 0 rgb(79 195 247 / .025);
+  box-shadow: inset -1px 0 rgb(255 154 85 / .025);
 }
 
 .brand-mark {
@@ -56,17 +53,17 @@
 .brand-mark svg { opacity: 0; }
 
 .efesto-sidebar nav button.active {
-  background: linear-gradient(90deg, rgb(232 119 50 / .11), rgb(79 195 247 / .025) 72%, transparent);
+  background: linear-gradient(90deg, rgb(232 119 50 / .11), rgb(255 154 85 / .025) 72%, transparent);
   box-shadow: inset 2px 0 var(--ef-forge);
 }
 
 .efesto-topbar {
   background: linear-gradient(90deg, rgb(14 13 14 / .94), rgb(10 12 15 / .92));
-  box-shadow: 0 1px rgb(79 195 247 / .025);
+  box-shadow: 0 1px rgb(255 154 85 / .025);
 }
 
 .connection-pill.online {
-  box-shadow: inset 0 0 18px rgb(127 176 105 / .035), 0 0 18px rgb(79 195 247 / .025);
+  box-shadow: inset 0 0 18px rgb(127 176 105 / .035), 0 0 18px rgb(255 154 85 / .025);
 }
 
 .home-view { position: relative; }
@@ -77,7 +74,7 @@
   margin-top: 0;
   border-radius: 30px;
   background:
-    radial-gradient(ellipse at 53% 48%, rgb(79 195 247 / .05), transparent 31%),
+    radial-gradient(ellipse at 53% 48%, rgb(255 205 165 / .04), transparent 31%),
     radial-gradient(ellipse at 45% 52%, rgb(232 119 50 / .08), transparent 45%);
 }
 
@@ -111,10 +108,10 @@
       transparent 0 14px,
       rgb(232 119 50 / .72) 14px 17px,
       transparent 17px 27px,
-      rgb(79 195 247 / .82) 27px 30px,
+      rgb(255 154 85 / .82) 27px 30px,
       transparent 30px 44px
     );
-  filter: drop-shadow(0 0 5px rgb(79 195 247 / .28));
+  filter: drop-shadow(0 0 5px rgb(255 154 85 / .28));
   mask-image: linear-gradient(90deg, transparent, black 8%, black 84%, transparent);
   transform: rotate(-2deg);
   transform-origin: left center;
@@ -127,15 +124,15 @@
 .brain-aura {
   inset: 7% 7% 5% 12%;
   background:
-    radial-gradient(circle at 62% 48%, rgb(79 195 247 / .12), transparent 34%),
+    radial-gradient(circle at 62% 48%, rgb(255 154 85 / .12), transparent 34%),
     radial-gradient(ellipse, rgb(232 119 50 / .13), transparent 69%);
   filter: blur(22px);
 }
 
 .brain-status {
-  border-color: rgb(79 195 247 / .12);
+  border-color: rgb(255 154 85 / .12);
   background: linear-gradient(135deg, rgb(18 17 18 / .9), rgb(10 15 19 / .88));
-  box-shadow: 0 16px 42px rgb(0 0 0 / .4), inset 0 0 22px rgb(79 195 247 / .025);
+  box-shadow: 0 16px 42px rgb(0 0 0 / .4), inset 0 0 22px rgb(255 154 85 / .025);
 }
 
 .phase-ready .brain-aura {
@@ -158,8 +155,8 @@
 }
 
 .phase-verifying::after {
-  background: repeating-linear-gradient(90deg, transparent 0 12px, rgb(79 195 247 / .95) 12px 16px, transparent 16px 28px);
-  filter: drop-shadow(0 0 7px rgb(104 229 255 / .45));
+  background: repeating-linear-gradient(90deg, transparent 0 12px, rgb(255 154 85 / .95) 12px 16px, transparent 16px 28px);
+  filter: drop-shadow(0 0 7px rgb(255 214 160 / .45));
 }
 
 .phase-forged::after {
@@ -180,11 +177,11 @@
 }
 
 .phase-verifying > img {
-  filter: saturate(.98) contrast(1.08) drop-shadow(0 0 24px rgb(79 195 247 / .14));
+  filter: saturate(.98) contrast(1.08) drop-shadow(0 0 24px rgb(255 154 85 / .14));
 }
 
 .home-copy h1 {
-  text-shadow: 0 0 26px rgb(232 119 50 / .06), 0 0 38px rgb(79 195 247 / .035);
+  text-shadow: 0 0 26px rgb(232 119 50 / .06), 0 0 38px rgb(255 154 85 / .035);
 }
 
 .starter-goals button,
@@ -199,13 +196,13 @@
 .starter-goals button:hover,
 .find-grid article:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 28px rgb(0 0 0 / .16), inset 0 0 18px rgb(79 195 247 / .018);
+  box-shadow: 0 12px 28px rgb(0 0 0 / .16), inset 0 0 18px rgb(255 154 85 / .018);
 }
 
 .goal-dock {
-  border-color: rgb(79 195 247 / .12);
+  border-color: rgb(255 154 85 / .12);
   background: linear-gradient(135deg, rgb(25 22 21 / .97), rgb(17 20 24 / .97));
-  box-shadow: 0 18px 54px rgb(0 0 0 / .5), 0 0 0 1px rgb(232 119 50 / .055), inset 0 0 26px rgb(79 195 247 / .02);
+  box-shadow: 0 18px 54px rgb(0 0 0 / .5), 0 0 0 1px rgb(232 119 50 / .055), inset 0 0 26px rgb(255 154 85 / .02);
 }
 
 .send-button {
