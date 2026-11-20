@@ -59,6 +59,13 @@ test('runs the Goal-first journey only after explicit confirmation', async ({ pa
   await expect(page.getByText('Investigando', { exact: true })).toBeVisible();
   // The Find title shows on the Home Finds card and on the forge's gold SUPPORT card.
   await expect(page.locator('.forge-home-finds').getByText('AI automation project', { exact: true })).toBeVisible();
+  // The forge re-tells a settled mission on first paint: by design (storyTimeline in
+  // lib/forge/forge-story.ts) the supported card's body stays hidden until the crawler
+  // animation reaches the final stage — visible at read + 0.5s (≈6.9s of story clock) and
+  // gold at ≈7.8s, plus data load — so the generic 8s expect timeout races the animation
+  // and loses on slower machines. forge.spec.ts synchronizes on the stage attribute for
+  // this same transition; wait for that observable final state, then assert content.
+  await expect(page.locator('.forge-live .forge-source[data-state="supported"]')).toHaveAttribute('data-stage', 'gold', { timeout: 15_000 });
   await expect(page.locator('.forge-live .forge-source[data-state="supported"]').getByRole('heading', { name: /^AI automation project/ })).toBeVisible();
   await expect(page.getByText('Kernel SUPPORT', { exact: true })).toBeVisible();
   await expect(page.locator('.forge-home-finds').getByRole('link', { name: /Abrir fuente/ })).toHaveAttribute('href', 'https://clients.example/projects/ai-automation');
