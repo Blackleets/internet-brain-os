@@ -64,6 +64,18 @@ type Geo = {
   webs: Web[]; hubs: P[];
 };
 
+/**
+ * The stage floor the anvil stands on (body coordinates). In the wide layout the mission
+ * counters bar overlays the stage's lower edge, so the anvil must stand above it; where the
+ * counters flow below the stage (narrow layout) the floor is the stage's own bottom edge.
+ * Keyed on the measured overlay, never on the stage-width heuristic: a narrow stage inside
+ * the wide layout (the forge embedded in Objetivos) still has the bar over its floor, and
+ * keying on width alone used to drop the anvil behind the counters there.
+ */
+export function forgeFloorY(stage: { y: number; h: number }, funnel: { y: number } | null | undefined): number {
+  return funnel && funnel.y < stage.y + stage.h - 1 ? funnel.y - 10 : stage.y + stage.h - 6;
+}
+
 const EM_SCALE = 0.25;
 const CRAWL_N = 24;
 const EMBER: RGB = [238, 135, 72], MOLTEN: RGB = [255, 122, 42], HOT: RGB = [255, 214, 160], WHITE: RGB = [255, 248, 232];
@@ -248,7 +260,7 @@ export class ForgeCrawlerRenderer {
       if (this.hooks.reducedMotion()) this.t = this.tl.hold[this.story.reach];
     }
     const s = mob ? 0.62 : clamp(S.w / 790, 0.78, 0.96);
-    const floorY = mob || !funnel ? S.y + S.h - 6 : funnel.y - 10;
+    const floorY = forgeFloorY(S, funnel);
     const bar = { x: S.cx + (mob ? 0 : 50 * (s / 0.96)), y: floorY - 160 * s };
     const q = { x: chip.cx, y: chip.y + chip.h + (mob ? 36 : 20) };
     const band = mob ? { x0: S.x + 18, x1: S.x + S.w - 18, y0: q.y + 34, y1: bar.y - 52 } : { x0: S.x + 46, x1: S.x + S.w - 46, y0: q.y + 46, y1: bar.y - 92 };

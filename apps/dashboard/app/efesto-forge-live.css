@@ -123,6 +123,11 @@
   height: max(540px, calc(100svh - 205px));
   min-height: 0;
 }
+/* Embedded in Objetivos, the view's own headings sit above the forge, so the hero height
+   budget above would push the stage floor — and the anvil standing on it — below the fold.
+   The embedded forge gets the height that actually remains under those headings, so the
+   whole anvil stays on screen. (Narrow layout overrides this back to auto below.) */
+.goals-forge-live .forge-live-body { height: max(430px, calc(100svh - 490px)); }
 .forge-live-fx { position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none; }
 /* Emissive halo layer (quarter resolution, drawn by the renderer): additive, under the crisp fx strokes. */
 .forge-live-glow { position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none; mix-blend-mode: screen; }

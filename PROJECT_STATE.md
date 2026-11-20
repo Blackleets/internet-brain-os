@@ -1,5 +1,15 @@
 # HEPHAESTUS — Current Project State
 
+## 2026-11-20 — Forge framing: the whole anvil stays on screen (founder order)
+
+Implemented in the sandbox clone at the founder's explicit order («el yunque debe estar completo en la pantalla»). `publicLaunchApproved=false` unchanged. Dashboard-only change; no Kernel/authority change; the spider, web, red-hot bar, sparks and threads are untouched.
+
+- **Root cause (two parts):** (1) In Objetivos on desktop the forge stage is narrow (544px) inside the wide layout, so the renderer took its narrow branch and anchored the scene floor to the stage's bottom edge — but in the wide layout the mission counters bar overlays that edge, so the anvil stood behind the counters and its base was hidden. (2) The forge body height used the hero budget `max(540px, calc(100svh - 205px))`, which ignores the Objetivos view headings (~265px) above the embedded forge, pushing the whole anvil below the fold.
+- **Fix:** the renderer's floor decision is now the exported pure helper `forgeFloorY(stage, funnel)` (`apps/dashboard/components/forge/forge-crawler-renderer.ts`): the anvil stands 10px above the counters bar whenever the bar measurably overlays the stage, and on the stage's own bottom edge otherwise — keyed on the measured overlay, not the width heuristic. The embedded forge gets the height that actually remains under the Objetivos headings: `.goals-forge-live .forge-live-body { height: max(430px, calc(100svh - 490px)); }` (`apps/dashboard/app/efesto-forge-live.css`); the standalone Home forge keeps the hero budget and the narrow layout still overrides to auto.
+- **Tests:** new `apps/dashboard/components/forge/forge-framing.test.ts` (6 tests: floor above an overlaying bar in wide layout, the Objetivos narrow-stage regression, stage-edge floor in narrow layout, no-counters fallback, embedded height rule, hero budget preserved). Full suite 302 files / 2,044 tests passed, root + dashboard typecheck exit 0, `architecture:check` passed.
+- **Visual verification (real Kernel + production build, captures read one by one):** `~/workspace/efesto-shots/yunque-completo-{home,objetivos}-{desktop,mobile}.png` — the full anvil silhouette (horn to base plate) is inside the stage and on screen in all four: Home desktop and mobile at first paint (unchanged), Objetivos desktop now at first paint (was entirely below the fold), Objetivos mobile with the scene in view (that view's header stack plus the scene's minimum composition exceed the 780px viewport, so at first paint the lower scene sits below the fold like the rest of that scroll page; the anvil is never cut by the scene itself and is fully visible, above the tab bar, when the scene is on screen).
+- **Rollback:** restore the previous one-line floor expression in `measure()` and remove the `.goals-forge-live` height rule; no stored data is affected.
+
 ## 2026-11-20 — Dashboard remembers the Kernel session by default (founder decision)
 
 Implemented in the sandbox clone at the founder's explicit decision. `publicLaunchApproved=false` unchanged.
