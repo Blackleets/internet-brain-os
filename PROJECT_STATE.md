@@ -1,5 +1,14 @@
 # HEPHAESTUS — Current Project State
 
+## 2026-11-20 — Release verifier now executes the real production audit (sandbox clone, UNMERGED, founder review pending)
+
+Implemented in the disposable sandbox clone on top of the Gemini Decisions adapter baseline (founder's working tree untouched, nothing pushed). `publicLaunchApproved=false` unchanged. This resolves the open finding recorded in the 2026-11-19 entry below.
+
+- **Real audit execution:** `scripts/release-readiness.mjs` now spawns `pnpm audit --prod --json` (cross-platform spawn, Windows shell for the pnpm shim, 120s bounded timeout, bounded output capture) and derives `strict-supply-chain-audit` from the executed result: exit 0 with zero reported vulnerabilities → `green` with an evidence line (`strict-supply-chain-audit-evidence: pnpm audit --prod executed: 0 vulnerabilities (N dependencies audited)`); a report with vulnerabilities → `red` with the real per-severity counts; spawn failure, timeout, output overflow, unparseable output, or a zero-report with a non-zero exit → `unverified`, never green. Any non-green audit prints `Efesto MVP release readiness: BLOCKED` and fails the script, so the global verdict can no longer claim GREEN without audit evidence. Check names and the rest of the output format are unchanged; the evidence line is additive.
+- **Static checks demoted to supporting signals:** the previous static conditions (no GHSA ignores in the workspace, patched Nano ID pin locked, CI contains the production audit step) still fail the release when violated, but they can no longer produce `green` for `strict-supply-chain-audit` on their own.
+- **Verification on this clone:** new `scripts/release-readiness.test.mjs` 13/13 with an injected command runner (no network in tests): parsing, green on a clean executed report, red on a vulnerable report (verdict BLOCKED, no green line), unverified on spawn failure/timeout/unparseable output/zero-report-nonzero-exit/runner throw. Existing script contracts stay green (`supply-chain-policy` 3/3, `internal-release-package` 4/4). Real run: `pnpm release:verify` prints GREEN with the executed evidence line (0 vulnerabilities, 80 dependencies audited); the unverified path was also demonstrated live with the real runner (pnpm absent from PATH → `unverified`, spawn ENOENT). The red path is proven by the injected-runner tests, not by a live vulnerable run. Full suite, typecheck and `architecture:check` results are recorded with this change's verification pass.
+- **Rollback:** revert `scripts/release-readiness.mjs` to the static-only version and delete `scripts/release-readiness.test.mjs`. No stored data is affected.
+
 ## 2026-11-20 — Optional Gemini Decisions advisory triage adapter (sandbox clone, UNMERGED, founder review pending)
 
 Implemented in the disposable sandbox clone on top of the 2026-11-19 fixes baseline (founder's working tree untouched, nothing pushed). `publicLaunchApproved=false` unchanged.
