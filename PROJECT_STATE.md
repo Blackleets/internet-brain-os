@@ -1,5 +1,14 @@
 # HEPHAESTUS — Current Project State
 
+## 2026-11-20 — Dashboard remembers the Kernel session by default (founder decision)
+
+Implemented in the sandbox clone at the founder's explicit decision. `publicLaunchApproved=false` unchanged.
+
+- **Behavior change (dashboard only, no Kernel/authority change):** the Settings «Recordar durante esta sesión» checkbox is now checked by default, so a manual token/pairing connection survives a page reload without re-entering the token. Unchecking it keeps the previous behavior exactly (tab memory only, nothing persisted). Storage scope is unchanged: the credential is written only to `sessionStorage` (key `hephaestus.owner.connection.session.v1`); `localStorage` and any longer persistence remain forbidden and unused. Disconnect still removes the stored credential immediately and restores the default (checked) preference for the next connection. EN/ES help copy now states the default truthfully («Activado por defecto · solo sessionStorage; sin persistencia indefinida»).
+- **Files:** `apps/dashboard/components/efesto-product-shell.tsx` (initial preference + disconnect reset), `apps/dashboard/lib/i18n/screens.ts` (help copy), `apps/dashboard/components/efesto-product-shell.test.tsx` (tests).
+- **Verification on this clone:** new tests cover (a) default remember — checkbox born checked, credential in sessionStorage, fresh mount restores the connection, never in localStorage — and (b) opt-out — unchecked box persists nothing. The Chat test now opts out explicitly so its nothing-persisted assertion keeps isolating Chat. Full suite 301 files / 2,038 tests passed (baseline 2,036 + 2 new), root + dashboard typecheck exit 0, `architecture:check` passed. Authentic browser proof: production build + real local Kernel (isolated temporary data dir) — connected through the UI without touching the checkbox, reloaded, and the connection survived (sidebar «Conectado · puerto 4000», «Forja lista», zero console/page errors); captures in `~/workspace/efesto-shots/session-default-{before,after}-reload.png` (operator-side evidence, not repo artifacts).
+- **Rollback:** revert the shell preference initial/reset to `false` and the help copy; no stored data is affected (sessionStorage entries remain valid under either default).
+
 ## 2026-11-20 — Release verifier now executes the real production audit (sandbox clone, UNMERGED, founder review pending)
 
 Implemented in the disposable sandbox clone on top of the Gemini Decisions adapter baseline (founder's working tree untouched, nothing pushed). `publicLaunchApproved=false` unchanged. This resolves the open finding recorded in the 2026-11-19 entry below.

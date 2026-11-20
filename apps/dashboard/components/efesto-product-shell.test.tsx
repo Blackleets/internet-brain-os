@@ -35,8 +35,10 @@ function responseFor(path: string, method: string): Response {
   return body ? Response.json(body) : Response.json({ ok: false }, { status: 404 });
 }
 
-async function connect(): Promise<void> {
+async function connect(options: { remember?: boolean } = {}): Promise<void> {
   fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
+  // Remembering the session is the default; only an explicit opt-out unchecks the box.
+  if (options.remember === false) fireEvent.click(screen.getByRole('checkbox', { name: /Recordar durante esta sesión/ }));
   fireEvent.change(screen.getByLabelText('Token privado'), { target: { value: token } });
   fireEvent.click(screen.getByRole('button', { name: 'Autorizar dispositivo' }));
   await waitFor(() => expect(screen.getByRole('button', { name: /Kernel listo/ })).toBeTruthy());
@@ -68,6 +70,33 @@ describe('Efesto goal-first product shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Desconectar' }));
     expect(revoke).toHaveBeenCalledOnce();
     expect(connectionStore.get()).toBeUndefined();
+  });
+
+  it('remembers the session by default and restores the connection after a reload', async () => {
+    const first = render(<EfestoProductShell />);
+    fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
+    const remember = screen.getByRole('checkbox', { name: /Recordar durante esta sesión/ }) as HTMLInputElement;
+    expect(remember.checked).toBe(true);
+    fireEvent.change(screen.getByLabelText('Token privado'), { target: { value: token } });
+    fireEvent.click(screen.getByRole('button', { name: 'Autorizar dispositivo' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: /Kernel listo/ })).toBeTruthy());
+    const saved = window.sessionStorage.getItem('hephaestus.owner.connection.session.v1');
+    expect(saved).toBeTruthy();
+    expect(JSON.parse(saved as string)).toMatchObject({ token });
+    // Session scope only: the credential is never promoted to localStorage.
+    expect(window.localStorage.getItem('hephaestus.owner.connection.session.v1')).toBeNull();
+    // Reload: a fresh mount over the same sessionStorage reconnects without re-entering the token.
+    first.unmount();
+    render(<EfestoProductShell />);
+    await waitFor(() => expect(screen.getByRole('button', { name: /Kernel listo/ })).toBeTruthy());
+    expect(connectionStore.get()).toMatchObject({ token });
+  });
+
+  it('keeps the token in tab memory only when the owner unchecks remember for this session', async () => {
+    render(<EfestoProductShell />);
+    await connect({ remember: false });
+    expect(window.sessionStorage.getItem('hephaestus.owner.connection.session.v1')).toBeNull();
+    expect(connectionStore.get()).toMatchObject({ token });
   });
 
   it('starts honest and goal-first without simulating Kernel activity', () => {
@@ -185,7 +214,9 @@ describe('Efesto goal-first product shell', () => {
 
   it('uses a configured model for Chat while keeping model output outside Evidence', async () => {
     render(<EfestoProductShell />);
-    await connect();
+    // Opt out of session remembering so the assertion below isolates Chat:
+    // with no remembered session, chatting must not write the connection key either.
+    await connect({ remember: false });
     fireEvent.click(screen.getByRole('button', { name: /^Modelos/ }));
     fireEvent.click(screen.getByRole('button', { name: /qwen3:4b/ }));
     fireEvent.change(screen.getByLabelText('Mensaje'), { target: { value: 'Resume el estado' } });

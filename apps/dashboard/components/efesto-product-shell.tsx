@@ -96,7 +96,9 @@ export default function EfestoProductShell() {
   const [toast, setToast] = useState('');
   const [connectionsOpen, setConnectionsOpen] = useState(false);
   const [connecting, setConnecting] = useState(false);
-  const [rememberSession, setRememberSession] = useState(false);
+  // Founder decision 2026-11-20: remembering the browser session is the default;
+  // the owner can still opt out per connection from Settings (tab memory only).
+  const [rememberSession, setRememberSession] = useState(true);
   const connectionAttempt = useRef(0);
   const automaticPaused = useRef(false);
   const chatAbortRef = useRef<AbortController | undefined>(undefined);
@@ -458,7 +460,7 @@ export default function EfestoProductShell() {
     if (connection?.token === EXTENSION_TRANSPORT) void revokeExtensionConnection().catch(() => setToast(t('s.sessionClosed')));
     chatAbortRef.current?.abort();
     setConnection(undefined); setSnapshot(undefined); setProviders([]); setGoalSurfaces([]); setCaseDetails({}); setSelectedCaseId(''); setChatMessages([]);
-    connectionStore.clear(); window.sessionStorage.removeItem(SESSION_CONNECTION_KEY); setRememberSession(false);
+    connectionStore.clear(); window.sessionStorage.removeItem(SESSION_CONNECTION_KEY); setRememberSession(true);
     setToast(t('s.deviceDisconnected'));
   }
 
